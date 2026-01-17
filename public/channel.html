@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Channel - UniConnect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .post-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .post-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .view-count {
+            transition: color 0.3s ease;
+        }
+        .view-count:hover {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white h-16">
+        <div class="container mx-auto px-4 h-full flex items-center justify-between">
+            <a href="/messages.html" class="flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span class="font-semibold">Back to Messages</span>
+            </a>
+            <div class="flex items-center space-x-4">
+                <a href="/search.html" class="p-2 hover:bg-white/10 rounded-full">
+                    <i class="fas fa-search"></i>
+                </a>
+                <a href="/profile.html" class="p-2 hover:bg-white/10 rounded-full">
+                    <i class="fas fa-user"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Channel Container -->
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Channel Header -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+            <!-- Channel Banner -->
+            <div class="h-48 gradient-bg relative">
+                <button onclick="changeChannelBanner()" 
+                        class="absolute top-4 right-4 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition">
+                    <i class="fas fa-camera mr-2"></i> Change Banner
+                </button>
+            </div>
+            
+            <!-- Channel Info -->
+            <div class="px-8 pb-8 -mt-16 relative">
+                <!-- Channel Avatar -->
+                <div class="relative inline-block">
+                    <div class="w-32 h-32 bg-blue-100 rounded-xl flex items-center justify-center border-4 border-white shadow-lg">
+                        <i class="fas fa-broadcast-tower text-blue-600 text-4xl"></i>
+                    </div>
+                    <button onclick="changeChannelAvatar()" 
+                            class="absolute bottom-2 right-2 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition">
+                        <i class="fas fa-camera text-sm"></i>
+                    </button>
+                </div>
+                
+                <!-- Channel Details -->
+                <div class="mt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h1 id="channelName" class="text-2xl font-bold text-gray-800">Loading...</h1>
+                            <p id="channelUsername" class="text-gray-600">@channel</p>
+                        </div>
+                        <div id="channelActions">
+                            <!-- Subscribe/Unsubscribe button will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <p id="channelDescription" class="text-gray-700 mb-4"></p>
+                    
+                    <!-- Channel Stats -->
+                    <div class="flex space-x-6 mb-6">
+                        <div class="text-center">
+                            <div class="text-xl font-bold text-gray-800" id="subscribersCount">0</div>
+                            <div class="text-sm text-gray-600">Subscribers</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xl font-bold text-gray-800" id="postsCount">0</div>
+                            <div class="text-sm text-gray-600">Posts</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xl font-bold text-gray-800" id="totalViews">0</div>
+                            <div class="text-sm text-gray-600">Total Views</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Channel Admin -->
+                    <div class="flex items-center space-x-2 mb-6">
+                        <span class="text-gray-600">Created by:</span>
+                        <img id="creatorAvatar" src="" class="w-8 h-8 rounded-full">
+                        <span id="creatorName" class="font-medium text-gray-800"></span>
+                    </div>
+                    
+                    <!-- Action Buttons (for creator) -->
+                    <div id="creatorActions" class="hidden space-x-3">
+                        <button onclick="createPost()" 
+                                class="gradient-bg text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition">
+                            <i class="fas fa-plus mr-2"></i> Create Post
+                        </button>
+                        <button onclick="manageChannel()" 
+                                class="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-50 transition">
+                            <i class="fas fa-cog mr-2"></i> Manage Channel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Channel Content -->
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Posts Section -->
+            <div class="lg:w-2/3">
+                <!-- Posts Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-800">Latest Posts</h2>
+                    <div class="flex space-x-2">
+                        <button onclick="sortPosts('latest')" 
+                                class="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Latest
+                        </button>
+                        <button onclick="sortPosts('popular')" 
+                                class="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Popular
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Posts List -->
+                <div id="postsList" class="space-y-6">
+                    <!-- Posts will be loaded here -->
+                    <div class="text-center py-12">
+                        <i class="fas fa-newspaper text-4xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-500">No posts yet</h3>
+                        <p class="text-gray-400">Be the first to post in this channel</p>
+                    </div>
+                </div>
+                
+                <!-- Load More -->
+                <div id="loadMoreContainer" class="text-center mt-8 hidden">
+                    <button onclick="loadMorePosts()" 
+                            class="gradient-bg text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-sync-alt mr-2"></i> Load More Posts
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="lg:w-1/3">
+                <!-- About Channel -->
+                <div class="bg-white rounded-xl shadow p-6 mb-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">About This Channel</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-sm text-gray-500">Category</label>
+                            <p id="channelCategory" class="font-medium">University Announcements</p>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">Created</label>
+                            <p id="channelCreated" class="font-medium"></p>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">Language</label>
+                            <p class="font-medium">English</p>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">Content Policy</label>
+                            <p class="text-sm text-gray-600">Educational content only. No spam.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Subscribers -->
+                <div class="bg-white rounded-xl shadow p-6 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-800 text-lg">Recent Subscribers</h3>
+                        <span class="text-sm text-gray-500" id="subscribersListCount">0</span>
+                    </div>
+                    <div id="subscribersList" class="space-y-3">
+                        <!-- Subscribers will be loaded here -->
+                        <div class="text-center py-4 text-gray-500">
+                            <i class="fas fa-users text-xl mb-2"></i>
+                            <p>No subscribers yet</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Channel Rules -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Channel Rules</h3>
+                    <ul class="space-y-2 text-sm text-gray-600">
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                            <span>Keep discussions relevant to the channel topic</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                            <span>Be respectful to all members</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                            <span>No spam or self-promotion</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                            <span>Follow university guidelines</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Post Modal -->
+    <div id="createPostModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl w-full max-w-2xl">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold">Create New Post</h3>
+                    <button onclick="closeCreatePostModal()" class="p-2 hover:bg-gray-100 rounded-full">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="createPostForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Post Content *</label>
+                        <textarea id="postContent" rows="6" 
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                                  placeholder="What would you like to share with the channel?"></textarea>
+                    </div>
+                    
+                    <!-- Media Upload -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Add Media (Optional)</label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition cursor-pointer"
+                             onclick="document.getElementById('mediaUpload').click()">
+                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                            <div class="font-medium text-gray-700">Click to upload media</div>
+                            <div class="text-sm text-gray-500">Images, videos, or documents up to 10MB</div>
+                            <input type="file" id="mediaUpload" class="hidden" onchange="previewMedia(this)">
+                        </div>
+                        <div id="mediaPreview" class="mt-2 hidden">
+                            <!-- Media preview will be shown here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Post Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Post Type</label>
+                        <div class="flex space-x-4">
+                            <label class="flex items-center">
+                                <input type="radio" name="postType" value="announcement" checked
+                                       class="text-purple-600 focus:ring-purple-500">
+                                <span class="ml-2">Announcement</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="postType" value="discussion"
+                                       class="text-purple-600 focus:ring-purple-500">
+                                <span class="ml-2">Discussion</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="postType" value="resource"
+                                       class="text-purple-600 focus:ring-purple-500">
+                                <span class="ml-2">Resource</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex space-x-3 pt-4">
+                        <button type="button" onclick="closeCreatePostModal()" 
+                                class="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="flex-1 gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                            <i class="fas fa-paper-plane mr-2"></i> Publish Post
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Post Detail Modal -->
+    <div id="postDetailModal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-xl w-full max-w-3xl my-8">
+            <!-- Post detail will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentUser = null;
+        let currentChannel = null;
+        let channelId = null;
+        let posts = [];
+        let currentPage = 1;
+        let hasMorePosts = true;
+        let isSubscribed = false;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+            await getChannelIdFromURL();
+            await loadCurrentUser();
+            await loadChannel();
+            setupSocket();
+            loadPosts();
+            loadSubscribers();
+        });
+        
+        // Get channel ID from URL
+        function getChannelIdFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            channelId = urlParams.get('id');
+            
+            if (!channelId) {
+                alert('Channel ID not found in URL');
+                window.location.href = '/messages.html';
+            }
+        }
+        
+        // Authentication
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/me', {
+                    headers: { 'Authorization': token }
+                });
+                
+                if (!response.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                window.location.href = '/login.html';
+            }
+        }
+        
+        // Load current user
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch('/api/me', {
+                    headers: { 'Authorization': localStorage.getItem('token') }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    currentUser = data.user;
+                }
+            } catch (error) {
+                console.error('Failed to load user:', error);
+            }
+        }
+        
+        // Load channel information
+        async function loadChannel() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/channels/${channelId}`, {
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentChannel = data.channel;
+                    renderChannel(data.channel);
+                    checkSubscription();
+                    checkIfCreator();
+                } else {
+                    alert('Channel not found or access denied');
+                    window.location.href = '/messages.html';
+                }
+            } catch (error) {
+                console.error('Failed to load channel:', error);
+            }
+        }
+        
+        // Render channel information
+        function renderChannel(channel) {
+            document.getElementById('channelName').textContent = channel.name;
+            document.getElementById('channelUsername').textContent = `@${channel.username}`;
+            document.getElementById('channelDescription').textContent = channel.description || 'No description provided';
+            
+            // Stats
+            document.getElementById('subscribersCount').textContent = channel.subscribers?.length || 0;
+            document.getElementById('postsCount').textContent = channel.postCount || 0;
+            document.getElementById('totalViews').textContent = channel.totalViews || 0;
+            
+            // Creator info
+            if (channel.creatorId) {
+                document.getElementById('creatorAvatar').src = channel.creatorId.avatar;
+                document.getElementById('creatorName').textContent = channel.creatorId.nickname;
+            }
+            
+            // Created date
+            const createdDate = new Date(channel.createdAt);
+            document.getElementById('channelCreated').textContent = createdDate.toLocaleDateString();
+            
+            // Category
+            document.getElementById('channelCategory').textContent = channel.category || 'General';
+        }
+        
+        // Check subscription status
+        function checkSubscription() {
+            if (currentChannel && currentUser) {
+                isSubscribed = currentChannel.subscribers?.some(sub => sub._id === currentUser._id);
+                renderSubscriptionButton();
+            }
+        }
+        
+        // Render subscription button
+        function renderSubscriptionButton() {
+            const container = document.getElementById('channelActions');
+            
+            if (isSubscribed) {
+                container.innerHTML = `
+                    <button onclick="unsubscribeFromChannel()" 
+                            class="bg-red-100 text-red-600 px-6 py-2 rounded-lg font-semibold hover:bg-red-200 transition">
+                        <i class="fas fa-bell-slash mr-2"></i> Unsubscribe
+                    </button>
+                `;
+            } else {
+                container.innerHTML = `
+                    <button onclick="subscribeToChannel()" 
+                            class="gradient-bg text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-bell mr-2"></i> Subscribe
+                    </button>
+                `;
+            }
+        }
+        
+        // Check if user is channel creator
+        function checkIfCreator() {
+            if (currentChannel && currentUser) {
+                const isCreator = currentChannel.creatorId?._id === currentUser._id;
+                if (isCreator) {
+                    document.getElementById('creatorActions').classList.remove('hidden');
+                }
+            }
+        }
+        
+        // Setup Socket.IO
+        function setupSocket() {
+            const token = localStorage.getItem('token');
+            socket = io();
+            
+            socket.emit('authenticate', token);
+            socket.emit('joinChannel', channelId);
+            
+            // Listen for new posts
+            socket.on('newPost', (post) => {
+                if (post.channelId === channelId) {
+                    addPostToUI(post);
+                }
+            });
+            
+            // Listen for subscription updates
+            socket.on('channelSubscriptionUpdate', (data) => {
+                if (data.channelId === channelId) {
+                    updateSubscribers(data);
+                }
+            });
+        }
+        
+        // Load posts
+        async function loadPosts(page = 1) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/channels/${channelId}/posts?page=${page}&limit=10`, {
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (page === 1) {
+                        posts = data.posts;
+                        renderPosts(data.posts);
+                    } else {
+                        posts = [...posts, ...data.posts];
+                        appendPosts(data.posts);
+                    }
+                    
+                    hasMorePosts = data.hasMore;
+                    currentPage = page;
+                    
+                    // Show/hide load more button
+                    const loadMoreBtn = document.getElementById('loadMoreContainer');
+                    if (hasMorePosts) {
+                        loadMoreBtn.classList.remove('hidden');
+                    } else {
+                        loadMoreBtn.classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load posts:', error);
+            }
+        }
+        
+        // Render posts
+        function renderPosts(posts) {
+            const container = document.getElementById('postsList');
+            
+            if (!posts || posts.length === 0) {
+                return;
+            }
+            
+            container.innerHTML = posts.map(post => createPostElement(post)).join('');
+        }
+        
+        // Append posts
+        function appendPosts(newPosts) {
+            const container = document.getElementById('postsList');
+            newPosts.forEach(post => {
+                const postElement = createPostElement(post);
+                container.insertAdjacentHTML('beforeend', postElement);
+            });
+        }
+        
+        // Create post element
+        function createPostElement(post) {
+            const postDate = new Date(post.createdAt);
+            const formattedDate = postDate.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+            
+            return `
+                <div class="post-card bg-white rounded-xl shadow p-6 cursor-pointer hover:shadow-lg"
+                     onclick="viewPost('${post._id}')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-broadcast-tower text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800">${post.title || 'Untitled Post'}</h3>
+                                <p class="text-sm text-gray-500">${formattedDate}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="view-count flex items-center text-gray-500 text-sm">
+                                <i class="fas fa-eye mr-1"></i>
+                                <span>${post.viewsCount || 0}</span>
+                            </span>
+                            <span class="flex items-center text-gray-500 text-sm">
+                                <i class="fas fa-heart mr-1"></i>
+                                <span>${post.likes?.length || 0}</span>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <p class="text-gray-700 mb-4 line-clamp-3">${post.content}</p>
+                    
+                    ${post.mediaUrl ? `
+                        <div class="mb-4">
+                            ${post.mediaType === 'image' ? 
+                                `<img src="${post.mediaUrl}" class="w-full h-48 object-cover rounded-lg">` :
+                                post.mediaType === 'video' ?
+                                `<div class="relative w-full h-48 bg-gray-800 rounded-lg">
+                                    <video src="${post.mediaUrl}" class="w-full h-full rounded-lg object-cover"></video>
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <i class="fas fa-play text-white text-3xl"></i>
+                                    </div>
+                                </div>` :
+                                `<div class="flex items-center p-3 bg-gray-100 rounded-lg">
+                                    <i class="fas fa-file text-gray-600 text-xl mr-3"></i>
+                                    <div>
+                                        <p class="font-medium">File Attachment</p>
+                                        <p class="text-sm text-gray-500">Click to download</p>
+                                    </div>
+                                </div>`
+                            }
+                        </div>
+                    ` : ''}
+                    
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex space-x-2">
+                            <button onclick="likePost('${post._id}', event)" 
+                                    class="flex items-center text-gray-500 hover:text-red-500">
+                                <i class="far fa-heart mr-1"></i>
+                                <span>Like</span>
+                            </button>
+                            <button onclick="commentOnPost('${post._id}', event)" 
+                                    class="flex items-center text-gray-500 hover:text-blue-500">
+                                <i class="far fa-comment mr-1"></i>
+                                <span>Comment</span>
+                            </button>
+                            <button onclick="sharePost('${post._id}', event)" 
+                                    class="flex items-center text-gray-500 hover:text-green-500">
+                                <i class="fas fa-share mr-1"></i>
+                                <span>Share</span>
+                            </button>
+                        </div>
+                        <button onclick="savePost('${post._id}', event)" 
+                                class="text-gray-500 hover:text-yellow-500">
+                            <i class="far fa-bookmark"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add post to UI
+        function addPostToUI(post) {
+            const container = document.getElementById('postsList');
+            
+            // If no posts yet
+            if (container.innerHTML.includes('No posts yet')) {
+                container.innerHTML = '';
+            }
+            
+            const postElement = createPostElement(post);
+            container.insertAdjacentHTML('afterbegin', postElement);
+            posts.unshift(post);
+        }
+        
+        // Load more posts
+        function loadMorePosts() {
+            loadPosts(currentPage + 1);
+        }
+        
+        // Sort posts
+        function sortPosts(sortBy) {
+            alert(`Sorting posts by ${sortBy} would be implemented`);
+        }
+        
+        // Subscribe to channel
+        async function subscribeToChannel() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/channels/${channelId}/subscribe`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    isSubscribed = true;
+                    renderSubscriptionButton();
+                    updateSubscriberCount(1);
+                    loadSubscribers();
+                } else {
+                    alert(data.error || 'Failed to subscribe');
+                }
+            } catch (error) {
+                console.error('Subscribe error:', error);
+                alert('Failed to subscribe');
+            }
+        }
+        
+        // Unsubscribe from channel
+        async function unsubscribeFromChannel() {
+            if (!confirm('Are you sure you want to unsubscribe from this channel?')) {
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/channels/${channelId}/unsubscribe`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    isSubscribed = false;
+                    renderSubscriptionButton();
+                    updateSubscriberCount(-1);
+                    loadSubscribers();
+                } else {
+                    alert(data.error || 'Failed to unsubscribe');
+                }
+            } catch (error) {
+                console.error('Unsubscribe error:', error);
+                alert('Failed to unsubscribe');
+            }
+        }
+        
+        // Update subscriber count
+        function updateSubscriberCount(change) {
+            const countElement = document.getElementById('subscribersCount');
+            const currentCount = parseInt(countElement.textContent) || 0;
+            countElement.textContent = currentCount + change;
+        }
+        
+        // Load subscribers
+        async function loadSubscribers() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/channels/${channelId}/subscribers`, {
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    renderSubscribers(data.subscribers);
+                }
+            } catch (error) {
+                console.error('Failed to load subscribers:', error);
+            }
+        }
+        
+        // Render subscribers
+        function renderSubscribers(subscribers) {
+            const container = document.getElementById('subscribersList');
+            const countElement = document.getElementById('subscribersListCount');
+            
+            if (!subscribers || subscribers.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-gray-500">
+                        <i class="fas fa-users text-xl mb-2"></i>
+                        <p>No subscribers yet</p>
+                    </div>
+                `;
+                countElement.textContent = '0';
+                return;
+            }
+            
+            const recentSubscribers = subscribers.slice(0, 5);
+            container.innerHTML = recentSubscribers.map(sub => `
+                <div class="flex items-center space-x-3">
+                    <img src="${sub.avatar}" class="w-8 h-8 rounded-full">
+                    <div>
+                        <p class="font-medium text-sm text-gray-800">${sub.nickname}</p>
+                        <p class="text-xs text-gray-500">@${sub.username}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            countElement.textContent = subscribers.length;
+        }
+        
+        // Update subscribers
+        function updateSubscribers(data) {
+            // This would update the subscribers list in real-time
+            loadSubscribers();
+        }
+        
+        // Create post
+        function createPost() {
+            if (!currentChannel || currentChannel.creatorId?._id !== currentUser._id) {
+                alert('Only channel creator can create posts');
+                return;
+            }
+            
+            document.getElementById('createPostModal').classList.remove('hidden');
+        }
+        
+        function closeCreatePostModal() {
+            document.getElementById('createPostModal').classList.add('hidden');
+            document.getElementById('createPostForm').reset();
+            document.getElementById('mediaPreview').classList.add('hidden');
+            document.getElementById('mediaPreview').innerHTML = '';
+        }
+        
+        // Preview media
+        function previewMedia(input) {
+            const file = input.files[0];
+            if (file) {
+                const preview = document.getElementById('mediaPreview');
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    if (file.type.startsWith('image/')) {
+                        preview.innerHTML = `
+                            <img src="${e.target.result}" class="max-w-full h-48 object-cover rounded-lg">
+                        `;
+                    } else if (file.type.startsWith('video/')) {
+                        preview.innerHTML = `
+                            <video src="${e.target.result}" class="max-w-full h-48 object-cover rounded-lg" controls></video>
+                        `;
+                    } else {
+                        preview.innerHTML = `
+                            <div class="flex items-center p-3 bg-gray-100 rounded-lg">
+                                <i class="fas fa-file text-gray-600 text-2xl mr-3"></i>
+                                <div>
+                                    <p class="font-medium">${file.name}</p>
+                                    <p class="text-sm text-gray-500">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    preview.classList.remove('hidden');
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // Create post form submission
+        document.getElementById('createPostForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const content = document.getElementById('postContent').value;
+            const postType = document.querySelector('input[name="postType"]:checked').value;
+            
+            if (!content.trim()) {
+                alert('Please enter post content');
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const formData = new FormData();
+                formData.append('content', content);
+                formData.append('type', postType);
+                
+                const mediaFile = document.getElementById('mediaUpload').files[0];
+                if (mediaFile) {
+                    formData.append('media', mediaFile);
+                }
+                
+                const response = await fetch(`/api/channels/${channelId}/posts`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': token
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('Post published successfully!');
+                    closeCreatePostModal();
+                    addPostToUI(data.post);
+                } else {
+                    alert(data.error || 'Failed to publish post');
+                }
+            } catch (error) {
+                console.error('Failed to create post:', error);
+                alert('Failed to publish post');
+            }
+        });
+        
+        // View post detail
+        async function viewPost(postId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/posts/${postId}`, {
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showPostDetail(data.post);
+                }
+            } catch (error) {
+                console.error('Failed to load post:', error);
+            }
+        }
+        
+        // Show post detail modal
+        function showPostDetail(post) {
+            const modal = document.getElementById('postDetailModal');
+            const container = modal.querySelector('.bg-white');
+            
+            const postDate = new Date(post.createdAt);
+            const formattedDate = postDate.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            container.innerHTML = `
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">${post.title || 'Untitled Post'}</h2>
+                            <p class="text-gray-500">${formattedDate}</p>
+                        </div>
+                        <button onclick="closePostDetail()" class="p-2 hover:bg-gray-100 rounded-full">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="prose max-w-none mb-6">
+                        <p class="text-gray-700 whitespace-pre-line">${post.content}</p>
+                    </div>
+                    
+                    ${post.mediaUrl ? `
+                        <div class="mb-6">
+                            ${post.mediaType === 'image' ? 
+                                `<img src="${post.mediaUrl}" class="w-full rounded-lg">` :
+                                post.mediaType === 'video' ?
+                                `<video src="${post.mediaUrl}" controls class="w-full rounded-lg"></video>` :
+                                `<div class="flex items-center p-4 bg-gray-100 rounded-lg">
+                                    <i class="fas fa-file text-gray-600 text-3xl mr-4"></i>
+                                    <div>
+                                        <p class="font-medium text-lg">File Attachment</p>
+                                        <p class="text-gray-500">Click to download</p>
+                                    </div>
+                                    <a href="${post.mediaUrl}" download class="ml-auto">
+                                        <button class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                                            <i class="fas fa-download mr-2"></i> Download
+                                        </button>
+                                    </a>
+                                </div>`
+                            }
+                        </div>
+                    ` : ''}
+                    
+                    <div class="flex items-center justify-between py-4 border-t border-b border-gray-200">
+                        <div class="flex items-center space-x-6">
+                            <button onclick="likePost('${post._id}')" 
+                                    class="flex items-center space-x-2 ${post.likes?.includes(currentUser._id) ? 'text-red-500' : 'text-gray-500'}">
+                                <i class="${post.likes?.includes(currentUser._id) ? 'fas' : 'far'} fa-heart"></i>
+                                <span>${post.likes?.length || 0}</span>
+                            </button>
+                            <button onclick="focusComments()" 
+                                    class="flex items-center space-x-2 text-gray-500">
+                                <i class="far fa-comment"></i>
+                                <span>${post.comments?.length || 0}</span>
+                            </button>
+                            <button onclick="sharePost('${post._id}')" 
+                                    class="flex items-center space-x-2 text-gray-500">
+                                <i class="fas fa-share"></i>
+                                <span>Share</span>
+                            </button>
+                        </div>
+                        <div class="flex items-center text-gray-500">
+                            <i class="fas fa-eye mr-2"></i>
+                            <span>${post.viewsCount || 0} views</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Comments Section -->
+                    <div class="mt-6">
+                        <h3 class="font-bold text-gray-800 text-lg mb-4">Comments</h3>
+                        <div id="commentsSection" class="space-y-4 mb-4">
+                            <!-- Comments will be loaded here -->
+                        </div>
+                        
+                        <!-- Add Comment -->
+                        <div class="flex space-x-2">
+                            <input type="text" id="commentInput" 
+                                   class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                   placeholder="Add a comment...">
+                            <button onclick="addComment('${post._id}')" 
+                                    class="gradient-bg text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90">
+                                Post
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+            loadComments(post._id);
+            
+            // Increment view count
+            incrementViewCount(post._id);
+        }
+        
+        function closePostDetail() {
+            document.getElementById('postDetailModal').classList.add('hidden');
+        }
+        
+        // Load comments
+        async function loadComments(postId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/posts/${postId}/comments`, {
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    renderComments(data.comments);
+                }
+            } catch (error) {
+                console.error('Failed to load comments:', error);
+            }
+        }
+        
+        // Render comments
+        function renderComments(comments) {
+            const container = document.getElementById('commentsSection');
+            
+            if (!comments || comments.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No comments yet</p>';
+                return;
+            }
+            
+            container.innerHTML = comments.map(comment => `
+                <div class="flex space-x-3">
+                    <img src="${comment.userId.avatar}" class="w-8 h-8 rounded-full">
+                    <div class="flex-1">
+                        <div class="bg-gray-100 rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-medium text-sm">${comment.userId.nickname}</span>
+                                <span class="text-xs text-gray-500">${formatTime(comment.createdAt)}</span>
+                            </div>
+                            <p class="text-gray-700">${comment.content}</p>
+                        </div>
+                        <div class="flex space-x-3 mt-1 ml-4">
+                            <button onclick="likeComment('${comment._id}')" class="text-xs text-gray-500 hover:text-red-500">
+                                Like
+                            </button>
+                            <button onclick="replyToComment('${comment._id}')" class="text-xs text-gray-500 hover:text-blue-500">
+                                Reply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Add comment
+        async function addComment(postId) {
+            const input = document.getElementById('commentInput');
+            const content = input.value.trim();
+            
+            if (!content) return;
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/posts/${postId}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify({ content })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    input.value = '';
+                    loadComments(postId);
+                }
+            } catch (error) {
+                console.error('Failed to add comment:', error);
+            }
+        }
+        
+        // Like post
+        async function likePost(postId, event) {
+            if (event) event.stopPropagation();
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/posts/${postId}/like`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    // Update like count in UI
+                    if (event) {
+                        const postElement = event.target.closest('.post-card');
+                        if (postElement) {
+                            const likeCount = postElement.querySelector('.fa-heart').nextElementSibling;
+                            const currentCount = parseInt(likeCount.textContent) || 0;
+                            likeCount.textContent = data.liked ? currentCount + 1 : currentCount - 1;
+                            
+                            const icon = postElement.querySelector('.fa-heart');
+                            if (data.liked) {
+                                icon.classList.remove('far');
+                                icon.classList.add('fas', 'text-red-500');
+                            } else {
+                                icon.classList.remove('fas', 'text-red-500');
+                                icon.classList.add('far');
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to like post:', error);
+            }
+        }
+        
+        // Share post
+        function sharePost(postId, event) {
+            if (event) event.stopPropagation();
+            
+            const postUrl = `${window.location.origin}/post.html?id=${postId}`;
+            navigator.clipboard.writeText(postUrl).then(() => {
+                alert('Post link copied to clipboard!');
+            });
+        }
+        
+        // Save post
+        async function savePost(postId, event) {
+            if (event) event.stopPropagation();
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/posts/${postId}/save`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert(data.saved ? 'Post saved!' : 'Post removed from saved');
+                }
+            } catch (error) {
+                console.error('Failed to save post:', error);
+            }
+        }
+        
+        // Increment view count
+        async function incrementViewCount(postId) {
+            try {
+                const token = localStorage.getItem('token');
+                await fetch(`/api/posts/${postId}/view`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token }
+                });
+            } catch (error) {
+                console.error('Failed to increment view count:', error);
+            }
+        }
+        
+        // Change channel banner
+        function changeChannelBanner() {
+            alert('Channel banner upload would be implemented');
+        }
+        
+        // Change channel avatar
+        function changeChannelAvatar() {
+            alert('Channel avatar upload would be implemented');
+        }
+        
+        // Manage channel
+        function manageChannel() {
+            alert('Channel management would open a modal');
+        }
+        
+        // Format time
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'just now';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+            if (diff < 86400000) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return date.toLocaleDateString();
+        }
+        
+        // Close modals when clicking outside
+        document.addEventListener('click', (event) => {
+            const createModal = document.getElementById('createPostModal');
+            const detailModal = document.getElementById('postDetailModal');
+            
+            if (createModal && !createModal.contains(event.target) && !event.target.closest('[onclick="createPost()"]')) {
+                if (!createModal.classList.contains('hidden')) {
+                    closeCreatePostModal();
+                }
+            }
+            
+            if (detailModal && event.target === detailModal) {
+                closePostDetail();
+            }
+        });
+    </script>
+</body>
+</html>

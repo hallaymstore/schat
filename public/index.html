@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniConnect - University Student Platform</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <!-- Custom CSS -->
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .diamond-avatar {
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+        }
+        .message-bubble {
+            border-radius: 20px;
+            max-width: 70%;
+        }
+        .message-bubble.sent {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: auto;
+        }
+        .message-bubble.received {
+            background: #f1f5f9;
+            color: #334155;
+        }
+        .stat-card {
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-graduation-cap text-purple-600 text-2xl"></i>
+                    <span class="text-xl font-bold text-gray-800">UniConnect</span>
+                </div>
+                <div class="hidden md:flex space-x-6">
+                    <a href="#features" class="text-gray-600 hover:text-purple-600">Features</a>
+                    <a href="#about" class="text-gray-600 hover:text-purple-600">About</a>
+                    <a href="/login.html" class="text-gray-600 hover:text-purple-600">Login</a>
+                </div>
+                <a href="/register.html" class="bg-purple-600 text-white px-6 py-2 rounded-full hover:bg-purple-700 transition">
+                    Register Free
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg text-white py-20">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-5xl md:text-6xl font-bold mb-6 animate__animated animate__fadeIn">
+                Connect with Your University Community
+            </h1>
+            <p class="text-xl md:text-2xl mb-8 opacity-90">
+                Real-time chat, study groups, and campus channels - all in one place.
+            </p>
+            <div class="flex flex-col md:flex-row justify-center gap-4 mb-12">
+                <a href="/register.html" class="bg-white text-purple-600 px-8 py-3 rounded-full text-lg font-semibold hover:bg-gray-100 transition">
+                    Start Chatting Now
+                </a>
+                <a href="#features" class="border-2 border-white px-8 py-3 rounded-full text-lg hover:bg-white hover:text-purple-600 transition">
+                    Learn More
+                </a>
+            </div>
+            
+            <!-- Stats Counter -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+                <div class="stat-card bg-white/10 backdrop-blur-sm p-6 rounded-2xl">
+                    <div class="text-4xl font-bold mb-2" id="usersCount">0</div>
+                    <div class="text-sm opacity-80">Active Students</div>
+                </div>
+                <div class="stat-card bg-white/10 backdrop-blur-sm p-6 rounded-2xl">
+                    <div class="text-4xl font-bold mb-2" id="messagesCount">0</div>
+                    <div class="text-sm opacity-80">Messages Today</div>
+                </div>
+                <div class="stat-card bg-white/10 backdrop-blur-sm p-6 rounded-2xl">
+                    <div class="text-4xl font-bold mb-2" id="groupsCount">0</div>
+                    <div class="text-sm opacity-80">Study Groups</div>
+                </div>
+                <div class="stat-card bg-white/10 backdrop-blur-sm p-6 rounded-2xl">
+                    <div class="text-4xl font-bold mb-2" id="channelsCount">0</div>
+                    <div class="text-sm opacity-80">Campus Channels</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <h2 class="text-4xl font-bold text-center mb-12 text-gray-800">Platform Features</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="p-6 rounded-2xl shadow-lg hover:shadow-xl transition">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-comments text-purple-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Real-Time Chat</h3>
+                    <p class="text-gray-600">Instant messaging with friends and classmates. Share text, images, and videos.</p>
+                </div>
+                <div class="p-6 rounded-2xl shadow-lg hover:shadow-xl transition">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-users text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Study Groups</h3>
+                    <p class="text-gray-600">Create or join study groups. Collaborate on projects and share resources.</p>
+                </div>
+                <div class="p-6 rounded-2xl shadow-lg hover:shadow-xl transition">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-broadcast-tower text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Campus Channels</h3>
+                    <p class="text-gray-600">Follow campus announcements, events, and important updates.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="gradient-bg text-white py-16">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-3xl font-bold mb-6">Ready to Connect?</h2>
+            <p class="text-xl mb-8 opacity-90">Join thousands of students already using UniConnect</p>
+            <a href="/register.html" class="bg-white text-purple-600 px-10 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transition inline-block">
+                Create Free Account
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="text-center">
+                <div class="flex justify-center space-x-6 mb-4">
+                    <a href="#" class="hover:text-purple-300"><i class="fab fa-facebook"></i></a>
+                    <a href="#" class="hover:text-purple-300"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="hover:text-purple-300"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="hover:text-purple-300"><i class="fab fa-linkedin"></i></a>
+                </div>
+                <p class="text-gray-400">© 2024 UniConnect. All rights reserved.</p>
+                <p class="text-gray-500 text-sm mt-2">Made for university students worldwide</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Animated counters
+        function animateCounter(element, target) {
+            let current = 0;
+            const increment = target / 100;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = Math.round(target);
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.round(current);
+                }
+            }, 20);
+        }
+
+        // Load stats
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats?increment=true');
+                const data = await response.json();
+                if (data.success) {
+                    animateCounter(document.getElementById('usersCount'), data.stats.totalUsers || 1250);
+                    animateCounter(document.getElementById('messagesCount'), data.stats.totalMessages || 54320);
+                    animateCounter(document.getElementById('groupsCount'), data.stats.totalGroups || 350);
+                    animateCounter(document.getElementById('channelsCount'), data.stats.totalChannels || 45);
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // Check if user is already logged in
+        async function checkAuth() {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    const response = await fetch('/api/me', {
+                        headers: { 'Authorization': token }
+                    });
+                    if (response.ok) {
+                        window.location.href = '/messages.html';
+                    }
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            checkAuth();
+        });
+    </script>
+</body>
+</html>

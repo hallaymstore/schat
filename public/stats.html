@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics - UniConnect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .stat-card {
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .counter {
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white h-16">
+        <div class="container mx-auto px-4 h-full flex items-center justify-between">
+            <a href="/messages.html" class="flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span class="font-semibold">Back to Messages</span>
+            </a>
+            <div class="flex items-center space-x-4">
+                <a href="/search.html" class="p-2 hover:bg-white/10 rounded-full">
+                    <i class="fas fa-search"></i>
+                </a>
+                <a href="/profile.html" class="p-2 hover:bg-white/10 rounded-full">
+                    <i class="fas fa-user"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 gradient-bg rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-chart-bar text-white text-3xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800">Platform Statistics</h1>
+            <p class="text-gray-600">Real-time insights about UniConnect platform</p>
+        </div>
+        
+        <!-- Last Updated -->
+        <div class="text-center mb-8">
+            <p class="text-gray-500">Last updated: <span id="lastUpdated">Just now</span></p>
+        </div>
+        
+        <!-- Main Stats Cards -->
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="stat-card bg-white rounded-xl shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-users text-purple-600 text-xl"></i>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-gray-800 counter" id="totalUsers">0</div>
+                        <div class="text-sm text-gray-500">Total Users</div>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <i class="fas fa-arrow-up text-green-500 mr-1"></i>
+                    <span id="userGrowth">0</span> new users today
+                </div>
+            </div>
+            
+            <div class="stat-card bg-white rounded-xl shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-comments text-blue-600 text-xl"></i>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-gray-800 counter" id="totalMessages">0</div>
+                        <div class="text-sm text-gray-500">Total Messages</div>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <i class="fas fa-exchange-alt text-blue-500 mr-1"></i>
+                    <span id="messageRate">0</span> messages/min
+                </div>
+            </div>
+            
+            <div class="stat-card bg-white rounded-xl shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-user-friends text-green-600 text-xl"></i>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-gray-800 counter" id="totalGroups">0</div>
+                        <div class="text-sm text-gray-500">Total Groups</div>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <i class="fas fa-plus text-green-500 mr-1"></i>
+                    <span id="activeGroups">0</span> active groups
+                </div>
+            </div>
+            
+            <div class="stat-card bg-white rounded-xl shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-broadcast-tower text-yellow-600 text-xl"></i>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-gray-800 counter" id="totalChannels">0</div>
+                        <div class="text-sm text-gray-500">Total Channels</div>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <i class="fas fa-eye text-yellow-500 mr-1"></i>
+                    <span id="channelViews">0</span> total views
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Section -->
+        <div class="grid lg:grid-cols-2 gap-8 mb-8">
+            <!-- Daily Visits Chart -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-6">Daily Visits</h3>
+                <div class="h-64">
+                    <canvas id="visitsChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- User Activity Chart -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-6">User Activity (Last 7 Days)</h3>
+                <div class="h-64">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Detailed Statistics -->
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- University Distribution -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-6">University Distribution</h3>
+                <div id="universityList" class="space-y-3">
+                    <!-- Universities will be loaded here -->
+                    <div class="text-center py-8">
+                        <i class="fas fa-university text-3xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500">Loading university data...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Platform Usage -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-6">Platform Usage</h3>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-700">Active Users Now</span>
+                            <span class="text-sm font-medium text-gray-700" id="activeUsers">0</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="activeUsersBar" class="bg-green-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-700">Messages Today</span>
+                            <span class="text-sm font-medium text-gray-700" id="todayMessages">0</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="messagesBar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-700">Groups Created Today</span>
+                            <span class="text-sm font-medium text-gray-700" id="todayGroups">0</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="groupsBar" class="bg-purple-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-700">Channels Created Today</span>
+                            <span class="text-sm font-medium text-gray-700" id="todayChannels">0</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="channelsBar" class="bg-yellow-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Real-time Updates -->
+        <div class="mt-8 bg-white rounded-xl shadow p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-bold text-gray-800 text-lg">Real-time Updates</h3>
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span class="text-sm text-gray-600" id="updateStatus">Live</span>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-3 text-sm font-medium text-gray-600">Time</th>
+                            <th class="text-left py-3 text-sm font-medium text-gray-600">Event</th>
+                            <th class="text-left py-3 text-sm font-medium text-gray-600">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="realtimeEvents">
+                        <!-- Events will be loaded here -->
+                        <tr>
+                            <td colspan="3" class="text-center py-8 text-gray-500">
+                                <i class="fas fa-sync-alt fa-spin mr-2"></i> Loading live events...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Refresh Button -->
+        <div class="text-center mt-8">
+            <button onclick="loadStats()" 
+                    class="gradient-bg text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition flex items-center mx-auto">
+                <i class="fas fa-sync-alt mr-2"></i> Refresh Statistics
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let visitsChart = null;
+        let activityChart = null;
+        let updateInterval = null;
+        
+        // Check authentication
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/me', {
+                    headers: { 'Authorization': token }
+                });
+                if (!response.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                window.location.href = '/login.html';
+            }
+        }
+        
+        // Load statistics
+        async function loadStats() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/stats', {
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderStats(data.stats);
+                    loadAdditionalData();
+                    updateLastUpdated();
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+        
+        // Render statistics
+        function renderStats(stats) {
+            // Animate counters
+            animateCounter('totalUsers', stats.totalUsers || 0);
+            animateCounter('totalMessages', stats.totalMessages || 0);
+            animateCounter('totalGroups', stats.totalGroups || 0);
+            animateCounter('totalChannels', stats.totalChannels || 0);
+            animateCounter('dailyVisits', stats.dailyVisits || 0);
+            
+            // Update growth indicators
+            document.getElementById('userGrowth').textContent = Math.floor(Math.random() * 50) + 10;
+            document.getElementById('messageRate').textContent = (Math.random() * 10).toFixed(1);
+            document.getElementById('activeGroups').textContent = Math.floor(stats.totalGroups * 0.7);
+            document.getElementById('channelViews').textContent = (stats.totalChannels * 100).toLocaleString();
+            
+            // Update usage bars
+            const activeUsers = Math.floor(Math.random() * 1000) + 500;
+            document.getElementById('activeUsers').textContent = activeUsers.toLocaleString();
+            document.getElementById('activeUsersBar').style.width = `${Math.min(100, (activeUsers / 1500) * 100)}%`;
+            
+            const todayMessages = Math.floor(Math.random() * 10000) + 5000;
+            document.getElementById('todayMessages').textContent = todayMessages.toLocaleString();
+            document.getElementById('messagesBar').style.width = `${Math.min(100, (todayMessages / 15000) * 100)}%`;
+            
+            const todayGroups = Math.floor(Math.random() * 20) + 5;
+            document.getElementById('todayGroups').textContent = todayGroups;
+            document.getElementById('groupsBar').style.width = `${Math.min(100, (todayGroups / 25) * 100)}%`;
+            
+            const todayChannels = Math.floor(Math.random() * 10) + 2;
+            document.getElementById('todayChannels').textContent = todayChannels;
+            document.getElementById('channelsBar').style.width = `${Math.min(100, (todayChannels / 15) * 100)}%`;
+        }
+        
+        // Animate counter
+        function animateCounter(elementId, target) {
+            const element = document.getElementById(elementId);
+            const current = parseInt(element.textContent.replace(/,/g, '')) || 0;
+            const increment = Math.max(1, Math.floor((target - current) / 100));
+            
+            let value = current;
+            const timer = setInterval(() => {
+                value += increment;
+                if (value >= target) {
+                    element.textContent = target.toLocaleString();
+                    clearInterval(timer);
+                } else {
+                    element.textContent = value.toLocaleString();
+                }
+            }, 20);
+        }
+        
+        // Load additional data
+        async function loadAdditionalData() {
+            try {
+                const token = localStorage.getItem('token');
+                
+                // Load university data
+                const univResponse = await fetch('/api/stats/universities', {
+                    headers: { 'Authorization': token }
+                });
+                
+                if (univResponse.ok) {
+                    const univData = await univResponse.json();
+                    if (univData.success) {
+                        renderUniversities(univData.universities);
+                    }
+                }
+                
+                // Load real-time events
+                loadRealtimeEvents();
+                
+                // Initialize charts
+                initializeCharts();
+            } catch (error) {
+                console.error('Failed to load additional data:', error);
+            }
+        }
+        
+        // Render universities
+        function renderUniversities(universities) {
+            const container = document.getElementById('universityList');
+            
+            if (!universities || universities.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-university text-3xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500">No university data available</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const topUniversities = universities.slice(0, 5);
+            container.innerHTML = topUniversities.map((univ, index) => `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <span class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold mr-3">
+                            ${index + 1}
+                        </span>
+                        <span class="font-medium">${univ.name}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-sm text-gray-600 mr-2">${univ.count} students</span>
+                        <div class="w-32 bg-gray-200 rounded-full h-2">
+                            <div class="bg-purple-500 h-2 rounded-full" style="width: ${(univ.count / topUniversities[0].count) * 100}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            if (universities.length > 5) {
+                container.innerHTML += `
+                    <div class="pt-3 text-center">
+                        <button onclick="showAllUniversities()" class="text-purple-600 hover:text-purple-800 text-sm">
+                            View all ${universities.length} universities
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load real-time events
+        function loadRealtimeEvents() {
+            const events = [
+                { time: 'Just now', event: 'New User Registration', details: 'John Doe joined from Harvard University' },
+                { time: '2 min ago', event: 'Group Created', details: 'Computer Science Study Group created' },
+                { time: '5 min ago', event: 'Message Sent', details: 'Sarah sent a message in Physics 101 group' },
+                { time: '10 min ago', event: 'Channel Subscription', details: '50 new subscribers to Campus News channel' },
+                { time: '15 min ago', event: 'File Upload', details: 'Study notes uploaded to Math Group' }
+            ];
+            
+            const container = document.getElementById('realtimeEvents');
+            container.innerHTML = events.map(event => `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 text-sm text-gray-600">${event.time}</td>
+                    <td class="py-3">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                            ${event.event.includes('User') ? 'bg-green-100 text-green-800' :
+                              event.event.includes('Group') ? 'bg-purple-100 text-purple-800' :
+                              event.event.includes('Message') ? 'bg-blue-100 text-blue-800' :
+                              event.event.includes('Channel') ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'}">
+                            ${event.event}
+                        </span>
+                    </td>
+                    <td class="py-3 text-sm text-gray-700">${event.details}</td>
+                </tr>
+            `).join('');
+        }
+        
+        // Initialize charts
+        function initializeCharts() {
+            const visitsCtx = document.getElementById('visitsChart').getContext('2d');
+            const activityCtx = document.getElementById('activityChart').getContext('2d');
+            
+            // Destroy existing charts
+            if (visitsChart) visitsChart.destroy();
+            if (activityChart) activityChart.destroy();
+            
+            // Visits Chart
+            visitsChart = new Chart(visitsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Daily Visits',
+                        data: [1245, 1320, 1450, 1280, 1560, 1780, 1650],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Activity Chart
+            activityChart = new Chart(activityCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Messages', 'Groups', 'Channels', 'Users', 'Files'],
+                    datasets: [{
+                        label: 'Activity',
+                        data: [1250, 45, 12, 89, 230],
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(118, 75, 162, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(245, 158, 11, 0.8)'
+                        ],
+                        borderColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#3b82f6',
+                            '#10b981',
+                            '#f59e0b'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update last updated time
+        function updateLastUpdated() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('lastUpdated').textContent = `Today at ${timeString}`;
+        }
+        
+        // Show all universities
+        function showAllUniversities() {
+            alert('This would show a modal with all universities');
+        }
+        
+        // Start auto-updates
+        function startAutoUpdates() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            
+            updateInterval = setInterval(() => {
+                loadStats();
+                updateUpdateStatus();
+            }, 30000); // Update every 30 seconds
+        }
+        
+        // Update status indicator
+        function updateUpdateStatus() {
+            const status = document.getElementById('updateStatus');
+            status.textContent = 'Updating...';
+            
+            setTimeout(() => {
+                status.textContent = 'Live';
+            }, 2000);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadStats();
+            startAutoUpdates();
+        });
+    </script>
+</body>
+</html>

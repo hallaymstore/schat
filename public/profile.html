@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - UniConnect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .diamond-avatar {
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+        }
+        .profile-tab {
+            transition: all 0.3s ease;
+        }
+        .profile-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .edit-input:focus {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white h-16">
+        <div class="container mx-auto px-4 h-full flex items-center justify-between">
+            <a href="/messages.html" class="flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span class="font-semibold">Back to Messages</span>
+            </a>
+            <div class="flex items-center space-x-4">
+                <button onclick="saveProfile()" id="saveBtn" 
+                        class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition hidden">
+                    <i class="fas fa-save mr-2"></i> Save Changes
+                </button>
+                <a href="#" onclick="logout()" class="p-2 hover:bg-white/10 rounded-full">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Profile Container -->
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Profile Header -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+            <!-- Cover Photo -->
+            <div class="h-48 gradient-bg relative">
+                <button onclick="changeCoverPhoto()" 
+                        class="absolute top-4 right-4 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition">
+                    <i class="fas fa-camera mr-2"></i> Change Cover
+                </button>
+            </div>
+            
+            <!-- Profile Info -->
+            <div class="px-8 pb-8 -mt-16 relative">
+                <!-- Avatar -->
+                <div class="relative inline-block">
+                    <img id="profileAvatar" src="https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png" 
+                         class="w-32 h-32 diamond-avatar border-4 border-white shadow-lg">
+                    <button onclick="changeAvatar()" 
+                            class="absolute bottom-2 right-2 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition">
+                        <i class="fas fa-camera text-sm"></i>
+                    </button>
+                </div>
+                
+                <!-- Profile Details -->
+                <div class="mt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h1 id="profileName" class="text-2xl font-bold text-gray-800"></h1>
+                            <p id="profileUsername" class="text-gray-600">@username</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div id="onlineStatus" class="flex items-center px-3 py-1 rounded-full text-sm">
+                                <span class="w-2 h-2 rounded-full mr-2 bg-green-500"></span>
+                                <span>Online</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p id="profileBio" class="text-gray-700 mb-4"></p>
+                    
+                    <!-- Stats -->
+                    <div class="flex space-x-6 mb-6">
+                        <div class="text-center">
+                            <div class="text-xl font-bold text-gray-800" id="friendsCount">0</div>
+                            <div class="text-sm text-gray-600">Friends</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xl font-bold text-gray-800" id="groupsCount">0</div>
+                            <div class="text-sm text-gray-600">Groups</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xl font-bold text-gray-800" id="messagesCount">0</div>
+                            <div class="text-sm text-gray-600">Messages</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-3">
+                        <button onclick="editProfile()" 
+                                class="gradient-bg text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition">
+                            <i class="fas fa-edit mr-2"></i> Edit Profile
+                        </button>
+                        <button onclick="shareProfile()" 
+                                class="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-50 transition">
+                            <i class="fas fa-share-alt mr-2"></i> Share Profile
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Tabs -->
+        <div class="flex border-b border-gray-200 mb-6 overflow-x-auto">
+            <button onclick="switchTab('info')" 
+                    class="profile-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap active">
+                <i class="fas fa-info-circle mr-2"></i> Basic Info
+            </button>
+            <button onclick="switchTab('education')" 
+                    class="profile-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
+                <i class="fas fa-graduation-cap mr-2"></i> Education
+            </button>
+            <button onclick="switchTab('settings')" 
+                    class="profile-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
+                <i class="fas fa-cog mr-2"></i> Settings
+            </button>
+            <button onclick="switchTab('activity')" 
+                    class="profile-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
+                <i class="fas fa-chart-line mr-2"></i> Activity
+            </button>
+        </div>
+        
+        <!-- Tab Content -->
+        <div id="tabContent">
+            <!-- Basic Info Tab -->
+            <div id="infoTab" class="space-y-6">
+                <!-- Personal Information -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Personal Information</h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                            <input type="text" id="editFullName" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                   placeholder="Full Name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nickname</label>
+                            <input type="text" id="editNickname" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                   placeholder="Nickname">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-3 text-gray-400">@</span>
+                                <input type="text" id="editUsername" 
+                                       class="w-full pl-8 px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                       placeholder="username">
+                                <div class="text-xs text-gray-500 mt-1" id="usernameChangeInfo">
+                                    Username can be changed once every 15 days
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                            <input type="tel" id="editPhone" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                   placeholder="Phone Number">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            <input type="email" id="editEmail" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                   placeholder="Email Address">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                            <textarea id="editBio" rows="3" 
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                      placeholder="Tell others about yourself..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Privacy Settings -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Privacy Settings</h3>
+                    <div class="space-y-4">
+                        <label class="flex items-center justify-between">
+                            <div>
+                                <span class="font-medium text-gray-700">Profile Visibility</span>
+                                <p class="text-sm text-gray-500">Who can see your profile?</p>
+                            </div>
+                            <select id="profileVisibility" 
+                                    class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option value="public">Everyone</option>
+                                <option value="university">University Only</option>
+                                <option value="friends">Friends Only</option>
+                                <option value="private">Private</option>
+                            </select>
+                        </label>
+                        
+                        <label class="flex items-center">
+                            <input type="checkbox" id="showOnlineStatus" 
+                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                            <span class="ml-2 text-gray-700">Show online status</span>
+                        </label>
+                        
+                        <label class="flex items-center">
+                            <input type="checkbox" id="showLastSeen" 
+                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                            <span class="ml-2 text-gray-700">Show last seen</span>
+                        </label>
+                        
+                        <label class="flex items-center">
+                            <input type="checkbox" id="allowMessageRequests" 
+                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                            <span class="ml-2 text-gray-700">Allow message requests from anyone</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Education Tab -->
+            <div id="educationTab" class="space-y-6 hidden">
+                <!-- University Information -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">University Information</h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">University</label>
+                            <select id="editUniversity" 
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                                <option value="">Select University</option>
+                                <option value="Harvard University">Harvard University</option>
+                                <option value="Stanford University">Stanford University</option>
+                                <option value="MIT">Massachusetts Institute of Technology</option>
+                                <option value="Cambridge University">Cambridge University</option>
+                                <option value="Oxford University">Oxford University</option>
+                                <option value="Other">Other University</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Study Group/Class</label>
+                            <input type="text" id="editStudyGroup" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                   placeholder="e.g., CS-101, Math-202">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Major/Field of Study</label>
+                            <input type="text" id="editMajor" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                   placeholder="e.g., Computer Science">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Year of Study</label>
+                            <select id="editYear" 
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                                <option value="">Select Year</option>
+                                <option value="Freshman">Freshman</option>
+                                <option value="Sophomore">Sophomore</option>
+                                <option value="Junior">Junior</option>
+                                <option value="Senior">Senior</option>
+                                <option value="Graduate">Graduate</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Courses -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-800 text-lg">Current Courses</h3>
+                        <button onclick="addCourse()" 
+                                class="text-purple-600 hover:text-purple-800 text-sm font-medium">
+                            <i class="fas fa-plus mr-1"></i> Add Course
+                        </button>
+                    </div>
+                    <div id="coursesList" class="space-y-3">
+                        <!-- Courses will be added here -->
+                        <div class="text-center py-4 text-gray-500">
+                            <i class="fas fa-book-open text-2xl mb-2"></i>
+                            <p>No courses added yet</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Study Interests -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Study Interests</h3>
+                    <div class="space-y-4">
+                        <textarea id="studyInterests" rows="3" 
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                  placeholder="What subjects are you interested in studying?"></textarea>
+                        <div class="flex flex-wrap gap-2" id="interestTags">
+                            <!-- Interest tags will be added here -->
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            Add interests to find study partners with similar goals
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Settings Tab -->
+            <div id="settingsTab" class="space-y-6 hidden">
+                <!-- Account Settings -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Account Settings</h3>
+                    <div class="space-y-4">
+                        <button onclick="changePassword()" 
+                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-gray-800">Change Password</div>
+                                    <div class="text-sm text-gray-500">Update your account password</div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
+                            </div>
+                        </button>
+                        
+                        <button onclick="changeEmail()" 
+                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-gray-800">Change Email</div>
+                                    <div class="text-sm text-gray-500">Update your email address</div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
+                            </div>
+                        </button>
+                        
+                        <button onclick="manageDevices()" 
+                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-gray-800">Manage Devices</div>
+                                    <div class="text-sm text-gray-500">View and manage logged-in devices</div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
+                            </div>
+                        </button>
+                        
+                        <button onclick="deleteAccount()" 
+                                class="w-full text-left p-3 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium">Delete Account</div>
+                                    <div class="text-sm">Permanently delete your account</div>
+                                </div>
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Notification Settings -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Notification Settings</h3>
+                    <div class="space-y-4">
+                        <label class="flex items-center justify-between">
+                            <div>
+                                <span class="font-medium text-gray-700">Message Notifications</span>
+                                <p class="text-sm text-gray-500">Receive notifications for new messages</p>
+                            </div>
+                            <input type="checkbox" id="messageNotifications" 
+                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500" checked>
+                        </label>
+                        
+                        <label class="flex items-center justify-between">
+                            <div>
+                                <span class="font-medium text-gray-700">Group Notifications</span>
+                                <p class="text-sm text-gray-500">Notifications for group activities</p>
+                            </div>
+                            <input type="checkbox" id="groupNotifications" 
+                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500" checked>
+                        </label>
+                        
+                        <label class="flex items-center justify-between">
+                            <div>
+                                <span class="font-medium text-gray-700">Channel Notifications</span>
+                                <p class="text-sm text-gray-500">Notifications for channel updates</p>
+                            </div>
+                            <input type="checkbox" id="channelNotifications" 
+                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500" checked>
+                        </label>
+                        
+                        <label class="flex items-center justify-between">
+                            <div>
+                                <span class="font-medium text-gray-700">Email Notifications</span>
+                                <p class="text-sm text-gray-500">Receive notifications via email</p>
+                            </div>
+                            <input type="checkbox" id="emailNotifications" 
+                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Theme Settings -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Theme & Display</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="theme" value="light" 
+                                           class="text-purple-600 focus:ring-purple-500" checked>
+                                    <span class="ml-2">Light</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="theme" value="dark" 
+                                           class="text-purple-600 focus:ring-purple-500">
+                                    <span class="ml-2">Dark</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="theme" value="auto" 
+                                           class="text-purple-600 focus:ring-purple-500">
+                                    <span class="ml-2">Auto</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Chat Bubble Style</label>
+                            <select id="chatBubbleStyle" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option value="rounded">Rounded</option>
+                                <option value="square">Square</option>
+                                <option value="modern">Modern</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Font Size</label>
+                            <select id="fontSize" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option value="small">Small</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Activity Tab -->
+            <div id="activityTab" class="space-y-6 hidden">
+                <!-- Activity Stats -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-6">Activity Overview</h3>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="text-center p-4 bg-purple-50 rounded-lg">
+                            <div class="text-2xl font-bold text-purple-600" id="totalActivity">0</div>
+                            <div class="text-sm text-gray-600">Total Messages</div>
+                        </div>
+                        <div class="text-center p-4 bg-blue-50 rounded-lg">
+                            <div class="text-2xl font-bold text-blue-600" id="activeDays">0</div>
+                            <div class="text-sm text-gray-600">Active Days</div>
+                        </div>
+                        <div class="text-center p-4 bg-green-50 rounded-lg">
+                            <div class="text-2xl font-bold text-green-600" id="avgMessages">0</div>
+                            <div class="text-sm text-gray-600">Avg. Daily Messages</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Recent Activity</h3>
+                    <div id="activityList" class="space-y-3">
+                        <!-- Activities will be loaded here -->
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-history text-2xl mb-2"></i>
+                            <p>No recent activity</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Export Data -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Data Management</h3>
+                    <div class="space-y-3">
+                        <button onclick="exportData()" 
+                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-gray-800">Export My Data</div>
+                                    <div class="text-sm text-gray-500">Download all your messages and data</div>
+                                </div>
+                                <i class="fas fa-download text-gray-400"></i>
+                            </div>
+                        </button>
+                        
+                        <button onclick="clearHistory()" 
+                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-gray-800">Clear Chat History</div>
+                                    <div class="text-sm text-gray-500">Delete all your message history</div>
+                                </div>
+                                <i class="fas fa-trash text-gray-400"></i>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Avatar Modal -->
+    <div id="avatarModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl w-full max-w-md">
+            <div class="p-6">
+                <h3 class="text-xl font-bold mb-4">Change Profile Picture</h3>
+                
+                <div class="space-y-4">
+                    <!-- Current Avatar -->
+                    <div class="text-center">
+                        <img id="currentAvatar" src="" class="w-32 h-32 diamond-avatar mx-auto mb-4">
+                    </div>
+                    
+                    <!-- Upload Options -->
+                    <div class="space-y-3">
+                        <button onclick="uploadNewAvatar()" 
+                                class="w-full border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-purple-500 hover:bg-purple-50 transition text-center">
+                            <i class="fas fa-upload text-2xl text-gray-400 mb-2"></i>
+                            <div class="font-medium text-gray-700">Upload New Photo</div>
+                            <div class="text-sm text-gray-500">JPG, PNG up to 5MB</div>
+                        </button>
+                        
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="selectAvatar('avatar1.jpg')" 
+                                    class="p-2 border border-gray-300 rounded-lg hover:border-purple-500">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=1" class="w-full rounded">
+                            </button>
+                            <button onclick="selectAvatar('avatar2.jpg')" 
+                                    class="p-2 border border-gray-300 rounded-lg hover:border-purple-500">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=2" class="w-full rounded">
+                            </button>
+                            <button onclick="selectAvatar('avatar3.jpg')" 
+                                    class="p-2 border border-gray-300 rounded-lg hover:border-purple-500">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=3" class="w-full rounded">
+                            </button>
+                            <button onclick="selectAvatar('avatar4.jpg')" 
+                                    class="p-2 border border-gray-300 rounded-lg hover:border-purple-500">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=4" class="w-full rounded">
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex space-x-3 pt-4">
+                        <button onclick="closeAvatarModal()" 
+                                class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition">
+                            Cancel
+                        </button>
+                        <button onclick="saveAvatar()" 
+                                class="flex-1 gradient-bg text-white py-2 rounded-lg font-semibold hover:opacity-90 transition">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let isEditing = false;
+        let originalData = {};
+        let currentTab = 'info';
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+            await loadProfile();
+            setupEventListeners();
+        });
+        
+        // Authentication
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/me', {
+                    headers: { 'Authorization': token }
+                });
+                
+                if (!response.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                window.location.href = '/login.html';
+            }
+        }
+        
+        // Load profile
+        async function loadProfile() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/me', {
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser = data.user;
+                    renderProfile(data.user);
+                    loadProfileStats();
+                    loadActivity();
+                }
+            } catch (error) {
+                console.error('Failed to load profile:', error);
+            }
+        }
+        
+        // Render profile
+        function renderProfile(user) {
+            // Basic info
+            document.getElementById('profileAvatar').src = user.avatar;
+            document.getElementById('profileName').textContent = user.nickname;
+            document.getElementById('profileUsername').textContent = `@${user.username}`;
+            document.getElementById('profileBio').textContent = user.bio || 'No bio yet';
+            
+            // Online status
+            const statusDiv = document.getElementById('onlineStatus');
+            const statusSpan = statusDiv.querySelector('span');
+            statusSpan.className = `w-2 h-2 rounded-full mr-2 ${user.isOnline ? 'bg-green-500' : 'bg-gray-400'}`;
+            statusDiv.querySelector('span:last-child').textContent = user.isOnline ? 'Online' : 'Offline';
+            
+            // Edit fields
+            document.getElementById('editFullName').value = user.fullName || '';
+            document.getElementById('editNickname').value = user.nickname || '';
+            document.getElementById('editUsername').value = user.username || '';
+            document.getElementById('editPhone').value = user.phone || '';
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editBio').value = user.bio || '';
+            document.getElementById('editUniversity').value = user.university || '';
+            document.getElementById('editStudyGroup').value = user.studyGroup || '';
+            
+            // Store original data
+            originalData = { ...user };
+            
+            // Check username change eligibility
+            checkUsernameChangeEligibility(user);
+        }
+        
+        // Check username change eligibility
+        function checkUsernameChangeEligibility(user) {
+            if (user.lastUsernameChange) {
+                const lastChange = new Date(user.lastUsernameChange);
+                const fifteenDaysAgo = new Date();
+                fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+                
+                if (lastChange > fifteenDaysAgo) {
+                    const nextChangeDate = new Date(lastChange);
+                    nextChangeDate.setDate(nextChangeDate.getDate() + 15);
+                    
+                    document.getElementById('usernameChangeInfo').innerHTML = `
+                        <span class="text-yellow-600">
+                            <i class="fas fa-clock mr-1"></i>
+                            Username can be changed on ${nextChangeDate.toLocaleDateString()}
+                        </span>
+                    `;
+                    document.getElementById('editUsername').disabled = true;
+                } else {
+                    document.getElementById('usernameChangeInfo').innerHTML = `
+                        <span class="text-green-600">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            Username can be changed
+                        </span>
+                    `;
+                    document.getElementById('editUsername').disabled = false;
+                }
+            } else {
+                document.getElementById('usernameChangeInfo').innerHTML = `
+                    <span class="text-green-600">
+                        <i class="fas fa-check-circle mr-1"></i>
+                        Username can be changed
+                    </span>
+                `;
+                document.getElementById('editUsername').disabled = false;
+            }
+        }
+        
+        // Load profile stats
+        async function loadProfileStats() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/profile/stats', {
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('friendsCount').textContent = data.stats.friends || 0;
+                    document.getElementById('groupsCount').textContent = data.stats.groups || 0;
+                    document.getElementById('messagesCount').textContent = data.stats.messages || 0;
+                }
+            } catch (error) {
+                console.error('Failed to load profile stats:', error);
+            }
+        }
+        
+        // Load activity
+        async function loadActivity() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/profile/activity', {
+                    headers: { 'Authorization': token }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('totalActivity').textContent = data.activity.totalMessages || 0;
+                    document.getElementById('activeDays').textContent = data.activity.activeDays || 0;
+                    document.getElementById('avgMessages').textContent = data.activity.avgMessages || 0;
+                    
+                    renderActivityList(data.activity.recent);
+                }
+            } catch (error) {
+                console.error('Failed to load activity:', error);
+            }
+        }
+        
+        // Render activity list
+        function renderActivityList(activities) {
+            const container = document.getElementById('activityList');
+            
+            if (!activities || activities.length === 0) {
+                return;
+            }
+            
+            container.innerHTML = activities.map(activity => `
+                <div class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3
+                        ${activity.type === 'message' ? 'bg-blue-100 text-blue-600' :
+                          activity.type === 'group' ? 'bg-purple-100 text-purple-600' :
+                          activity.type === 'channel' ? 'bg-yellow-100 text-yellow-600' :
+                          'bg-gray-100 text-gray-600'}">
+                        <i class="fas fa-${activity.icon || 'comment'}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800">${activity.description}</p>
+                        <p class="text-sm text-gray-500">${formatTime(activity.timestamp)}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Edit profile
+        function editProfile() {
+            isEditing = true;
+            document.getElementById('saveBtn').classList.remove('hidden');
+            
+            // Enable all edit inputs
+            document.querySelectorAll('.edit-input').forEach(input => {
+                if (!input.disabled) {
+                    input.removeAttribute('readonly');
+                }
+            });
+            
+            // Show edit mode
+            document.querySelectorAll('[id^="edit"]').forEach(element => {
+                if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT') {
+                    element.classList.add('bg-gray-50');
+                }
+            });
+        }
+        
+        // Save profile
+        async function saveProfile() {
+            const updates = {
+                fullName: document.getElementById('editFullName').value,
+                nickname: document.getElementById('editNickname').value,
+                username: document.getElementById('editUsername').value,
+                phone: document.getElementById('editPhone').value,
+                email: document.getElementById('editEmail').value,
+                bio: document.getElementById('editBio').value,
+                university: document.getElementById('editUniversity').value,
+                studyGroup: document.getElementById('editStudyGroup').value
+            };
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify(updates)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Profile updated successfully!');
+                    isEditing = false;
+                    document.getElementById('saveBtn').classList.add('hidden');
+                    
+                    // Update displayed profile
+                    currentUser = data.user;
+                    renderProfile(data.user);
+                    
+                    // Disable edit inputs
+                    document.querySelectorAll('.edit-input').forEach(input => {
+                        input.setAttribute('readonly', true);
+                        input.classList.remove('bg-gray-50');
+                    });
+                } else {
+                    alert(data.error || 'Failed to update profile');
+                }
+            } catch (error) {
+                console.error('Failed to save profile:', error);
+                alert('Failed to update profile');
+            }
+        }
+        
+        // Switch tab
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // Hide all tab contents
+            document.querySelectorAll('[id$="Tab"]').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Show selected tab content
+            document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+            
+            // Update tab styles
+            document.querySelectorAll('.profile-tab').forEach(btn => {
+                btn.classList.remove('active', 'text-white');
+                btn.classList.add('text-gray-600', 'hover:text-purple-600');
+            });
+            
+            // Active current tab
+            const activeTab = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+            if (activeTab) {
+                activeTab.classList.remove('text-gray-600', 'hover:text-purple-600');
+                activeTab.classList.add('active', 'text-white');
+            }
+        }
+        
+        // Change avatar
+        function changeAvatar() {
+            document.getElementById('currentAvatar').src = currentUser.avatar;
+            document.getElementById('avatarModal').classList.remove('hidden');
+        }
+        
+        function closeAvatarModal() {
+            document.getElementById('avatarModal').classList.add('hidden');
+        }
+        
+        function uploadNewAvatar() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    await uploadAvatar(file);
+                }
+            };
+            input.click();
+        }
+        
+        async function uploadAvatar(file) {
+            try {
+                const formData = new FormData();
+                formData.append('avatar', file);
+                
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/upload-avatar', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': token
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('profileAvatar').src = data.avatar;
+                    document.getElementById('currentAvatar').src = data.avatar;
+                    currentUser.avatar = data.avatar;
+                    alert('Avatar updated successfully!');
+                }
+            } catch (error) {
+                console.error('Failed to upload avatar:', error);
+                alert('Failed to upload avatar');
+            }
+        }
+        
+        function selectAvatar(avatarUrl) {
+            // This would select a predefined avatar
+            alert(`Selected avatar: ${avatarUrl}`);
+        }
+        
+        function saveAvatar() {
+            closeAvatarModal();
+        }
+        
+        // Change cover photo
+        function changeCoverPhoto() {
+            alert('Cover photo upload would be implemented');
+        }
+        
+        // Share profile
+        function shareProfile() {
+            const profileUrl = `${window.location.origin}/profile.html?user=${currentUser._id}`;
+            navigator.clipboard.writeText(profileUrl).then(() => {
+                alert('Profile link copied to clipboard!');
+            });
+        }
+        
+        // Add course
+        function addCourse() {
+            const courseName = prompt('Enter course name (e.g., CS-101):');
+            if (courseName) {
+                const coursesList = document.getElementById('coursesList');
+                
+                if (coursesList.innerHTML.includes('No courses')) {
+                    coursesList.innerHTML = '';
+                }
+                
+                const courseDiv = document.createElement('div');
+                courseDiv.className = 'flex items-center justify-between p-3 border border-gray-200 rounded-lg';
+                courseDiv.innerHTML = `
+                    <div>
+                        <span class="font-medium text-gray-800">${courseName}</span>
+                        <span class="text-sm text-gray-500 ml-2">Active</span>
+                    </div>
+                    <button onclick="removeCourse(this)" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                coursesList.appendChild(courseDiv);
+            }
+        }
+        
+        function removeCourse(button) {
+            if (confirm('Remove this course?')) {
+                button.closest('div.flex').remove();
+            }
+        }
+        
+        // Change password
+        function changePassword() {
+            const oldPassword = prompt('Enter current password:');
+            if (oldPassword) {
+                const newPassword = prompt('Enter new password:');
+                if (newPassword) {
+                    const confirmPassword = prompt('Confirm new password:');
+                    if (newPassword === confirmPassword) {
+                        alert('Password change request sent!');
+                        // Here you would make an API call to change password
+                    } else {
+                        alert('Passwords do not match!');
+                    }
+                }
+            }
+        }
+        
+        // Change email
+        function changeEmail() {
+            const newEmail = prompt('Enter new email address:');
+            if (newEmail) {
+                alert(`Email change request sent to ${newEmail}!`);
+                // Here you would make an API call to change email
+            }
+        }
+        
+        // Manage devices
+        function manageDevices() {
+            alert('Device management would open a modal');
+        }
+        
+        // Delete account
+        function deleteAccount() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                const confirmation = prompt('Type "DELETE" to confirm:');
+                if (confirmation === 'DELETE') {
+                    alert('Account deletion request sent!');
+                    // Here you would make an API call to delete account
+                }
+            }
+        }
+        
+        // Export data
+        function exportData() {
+            alert('Data export has been started. You will receive an email when it\'s ready.');
+        }
+        
+        // Clear history
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+                alert('Chat history will be cleared. This may take a few minutes.');
+            }
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Auto-save on input change
+            document.querySelectorAll('.edit-input').forEach(input => {
+                input.addEventListener('input', () => {
+                    if (isEditing) {
+                        checkForChanges();
+                    }
+                });
+            });
+            
+            // Detect changes in selects
+            document.querySelectorAll('select').forEach(select => {
+                select.addEventListener('change', () => {
+                    if (isEditing) {
+                        checkForChanges();
+                    }
+                });
+            });
+        }
+        
+        // Check for changes
+        function checkForChanges() {
+            const hasChanges = 
+                document.getElementById('editFullName').value !== originalData.fullName ||
+                document.getElementById('editNickname').value !== originalData.nickname ||
+                document.getElementById('editUsername').value !== originalData.username ||
+                document.getElementById('editPhone').value !== originalData.phone ||
+                document.getElementById('editEmail').value !== originalData.email ||
+                document.getElementById('editBio').value !== originalData.bio ||
+                document.getElementById('editUniversity').value !== originalData.university ||
+                document.getElementById('editStudyGroup').value !== originalData.studyGroup;
+            
+            if (hasChanges && !document.getElementById('saveBtn').classList.contains('hidden')) {
+                return; // Already showing
+            }
+            
+            if (hasChanges) {
+                document.getElementById('saveBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('saveBtn').classList.add('hidden');
+            }
+        }
+        
+        // Format time
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'just now';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+            if (diff < 86400000) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (diff < 604800000) return date.toLocaleDateString([], { weekday: 'short' });
+            return date.toLocaleDateString();
+        }
+        
+        // Logout
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: { 'Authorization': localStorage.getItem('token') }
+                });
+            } catch (error) {
+                // Ignore errors
+            }
+            
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - UniConnect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .form-input {
+            transition: all 0.3s ease;
+        }
+        .form-input:focus {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-4xl w-full grid md:grid-cols-2 bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <!-- Left Side - Form -->
+        <div class="p-8 md:p-12">
+            <a href="/" class="inline-flex items-center text-purple-600 font-bold mb-8">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Home
+            </a>
+            
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Create Account</h1>
+            <p class="text-gray-600 mb-8">Join thousands of university students already using UniConnect</p>
+            
+            <form id="registerForm" class="space-y-6">
+                <!-- Row 1: Full Name & Nickname -->
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                        <input type="text" name="fullName" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                               placeholder="John Doe">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nickname *</label>
+                        <input type="text" name="nickname" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                               placeholder="johnny">
+                    </div>
+                </div>
+                
+                <!-- Username -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Username *</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-gray-400">@</span>
+                        <input type="text" name="username" required 
+                               class="w-full pl-8 px-4 py-3 border border-gray-300 rounded-lg form-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                               placeholder="johndoe">
+                        <div class="text-xs text-gray-500 mt-1">Can be changed only once every 15 days</div>
+                    </div>
+                </div>
+                
+                <!-- University & Study Group -->
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">University *</label>
+                        <select name="university" required 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                            <option value="">Select University</option>
+                            <option value="Harvard University">Harvard University</option>
+                            <option value="Stanford University">Stanford University</option>
+                            <option value="MIT">Massachusetts Institute of Technology</option>
+                            <option value="Cambridge University">Cambridge University</option>
+                            <option value="Oxford University">Oxford University</option>
+                            <option value="Other">Other University</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Study Group *</label>
+                        <input type="text" name="studyGroup" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                               placeholder="CS-101, Math-202, etc.">
+                    </div>
+                </div>
+                
+                <!-- Phone & Email -->
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-3 text-gray-400">+1</span>
+                            <input type="tel" name="phone" required 
+                                   class="w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg form-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                   placeholder="555-123-4567">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email (Optional)</label>
+                        <input type="email" name="email" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                               placeholder="john@university.edu">
+                    </div>
+                </div>
+                
+                <!-- Bio -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                    <textarea name="bio" rows="3" 
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                              placeholder="Tell us about yourself..."></textarea>
+                </div>
+                
+                <!-- Password -->
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+                        <input type="password" name="password" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                               placeholder="••••••••">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label>
+                        <input type="password" name="confirmPassword" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                               placeholder="••••••••">
+                    </div>
+                </div>
+                
+                <!-- Submit Button -->
+                <button type="submit" 
+                        class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center">
+                    <i class="fas fa-user-plus mr-2"></i> Create Account
+                </button>
+                
+                <!-- Login Link -->
+                <div class="text-center">
+                    <p class="text-gray-600">Already have an account? 
+                        <a href="/login.html" class="text-purple-600 font-semibold hover:underline">Sign In</a>
+                    </p>
+                </div>
+            </form>
+            
+            <!-- Error/Success Messages -->
+            <div id="message" class="mt-4 hidden"></div>
+        </div>
+        
+        <!-- Right Side - Preview -->
+        <div class="gradient-bg text-white p-8 md:p-12 hidden md:flex flex-col justify-center">
+            <div class="text-center">
+                <div class="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-user-graduate text-4xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold mb-4">Welcome to UniConnect</h2>
+                <p class="opacity-90 mb-8">Connect with classmates, join study groups, and stay updated with campus life.</p>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-300 mr-3"></i>
+                        <span>Real-time messaging</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-300 mr-3"></i>
+                        <span>Study group collaboration</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-300 mr-3"></i>
+                        <span>Campus channel updates</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-300 mr-3"></i>
+                        <span>Secure and private</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Validate passwords
+            if (data.password !== data.confirmPassword) {
+                showMessage('Passwords do not match!', 'error');
+                return;
+            }
+            
+            // Remove confirmPassword from data
+            delete data.confirmPassword;
+            
+            // Show loading
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating Account...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Account created successfully! Redirecting...', 'success');
+                    localStorage.setItem('token', result.token);
+                    setTimeout(() => {
+                        window.location.href = '/messages.html';
+                    }, 1500);
+                } else {
+                    showMessage(result.error || 'Registration failed!', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+                console.error('Registration error:', error);
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `p-3 rounded-lg ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+            messageDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageDiv.classList.add('hidden');
+            }, 5000);
+        }
+        
+        // Check if already logged in
+        async function checkAuth() {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    const response = await fetch('/api/me', {
+                        headers: { 'Authorization': token }
+                    });
+                    if (response.ok) {
+                        window.location.href = '/messages.html';
+                    }
+                }
+            } catch (error) {
+                // Not logged in
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>
