@@ -64,7 +64,7 @@
                     <span class="text-xl font-bold">UniConnect</span>
                 </a>
                 <div class="hidden md:block">
-                    <span class="text-sm opacity-80">University Chat Platform</span>
+                    <span class="text-sm opacity-80">Universitet Chat Platforma</span>
                 </div>
             </div>
             
@@ -89,7 +89,7 @@
                             <i class="fas fa-user mr-2"></i> Profile
                         </a>
                         <a href="#" onclick="logout()" class="block px-4 py-3 text-red-600 hover:bg-gray-100">
-                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                            <i class="fas fa-sign-out-alt mr-2"></i> Chiqish
                         </a>
                     </div>
                 </div>
@@ -103,8 +103,8 @@
         <div class="w-full md:w-1/3 lg:w-1/4 bg-white border-r border-gray-200 flex flex-col">
             <!-- Header -->
             <div class="p-4 border-b border-gray-200">
-                <h2 class="text-xl font-bold text-gray-800">Messages</h2>
-                <p class="text-sm text-gray-600">Chat with friends and classmates</p>
+                <h2 class="text-xl font-bold text-gray-800">Xabarlar</h2>
+                <p class="text-sm text-gray-600">Do'stlaringiz va kursdoshlaringiz bilan suhbatlashing!</p>
             </div>
             
             <!-- Search Box -->
@@ -122,7 +122,7 @@
             <div class="p-4 border-b border-gray-200">
                 <button onclick="startNewChat()" 
                         class="w-full gradient-bg text-white py-2 rounded-lg font-semibold hover:opacity-90 transition">
-                    <i class="fas fa-plus mr-2"></i> New Chat
+                    <i class="fas fa-plus mr-2"></i> Yangi Chat
                 </button>
             </div>
             
@@ -131,8 +131,8 @@
                 <!-- Conversations will be loaded here -->
                 <div class="p-8 text-center text-gray-500">
                     <i class="fas fa-comments text-4xl mb-4 opacity-20"></i>
-                    <p>No conversations yet</p>
-                    <p class="text-sm">Start a new chat with classmates!</p>
+                    <p>Halicha Suhbatlar yo'q</p>
+                    <p class="text-sm">Yangi chatni boshlash uchun xabar yuboring!</p>
                 </div>
             </div>
         </div>
@@ -163,15 +163,15 @@
                 <!-- Messages will be loaded here -->
                 <div class="text-center mt-20">
                     <i class="fas fa-comment-dots text-4xl text-gray-300 mb-4"></i>
-                    <h3 class="text-xl font-semibold text-gray-500">Select a conversation</h3>
-                    <p class="text-gray-400">Choose a chat from the left to start messaging</p>
+                    <h3 class="text-xl font-semibold text-gray-500">Suhbatni tanlang</h3>
+                    <p class="text-gray-400">Chap oynadan suhbatni tanlang va maroqli suhbat quring</p>
                 </div>
             </div>
             
             <!-- Message Input -->
             <div class="bg-white border-t border-gray-200 p-4">
                 <div id="typingIndicator" class="text-sm text-gray-500 mb-2 hidden">
-                    <span id="typingUser"></span> is typing...
+                    <span id="typingUser"></span> yozyapti...
                 </div>
                 <div class="flex space-x-2">
                     <button onclick="attachMedia()" class="p-3 hover:bg-gray-100 rounded-full">
@@ -187,7 +187,7 @@
                     </button>
                 </div>
                 <div class="text-xs text-gray-500 mt-2 text-center">
-                    Press Enter to send, Shift+Enter for new line
+                    Yuborish uchun Enter bosing, Yangi qator uchun Shift+Enter bosing.
                 </div>
             </div>
         </div>
@@ -195,7 +195,7 @@
         <!-- User Info Sidebar -->
         <div id="userInfoSidebar" class="hidden md:w-1/4 bg-white border-l border-gray-200 p-4">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-semibold">User Info</h3>
+                <h3 class="text-lg font-semibold">User Ma'lumotlari</h3>
                 <button onclick="hideUserInfo()" class="p-2 hover:bg-gray-100 rounded-full">
                     <i class="fas fa-times"></i>
                 </button>
@@ -211,11 +211,11 @@
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="text-sm text-gray-500">University</label>
+                    <label class="text-sm text-gray-500">Universitet</label>
                     <p id="infoUniversity" class="font-medium"></p>
                 </div>
                 <div>
-                    <label class="text-sm text-gray-500">Study Group</label>
+                    <label class="text-sm text-gray-500">Ta'lim guruhi</label>
                     <p id="infoStudyGroup" class="font-medium"></p>
                 </div>
                 <div>
@@ -223,7 +223,7 @@
                     <p id="infoBio" class="text-gray-700"></p>
                 </div>
                 <div>
-                    <label class="text-sm text-gray-500">Last Seen</label>
+                    <label class="text-sm text-gray-500">So'nggi faollik</label>
                     <p id="infoLastSeen" class="text-gray-700"></p>
                 </div>
             </div>
@@ -235,7 +235,7 @@
         <div class="bg-white rounded-lg w-full max-w-md mx-4">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold">Start New Chat</h3>
+                    <h3 class="text-xl font-bold">Yangi chat boshlang</h3>
                     <button onclick="closeNewChat()" class="p-2 hover:bg-gray-100 rounded-full">
                         <i class="fas fa-times"></i>
                     </button>
@@ -375,7 +375,7 @@ async function loadCurrentUser() {
                 container.innerHTML = `
                     <div class="p-8 text-center text-gray-500">
                         <i class="fas fa-comments text-4xl mb-4 opacity-20"></i>
-                        <p>No conversations yet</p>
+                        <p>Hali suhbat mavjud emas</p>
                         <p class="text-sm">Start a new chat with classmates!</p>
                     </div>
                 `;
@@ -404,7 +404,7 @@ async function loadCurrentUser() {
                 }
                 
                 // Get full name or nickname
-                const displayName = conv.fullName || conv.nickname || conv.username || 'Unknown';
+                const displayName = conv.fullName || conv.nickname || conv.username || 'Nomalum';
                 const nickname = conv.nickname || conv.username || '';
                 
                 return `
@@ -450,7 +450,7 @@ async function loadCurrentUser() {
                 // Redirect to chat.html with user ID
                 window.location.href = `/chat.html?user=${userId}`;
             } catch (error) {
-                console.error('Failed to open chat:', error);
+                console.error('Chat ochishda Xatolik:', error);
             }
         }
 
