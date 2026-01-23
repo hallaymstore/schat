@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Pet Market — SChat</title>
+  <meta name="description" content="Robotcha uchun ovqatlar, bo‘yoqlar va kiyimlar — coin evaziga xarid qiling."/>
+  <script>
+    tailwind = { config: { darkMode:'class', theme:{ extend:{
+      fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
+      keyframes:{
+        floaty:{'0%,100%':{transform:'translateY(0px)'},'50%':{transform:'translateY(-10px)'}},
+        shimmer:{'0%':{backgroundPosition:'0% 50%'},'100%':{backgroundPosition:'100% 50%'}},
+        pop:{'0%':{transform:'scale(.98)',opacity:.0},'100%':{transform:'scale(1)',opacity:1}}
+      },
+      animation:{ floaty:'floaty 7s ease-in-out infinite', shimmer:'shimmer 6s ease-in-out infinite', pop:'pop .45s ease-out both' }
+    }}}};
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,.58);
+      --glass-brd: rgba(255,255,255,.36);
+      --muted: rgba(15,23,42,.72);
+      --muted2: rgba(15,23,42,.55);
+      --grid: rgba(15,23,42,.06);
+      --ring: rgba(99,102,241,.45);
+      --ok: rgba(34,197,94,.18);
+      --bad: rgba(239,68,68,.18);
+    }
+    .dark{
+      --glass-bg: rgba(2,6,23,.58);
+      --glass-brd: rgba(148,163,184,.16);
+      --muted: rgba(226,232,240,.78);
+      --muted2: rgba(226,232,240,.55);
+      --grid: rgba(148,163,184,.08);
+      --ring: rgba(236,72,153,.35);
+      --ok: rgba(34,197,94,.14);
+      --bad: rgba(239,68,68,.14);
+    }
+    body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .muted{ color: var(--muted); }
+    .muted2{ color: var(--muted2); }
+    .glass{
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .btn-primary{ background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)); }
+    .btn-primary:hover{ filter: brightness(1.05); }
+    .btn-ghost:hover{ background: rgba(148,163,184,.12); }
+    .glow-ring:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
+    .u-anim{
+      background: linear-gradient(90deg, rgba(99,102,241,1), rgba(236,72,153,1));
+      background-size: 200% 200%;
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      animation: shimmer 6s ease-in-out infinite;
+    }
+    .bg-orbs{
+      position: fixed; inset: 0; z-index: -2; overflow: hidden;
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.38), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.28), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.22), transparent 60%),
+        linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
+    }
+    .dark .bg-orbs{
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.24), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.19), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.14), transparent 60%),
+        linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));
+    }
+    .bg-grid{
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 70px 70px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+      opacity: .85;
+    }
+    .g-border{ position: relative; }
+    .g-border:before{
+      content:"";
+      position:absolute; inset:-1px; border-radius: 1.5rem;
+      background: linear-gradient(135deg, rgba(99,102,241,.55), rgba(236,72,153,.45), rgba(34,197,94,.35));
+      z-index:-1;
+    }
+    .chip{ background: rgba(148,163,184,.14); border: 1px solid rgba(148,163,184,.18); }
+  </style>
+  <script>
+    (function(){
+      const key='theme';
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark?'dark':'light');
+      if(mode==='dark') document.documentElement.classList.add('dark');
+    })();
+  </script>
+</head>
+
+<body class="min-h-screen text-slate-900 dark:text-slate-100">
+  <div class="bg-orbs"></div>
+  <div class="bg-grid"></div>
+
+  <header class="sticky top-0 z-50">
+    <div class="mx-auto max-w-6xl px-4 py-4">
+      <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
+        <a href="/profile.html" class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white shadow-glass">
+            <i class="fa-solid fa-store"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-extrabold tracking-tight">Pet Market</div>
+            <div class="text-xs muted">Ovqat • Bo‘yoq • Kiyim</div>
+          </div>
+        </a>
+
+        <div class="flex items-center gap-2">
+          <div class="glass rounded-xl px-3 py-2 text-sm font-extrabold">
+            <i class="fa-solid fa-coins mr-2"></i><span id="coins">0</span> coin
+          </div>
+          <a href="/add-funds.html" class="btn-primary rounded-xl px-3 py-2 text-sm font-extrabold text-white glow-ring">
+            <i class="fa-solid fa-plus mr-2"></i>Coin to‘ldirish
+          </a>
+          <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring" title="Tungi/Kunduzgi">
+            <i id="themeIcon" class="fa-solid fa-moon"></i><span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    <div id="toast" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-[60] glass rounded-2xl px-4 py-3 text-sm font-extrabold"></div>
+
+    <section class="glass rounded-3xl p-6 g-border animate-pop">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Robotcha uchun market</span>
+          </div>
+          <h1 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+            Robotchangizni <span class="u-anim">kuchaytiring</span>
+          </h1>
+          <p class="mt-2 muted2 text-sm sm:text-base">
+            Xarid qiling, inventarga tushadi. Keyin profilda oziqlantirish, rang berish va kiyim kiydirish mumkin.
+          </p>
+          <div class="mt-3 text-xs muted2">
+            Narx: <span class="font-extrabold">coin</span> bilan. Coin top-up: <a class="underline font-extrabold" href="/add-funds.html">add-funds</a>.
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button data-tab="foods" class="tab chip rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring">
+            <i class="fa-solid fa-burger mr-2"></i>Ovqat
+          </button>
+          <button data-tab="paints" class="tab chip rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring">
+            <i class="fa-solid fa-palette mr-2"></i>Bo‘yoq
+          </button>
+          <button data-tab="outfits" class="tab chip rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring">
+            <i class="fa-solid fa-shirt mr-2"></i>Kiyim
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 grid lg:grid-cols-3 gap-6">
+      <div class="glass rounded-3xl p-6 g-border animate-pop lg:col-span-2">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div id="tabTitle" class="text-lg font-black">Ovqatlar</div>
+            <div id="tabSub" class="text-xs muted2 mt-1">Ochlikni tez to‘ldirish uchun</div>
+          </div>
+          <a href="/profile.html" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring">
+            <i class="fa-solid fa-user-astronaut mr-2"></i>Profil
+          </a>
+        </div>
+        <div id="items" class="mt-5 grid sm:grid-cols-2 gap-4"></div>
+      </div>
+
+      <aside class="glass rounded-3xl p-6 g-border animate-pop">
+        <div class="text-sm font-extrabold">Tezkor ma’lumot</div>
+        <div class="mt-3 space-y-3">
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted">Qanday ishlaydi?</div>
+            <div class="mt-1 text-sm muted2">
+              Xarid → inventar. Profil → ishlatish. Ovqat ochlikni oshiradi, bo‘yoq robot rangini o‘zgartiradi, kiyim esa outfit rangini beradi.
+            </div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted">Coin kursi</div>
+            <div class="mt-1 text-sm muted2">
+              <span class="font-extrabold">10 coin = 1000 so‘m</span> (1 coin = 100 so‘m).
+            </div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted">Maslahat</div>
+            <div class="mt-1 text-sm muted2">
+              Avval ovqat, keyin bo‘yoq. Level oshishi uchun robotni tez-tez oziqlantiring.
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    // Theme
+    (function(){
+      const key='theme';
+      const html=document.documentElement;
+      const btn=document.getElementById('themeToggle');
+      const icon=document.getElementById('themeIcon');
+      const label=document.getElementById('themeLabel');
+      function apply(mode){
+        if(mode==='dark') html.classList.add('dark'); else html.classList.remove('dark');
+        localStorage.setItem(key, mode);
+        icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+      }
+      const saved = localStorage.getItem(key);
+      if(saved) apply(saved);
+      else apply((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark':'light');
+      btn.addEventListener('click', ()=> apply(html.classList.contains('dark') ? 'light' : 'dark'));
+    })();
+
+    const token = () => localStorage.getItem('token') || '';
+    const toast = (text, type='info') => {
+      const el = document.getElementById('toast');
+      el.textContent = text;
+      el.classList.remove('hidden');
+      el.style.background = type === 'error' ? 'var(--bad)' : 'var(--ok)';
+      el.style.border = '1px solid rgba(148,163,184,.2)';
+      el.style.color = type === 'error' ? 'rgba(220,38,38,.95)' : 'rgba(16,185,129,.95)';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=> el.classList.add('hidden'), 3800);
+    };
+
+    let market = null;
+    let tab = 'foods';
+
+    const tabMeta = {
+      foods: { title:'Ovqatlar', sub:'Ochlikni tez to‘ldirish uchun', icon:'fa-burger' },
+      paints: { title:'Bo‘yoqlar', sub:'Robot va kiyim rangini o‘zgartiring', icon:'fa-palette' },
+      outfits: { title:'Kiyimlar', sub:'Kiyim rangini yangilang', icon:'fa-shirt' }
+    };
+
+    async function load(){
+      if(!token()){ window.location.href='/login.html'; return; }
+      const res = await fetch('/api/pet/me', { headers: { 'Authorization': `Bearer ${token()}` } }).catch(()=>null);
+      if(!res || !res.ok){ localStorage.removeItem('token'); window.location.href='/login.html'; return; }
+      const j = await res.json().catch(()=>null);
+      market = j.market;
+      document.getElementById('coins').textContent = j.coins || 0;
+      render();
+    }
+
+    function cardTemplate(item, type){
+      const extra = type==='foods'
+        ? `<div class="mt-3 text-xs muted2">Ochlik +<span class="font-extrabold">${item.hungerPlus||10}</span></div>`
+        : (item.color ? `<div class="mt-3 flex items-center gap-2 text-xs muted2">
+              <span class="w-4 h-4 rounded-full border border-white/30" style="background:${item.color}"></span>
+              <span class="font-extrabold">${item.color}</span>
+            </div>` : '');
+
+      const badge = type==='foods'
+        ? `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold"><i class="fa-solid fa-heart-pulse mr-1"></i>Hunger</span>`
+        : (type==='paints'
+          ? `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold"><i class="fa-solid fa-droplet mr-1"></i>Paint</span>`
+          : `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold"><i class="fa-solid fa-shirt mr-1"></i>Outfit</span>`);
+
+      return `
+        <div class="glass rounded-3xl p-5 g-border">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="text-base font-black">${item.name}</div>
+              <div class="mt-1 text-xs muted2">ID: <span class="font-mono">${item.id}</span></div>
+            </div>
+            ${badge}
+          </div>
+
+          ${extra}
+
+          <div class="mt-4 flex items-center justify-between gap-3">
+            <div class="text-sm font-extrabold">
+              <i class="fa-solid fa-coins mr-2"></i>${item.price} coin
+            </div>
+            <button class="buy btn-primary text-white rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-id="${item.id}">
+              Xarid qilish
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function render(){
+      const meta = tabMeta[tab];
+      document.getElementById('tabTitle').textContent = meta.title;
+      document.getElementById('tabSub').textContent = meta.sub;
+
+      document.querySelectorAll('.tab').forEach(b=>{
+        const active = b.dataset.tab === tab;
+        b.style.background = active ? 'rgba(99,102,241,.16)' : 'rgba(148,163,184,.14)';
+        b.style.border = active ? '1px solid rgba(99,102,241,.35)' : '1px solid rgba(148,163,184,.18)';
+      });
+
+      const list = (market && market[tab]) ? market[tab] : [];
+      const box = document.getElementById('items');
+      box.innerHTML = list.length ? list.map(it=>cardTemplate(it, tab)).join('') : `<div class="text-sm muted2">Bo‘sh.</div>`;
+
+      box.querySelectorAll('.buy').forEach(btn=>{
+        btn.addEventListener('click', ()=> buy(btn.dataset.id));
+      });
+    }
+
+    async function buy(itemId){
+      const btns = [...document.querySelectorAll(`.buy[data-id="${itemId}"]`)];
+      btns.forEach(b=>{ b.disabled=true; b.textContent='...'; b.classList.add('opacity-70'); });
+
+      try{
+        const res = await fetch('/api/shop/buy', {
+          method:'POST',
+          headers: { 'Authorization': `Bearer ${token()}`, 'Content-Type':'application/json' },
+          body: JSON.stringify({ itemId })
+        });
+        const j = await res.json().catch(()=>null);
+        if(!res.ok) return toast(j?.error || "Xarid muvaffaqiyatsiz", 'error');
+        toast("Xarid qilindi. Inventarga tushdi!", 'success');
+        // refresh coins
+        const me = await fetch('/api/pet/me', { headers: { 'Authorization': `Bearer ${token()}` } });
+        const mj = await me.json().catch(()=>null);
+        if(me.ok) document.getElementById('coins').textContent = mj.coins || 0;
+      } finally {
+        btns.forEach(b=>{ b.disabled=false; b.textContent='Xarid qilish'; b.classList.remove('opacity-70'); });
+      }
+    }
+
+    document.querySelectorAll('.tab').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        tab = b.dataset.tab;
+        render();
+      });
+    });
+
+    load();
+  </script>
+</body>
+</html>

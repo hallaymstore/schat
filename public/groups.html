@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uz">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Groups - UniConnect</title>
+    <title>Guruhlar — SChat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -18,58 +18,105 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
     </style>
+
+  <script>
+    tailwind = {config:{darkMode:'class',theme:{extend:{boxShadow:{glass:'0 10px 40px rgba(0,0,0,.15)'}}}}};
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    :root{--glass-bg:rgba(255,255,255,.55);--glass-brd:rgba(255,255,255,.35);--muted:rgba(15,23,42,.7)}
+    .dark{--glass-bg:rgba(15,23,42,.55);--glass-brd:rgba(148,163,184,.18);--muted:rgba(226,232,240,.75)}
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .bg-orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;
+      background:radial-gradient(1200px 600px at 15% 10%, rgba(99,102,241,.35), transparent 60%),
+               radial-gradient(900px 500px at 85% 15%, rgba(236,72,153,.28), transparent 60%),
+               radial-gradient(1000px 700px at 50% 90%, rgba(34,197,94,.22), transparent 60%),
+               linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));}
+    .dark .bg-orbs{
+      background:radial-gradient(1200px 600px at 15% 10%, rgba(99,102,241,.25), transparent 60%),
+               radial-gradient(900px 500px at 85% 15%, rgba(236,72,153,.20), transparent 60%),
+               radial-gradient(1000px 700px at 50% 90%, rgba(34,197,94,.15), transparent 60%),
+               linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));}
+    .glass{background:var(--glass-bg);border:1px solid var(--glass-brd);box-shadow:0 10px 40px rgba(0,0,0,.15);
+      backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .muted{color:var(--muted)}
+    .btn-primary{background:linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1))}
+    .btn-primary:hover{filter:brightness(1.05)}
+    .btn-ghost:hover{background:rgba(148,163,184,.12)}
+  </style>
+
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="h-full text-slate-900 dark:text-slate-100">
+  <div class="bg-orbs"></div>
     <!-- Navigation -->
-    <nav class="gradient-bg text-white h-16">
-        <div class="container mx-auto px-4 h-full flex items-center justify-between">
-            <a href="/messages.html" class="flex items-center space-x-2">
-                <i class="fas fa-arrow-left"></i>
-                <span class="font-semibold">Back to Messages</span>
-            </a>
-            <div class="flex items-center space-x-4">
-                <a href="/search.html" class="p-2 hover:bg-white/10 rounded-full">
-                    <i class="fas fa-search"></i>
-                </a>
-                <a href="/profile.html" class="p-2 hover:bg-white/10 rounded-full">
-                    <i class="fas fa-user"></i>
-                </a>
-            </div>
+    
+  <header class="sticky top-0 z-50">
+    <div class="mx-auto max-w-7xl px-4 py-4">
+      <div class="glass rounded-2xl px-4 py-3 flex items-center justify-between">
+        <a href="/index.html" class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white shadow-glass">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-extrabold tracking-tight">SChat</div>
+            <div class="text-xs muted">Talabalar uchun platforma</div>
+          </div>
+        </a>
+        <nav class="hidden md:flex items-center gap-1">
+          <a href="/messages.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Xabarlar</a>
+          <a href="/groups.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Guruhlar</a>
+          <a href="/channels.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Kanallar</a>
+        </nav>
+        <div class="flex items-center gap-2">
+          <button id="themeToggle" class="btn-ghost glass rounded-xl px-3 py-2 text-sm font-semibold muted">
+            <i id="themeIcon" class="fa-solid fa-moon"></i>
+            <span class="ml-2" id="themeLabel">Tungi</span>
+          </button>
+          <a href="/profile.html" class="glass rounded-xl px-3 py-2 text-sm font-semibold muted btn-ghost">
+            <i class="fa-solid fa-user"></i><span class="ml-2 hidden sm:inline">Profil</span>
+          </a>
         </div>
-    </nav>
+      </div>
+    </div>
+  </header>
+
 
     <!-- Main Content -->
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto max-w-7xl px-4 py-8">
         <!-- Header -->
-        <div class="text-center mb-8">
+        <div class="glass rounded-3xl p-8 text-center mb-8">
             <div class="w-20 h-20 gradient-bg rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-users text-white text-3xl"></i>
             </div>
-            <h1 class="text-3xl font-bold text-gray-800">Study Groups</h1>
-            <p class="text-gray-600">Join or create study groups with classmates</p>
+            <h1 class="text-3xl font-bold text-gray-800">O‘quv guruhlari</h1>
+            <p class="text-gray-600">Kursdoshlar bilan guruhlarga qo‘shiling yoki yangi guruh yarating</p>
         </div>
         
         <!-- Create Group Button -->
         <div class="flex justify-center mb-8">
             <button onclick="openCreateModal()" 
-                    class="gradient-bg text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition flex items-center">
-                <i class="fas fa-plus mr-2"></i> Create New Group
+                    class="btn-primary text-white px-6 py-3 rounded-2xl font-semibold hover:opacity-90 transition flex items-center">
+                <i class="fas fa-plus mr-2"></i> Yangi guruh yaratish
             </button>
         </div>
         
         <!-- Groups Tabs -->
-        <div class="flex border-b border-gray-200 mb-6 overflow-x-auto">
+        <div class="glass rounded-2xl p-2 mb-6 flex overflow-x-auto gap-1">
             <button onclick="switchGroupTab('my')" 
-                    class="group-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
-                <i class="fas fa-user-friends mr-2"></i> My Groups
+                    class="group-tab px-4 py-2 rounded-xl font-semibold muted btn-ghost whitespace-nowrap">
+                <i class="fas fa-user-friends mr-2"></i> Mening guruhlarim
             </button>
             <button onclick="switchGroupTab('joined')" 
-                    class="group-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
-                <i class="fas fa-users mr-2"></i> Joined Groups
+                    class="group-tab px-4 py-2 rounded-xl font-semibold muted btn-ghost whitespace-nowrap">
+                <i class="fas fa-users mr-2"></i> Qo‘shilgan guruhlar
             </button>
             <button onclick="switchGroupTab('all')" 
-                    class="group-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
-                <i class="fas fa-globe mr-2"></i> All Groups
+                    class="group-tab px-4 py-2 rounded-xl font-semibold muted btn-ghost whitespace-nowrap">
+                <i class="fas fa-globe mr-2"></i> Barcha guruhlar
             </button>
         </div>
         
@@ -84,7 +131,7 @@
         </div>
         
         <!-- Statistics -->
-        <div class="mt-12 bg-white rounded-xl shadow p-6">
+        <div class="mt-12 glass rounded-xl shadow p-6">
             <h3 class="font-bold text-gray-800 mb-4">Group Statistics</h3>
             <div class="grid md:grid-cols-4 gap-4">
                 <div class="text-center p-4 bg-purple-50 rounded-lg">
@@ -93,7 +140,7 @@
                 </div>
                 <div class="text-center p-4 bg-blue-50 rounded-lg">
                     <div class="text-2xl font-bold text-blue-600" id="myGroups">0</div>
-                    <div class="text-sm text-gray-600">My Groups</div>
+                    <div class="text-sm text-gray-600">Mening guruhlarim</div>
                 </div>
                 <div class="text-center p-4 bg-green-50 rounded-lg">
                     <div class="text-2xl font-bold text-green-600" id="joinedGroups">0</div>
@@ -109,10 +156,10 @@
 
     <!-- Create Group Modal -->
     <div id="createModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl w-full max-w-md">
+        <div class="glass rounded-xl w-full max-w-md">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold">Create New Group</h3>
+                    <h3 class="text-xl font-bold">Yangi guruh yaratish</h3>
                     <button onclick="closeCreateModal()" class="p-2 hover:bg-gray-100 rounded-full">
                         <i class="fas fa-times"></i>
                     </button>
@@ -261,7 +308,7 @@
             }
             
             container.innerHTML = groups.map(group => `
-                <div class="group-card bg-white rounded-xl shadow overflow-hidden">
+                <div class="group-card glass rounded-xl shadow overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-start justify-between mb-4">
                             <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center">
@@ -472,5 +519,38 @@
             switchGroupTab('my');
         });
     </script>
+
+<script>
+(function(){
+  const key='theme';
+  const html=document.documentElement;
+  const btn=document.getElementById('themeToggle');
+  const icon=document.getElementById('themeIcon');
+  const label=document.getElementById('themeLabel');
+
+  function apply(mode){
+    if(mode==='dark'){ html.classList.add('dark'); }
+    else { html.classList.remove('dark'); }
+    localStorage.setItem(key, mode);
+    if(icon){ icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon'; }
+    if(label){ label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi'; }
+  }
+
+  const saved = localStorage.getItem(key);
+  if(saved){ apply(saved); }
+  else {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    apply(prefersDark ? 'dark' : 'light');
+  }
+
+  if(btn){
+    btn.addEventListener('click', ()=>{
+      const isDark = html.classList.contains('dark');
+      apply(isDark ? 'light' : 'dark');
+    });
+  }
+})();
+</script>
+
 </body>
 </html>

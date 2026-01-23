@@ -1,1216 +1,712 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile - UniConnect</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .diamond-avatar {
-            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-        }
-        .profile-tab {
-            transition: all 0.3s ease;
-        }
-        .profile-tab.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .edit-input:focus {
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-        }
-    </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Profil — SChat</title>
+  <meta name="description" content="Profil: shaxsiy ma’lumotlar, coin balans, robotcha (pet) va inventar."/>
+  <script>
+    tailwind = {
+      config: {
+        darkMode: 'class',
+        theme: { extend: {
+          fontFamily: { inter: ['Inter','ui-sans-serif','system-ui'] },
+          boxShadow: { glass: '0 20px 60px rgba(0,0,0,.18)' },
+          keyframes: {
+            floaty: { '0%,100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-10px)' } },
+            shimmer: { '0%': { backgroundPosition: '0% 50%' }, '100%': { backgroundPosition: '100% 50%' } },
+            pop: { '0%': { transform: 'scale(.98)', opacity: .0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+            pulseSoft: { '0%,100%': { transform: 'scale(1)', opacity: .95 }, '50%': { transform: 'scale(1.04)', opacity: 1 } }
+          },
+          animation: {
+            floaty: 'floaty 7s ease-in-out infinite',
+            shimmer: 'shimmer 6s ease-in-out infinite',
+            pop: 'pop .45s ease-out both',
+            pulseSoft: 'pulseSoft 2.5s ease-in-out infinite'
+          }
+        }}
+      }
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,.58);
+      --glass-brd: rgba(255,255,255,.36);
+      --muted: rgba(15,23,42,.72);
+      --muted2: rgba(15,23,42,.55);
+      --grid: rgba(15,23,42,.06);
+      --ring: rgba(99,102,241,.45);
+      --ok: rgba(34,197,94,.18);
+      --bad: rgba(239,68,68,.18);
+    }
+    .dark{
+      --glass-bg: rgba(2,6,23,.58);
+      --glass-brd: rgba(148,163,184,.16);
+      --muted: rgba(226,232,240,.78);
+      --muted2: rgba(226,232,240,.55);
+      --grid: rgba(148,163,184,.08);
+      --ring: rgba(236,72,153,.35);
+      --ok: rgba(34,197,94,.14);
+      --bad: rgba(239,68,68,.14);
+    }
+    body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .muted{ color: var(--muted); }
+    .muted2{ color: var(--muted2); }
+    .glass{
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .btn-primary{ background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)); }
+    .btn-primary:hover{ filter: brightness(1.05); }
+    .btn-ghost:hover{ background: rgba(148,163,184,.12); }
+    .glow-ring:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
+    .u-anim{
+      background: linear-gradient(90deg, rgba(99,102,241,1), rgba(236,72,153,1));
+      background-size: 200% 200%;
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      animation: shimmer 6s ease-in-out infinite;
+    }
+    .bg-orbs{
+      position: fixed; inset: 0; z-index: -2; overflow: hidden;
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.38), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.28), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.22), transparent 60%),
+        linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
+    }
+    .dark .bg-orbs{
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.24), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.19), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.14), transparent 60%),
+        linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));
+    }
+    .bg-grid{
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 70px 70px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+      opacity: .85;
+    }
+    .g-border{ position: relative; }
+    .g-border:before{
+      content:"";
+      position:absolute; inset:-1px; border-radius: 1.5rem;
+      background: linear-gradient(135deg, rgba(99,102,241,.55), rgba(236,72,153,.45), rgba(34,197,94,.35));
+      z-index:-1;
+    }
+    /* progress */
+    .bar{ height: 10px; border-radius: 999px; background: rgba(148,163,184,.18); overflow:hidden; }
+    .bar > i{ display:block; height:100%; border-radius:999px; background: linear-gradient(90deg, rgba(34,197,94,1), rgba(99,102,241,1), rgba(236,72,153,1)); width: 50%; }
+  </style>
+
+  <script>
+    (function(){
+      const key='theme';
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark?'dark':'light');
+      if(mode==='dark') document.documentElement.classList.add('dark');
+    })();
+  </script>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <!-- Navigation -->
-    <nav class="gradient-bg text-white h-16">
-        <div class="container mx-auto px-4 h-full flex items-center justify-between">
-            <a href="/messages.html" class="flex items-center space-x-2">
-                <i class="fas fa-arrow-left"></i>
-                <span class="font-semibold">Back to Messages</span>
+
+<body class="min-h-screen text-slate-900 dark:text-slate-100">
+  <div class="bg-orbs"></div>
+  <div class="bg-grid"></div>
+
+  <header class="sticky top-0 z-50">
+    <div class="mx-auto max-w-6xl px-4 py-4">
+      <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
+        <a href="/messages.html" class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white shadow-glass">
+            <i class="fa-solid fa-user-astronaut"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-extrabold tracking-tight">Profil</div>
+            <div class="text-xs muted">Robotcha • Coin • Inventar</div>
+          </div>
+        </a>
+
+        <div class="flex items-center gap-2">
+          <a href="/petmarket.html" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring" title="Pet Market">
+            <i class="fa-solid fa-store"></i><span class="ml-2 hidden sm:inline">Pet Market</span>
+          </a>
+          <a href="/add-funds.html" class="btn-primary rounded-xl px-3 py-2 text-sm font-extrabold text-white glow-ring" title="Coin to‘ldirish">
+            <i class="fa-solid fa-coins"></i><span class="ml-2 hidden sm:inline">Coin to‘ldirish</span>
+          </a>
+          <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring" title="Tungi/Kunduzgi">
+            <i id="themeIcon" class="fa-solid fa-moon"></i><span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
+          </button>
+          <button id="logoutBtn" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring" title="Chiqish">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i><span class="ml-2 hidden sm:inline">Chiqish</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    <div id="toast" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-[60] glass rounded-2xl px-4 py-3 text-sm font-extrabold"></div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <!-- Left: user card -->
+      <section class="glass rounded-3xl p-6 g-border animate-pop lg:col-span-1">
+        <div class="flex items-center gap-4">
+          <img id="avatar" class="w-16 h-16 rounded-2xl object-cover border border-white/30" alt="Avatar"/>
+          <div class="min-w-0">
+            <div id="nickname" class="text-xl font-black tracking-tight truncate">—</div>
+            <div id="username" class="text-sm muted2 truncate">@—</div>
+            <div id="university" class="text-xs muted2 mt-1 truncate"><i class="fa-solid fa-building-columns mr-2"></i>—</div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid grid-cols-2 gap-3">
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted">Coin balans</div>
+            <div class="mt-1 text-2xl font-black"><span id="coins">0</span> <span class="text-sm font-extrabold muted2">coin</span></div>
+            <div class="mt-2 text-xs muted2">10 coin = 1000 so‘m</div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted">Robotcha</div>
+            <div class="mt-1 text-2xl font-black"><span id="petLevel">1</span> <span class="text-sm font-extrabold muted2">level</span></div>
+            <div class="mt-2 text-xs muted2">XP va ochlikni boshqaring</div>
+          </div>
+        </div>
+
+        <div class="mt-4 glass rounded-2xl p-4">
+          <div class="text-xs font-extrabold muted">Bio</div>
+          <div id="bio" class="mt-1 text-sm muted2 leading-relaxed">—</div>
+        </div>
+
+        <div id="adminBox" class="hidden mt-4 glass rounded-2xl p-4">
+          <div class="text-xs font-extrabold muted">Admin</div>
+          <div class="mt-2 flex items-center gap-2">
+            <a href="/admin.html" class="btn-primary rounded-xl px-4 py-2 text-sm font-extrabold text-white glow-ring">
+              Admin panelga o‘tish
             </a>
-            <div class="flex items-center space-x-4">
-                <button onclick="saveProfile()" id="saveBtn" 
-                        class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition hidden">
-                    <i class="fas fa-save mr-2"></i> Save Changes
-                </button>
-                <a href="#" onclick="logout()" class="p-2 hover:bg-white/10 rounded-full">
-                    <i class="fas fa-sign-out-alt"></i>
-                </a>
-            </div>
+          </div>
+          <div class="mt-2 text-xs muted2">Top-up so‘rovlarini tasdiqlash, foydalanuvchi balansini boshqarish.</div>
         </div>
-    </nav>
+      </section>
 
-    <!-- Profile Container -->
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <!-- Profile Header -->
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-            <!-- Cover Photo -->
-            <div id="coverPhoto" class="h-48 gradient-bg relative" style="background-size: cover; background-position: center;">
-                <button id="changeCoverBtn" onclick="changeCoverPhoto()" 
-                        class="absolute top-4 right-4 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition">
-                    <i class="fas fa-camera mr-2"></i> Change Cover
-                </button>
-            </div>
-            
-            <!-- Profile Info -->
-            <div class="px-8 pb-8 -mt-16 relative">
-                <!-- Avatar -->
-                <div class="relative inline-block">
-                    <img id="profileAvatar" src="https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png" 
-                         class="w-32 h-32 diamond-avatar border-4 border-white shadow-lg">
-                    <button id="changeAvatarBtn" onclick="changeAvatar()" 
-                            class="absolute bottom-2 right-2 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition">
-                        <i class="fas fa-camera text-sm"></i>
-                    </button>
-                </div>
-                
-                <!-- Profile Details -->
-                <div class="mt-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <div>
-                            <h1 id="profileName" class="text-2xl font-bold text-gray-800"></h1>
-                            <p id="profileUsername" class="text-gray-600">@username</p>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div id="onlineStatus" class="flex items-center px-3 py-1 rounded-full text-sm">
-                                <span class="w-2 h-2 rounded-full mr-2 bg-green-500"></span>
-                                <span>Online</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <p id="profileBio" class="text-gray-700 mb-4"></p>
-                    
-                    <!-- Stats -->
-                    <div class="flex space-x-6 mb-6">
-                        <div class="text-center">
-                            <div class="text-xl font-bold text-gray-800" id="friendsCount">0</div>
-                            <div class="text-sm text-gray-600">Friends</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-xl font-bold text-gray-800" id="groupsCount">0</div>
-                            <div class="text-sm text-gray-600">Groups</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-xl font-bold text-gray-800" id="messagesCount">0</div>
-                            <div class="text-sm text-gray-600">Messages</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    <div class="flex space-x-3">
-                        <button onclick="editProfile()" 
-                                class="gradient-bg text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition">
-                            <i class="fas fa-edit mr-2"></i> Edit Profile
-                        </button>
-                        <button onclick="shareProfile()" 
-                                class="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-50 transition">
-                            <i class="fas fa-share-alt mr-2"></i> Share Profile
-                        </button>
-                    </div>
-                </div>
-            </div>
+      <!-- Center: Robot -->
+      <section class="glass rounded-3xl p-6 g-border animate-pop lg:col-span-1">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="text-sm font-extrabold">Shaxsiy robotcha</div>
+            <div class="text-xs muted2 mt-1">Oziqlantiring, rang bering, kiyim kiydiring</div>
+          </div>
+          <div class="glass rounded-2xl px-3 py-2 text-xs font-extrabold muted">
+            <i class="fa-solid fa-hand-pointer mr-2"></i>robotchani bosing
+          </div>
         </div>
-        
-        <!-- Profile Tabs -->
-        <div class="flex border-b border-gray-200 mb-6 overflow-x-auto">
-            <button onclick="switchTab('info')" 
-                    class="profile-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap active">
-                <i class="fas fa-info-circle mr-2"></i> Basic Info
-            </button>
-            <button onclick="switchTab('education')" 
-                    class="profile-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
-                <i class="fas fa-graduation-cap mr-2"></i> Education
-            </button>
-            <button onclick="switchTab('settings')" 
-                    class="profile-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
-                <i class="fas fa-cog mr-2"></i> Settings
-            </button>
-            <button onclick="switchTab('activity')" 
-                    class="profile-tab px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
-                <i class="fas fa-chart-line mr-2"></i> Activity
-            </button>
+
+        <div class="mt-5 flex items-center justify-center">
+          <div class="relative">
+            <div id="spark" class="absolute -inset-6 rounded-[32px] opacity-0"></div>
+            <svg id="robot" viewBox="0 0 260 260" class="w-[240px] max-w-full drop-shadow-2xl select-none cursor-pointer">
+              <defs>
+                <linearGradient id="rgBody" x1="0" y1="0" x2="1" y2="1">
+                  <stop id="b0" offset="0" stop-color="#6366f1"/>
+                  <stop id="b1" offset="1" stop-color="#a855f7"/>
+                </linearGradient>
+                <linearGradient id="rgOutfit" x1="0" y1="0" x2="1" y2="1">
+                  <stop id="o0" offset="0" stop-color="#ec4899"/>
+                  <stop id="o1" offset="1" stop-color="#f59e0b"/>
+                </linearGradient>
+              </defs>
+
+              <g id="antenna">
+                <path d="M130 20 C112 20 110 46 130 46 C150 46 148 20 130 20Z" fill="url(#rgOutfit)" opacity="0.92"/>
+                <path d="M130 46 L130 70" stroke="rgba(148,163,184,.8)" stroke-width="8" stroke-linecap="round"/>
+                <circle cx="130" cy="16" r="10" fill="url(#rgOutfit)"/>
+              </g>
+
+              <g id="head">
+                <rect x="50" y="62" width="160" height="132" rx="42" fill="url(#rgBody)"/>
+                <rect x="72" y="96" width="116" height="62" rx="24" fill="rgba(15,23,42,.10)"/>
+              </g>
+
+              <g id="eyes" transform="translate(0,0)">
+                <g id="eyeL" transform="translate(108 126)">
+                  <circle r="14" fill="rgba(2,6,23,.75)"/>
+                  <circle r="4" cx="4" cy="-2" fill="rgba(255,255,255,.9)"/>
+                  <path id="blinkL" d="M-14 0 Q0 10 14 0" stroke="rgba(2,6,23,.55)" stroke-width="4" stroke-linecap="round" fill="none" opacity="0"/>
+                </g>
+                <g id="eyeR" transform="translate(152 126)">
+                  <circle r="14" fill="rgba(2,6,23,.75)"/>
+                  <circle r="4" cx="4" cy="-2" fill="rgba(255,255,255,.9)"/>
+                  <path id="blinkR" d="M-14 0 Q0 10 14 0" stroke="rgba(2,6,23,.55)" stroke-width="4" stroke-linecap="round" fill="none" opacity="0"/>
+                </g>
+              </g>
+
+              <g id="mouthHappy" opacity="1">
+                <path d="M106 174 Q130 190 154 174" stroke="rgba(2,6,23,.55)" stroke-width="7" stroke-linecap="round" fill="none"/>
+              </g>
+              <g id="mouthSad" opacity="0">
+                <path d="M106 192 Q130 176 154 192" stroke="rgba(2,6,23,.55)" stroke-width="7" stroke-linecap="round" fill="none"/>
+              </g>
+
+              <g id="outfit">
+                <path d="M70 204 C90 230 170 230 190 204" stroke="url(#rgOutfit)" stroke-width="18" stroke-linecap="round" fill="none" opacity="0.95"/>
+              </g>
+            </svg>
+
+            <div class="mt-3 text-center text-xs muted2">
+              <span id="robotHint">Holat: yuklanmoqda…</span>
+            </div>
+          </div>
         </div>
-        
-        <!-- Tab Content -->
-        <div id="tabContent">
-            <!-- Basic Info Tab -->
-            <div id="infoTab" class="space-y-6">
-                <!-- Personal Information -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Personal Information</h3>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                            <input type="text" id="editFullName" 
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                   placeholder="Full Name">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Nickname</label>
-                            <input type="text" id="editNickname" 
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                   placeholder="Nickname">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-3 text-gray-400">@</span>
-                                <input type="text" id="editUsername" 
-                                       class="w-full pl-8 px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                       placeholder="username">
-                                <div class="text-xs text-gray-500 mt-1" id="usernameChangeInfo">
-                                    Username can be changed once every 15 days
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                            <input type="tel" id="editPhone" 
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                   placeholder="Phone Number">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                            <input type="email" id="editEmail" 
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                   placeholder="Email Address">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-                            <textarea id="editBio" rows="3" 
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                      placeholder="Tell others about yourself..."></textarea>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Privacy Settings -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Privacy Settings</h3>
-                    <div class="space-y-4">
-                        <label class="flex items-center justify-between">
-                            <div>
-                                <span class="font-medium text-gray-700">Profile Visibility</span>
-                                <p class="text-sm text-gray-500">Who can see your profile?</p>
-                            </div>
-                            <select id="profileVisibility" 
-                                    class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                <option value="public">Everyone</option>
-                                <option value="university">University Only</option>
-                                <option value="friends">Friends Only</option>
-                                <option value="private">Private</option>
-                            </select>
-                        </label>
-                        
-                        <label class="flex items-center">
-                            <input type="checkbox" id="showOnlineStatus" 
-                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
-                            <span class="ml-2 text-gray-700">Show online status</span>
-                        </label>
-                        
-                        <label class="flex items-center">
-                            <input type="checkbox" id="showLastSeen" 
-                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
-                            <span class="ml-2 text-gray-700">Show last seen</span>
-                        </label>
-                        
-                        <label class="flex items-center">
-                            <input type="checkbox" id="allowMessageRequests" 
-                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
-                            <span class="ml-2 text-gray-700">Allow message requests from anyone</span>
-                        </label>
-                    </div>
-                </div>
+
+        <div class="mt-5 grid gap-4">
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-extrabold muted">Ochlik (Hunger)</div>
+              <div class="text-xs font-extrabold"><span id="hungerVal">0</span>/100</div>
             </div>
-            
-            <!-- Education Tab -->
-            <div id="educationTab" class="space-y-6 hidden">
-                <!-- University Information -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">University Information</h3>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">University</label>
-                            <select id="editUniversity" 
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
-                                <option value="">Select University</option>
-                                <option value="Harvard University">Harvard University</option>
-                                <option value="Stanford University">Stanford University</option>
-                                <option value="MIT">Massachusetts Institute of Technology</option>
-                                <option value="Cambridge University">Cambridge University</option>
-                                <option value="Oxford University">Oxford University</option>
-                                <option value="Other">Other University</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Study Group/Class</label>
-                            <input type="text" id="editStudyGroup" 
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                   placeholder="e.g., CS-101, Math-202">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Major/Field of Study</label>
-                            <input type="text" id="editMajor" 
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                   placeholder="e.g., Computer Science">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Year of Study</label>
-                            <select id="editYear" 
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
-                                <option value="">Select Year</option>
-                                <option value="Freshman">Freshman</option>
-                                <option value="Sophomore">Sophomore</option>
-                                <option value="Junior">Junior</option>
-                                <option value="Senior">Senior</option>
-                                <option value="Graduate">Graduate</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Courses -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-gray-800 text-lg">Current Courses</h3>
-                        <button onclick="addCourse()" 
-                                class="text-purple-600 hover:text-purple-800 text-sm font-medium">
-                            <i class="fas fa-plus mr-1"></i> Add Course
-                        </button>
-                    </div>
-                    <div id="coursesList" class="space-y-3">
-                        <!-- Courses will be added here -->
-                        <div class="text-center py-4 text-gray-500">
-                            <i class="fas fa-book-open text-2xl mb-2"></i>
-                            <p>No courses added yet</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Study Interests -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Study Interests</h3>
-                    <div class="space-y-4">
-                        <textarea id="studyInterests" rows="3" 
-                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg edit-input focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                  placeholder="What subjects are you interested in studying?"></textarea>
-                        <div class="flex flex-wrap gap-2" id="interestTags">
-                            <!-- Interest tags will be added here -->
-                        </div>
-                        <div class="text-sm text-gray-500">
-                            Add interests to find study partners with similar goals
-                        </div>
-                    </div>
-                </div>
+            <div class="mt-2 bar"><i id="hungerBar"></i></div>
+          </div>
+
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-extrabold muted">XP</div>
+              <div class="text-xs font-extrabold"><span id="xpVal">0</span>/100</div>
             </div>
-            
-            <!-- Settings Tab -->
-            <div id="settingsTab" class="space-y-6 hidden">
-                <!-- Account Settings -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Account Settings</h3>
-                    <div class="space-y-4">
-                        <button onclick="changePassword()" 
-                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-medium text-gray-800">Change Password</div>
-                                    <div class="text-sm text-gray-500">Update your account password</div>
-                                </div>
-                                <i class="fas fa-chevron-right text-gray-400"></i>
-                            </div>
-                        </button>
-                        
-                        <button onclick="changeEmail()" 
-                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-medium text-gray-800">Change Email</div>
-                                    <div class="text-sm text-gray-500">Update your email address</div>
-                                </div>
-                                <i class="fas fa-chevron-right text-gray-400"></i>
-                            </div>
-                        </button>
-                        
-                        <button onclick="manageDevices()" 
-                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-medium text-gray-800">Manage Devices</div>
-                                    <div class="text-sm text-gray-500">View and manage logged-in devices</div>
-                                </div>
-                                <i class="fas fa-chevron-right text-gray-400"></i>
-                            </div>
-                        </button>
-                        
-                        <button onclick="deleteAccount()" 
-                                class="w-full text-left p-3 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-medium">Delete Account</div>
-                                    <div class="text-sm">Permanently delete your account</div>
-                                </div>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Notification Settings -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Notification Settings</h3>
-                    <div class="space-y-4">
-                        <label class="flex items-center justify-between">
-                            <div>
-                                <span class="font-medium text-gray-700">Message Notifications</span>
-                                <p class="text-sm text-gray-500">Receive notifications for new messages</p>
-                            </div>
-                            <input type="checkbox" id="messageNotifications" 
-                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500" checked>
-                        </label>
-                        
-                        <label class="flex items-center justify-between">
-                            <div>
-                                <span class="font-medium text-gray-700">Group Notifications</span>
-                                <p class="text-sm text-gray-500">Notifications for group activities</p>
-                            </div>
-                            <input type="checkbox" id="groupNotifications" 
-                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500" checked>
-                        </label>
-                        
-                        <label class="flex items-center justify-between">
-                            <div>
-                                <span class="font-medium text-gray-700">Channel Notifications</span>
-                                <p class="text-sm text-gray-500">Notifications for channel updates</p>
-                            </div>
-                            <input type="checkbox" id="channelNotifications" 
-                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500" checked>
-                        </label>
-                        
-                        <label class="flex items-center justify-between">
-                            <div>
-                                <span class="font-medium text-gray-700">Email Notifications</span>
-                                <p class="text-sm text-gray-500">Receive notifications via email</p>
-                            </div>
-                            <input type="checkbox" id="emailNotifications" 
-                                   class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
-                        </label>
-                    </div>
-                </div>
-                
-                <!-- Theme Settings -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Theme & Display</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-                            <div class="flex space-x-4">
-                                <label class="flex items-center">
-                                    <input type="radio" name="theme" value="light" 
-                                           class="text-purple-600 focus:ring-purple-500" checked>
-                                    <span class="ml-2">Light</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="radio" name="theme" value="dark" 
-                                           class="text-purple-600 focus:ring-purple-500">
-                                    <span class="ml-2">Dark</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="radio" name="theme" value="auto" 
-                                           class="text-purple-600 focus:ring-purple-500">
-                                    <span class="ml-2">Auto</span>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Chat Bubble Style</label>
-                            <select id="chatBubbleStyle" 
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                <option value="rounded">Rounded</option>
-                                <option value="square">Square</option>
-                                <option value="modern">Modern</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Font Size</label>
-                            <select id="fontSize" 
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                <option value="small">Small</option>
-                                <option value="medium" selected>Medium</option>
-                                <option value="large">Large</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Activity Tab -->
-            <div id="activityTab" class="space-y-6 hidden">
-                <!-- Activity Stats -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-6">Activity Overview</h3>
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div class="text-center p-4 bg-purple-50 rounded-lg">
-                            <div class="text-2xl font-bold text-purple-600" id="totalActivity">0</div>
-                            <div class="text-sm text-gray-600">Total Messages</div>
-                        </div>
-                        <div class="text-center p-4 bg-blue-50 rounded-lg">
-                            <div class="text-2xl font-bold text-blue-600" id="activeDays">0</div>
-                            <div class="text-sm text-gray-600">Active Days</div>
-                        </div>
-                        <div class="text-center p-4 bg-green-50 rounded-lg">
-                            <div class="text-2xl font-bold text-green-600" id="avgMessages">0</div>
-                            <div class="text-sm text-gray-600">Avg. Daily Messages</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Recent Activity -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Recent Activity</h3>
-                    <div id="activityList" class="space-y-3">
-                        <!-- Activities will be loaded here -->
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-history text-2xl mb-2"></i>
-                            <p>No recent activity</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Export Data -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Data Management</h3>
-                    <div class="space-y-3">
-                        <button onclick="exportData()" 
-                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-medium text-gray-800">Export My Data</div>
-                                    <div class="text-sm text-gray-500">Download all your messages and data</div>
-                                </div>
-                                <i class="fas fa-download text-gray-400"></i>
-                            </div>
-                        </button>
-                        
-                        <button onclick="clearHistory()" 
-                                class="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-medium text-gray-800">Clear Chat History</div>
-                                    <div class="text-sm text-gray-500">Delete all your message history</div>
-                                </div>
-                                <i class="fas fa-trash text-gray-400"></i>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <div class="mt-2 bar"><i id="xpBar"></i></div>
+          </div>
+
+          <div class="grid sm:grid-cols-3 gap-3">
+            <button id="feedBtn" class="btn-primary rounded-2xl px-4 py-3 text-sm font-extrabold text-white glow-ring">
+              <i class="fa-solid fa-burger mr-2"></i>Oziqlantirish
+            </button>
+            <button id="paintBtn" class="glass rounded-2xl px-4 py-3 text-sm font-extrabold btn-ghost glow-ring">
+              <i class="fa-solid fa-palette mr-2"></i>Rang berish
+            </button>
+            <button id="outfitBtn" class="glass rounded-2xl px-4 py-3 text-sm font-extrabold btn-ghost glow-ring">
+              <i class="fa-solid fa-shirt mr-2"></i>Kiyim
+            </button>
+          </div>
         </div>
+      </section>
+
+      <!-- Right: inventory + history -->
+      <section class="glass rounded-3xl p-6 g-border animate-pop lg:col-span-1">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-extrabold">Inventar</div>
+            <div class="text-xs muted2 mt-1">Olingan mahsulotlar shu yerda ko‘rinadi</div>
+          </div>
+          <a href="/petmarket.html" class="glass rounded-xl px-3 py-2 text-xs font-extrabold btn-ghost glow-ring">
+            <i class="fa-solid fa-store mr-2"></i>Market
+          </a>
+        </div>
+
+        <div class="mt-4 space-y-3">
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted mb-2"><i class="fa-solid fa-burger mr-2"></i>Ovqatlar</div>
+            <div id="foods" class="grid gap-2"></div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted mb-2"><i class="fa-solid fa-palette mr-2"></i>Bo‘yoqlar</div>
+            <div id="paints" class="grid gap-2"></div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted mb-2"><i class="fa-solid fa-shirt mr-2"></i>Kiyimlar</div>
+            <div id="outfits" class="grid gap-2"></div>
+          </div>
+        </div>
+
+        <div class="mt-4 glass rounded-2xl p-4">
+          <div class="flex items-center justify-between">
+            <div class="text-xs font-extrabold muted">Coin to‘ldirish so‘rovlari</div>
+            <a href="/add-funds.html" class="text-xs font-extrabold underline">Yangi so‘rov</a>
+          </div>
+          <div id="topupList" class="mt-2 space-y-2"></div>
+        </div>
+      </section>
     </div>
 
-    <!-- Change Avatar Modal -->
-    <div id="avatarModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl w-full max-w-md">
-            <div class="p-6">
-                <h3 class="text-xl font-bold mb-4">Change Profile Picture</h3>
-                
-                <div class="space-y-4">
-                    <!-- Current Avatar -->
-                    <div class="text-center">
-                        <img id="currentAvatar" src="" class="w-32 h-32 diamond-avatar mx-auto mb-4">
-                    </div>
-                    
-                    <!-- Upload Options -->
-                    <div class="space-y-3">
-                        <button onclick="uploadNewAvatar()" 
-                                class="w-full border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-purple-500 hover:bg-purple-50 transition text-center">
-                            <i class="fas fa-upload text-2xl text-gray-400 mb-2"></i>
-                            <div class="font-medium text-gray-700">Upload New Photo</div>
-                            <div class="text-sm text-gray-500">JPG, PNG up to 5MB</div>
-                        </button>
-                        
-                        <div class="grid grid-cols-4 gap-2">
-                            <button onclick="selectAvatar('avatar1.jpg')" 
-                                    class="p-2 border border-gray-300 rounded-lg hover:border-purple-500">
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=1" class="w-full rounded">
-                            </button>
-                            <button onclick="selectAvatar('avatar2.jpg')" 
-                                    class="p-2 border border-gray-300 rounded-lg hover:border-purple-500">
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=2" class="w-full rounded">
-                            </button>
-                            <button onclick="selectAvatar('avatar3.jpg')" 
-                                    class="p-2 border border-gray-300 rounded-lg hover:border-purple-500">
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=3" class="w-full rounded">
-                            </button>
-                            <button onclick="selectAvatar('avatar4.jpg')" 
-                                    class="p-2 border border-gray-300 rounded-lg hover:border-purple-500">
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=4" class="w-full rounded">
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Actions -->
-                    <div class="flex space-x-3 pt-4">
-                        <button onclick="closeAvatarModal()" 
-                                class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition">
-                            Cancel
-                        </button>
-                        <button onclick="saveAvatar()" 
-                                class="flex-1 gradient-bg text-white py-2 rounded-lg font-semibold hover:opacity-90 transition">
-                            Save Changes
-                        </button>
-                    </div>
-                </div>
+    <!-- Modal -->
+    <div id="modal" class="hidden fixed inset-0 z-[70]">
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="absolute inset-0 flex items-end sm:items-center justify-center p-4">
+        <div class="glass rounded-3xl w-full max-w-lg p-5 sm:p-6 g-border">
+          <div class="flex items-center justify-between">
+            <div>
+              <div id="modalTitle" class="text-lg font-black">—</div>
+              <div id="modalSub" class="text-xs muted2 mt-1">—</div>
             </div>
+            <button id="modalClose" class="glass rounded-xl px-3 py-2 btn-ghost glow-ring">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div id="modalBody" class="mt-4"></div>
+
+          <div class="mt-5 flex items-center justify-end gap-2">
+            <button id="modalCancel" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">Bekor</button>
+            <button id="modalOk" class="btn-primary rounded-xl px-4 py-2 text-sm font-extrabold text-white glow-ring">Qo‘llash</button>
+          </div>
         </div>
+      </div>
     </div>
 
-    <script>
-        let currentUser = null;
-        let isEditing = false;
-        let originalData = {};
-        let currentTab = 'info';
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', async () => {
-            await checkAuth();
-            await loadProfile();
-            setupEventListeners();
-        });
-        
-        // Authentication
-        async function checkAuth() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                window.location.href = '/login.html';
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/me', {
-                    headers: { 
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        localStorage.removeItem('token');
-                        window.location.href = '/login.html';
-                        return;
-                    }
-                    console.warn('Auth check returned non-ok status:', response.status);
-                } else {
-                    const data = await response.json();
-                    if (!data.success) {
-                        localStorage.removeItem('token');
-                        window.location.href = '/login.html';
-                        return;
-                    }
-                }
-            } catch (error) {
-                console.error('Auth check error:', error);
-                if (error.name === 'TypeError' || error.message.includes('Failed to fetch')) {
-                    console.error('Network error during auth check');
-                } else {
-                    localStorage.removeItem('token');
-                    window.location.href = '/login.html';
-                }
-            }
+  </main>
+
+  <script>
+    // Theme toggle
+    (function(){
+      const key='theme';
+      const html=document.documentElement;
+      const btn=document.getElementById('themeToggle');
+      const icon=document.getElementById('themeIcon');
+      const label=document.getElementById('themeLabel');
+
+      function apply(mode){
+        if(mode==='dark') html.classList.add('dark'); else html.classList.remove('dark');
+        localStorage.setItem(key, mode);
+        if(icon) icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        if(label) label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+      }
+      const saved = localStorage.getItem(key);
+      if(saved) apply(saved);
+      else {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        apply(prefersDark ? 'dark' : 'light');
+      }
+      btn && btn.addEventListener('click', ()=> apply(html.classList.contains('dark') ? 'light' : 'dark'));
+    })();
+
+    // Helpers
+    const token = () => localStorage.getItem('token') || '';
+    const authHeaders = () => ({ 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' });
+
+    const toast = (text, type='info') => {
+      const el = document.getElementById('toast');
+      el.textContent = text;
+      el.classList.remove('hidden');
+      el.style.background = type === 'error' ? 'var(--bad)' : 'var(--ok)';
+      el.style.border = '1px solid rgba(148,163,184,.2)';
+      el.style.color = type === 'error' ? 'rgba(220,38,38,.95)' : 'rgba(16,185,129,.95)';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=> el.classList.add('hidden'), 4200);
+    };
+
+    const fmtDate = (d) => {
+      try { return new Date(d).toLocaleString('uz-UZ'); } catch { return ''; }
+    };
+
+    // Modal
+    const modal = {
+      root: document.getElementById('modal'),
+      title: document.getElementById('modalTitle'),
+      sub: document.getElementById('modalSub'),
+      body: document.getElementById('modalBody'),
+      ok: document.getElementById('modalOk'),
+      cancel: document.getElementById('modalCancel'),
+      close: document.getElementById('modalClose'),
+      show({title, sub, bodyHTML, onOk}){
+        this.title.textContent = title || '';
+        this.sub.textContent = sub || '';
+        this.body.innerHTML = bodyHTML || '';
+        this.root.classList.remove('hidden');
+        const handler = async () => {
+          this.ok.disabled = true;
+          try { await onOk?.(); this.hide(); } finally { this.ok.disabled = false; }
+        };
+        this.ok.onclick = handler;
+      },
+      hide(){ this.root.classList.add('hidden'); this.ok.onclick = null; }
+    };
+    modal.cancel.onclick = () => modal.hide();
+    modal.close.onclick = () => modal.hide();
+    modal.root.addEventListener('click', (e)=> { if(e.target === modal.root.querySelector('.absolute.inset-0.bg-black\\/40')) modal.hide(); });
+
+    // Robot interactivity
+    const eyeGroup = () => document.getElementById('eyes');
+    const blinkL = () => document.getElementById('blinkL');
+    const blinkR = () => document.getElementById('blinkR');
+    const mouthHappy = () => document.getElementById('mouthHappy');
+    const mouthSad = () => document.getElementById('mouthSad');
+    const hint = () => document.getElementById('robotHint');
+
+    function setMood(ok){
+      mouthHappy().style.opacity = ok ? '1' : '0';
+      mouthSad().style.opacity = ok ? '0' : '1';
+    }
+    function blink(){
+      blinkL().style.opacity = '1';
+      blinkR().style.opacity = '1';
+      setTimeout(()=>{ blinkL().style.opacity = '0'; blinkR().style.opacity = '0'; }, 180);
+    }
+    function lookAt(x,y){
+      const g = eyeGroup();
+      const r = g.getBoundingClientRect();
+      const cx = r.left + r.width/2;
+      const cy = r.top + r.height/2;
+      const dx = Math.max(-10, Math.min(10, (x - cx)/18));
+      const dy = Math.max(-8, Math.min(8, (y - cy)/20));
+      g.setAttribute('transform', `translate(${dx},${dy})`);
+    }
+
+    document.addEventListener('mousemove', (e)=> lookAt(e.clientX, e.clientY));
+    document.getElementById('robot').addEventListener('click', ()=>{
+      blink();
+      const s = document.getElementById('spark');
+      s.style.opacity = '1';
+      s.style.background = 'radial-gradient(closest-side, rgba(236,72,153,.32), transparent 65%)';
+      s.classList.add('animate-pulseSoft');
+      setTimeout(()=>{ s.style.opacity = '0'; s.classList.remove('animate-pulseSoft'); }, 520);
+    });
+    setInterval(()=>{ if(!document.hidden) blink(); }, 4200);
+
+    // State
+    let market = null;
+    let petState = null;
+
+    function setRobotColors(bodyColor, outfitColor){
+      const b0 = document.getElementById('b0');
+      const b1 = document.getElementById('b1');
+      const o0 = document.getElementById('o0');
+      const o1 = document.getElementById('o1');
+      if(b0) b0.setAttribute('stop-color', bodyColor);
+      if(b1) b1.setAttribute('stop-color', '#a855f7');
+      if(o0) o0.setAttribute('stop-color', outfitColor);
+      if(o1) o1.setAttribute('stop-color', '#f59e0b');
+    }
+
+    function setBars(hunger, xp){
+      const h = Math.max(0, Math.min(100, hunger||0));
+      const x = Math.max(0, Math.min(100, xp||0));
+      document.getElementById('hungerVal').textContent = h;
+      document.getElementById('xpVal').textContent = x;
+      document.getElementById('hungerBar').style.width = `${h}%`;
+      document.getElementById('xpBar').style.width = `${x}%`;
+      setMood(h >= 25);
+      hint().textContent = h < 25 ? "Holat: och qoldim… ovqat bering" : "Holat: zo‘r! davom eting";
+    }
+
+    function renderInv(list, containerId, btnText, onUse){
+      const box = document.getElementById(containerId);
+      box.innerHTML = '';
+      if(!list || !list.length){
+        box.innerHTML = `<div class="text-xs muted2">Hozircha bo‘sh. Marketdan xarid qiling.</div>`;
+        return;
+      }
+      for(const it of list){
+        const qty = Number(it.qty||0);
+        const disabled = qty<=0;
+        const extra = it.color ? `<span class="inline-flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:${it.color}"></span><span class="muted2">${it.name}</span></span>` : `<span class="muted2">${it.name}</span>`;
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-3 glass rounded-xl px-3 py-2';
+        row.innerHTML = `
+          <div class="min-w-0">
+            <div class="text-xs font-extrabold">${extra}</div>
+            <div class="text-[11px] muted2 mt-0.5">Soni: <span class="font-extrabold">${qty}</span></div>
+          </div>
+          <button ${disabled?'disabled':''} class="px-3 py-2 rounded-xl text-xs font-extrabold glow-ring ${disabled?'opacity-40 cursor-not-allowed':'btn-primary text-white'}">${btnText}</button>
+        `;
+        row.querySelector('button').onclick = ()=> onUse(it);
+        box.appendChild(row);
+      }
+    }
+
+    function renderTopups(items){
+      const box = document.getElementById('topupList');
+      box.innerHTML = '';
+      if(!items || !items.length){
+        box.innerHTML = `<div class="text-xs muted2">Hozircha so‘rov yo‘q.</div>`;
+        return;
+      }
+      for(const r of items.slice(0,6)){
+        const st = r.status === 'approved' ? 'Tasdiqlandi' : (r.status === 'rejected' ? 'Rad etildi' : 'Kutilmoqda');
+        const badge = r.status === 'approved'
+          ? 'bg-emerald-500/15 text-emerald-500'
+          : (r.status === 'rejected' ? 'bg-red-500/15 text-red-500' : 'bg-amber-500/15 text-amber-500');
+        const row = document.createElement('div');
+        row.className = 'glass rounded-xl px-3 py-2 flex items-center justify-between gap-3';
+        row.innerHTML = `
+          <div class="min-w-0">
+            <div class="text-xs font-extrabold">${r.coins} coin <span class="muted2">(${r.amountSom} so‘m)</span></div>
+            <div class="text-[11px] muted2 mt-0.5">${fmtDate(r.createdAt)}</div>
+          </div>
+          <div class="text-[11px] font-extrabold px-2 py-1 rounded-lg ${badge}">${st}</div>
+        `;
+        box.appendChild(row);
+      }
+    }
+
+    async function loadProfile(){
+      const t = token();
+      if(!t){ window.location.href = '/login.html'; return; }
+
+      // /api/me for profile basic
+      const meRes = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${t}` } }).catch(()=>null);
+      if(!meRes || !meRes.ok){ localStorage.removeItem('token'); window.location.href = '/login.html'; return; }
+      const me = await meRes.json().catch(()=>null);
+
+      const u = me && (me.user || me);
+      if(u){
+        document.getElementById('avatar').src = u.avatar || 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png';
+        document.getElementById('nickname').textContent = u.nickname || u.fullName || 'Foydalanuvchi';
+        document.getElementById('username').textContent = '@' + (u.username || '');
+        document.getElementById('university').innerHTML = `<i class="fa-solid fa-building-columns mr-2"></i>${u.university || '—'}`;
+        document.getElementById('bio').textContent = u.bio || 'Bio yozilmagan.';
+      }
+
+      // /api/pet/me for coins+pet+inv+market
+      const pRes = await fetch('/api/pet/me', { headers: { 'Authorization': `Bearer ${t}` } }).catch(()=>null);
+      if(!pRes || !pRes.ok){
+        const err = await pRes?.json?.().catch(()=>null);
+        toast(err?.error || "Pet ma’lumotlarini yuklab bo‘lmadi", 'error');
+        return;
+      }
+      const pdata = await pRes.json();
+      market = pdata.market;
+      petState = { coins: pdata.coins, pet: pdata.pet, inventory: pdata.inventory, isAdmin: pdata.isAdmin };
+
+      document.getElementById('coins').textContent = petState.coins || 0;
+      document.getElementById('petLevel').textContent = petState.pet?.level || 1;
+      setRobotColors(petState.pet?.color || '#6366f1', petState.pet?.outfitColor || '#ec4899');
+      setBars(petState.pet?.hunger || 0, petState.pet?.xp || 0);
+
+      renderInv(petState.inventory?.foods, 'foods', 'Yedirish', (it)=> openFeed(it.id));
+      renderInv(petState.inventory?.paints, 'paints', 'Bo‘yash', (it)=> openPaint(it.id));
+      renderInv(petState.inventory?.outfits, 'outfits', 'Kiyish', (it)=> useOutfit(it.id));
+
+      if(petState.isAdmin) document.getElementById('adminBox').classList.remove('hidden');
+
+      // topups list
+      const tr = await fetch('/api/wallet/topup-requests', { headers: { 'Authorization': `Bearer ${t}` } }).catch(()=>null);
+      if(tr && tr.ok){
+        const tj = await tr.json().catch(()=>null);
+        renderTopups(tj?.requests || []);
+      }
+    }
+
+    async function refreshPet(){
+      const t = token();
+      const pRes = await fetch('/api/pet/me', { headers: { 'Authorization': `Bearer ${t}` } }).catch(()=>null);
+      if(!pRes || !pRes.ok) return;
+      const pdata = await pRes.json();
+      market = pdata.market;
+      petState = { coins: pdata.coins, pet: pdata.pet, inventory: pdata.inventory, isAdmin: pdata.isAdmin };
+      document.getElementById('coins').textContent = petState.coins || 0;
+      document.getElementById('petLevel').textContent = petState.pet?.level || 1;
+      setRobotColors(petState.pet?.color || '#6366f1', petState.pet?.outfitColor || '#ec4899');
+      setBars(petState.pet?.hunger || 0, petState.pet?.xp || 0);
+      renderInv(petState.inventory?.foods, 'foods', 'Yedirish', (it)=> openFeed(it.id));
+      renderInv(petState.inventory?.paints, 'paints', 'Bo‘yash', (it)=> openPaint(it.id));
+      renderInv(petState.inventory?.outfits, 'outfits', 'Kiyish', (it)=> useOutfit(it.id));
+    }
+
+    // Actions
+    function openFeed(defaultFoodId=null){
+      const items = petState?.inventory?.foods || [];
+      const options = items.filter(x => (x.qty||0)>0).map(x => `<option value="${x.id}" ${x.id===defaultFoodId?'selected':''}>${x.name} (+${x.hungerPlus||10}) — ${x.qty} dona</option>`).join('');
+      modal.show({
+        title: "Robotchani oziqlantirish",
+        sub: "Ovqat tanlang (inventardan sarflanadi)",
+        bodyHTML: `
+          <label class="text-xs font-extrabold muted">Ovqat</label>
+          <select id="foodSel" class="mt-2 w-full glass rounded-2xl px-4 py-3 text-sm glow-ring">${options || '<option disabled>Ovqat yo‘q</option>'}</select>
+          <div class="mt-3 text-xs muted2">Marketdan ovqat sotib olishingiz mumkin: <a class="underline font-extrabold" href="/petmarket.html">Pet Market</a></div>
+        `,
+        onOk: async ()=>{
+          const sel = document.getElementById('foodSel');
+          const foodId = sel?.value;
+          if(!foodId) return toast("Ovqat tanlanmadi", 'error');
+          const res = await fetch('/api/pet/feed', { method:'POST', headers: authHeaders(), body: JSON.stringify({ foodId }) });
+          const j = await res.json().catch(()=>null);
+          if(!res.ok) return toast(j?.error || "Oziqlantirib bo‘lmadi", 'error');
+          toast("Robotcha xursand. Yaxshi!", 'success');
+          await refreshPet();
         }
-        
-        // Get user ID from URL
-        function getUserIdFromURL() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('user');
+      });
+    }
+
+    function openPaint(defaultPaintId=null){
+      const items = petState?.inventory?.paints || [];
+      const options = items.filter(x => (x.qty||0)>0).map(x => `<option value="${x.id}" ${x.id===defaultPaintId?'selected':''}>${x.name} — ${x.qty} dona</option>`).join('');
+      modal.show({
+        title: "Rang berish",
+        sub: "Bo‘yoq tanlang va qaysi qism bo‘yalishini belgilang",
+        bodyHTML: `
+          <label class="text-xs font-extrabold muted">Bo‘yoq</label>
+          <select id="paintSel" class="mt-2 w-full glass rounded-2xl px-4 py-3 text-sm glow-ring">${options || '<option disabled>Bo‘yoq yo‘q</option>'}</select>
+
+          <label class="mt-4 text-xs font-extrabold muted block">Qayerga</label>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <label class="glass rounded-2xl px-4 py-3 text-sm font-extrabold flex items-center gap-2">
+              <input type="radio" name="target" value="body" checked> Tana rangi
+            </label>
+            <label class="glass rounded-2xl px-4 py-3 text-sm font-extrabold flex items-center gap-2">
+              <input type="radio" name="target" value="outfit"> Kiyim rangi
+            </label>
+          </div>
+
+          <div class="mt-3 text-xs muted2">Market: <a class="underline font-extrabold" href="/petmarket.html">Pet Market</a></div>
+        `,
+        onOk: async ()=>{
+          const sel = document.getElementById('paintSel');
+          const paintId = sel?.value;
+          const target = document.querySelector('input[name="target"]:checked')?.value || 'body';
+          if(!paintId) return toast("Bo‘yoq tanlanmadi", 'error');
+          const res = await fetch('/api/pet/paint', { method:'POST', headers: authHeaders(), body: JSON.stringify({ paintId, target }) });
+          const j = await res.json().catch(()=>null);
+          if(!res.ok) return toast(j?.error || "Bo‘yab bo‘lmadi", 'error');
+          toast("Rang yangilandi!", 'success');
+          await refreshPet();
         }
-        
-        // Load profile
-        async function loadProfile() {
-            try {
-                const token = localStorage.getItem('token');
-                const userId = getUserIdFromURL();
-                
-                // If userId in URL, load that user's profile, otherwise load current user's profile
-                const endpoint = userId ? `/api/user/${userId}` : '/api/me';
-                
-                const response = await fetch(endpoint, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    const profileUser = userId ? data.user : data.user;
-                    currentUser = data.user; // Store for comparison
-                    
-                    // Check if viewing own profile or other user's profile
-                    const isOwnProfile = !userId || (currentUser._id === userId);
-                    
-                    renderProfile(profileUser, isOwnProfile);
-                    
-                    if (isOwnProfile) {
-                        loadProfileStats();
-                        loadActivity();
-                    } else {
-                        // Hide edit buttons for other users' profiles
-                        document.getElementById('saveBtn').classList.add('hidden');
-                        document.getElementById('changeCoverBtn').style.display = 'none';
-                        document.getElementById('changeAvatarBtn').style.display = 'none';
-                        document.querySelectorAll('.edit-btn, .edit-input').forEach(el => {
-                            el.style.display = 'none';
-                        });
-                        
-                        // Add "Start Chat" button for other users
-                        const profileHeader = document.querySelector('.mt-4');
-                        if (profileHeader && !document.getElementById('startChatBtn')) {
-                            const chatBtn = document.createElement('button');
-                            chatBtn.id = 'startChatBtn';
-                            chatBtn.onclick = () => window.location.href = `/chat.html?user=${userId}`;
-                            chatBtn.className = 'gradient-bg text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition';
-                            chatBtn.innerHTML = '<i class="fas fa-comment mr-2"></i> Start Chat';
-                            profileHeader.appendChild(chatBtn);
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load profile:', error);
-            }
+      });
+    }
+
+    async function useOutfit(defaultOutfitId=null){
+      const items = petState?.inventory?.outfits || [];
+      const opts = items.filter(x => (x.qty||0)>0).map(x => `<option value="${x.id}" ${x.id===defaultOutfitId?'selected':''}>${x.name} — ${x.qty} dona</option>`).join('');
+      modal.show({
+        title: "Kiyim kiydirish",
+        sub: "Kiyim tanlang (inventardan 1 dona sarflanadi)",
+        bodyHTML: `
+          <label class="text-xs font-extrabold muted">Kiyim</label>
+          <select id="outSel" class="mt-2 w-full glass rounded-2xl px-4 py-3 text-sm glow-ring">${opts || '<option disabled>Kiyim yo‘q</option>'}</select>
+          <div class="mt-3 text-xs muted2">Market: <a class="underline font-extrabold" href="/petmarket.html">Pet Market</a></div>
+        `,
+        onOk: async ()=>{
+          const outfitId = document.getElementById('outSel')?.value;
+          if(!outfitId) return toast("Kiyim tanlanmadi", 'error');
+          const res = await fetch('/api/pet/equip', { method:'POST', headers: authHeaders(), body: JSON.stringify({ outfitId }) });
+          const j = await res.json().catch(()=>null);
+          if(!res.ok) return toast(j?.error || "Kiyim kiydirib bo‘lmadi", 'error');
+          toast("Kiyim yangilandi!", 'success');
+          await refreshPet();
         }
-        
-        // Render profile
-        function renderProfile(user, isOwnProfile = true) {
-            // Basic info
-            document.getElementById('profileAvatar').src = user.avatar || 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png';
-            document.getElementById('profileName').textContent = user.fullName || user.nickname || user.username || 'Unknown';
-            document.getElementById('profileUsername').textContent = `@${user.username || 'unknown'}`;
-            document.getElementById('profileBio').textContent = user.bio || 'No bio yet';
-            
-            // Online status
-            const statusDiv = document.getElementById('onlineStatus');
-            const statusSpan = statusDiv.querySelector('span');
-            statusSpan.className = `w-2 h-2 rounded-full mr-2 ${user.isOnline ? 'bg-green-500' : 'bg-gray-400'}`;
-            statusDiv.querySelector('span:last-child').textContent = user.isOnline ? 'Online' : 'Offline';
-            
-            // Edit fields (only if own profile)
-            if (isOwnProfile) {
-                document.getElementById('editFullName').value = user.fullName || '';
-                document.getElementById('editNickname').value = user.nickname || '';
-                document.getElementById('editUsername').value = user.username || '';
-            }
-            document.getElementById('editPhone').value = user.phone || '';
-            document.getElementById('editEmail').value = user.email || '';
-            document.getElementById('editBio').value = user.bio || '';
-            document.getElementById('editUniversity').value = user.university || '';
-            document.getElementById('editStudyGroup').value = user.studyGroup || '';
-            
-            // Store original data
-            originalData = { ...user };
-            
-            // Check username change eligibility
-            checkUsernameChangeEligibility(user);
-        }
-        
-        // Check username change eligibility
-        function checkUsernameChangeEligibility(user) {
-            if (user.lastUsernameChange) {
-                const lastChange = new Date(user.lastUsernameChange);
-                const fifteenDaysAgo = new Date();
-                fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
-                
-                if (lastChange > fifteenDaysAgo) {
-                    const nextChangeDate = new Date(lastChange);
-                    nextChangeDate.setDate(nextChangeDate.getDate() + 15);
-                    
-                    document.getElementById('usernameChangeInfo').innerHTML = `
-                        <span class="text-yellow-600">
-                            <i class="fas fa-clock mr-1"></i>
-                            Username can be changed on ${nextChangeDate.toLocaleDateString()}
-                        </span>
-                    `;
-                    document.getElementById('editUsername').disabled = true;
-                } else {
-                    document.getElementById('usernameChangeInfo').innerHTML = `
-                        <span class="text-green-600">
-                            <i class="fas fa-check-circle mr-1"></i>
-                            Username can be changed
-                        </span>
-                    `;
-                    document.getElementById('editUsername').disabled = false;
-                }
-            } else {
-                document.getElementById('usernameChangeInfo').innerHTML = `
-                    <span class="text-green-600">
-                        <i class="fas fa-check-circle mr-1"></i>
-                        Username can be changed
-                    </span>
-                `;
-                document.getElementById('editUsername').disabled = false;
-            }
-        }
-        
-        // Load profile stats
-        async function loadProfileStats() {
-            try {
-                const token = localStorage.getItem('token');
-                const response = await fetch('/api/profile/stats', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('friendsCount').textContent = data.stats.friends || 0;
-                    document.getElementById('groupsCount').textContent = data.stats.groups || 0;
-                    document.getElementById('messagesCount').textContent = data.stats.messages || 0;
-                }
-            } catch (error) {
-                console.error('Failed to load profile stats:', error);
-            }
-        }
-        
-        // Load activity
-        async function loadActivity() {
-            try {
-                const token = localStorage.getItem('token');
-                const response = await fetch('/api/profile/activity', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('totalActivity').textContent = data.activity.totalMessages || 0;
-                    document.getElementById('activeDays').textContent = data.activity.activeDays || 0;
-                    document.getElementById('avgMessages').textContent = data.activity.avgMessages || 0;
-                    
-                    renderActivityList(data.activity.recent);
-                }
-            } catch (error) {
-                console.error('Failed to load activity:', error);
-            }
-        }
-        
-        // Render activity list
-        function renderActivityList(activities) {
-            const container = document.getElementById('activityList');
-            
-            if (!activities || activities.length === 0) {
-                return;
-            }
-            
-            container.innerHTML = activities.map(activity => `
-                <div class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3
-                        ${activity.type === 'message' ? 'bg-blue-100 text-blue-600' :
-                          activity.type === 'group' ? 'bg-purple-100 text-purple-600' :
-                          activity.type === 'channel' ? 'bg-yellow-100 text-yellow-600' :
-                          'bg-gray-100 text-gray-600'}">
-                        <i class="fas fa-${activity.icon || 'comment'}"></i>
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-medium text-gray-800">${activity.description}</p>
-                        <p class="text-sm text-gray-500">${formatTime(activity.timestamp)}</p>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // Edit profile
-        function editProfile() {
-            isEditing = true;
-            document.getElementById('saveBtn').classList.remove('hidden');
-            
-            // Enable all edit inputs
-            document.querySelectorAll('.edit-input').forEach(input => {
-                if (!input.disabled) {
-                    input.removeAttribute('readonly');
-                }
-            });
-            
-            // Show edit mode
-            document.querySelectorAll('[id^="edit"]').forEach(element => {
-                if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT') {
-                    element.classList.add('bg-gray-50');
-                }
-            });
-        }
-        
-        // Save profile
-        async function saveProfile() {
-            const updates = {
-                fullName: document.getElementById('editFullName').value,
-                nickname: document.getElementById('editNickname').value,
-                username: document.getElementById('editUsername').value,
-                phone: document.getElementById('editPhone').value,
-                email: document.getElementById('editEmail').value,
-                bio: document.getElementById('editBio').value,
-                university: document.getElementById('editUniversity').value,
-                studyGroup: document.getElementById('editStudyGroup').value
-            };
-            
-            try {
-                const token = localStorage.getItem('token');
-                const response = await fetch('/api/profile', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(updates)
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('Profile updated successfully!');
-                    isEditing = false;
-                    document.getElementById('saveBtn').classList.add('hidden');
-                    
-                    // Update displayed profile
-                    currentUser = data.user;
-                    renderProfile(data.user);
-                    
-                    // Disable edit inputs
-                    document.querySelectorAll('.edit-input').forEach(input => {
-                        input.setAttribute('readonly', true);
-                        input.classList.remove('bg-gray-50');
-                    });
-                } else {
-                    alert(data.error || 'Failed to update profile');
-                }
-            } catch (error) {
-                console.error('Failed to save profile:', error);
-                alert('Failed to update profile');
-            }
-        }
-        
-        // Switch tab
-        function switchTab(tabName) {
-            currentTab = tabName;
-            
-            // Hide all tab contents
-            document.querySelectorAll('[id$="Tab"]').forEach(tab => {
-                tab.classList.add('hidden');
-            });
-            
-            // Show selected tab content
-            document.getElementById(`${tabName}Tab`).classList.remove('hidden');
-            
-            // Update tab styles
-            document.querySelectorAll('.profile-tab').forEach(btn => {
-                btn.classList.remove('active', 'text-white');
-                btn.classList.add('text-gray-600', 'hover:text-purple-600');
-            });
-            
-            // Active current tab
-            const activeTab = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
-            if (activeTab) {
-                activeTab.classList.remove('text-gray-600', 'hover:text-purple-600');
-                activeTab.classList.add('active', 'text-white');
-            }
-        }
-        
-        // Change avatar
-        function changeAvatar() {
-            document.getElementById('currentAvatar').src = currentUser.avatar;
-            document.getElementById('avatarModal').classList.remove('hidden');
-        }
-        
-        function closeAvatarModal() {
-            document.getElementById('avatarModal').classList.add('hidden');
-        }
-        
-        function uploadNewAvatar() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    await uploadAvatar(file);
-                }
-            };
-            input.click();
-        }
-        
-        async function uploadAvatar(file) {
-            try {
-                // Show loading
-                const loadingText = document.createElement('div');
-                loadingText.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg z-50';
-                loadingText.textContent = 'Uploading avatar...';
-                document.body.appendChild(loadingText);
-                
-                const formData = new FormData();
-                formData.append('avatar', file);
-                
-                const token = localStorage.getItem('token');
-                const response = await fetch('/api/upload-avatar', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    document.getElementById('profileAvatar').src = data.avatar;
-                    if (document.getElementById('currentAvatar')) {
-                        document.getElementById('currentAvatar').src = data.avatar;
-                    }
-                    currentUser.avatar = data.avatar;
-                    loadingText.textContent = 'Avatar updated successfully!';
-                    loadingText.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg z-50';
-                    setTimeout(() => loadingText.remove(), 2000);
-                } else {
-                    throw new Error(data.error || 'Upload failed');
-                }
-            } catch (error) {
-                console.error('Failed to upload avatar:', error);
-                alert('Failed to upload avatar: ' + (error.message || 'Unknown error'));
-            }
-        }
-        
-        function selectAvatar(avatarUrl) {
-            // This would select a predefined avatar
-            alert(`Selected avatar: ${avatarUrl}`);
-        }
-        
-        function saveAvatar() {
-            closeAvatarModal();
-        }
-        
-        // Change cover photo
-        function changeCoverPhoto() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    await uploadCoverPhoto(file);
-                }
-            };
-            input.click();
-        }
-        
-        async function uploadCoverPhoto(file) {
-            try {
-                // Show loading
-                const loadingText = document.createElement('div');
-                loadingText.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg z-50';
-                loadingText.textContent = 'Uploading cover photo...';
-                document.body.appendChild(loadingText);
-                
-                const formData = new FormData();
-                formData.append('avatar', file); // Using same endpoint for now
-                
-                const token = localStorage.getItem('token');
-                const response = await fetch('/api/upload-avatar', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    // Update cover photo (using gradient for now, but can be changed to use coverPhoto field)
-                    const coverPhotoDiv = document.querySelector('.h-48.gradient-bg');
-                    if (coverPhotoDiv) {
-                        coverPhotoDiv.style.backgroundImage = `url(${data.avatar})`;
-                        coverPhotoDiv.style.backgroundSize = 'cover';
-                        coverPhotoDiv.style.backgroundPosition = 'center';
-                    }
-                    loadingText.textContent = 'Cover photo updated successfully!';
-                    loadingText.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg z-50';
-                    setTimeout(() => loadingText.remove(), 2000);
-                } else {
-                    throw new Error(data.error || 'Upload failed');
-                }
-            } catch (error) {
-                console.error('Failed to upload cover photo:', error);
-                alert('Failed to upload cover photo: ' + (error.message || 'Unknown error'));
-            }
-        }
-        
-        // Share profile
-        function shareProfile() {
-            const profileUrl = `${window.location.origin}/profile.html?user=${currentUser._id}`;
-            navigator.clipboard.writeText(profileUrl).then(() => {
-                alert('Profile link copied to clipboard!');
-            });
-        }
-        
-        // Add course
-        function addCourse() {
-            const courseName = prompt('Enter course name (e.g., CS-101):');
-            if (courseName) {
-                const coursesList = document.getElementById('coursesList');
-                
-                if (coursesList.innerHTML.includes('No courses')) {
-                    coursesList.innerHTML = '';
-                }
-                
-                const courseDiv = document.createElement('div');
-                courseDiv.className = 'flex items-center justify-between p-3 border border-gray-200 rounded-lg';
-                courseDiv.innerHTML = `
-                    <div>
-                        <span class="font-medium text-gray-800">${courseName}</span>
-                        <span class="text-sm text-gray-500 ml-2">Active</span>
-                    </div>
-                    <button onclick="removeCourse(this)" class="text-red-600 hover:text-red-800">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-                
-                coursesList.appendChild(courseDiv);
-            }
-        }
-        
-        function removeCourse(button) {
-            if (confirm('Remove this course?')) {
-                button.closest('div.flex').remove();
-            }
-        }
-        
-        // Change password
-        function changePassword() {
-            const oldPassword = prompt('Enter current password:');
-            if (oldPassword) {
-                const newPassword = prompt('Enter new password:');
-                if (newPassword) {
-                    const confirmPassword = prompt('Confirm new password:');
-                    if (newPassword === confirmPassword) {
-                        alert('Password change request sent!');
-                        // Here you would make an API call to change password
-                    } else {
-                        alert('Passwords do not match!');
-                    }
-                }
-            }
-        }
-        
-        // Change email
-        function changeEmail() {
-            const newEmail = prompt('Enter new email address:');
-            if (newEmail) {
-                alert(`Email change request sent to ${newEmail}!`);
-                // Here you would make an API call to change email
-            }
-        }
-        
-        // Manage devices
-        function manageDevices() {
-            alert('Device management would open a modal');
-        }
-        
-        // Delete account
-        function deleteAccount() {
-            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                const confirmation = prompt('Type "DELETE" to confirm:');
-                if (confirmation === 'DELETE') {
-                    alert('Account deletion request sent!');
-                    // Here you would make an API call to delete account
-                }
-            }
-        }
-        
-        // Export data
-        function exportData() {
-            alert('Data export has been started. You will receive an email when it\'s ready.');
-        }
-        
-        // Clear history
-        function clearHistory() {
-            if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
-                alert('Chat history will be cleared. This may take a few minutes.');
-            }
-        }
-        
-        // Setup event listeners
-        function setupEventListeners() {
-            // Auto-save on input change
-            document.querySelectorAll('.edit-input').forEach(input => {
-                input.addEventListener('input', () => {
-                    if (isEditing) {
-                        checkForChanges();
-                    }
-                });
-            });
-            
-            // Detect changes in selects
-            document.querySelectorAll('select').forEach(select => {
-                select.addEventListener('change', () => {
-                    if (isEditing) {
-                        checkForChanges();
-                    }
-                });
-            });
-        }
-        
-        // Check for changes
-        function checkForChanges() {
-            const hasChanges = 
-                document.getElementById('editFullName').value !== originalData.fullName ||
-                document.getElementById('editNickname').value !== originalData.nickname ||
-                document.getElementById('editUsername').value !== originalData.username ||
-                document.getElementById('editPhone').value !== originalData.phone ||
-                document.getElementById('editEmail').value !== originalData.email ||
-                document.getElementById('editBio').value !== originalData.bio ||
-                document.getElementById('editUniversity').value !== originalData.university ||
-                document.getElementById('editStudyGroup').value !== originalData.studyGroup;
-            
-            if (hasChanges && !document.getElementById('saveBtn').classList.contains('hidden')) {
-                return; // Already showing
-            }
-            
-            if (hasChanges) {
-                document.getElementById('saveBtn').classList.remove('hidden');
-            } else {
-                document.getElementById('saveBtn').classList.add('hidden');
-            }
-        }
-        
-        // Format time
-        function formatTime(dateString) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const diff = now - date;
-            
-            if (diff < 60000) return 'just now';
-            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-            if (diff < 86400000) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            if (diff < 604800000) return date.toLocaleDateString([], { weekday: 'short' });
-            return date.toLocaleDateString();
-        }
-        
-        // Logout
-        async function logout() {
-            try {
-                await fetch('/api/logout', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
-            } catch (error) {
-                // Ignore errors
-            }
-            
-            localStorage.removeItem('token');
-            window.location.href = '/login.html';
-        }
-    </script>
+      });
+    }
+
+    // Quick buttons
+    document.getElementById('feedBtn').onclick = ()=> openFeed();
+    document.getElementById('paintBtn').onclick = ()=> openPaint();
+    document.getElementById('outfitBtn').onclick = ()=> useOutfit();
+
+    document.getElementById('logoutBtn').onclick = async ()=>{
+      localStorage.removeItem('token');
+      window.location.href = '/login.html';
+    };
+
+    // Init
+    loadProfile().catch(()=> toast("Yuklashda xatolik", 'error'));
+  </script>
 </body>
 </html>

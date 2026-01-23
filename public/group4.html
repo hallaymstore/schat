@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uz">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group - UniConnect</title>
+    <title>Guruh — SChat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
@@ -31,149 +31,78 @@
             transform: scale(1.1);
         }
     </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-<style id="glassTheme">
+<style>
   :root{
-    --glass-bg: rgba(255,255,255,.52);
-    --glass-brd: rgba(255,255,255,.30);
-    --muted: rgba(15,23,42,.74);
-    --muted2: rgba(15,23,42,.56);
+    --glass-bg: rgba(255,255,255,.58);
+    --glass-brd: rgba(255,255,255,.34);
+    --muted: rgba(15,23,42,.72);
+    --muted2: rgba(15,23,42,.55);
     --grid: rgba(15,23,42,.06);
     --ring: rgba(99,102,241,.40);
-    --shadow: rgba(0,0,0,.18);
   }
-  html.dark{
-    --glass-bg: rgba(2,6,23,.56);
+  .dark{
+    --glass-bg: rgba(2,6,23,.58);
     --glass-brd: rgba(148,163,184,.16);
     --muted: rgba(226,232,240,.78);
     --muted2: rgba(226,232,240,.55);
     --grid: rgba(148,163,184,.08);
-    --ring: rgba(236,72,153,.30);
-    --shadow: rgba(0,0,0,.45);
+    --ring: rgba(236,72,153,.32);
   }
-
-  html, body{
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial !important;
+  body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+  .muted{ color: var(--muted); }
+  .muted2{ color: var(--muted2); }
+  .glass{
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-brd);
+    box-shadow: 0 20px 60px rgba(0,0,0,.18);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
   }
-
-  body{
+  .glow:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
+  .u-anim{
+    background: linear-gradient(90deg, rgba(99,102,241,1), rgba(236,72,153,1), rgba(34,197,94,1));
+    background-size: 200% 200%;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation: shimmer 7s ease-in-out infinite;
+  }
+  .bg-orbs{
+    position: fixed; inset: 0; z-index: -2; overflow:hidden;
     background:
-      radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.30), transparent 60%),
-      radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.22), transparent 60%),
-      radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.18), transparent 60%),
-      linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1)) !important;
-    background-attachment: fixed !important;
-    color: rgb(15 23 42);
+      radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.38), transparent 60%),
+      radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.28), transparent 60%),
+      radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.22), transparent 60%),
+      linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
   }
-  html.dark body{
+  .dark .bg-orbs{
     background:
-      radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.20), transparent 60%),
-      radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.16), transparent 60%),
-      radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.12), transparent 60%),
-      linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1)) !important;
-    color: rgb(226 232 240);
+      radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.24), transparent 60%),
+      radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.20), transparent 60%),
+      radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.14), transparent 60%),
+      linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));
   }
-
-  /* Subtle grid overlay */
-  body:before{
-    content:"";
-    position: fixed;
-    inset: 0;
-    pointer-events:none;
-    z-index: -1;
+  .bg-grid{
+    position: fixed; inset: 0; z-index: -1; pointer-events:none;
     background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
                       linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
     background-size: 70px 70px;
     mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
     opacity: .85;
   }
-
-  /* Generic glass upgrade: cards, panels, modals, headers, sidebars */
-  .glass, .card, .panel, .container, .box, .modal-content,
-  header, nav, main, section, aside, footer,
-  [class*="card"], [class*="panel"], [class*="sidebar"], [class*="header"], [class*="content"]{
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+  .btn-primary{
+    background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1));
   }
-
-  /* Make many common blocks glassy without breaking layout */
-  header, nav{
-    background: var(--glass-bg) !important;
-    border-bottom: 1px solid var(--glass-brd) !important;
-    box-shadow: 0 18px 55px var(--shadow) !important;
+  .btn-primary:hover{ filter: brightness(1.05); }
+  .btn-ghost:hover{ background: rgba(148,163,184,.12); }
+  .field{
+    background: rgba(255,255,255,.36);
+    border: 1px solid rgba(255,255,255,.28);
   }
-
-  /* If there is a main wrapper, upgrade it */
-  .main, .main-content, #main, #content, .content, .group-container, .group-page, .group-card{
-    background: var(--glass-bg) !important;
-    border: 1px solid var(--glass-brd) !important;
-    border-radius: 22px;
-    box-shadow: 0 22px 70px var(--shadow) !important;
+  .dark .field{
+    background: rgba(2,6,23,.32);
+    border: 1px solid rgba(148,163,184,.18);
   }
-
-  /* Buttons */
-  button, .btn, [role="button"], input[type="submit"]{
-    border-radius: 14px !important;
-  }
-  .btn-primary, button.primary, .primary-btn{
-    background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)) !important;
-    color: white !important;
-    border: 1px solid rgba(255,255,255,.18) !important;
-  }
-  .btn-primary:hover, button.primary:hover, .primary-btn:hover{ filter: brightness(1.05); }
-
-  /* Inputs */
-  input, textarea, select{
-    background: rgba(255,255,255,.38) !important;
-    border: 1px solid rgba(255,255,255,.28) !important;
-    color: rgb(15 23 42) !important;
-  }
-  html.dark input, html.dark textarea, html.dark select{
-    background: rgba(2,6,23,.32) !important;
-    border: 1px solid rgba(148,163,184,.18) !important;
-    color: rgb(226 232 240) !important;
-  }
-  input:focus, textarea:focus, select:focus{
-    outline: none !important;
-    box-shadow: 0 0 0 5px var(--ring) !important;
-    border-color: transparent !important;
-  }
-
-  /* Text helpers if present */
-  .muted{ color: var(--muted) !important; }
-  .muted2{ color: var(--muted2) !important; }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar{ width: 10px; height:10px; }
-  ::-webkit-scrollbar-thumb{ background: rgba(148,163,184,.28); border-radius: 999px; }
-  ::-webkit-scrollbar-track{ background: transparent; }
-
-  /* Theme floating button */
-  #themeFab{
-    position: fixed;
-    right: 18px;
-    top: 88px;
-    z-index: 9999;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-brd);
-    box-shadow: 0 18px 55px var(--shadow);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    border-radius: 16px;
-    padding: 10px 12px;
-    font-weight: 800;
-    font-size: 13px;
-    color: var(--muted);
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-  }
-  #themeFab i{ opacity: .9; }
+  .field:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); border-color: transparent; }
 </style>
 <script>
   (function(){
@@ -186,152 +115,133 @@
 </script>
 
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <!-- Navigation -->
-    <nav class="gradient-bg text-white h-16">
-        <div class="container mx-auto px-4 h-full flex items-center justify-between">
-            <a href="/groups.html" class="flex items-center space-x-2">
-                <i class="fas fa-arrow-left"></i>
-                <span class="font-semibold">Back to Groups</span>
-            </a>
-            <div class="flex items-center space-x-4">
-                <button onclick="toggleInfoPanel()" class="p-2 hover:bg-white/10 rounded-full">
-                    <i class="fas fa-info-circle"></i>
-                </button>
-                <a href="#" onclick="logout()" class="p-2 hover:bg-white/10 rounded-full">
-                    <i class="fas fa-sign-out-alt"></i>
-                </a>
-            </div>
-        </div>
-    </nav>
 
-    <!-- Main Layout -->
-    <div class="container mx-auto flex h-[calc(100vh-4rem)]">
-        <!-- Chat Area -->
-        <div class="flex-1 flex flex-col bg-white">
-            <!-- Group Header -->
-            <div class="border-b border-gray-200 p-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center">
-                            <i class="fas fa-users text-white text-xl"></i>
-                        </div>
-                        <div>
-                            <h1 id="groupName" class="text-xl font-bold text-gray-800">Loading...</h1>
-                            <p id="groupMembers" class="text-sm text-gray-600">0 members</p>
-                        </div>
-                    </div>
-                    <div id="groupActions" class="flex items-center space-x-2">
-                        <!-- Actions will be loaded here -->
-                    </div>
-                </div>
-                <p id="groupDescription" class="text-gray-600 mt-2"></p>
-            </div>
-            
-            <!-- Messages Container -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-4" id="messagesContainer">
-                <!-- Messages will be loaded here -->
-                <div class="text-center mt-20">
-                    <i class="fas fa-comments text-4xl text-gray-300 mb-4"></i>
-                    <h3 class="text-xl font-semibold text-gray-500">Group Chat</h3>
-                    <p class="text-gray-400">Start the conversation!</p>
-                </div>
-            </div>
-            
-            <!-- Message Input -->
-            <div class="border-t border-gray-200 p-4 bg-white">
-                <div class="flex space-x-2">
-                    <button onclick="attachMedia()" class="p-3 hover:bg-gray-100 rounded-full">
-                        <i class="fas fa-paperclip text-gray-600"></i>
-                    </button>
-                    <input type="text" id="messageInput" 
-                           class="flex-1 border border-gray-300 rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                           placeholder="Type a message to the group..." 
-                           onkeyup="handleEnter(event)">
-                    <button onclick="sendGroupMessage()" 
-                            class="gradient-bg text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
+<body class="min-h-screen text-slate-900 dark:text-slate-100">
+  <div class="bg-orbs"></div>
+  <div class="bg-grid"></div>
+
+  <header class="sticky top-0 z-50">
+    <div class="mx-auto max-w-6xl px-4 py-4">
+      <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
+        <a href="/groups.html" class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white">
+            <i class="fa-solid fa-people-group"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-extrabold tracking-tight">Guruh</div>
+            <div class="text-xs muted">Tartib • Hamkorlik • Chat</div>
+          </div>
+        </a>
+
+        <div class="flex items-center gap-2">
+          <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow">
+            <i id="themeIcon" class="fa-solid fa-moon"></i>
+            <span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
+          </button>
+          <a href="/profile.html" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow">
+            <i class="fa-solid fa-user"></i><span class="ml-2 hidden sm:inline">Profil</span>
+          </a>
         </div>
-        
-        <!-- Info Panel -->
-        <div id="infoPanel" class="w-80 border-l border-gray-200 bg-white overflow-y-auto hidden md:block">
-            <div class="p-6">
-                <!-- Group Info -->
-                <div class="mb-8">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Group Information</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-sm text-gray-500">Created By</label>
-                            <div class="flex items-center space-x-2 mt-1">
-                                <img id="creatorAvatar" src="" class="w-8 h-8 rounded-full">
-                                <span id="creatorName" class="font-medium"></span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Created Date</label>
-                            <p id="createdDate" class="font-medium"></p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">University</label>
-                            <p id="groupUniversity" class="font-medium"></p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Description</label>
-                            <p id="fullDescription" class="text-gray-700"></p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Members List -->
-                <div>
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-gray-800 text-lg">Members</h3>
-                        <span id="membersCount" class="text-sm text-gray-500">0 members</span>
-                    </div>
-                    <div id="membersList" class="space-y-3">
-                        <!-- Members will be loaded here -->
-                    </div>
-                </div>
-                
-                <!-- Invite Section -->
-                <div class="mt-8 pt-6 border-t border-gray-200">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Invite Members</h3>
-                    <div class="relative mb-3">
-                        <input type="text" id="inviteSearch" 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                               placeholder="Search users...">
-                    </div>
-                    <div id="inviteResults" class="space-y-2 max-h-40 overflow-y-auto mb-3">
-                        <!-- Invite results will appear here -->
-                    </div>
-                    <button onclick="copyInviteLink()" 
-                            class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 transition">
-                        <i class="fas fa-link mr-2"></i> Copy Invite Link
-                    </button>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+  </header>
 
-    <!-- Media Modal -->
-    <div id="mediaModal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg max-w-2xl max-h-[90vh] overflow-hidden">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="font-bold text-gray-800">Media Preview</h3>
-                <button onclick="closeMediaModal()" class="p-2 hover:bg-gray-100 rounded-full">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="p-4">
-                <img id="mediaPreview" src="" class="max-w-full max-h-[70vh] mx-auto">
-            </div>
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    <section class="glass rounded-3xl p-6 animate-pop">
+      <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+        <div class="min-w-0">
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-circle-info"></i>
+            <span id="groupStatus">Yuklanmoqda…</span>
+          </div>
+          <h1 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+            <span id="groupName" class="u-anim">Guruh</span>
+          </h1>
+          <p id="groupDesc" class="mt-2 muted2 text-sm sm:text-base max-w-2xl">
+            Guruh ma’lumotlari yuklanmoqda…
+          </p>
+
+          <div class="mt-5 flex flex-wrap gap-2">
+            <button id="openChatBtn" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow">
+              <i class="fa-solid fa-comments mr-2"></i>Guruh chatiga kirish
+            </button>
+            <button id="inviteBtn" class="glass rounded-2xl px-5 py-3 text-sm font-extrabold btn-ghost glow">
+              <i class="fa-solid fa-link mr-2"></i>Taklif havolasi
+            </button>
+            <button id="editBtn" class="glass rounded-2xl px-5 py-3 text-sm font-extrabold btn-ghost glow">
+              <i class="fa-solid fa-pen mr-2"></i>Tahrirlash
+            </button>
+          </div>
         </div>
-    </div>
 
-    <script>
+        <div class="w-full lg:w-[360px] glass rounded-3xl p-5">
+          <div class="flex items-center justify-between">
+            <div class="font-extrabold">A’zolar</div>
+            <div class="text-xs muted2"><span id="memberCount">—</span> ta</div>
+          </div>
+          <div id="membersList" class="mt-4 space-y-2 max-h-[380px] overflow-auto pr-1"></div>
+
+          <div class="mt-4">
+            <div class="text-xs font-extrabold muted">Username orqali qo‘shish</div>
+            <div class="mt-2 flex gap-2">
+              <input id="addMemberInput" class="field rounded-2xl px-4 py-3 text-sm w-full" placeholder="username"/>
+              <button id="addMemberBtn" class="btn-primary text-white rounded-2xl px-4 py-3 text-sm font-extrabold glow">
+                Qo‘shish
+              </button>
+            </div>
+            <div class="text-[11px] muted2 mt-2">Faqat guruh admini qo‘sha oladi (agar server shunday sozlangan bo‘lsa).</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 glass rounded-3xl p-6 animate-pop">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <div class="text-lg font-black">So‘nggi xabarlar</div>
+          <div class="text-xs muted2 mt-1">Guruh chatidagi oxirgi faoliyat (preview).</div>
+        </div>
+        <button id="refreshBtn" class="glass rounded-2xl px-5 py-3 text-sm font-extrabold btn-ghost glow">
+          <i class="fa-solid fa-rotate mr-2"></i>Yangilash
+        </button>
+      </div>
+      <div id="messagesPreview" class="mt-4 space-y-3"></div>
+    </section>
+
+    <div id="toast" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-[60] glass rounded-2xl px-4 py-3 text-sm font-extrabold"></div>
+  </main>
+
+  <script>
+    // Theme toggle
+    (function(){
+      const key='theme';
+      const html=document.documentElement;
+      const btn=document.getElementById('themeToggle');
+      const icon=document.getElementById('themeIcon');
+      const label=document.getElementById('themeLabel');
+      function apply(mode){
+        if(mode==='dark') html.classList.add('dark'); else html.classList.remove('dark');
+        localStorage.setItem(key, mode);
+        icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+      }
+      const saved=localStorage.getItem(key);
+      apply(saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light'));
+      btn.addEventListener('click', ()=> apply(html.classList.contains('dark') ? 'light' : 'dark'));
+    })();
+    const toast = (msg, type='info') => {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      el.style.background = type==='error' ? 'rgba(239,68,68,.14)' : 'rgba(34,197,94,.14)';
+      el.style.color = type==='error' ? 'rgba(220,38,38,.95)' : 'rgba(16,185,129,.95)';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=> el.classList.add('hidden'), 3800);
+    };
+  </script>
+
+  <script>
+  
         let socket = null;
         let currentUser = null;
         let currentGroup = null;
@@ -920,30 +830,151 @@
             localStorage.removeItem('token');
             window.location.href = '/login.html';
         }
-    </script>
+    
+  </script>
 
-<div id="themeFab" title="Kunduzgi / Tungi">
-  <i id="themeFabIcon" class="fa-solid fa-moon"></i>
-  <span id="themeFabLabel">Tungi</span>
-</div>
-<script>
-  (function(){
-    const key='theme';
-    const btn=document.getElementById('themeFab');
-    const icon=document.getElementById('themeFabIcon');
-    const label=document.getElementById('themeFabLabel');
-    function apply(mode){
-      if(mode==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
-      localStorage.setItem(key, mode);
-      icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-      label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
-    }
-    const saved=localStorage.getItem(key);
-    const prefers=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    apply(saved || (prefers?'dark':'light'));
-    btn.addEventListener('click', ()=> apply(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
-  })();
-</script>
+  <script>
+    // ====== Minimal adapters (if original JS does not fill new UI) ======
+    // This adapter attempts to map common ids from older group.html implementations.
+    (function(){
+      const params = new URLSearchParams(location.search);
+      const groupId = params.get('group') || params.get('id') || params.get('groupId');
+      const token = localStorage.getItem('token') || '';
 
+      function headers(){
+        return token ? { 'Authorization': 'Bearer ' + token, 'Content-Type':'application/json' } : { 'Content-Type':'application/json' };
+      }
+
+      async function getJSON(url){
+        const r = await fetch(url, { headers: headers() });
+        const j = await r.json().catch(()=>null);
+        if(!r.ok) throw new Error(j?.error || 'Xatolik');
+        return j;
+      }
+
+      function renderMembers(members){
+        const list = document.getElementById('membersList');
+        list.innerHTML = '';
+        (members||[]).forEach(m=>{
+          const u = m.user || m;
+          const div = document.createElement('div');
+          div.className = 'glass rounded-2xl px-4 py-3 flex items-center justify-between';
+          div.innerHTML = `
+            <div class="min-w-0">
+              <div class="font-extrabold truncate">${u.username || '—'}</div>
+              <div class="text-xs muted2 truncate">${u.nickname || u.fullName || ''}</div>
+            </div>
+            <div class="text-xs muted2">${m.role || ''}</div>
+          `;
+          list.appendChild(div);
+        });
+        document.getElementById('memberCount').textContent = (members||[]).length;
+      }
+
+      function setGroupInfo(g){
+        document.getElementById('groupName').textContent = g.name || 'Guruh';
+        document.getElementById('groupDesc').textContent = g.description || 'Tavsif yo‘q.';
+        document.getElementById('groupStatus').textContent = g.isPrivate ? 'Yopiq guruh' : 'Ochiq guruh';
+      }
+
+      function renderPreview(msgs){
+        const box = document.getElementById('messagesPreview');
+        box.innerHTML = '';
+        (msgs||[]).slice(0, 8).forEach(x=>{
+          const d = document.createElement('div');
+          d.className = 'glass rounded-2xl p-4';
+          const name = x.sender?.username || x.username || 'User';
+          const t = new Date(x.createdAt || Date.now()).toLocaleString('uz-UZ');
+          d.innerHTML = `
+            <div class="flex items-center justify-between gap-3">
+              <div class="font-extrabold truncate">${name}</div>
+              <div class="text-xs muted2">${t}</div>
+            </div>
+            <div class="mt-2 text-sm">${(x.content||x.text||'').toString().slice(0,240)}</div>
+          `;
+          box.appendChild(d);
+        });
+        if(!(msgs||[]).length) box.innerHTML = '<div class="text-sm muted2">Hozircha xabar yo‘q.</div>';
+      }
+
+      async function load(){
+        if(!groupId) {
+          toast('Group ID topilmadi. URL’da ?group=... bo‘lishi kerak.', 'error');
+          return;
+        }
+        try {
+          // Try common endpoints (your server may use one of them)
+          let g = null;
+          const candidates = [
+            `/api/groups/${groupId}`,
+            `/api/group/${groupId}`,
+            `/api/get-group/${groupId}`
+          ];
+          for (const u of candidates){
+            try { g = await getJSON(u); break; } catch(e){}
+          }
+          if(!g) throw new Error('Guruh topilmadi (API mos emas).');
+          setGroupInfo(g.group || g);
+
+          // members
+          let members = null;
+          const memCandidates = [
+            `/api/groups/${groupId}/members`,
+            `/api/group/${groupId}/members`
+          ];
+          for (const u of memCandidates){
+            try { members = await getJSON(u); break; } catch(e){}
+          }
+          if(members) renderMembers(members.members || members);
+
+          // preview messages
+          let msgs = null;
+          const msgCandidates = [
+            `/api/groups/${groupId}/messages?limit=20`,
+            `/api/group/${groupId}/messages?limit=20`
+          ];
+          for (const u of msgCandidates){
+            try { msgs = await getJSON(u); break; } catch(e){}
+          }
+          if(msgs) renderPreview(msgs.messages || msgs);
+
+          // buttons
+          document.getElementById('openChatBtn').onclick = ()=> location.href = `/group.html?id=${groupId}#chat`;
+          document.getElementById('refreshBtn').onclick = ()=> load();
+          document.getElementById('inviteBtn').onclick = async ()=> {
+            const link = location.origin + `/groups.html?join=${groupId}`;
+            try{ await navigator.clipboard.writeText(link); toast('Taklif havolasi nusxalandi'); } catch(e){ toast(link); }
+          };
+          document.getElementById('addMemberBtn').onclick = async ()=> {
+            const username = document.getElementById('addMemberInput').value.trim();
+            if(!username) return toast('Username kiriting', 'error');
+            // common add endpoint
+            const addCandidates = [
+              `/api/groups/${groupId}/members`,
+              `/api/group/${groupId}/members/add`
+            ];
+            let ok = false;
+            for (const u of addCandidates){
+              try {
+                const r = await fetch(u, { method:'POST', headers: headers(), body: JSON.stringify({ username }) });
+                const j = await r.json().catch(()=>null);
+                if(!r.ok) throw new Error(j?.error || 'Xatolik');
+                ok = true; break;
+              } catch(e){}
+            }
+            if(!ok) return toast('Qo‘shish endpointi topilmadi (server route nomini moslash kerak).', 'error');
+            toast('A’zo qo‘shildi');
+            document.getElementById('addMemberInput').value='';
+            load();
+          };
+        } catch (e) {
+          toast(e.message || 'Xatolik', 'error');
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', load);
+    })();
+  </script>
 </body>
+
 </html>

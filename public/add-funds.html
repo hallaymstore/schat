@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Coin to‘ldirish — SChat</title>
+  <meta name="description" content="Coin to‘ldirish: miqdor kiriting, narx avtomatik, screenshot yuklang, admin tasdiqlasa balans oshadi."/>
+  <script>
+    tailwind = { config: { darkMode:'class', theme:{ extend:{
+      fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
+      keyframes:{
+        floaty:{'0%,100%':{transform:'translateY(0px)'},'50%':{transform:'translateY(-10px)'}},
+        shimmer:{'0%':{backgroundPosition:'0% 50%'},'100%':{backgroundPosition:'100% 50%'}},
+        pop:{'0%':{transform:'scale(.98)',opacity:.0},'100%':{transform:'scale(1)',opacity:1}}
+      },
+      animation:{ floaty:'floaty 7s ease-in-out infinite', shimmer:'shimmer 6s ease-in-out infinite', pop:'pop .45s ease-out both' }
+    }}}};
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,.58);
+      --glass-brd: rgba(255,255,255,.36);
+      --muted: rgba(15,23,42,.72);
+      --muted2: rgba(15,23,42,.55);
+      --grid: rgba(15,23,42,.06);
+      --ring: rgba(99,102,241,.45);
+      --ok: rgba(34,197,94,.18);
+      --bad: rgba(239,68,68,.18);
+    }
+    .dark{
+      --glass-bg: rgba(2,6,23,.58);
+      --glass-brd: rgba(148,163,184,.16);
+      --muted: rgba(226,232,240,.78);
+      --muted2: rgba(226,232,240,.55);
+      --grid: rgba(148,163,184,.08);
+      --ring: rgba(236,72,153,.35);
+      --ok: rgba(34,197,94,.14);
+      --bad: rgba(239,68,68,.14);
+    }
+    body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .muted{ color: var(--muted); }
+    .muted2{ color: var(--muted2); }
+    .glass{
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .btn-primary{ background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)); }
+    .btn-primary:hover{ filter: brightness(1.05); }
+    .btn-ghost:hover{ background: rgba(148,163,184,.12); }
+    .glow-ring:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
+    .u-anim{
+      background: linear-gradient(90deg, rgba(99,102,241,1), rgba(236,72,153,1));
+      background-size: 200% 200%;
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      animation: shimmer 6s ease-in-out infinite;
+    }
+    .bg-orbs{
+      position: fixed; inset: 0; z-index: -2; overflow: hidden;
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.38), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.28), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.22), transparent 60%),
+        linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
+    }
+    .dark .bg-orbs{
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.24), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.19), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.14), transparent 60%),
+        linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));
+    }
+    .bg-grid{
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 70px 70px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+      opacity: .85;
+    }
+    .g-border{ position: relative; }
+    .g-border:before{
+      content:"";
+      position:absolute; inset:-1px; border-radius: 1.5rem;
+      background: linear-gradient(135deg, rgba(99,102,241,.55), rgba(236,72,153,.45), rgba(34,197,94,.35));
+      z-index:-1;
+    }
+    .field{
+      background: rgba(255,255,255,.38);
+      border: 1px solid rgba(255,255,255,.28);
+    }
+    .dark .field{
+      background: rgba(2,6,23,.35);
+      border: 1px solid rgba(148,163,184,.18);
+    }
+    .field:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); border-color: transparent; }
+  </style>
+  <script>
+    (function(){
+      const key='theme';
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark?'dark':'light');
+      if(mode==='dark') document.documentElement.classList.add('dark');
+    })();
+  </script>
+</head>
+
+<body class="min-h-screen text-slate-900 dark:text-slate-100">
+  <div class="bg-orbs"></div>
+  <div class="bg-grid"></div>
+
+  <header class="sticky top-0 z-50">
+    <div class="mx-auto max-w-6xl px-4 py-4">
+      <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
+        <a href="/profile.html" class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white shadow-glass">
+            <i class="fa-solid fa-coins"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-extrabold tracking-tight">Coin to‘ldirish</div>
+            <div class="text-xs muted">So‘rov → admin tasdiq → balans</div>
+          </div>
+        </a>
+
+        <div class="flex items-center gap-2">
+          <div class="glass rounded-xl px-3 py-2 text-sm font-extrabold">
+            <i class="fa-solid fa-wallet mr-2"></i><span id="coins">0</span> coin
+          </div>
+          <a href="/petmarket.html" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring">
+            <i class="fa-solid fa-store mr-2"></i>Pet Market
+          </a>
+          <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring" title="Tungi/Kunduzgi">
+            <i id="themeIcon" class="fa-solid fa-moon"></i><span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    <div id="toast" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-[60] glass rounded-2xl px-4 py-3 text-sm font-extrabold"></div>
+
+    <section class="glass rounded-3xl p-6 g-border animate-pop">
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-shield-heart"></i>
+            <span>“Nazoratli” coin to‘ldirish</span>
+          </div>
+          <h1 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+            Coinni <span class="u-anim">xavfsiz</span> to‘ldiring
+          </h1>
+          <p class="mt-2 muted2 text-sm sm:text-base">
+            Miqdorni kiriting, narx avtomatik hisoblanadi. Admin kartasiga to‘lov qiling, screenshot yuklang va so‘rov yuboring.
+            Admin tasdiqlagach coin balansingizga qo‘shiladi.
+          </p>
+        </div>
+
+        <div class="glass rounded-2xl px-4 py-3">
+          <div class="text-xs font-extrabold muted">Kurs</div>
+          <div class="mt-1 text-sm font-extrabold">10 coin = 1000 so‘m</div>
+          <div class="text-xs muted2 mt-1">1 coin = 100 so‘m</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 grid lg:grid-cols-3 gap-6">
+      <div class="glass rounded-3xl p-6 g-border animate-pop lg:col-span-2">
+        <div class="text-lg font-black">Yangi top-up so‘rovi</div>
+        <div class="text-xs muted2 mt-1">Iltimos, to‘lov screenshotini aniq qilib yuklang.</div>
+
+        <form id="topupForm" class="mt-5 grid sm:grid-cols-2 gap-4" enctype="multipart/form-data">
+          <div>
+            <label class="text-xs font-extrabold muted">Coin miqdori</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-coins absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <input id="coinsInput" name="coins" type="number" min="1" step="1" required
+                     class="field w-full rounded-2xl px-11 py-3 text-sm" placeholder="Masalan: 50" />
+            </div>
+            <div class="mt-2 text-xs muted2">Masalan: 50 coin = 5000 so‘m</div>
+          </div>
+
+          <div>
+            <label class="text-xs font-extrabold muted">Narx (so‘m)</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-money-bill-wave absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <input id="somInput" type="text" readonly class="field w-full rounded-2xl px-11 py-3 text-sm" value="0 so‘m"/>
+            </div>
+            <div class="mt-2 text-xs muted2">Avtomatik hisoblanadi (coin × 100).</div>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="text-xs font-extrabold muted">To‘lov skrinshot</label>
+            <div class="mt-2">
+              <input id="shot" name="screenshot" type="file" accept="image/*" required
+                     class="field w-full rounded-2xl px-4 py-3 text-sm"/>
+            </div>
+            <div class="mt-2 text-xs muted2">Faqat rasm (png/jpg/webp). Keyin admin tekshiradi.</div>
+          </div>
+
+          <div class="sm:col-span-2">
+            <div class="glass rounded-2xl p-4">
+              <div class="text-xs font-extrabold muted">Admin karta</div>
+              <div class="mt-2 text-sm font-extrabold">
+                8600 0000 0000 0000 <span class="muted2">(namuna)</span>
+              </div>
+              <div class="mt-1 text-xs muted2">Bu joyni o‘zingizning haqiqiy karta raqamingiz bilan almashtiring.</div>
+            </div>
+          </div>
+
+          <div class="sm:col-span-2 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <button id="sendBtn" type="submit" class="btn-primary rounded-2xl px-6 py-3 text-sm font-extrabold text-white glow-ring">
+              So‘rov yuborish <i class="fa-solid fa-paper-plane ml-2"></i>
+            </button>
+            <a href="/profile.html" class="glass rounded-2xl px-6 py-3 text-sm font-extrabold btn-ghost text-center glow-ring">
+              Profilga qaytish
+            </a>
+          </div>
+        </form>
+      </div>
+
+      <aside class="glass rounded-3xl p-6 g-border animate-pop">
+        <div class="text-sm font-extrabold">So‘rovlar holati</div>
+        <div class="text-xs muted2 mt-1">Oxirgi top-up so‘rovlaringiz</div>
+        <div id="reqList" class="mt-4 space-y-2"></div>
+
+        <div class="mt-4 glass rounded-2xl p-4">
+          <div class="text-xs font-extrabold muted">Eslatma</div>
+          <div class="mt-1 text-sm muted2">
+            Tasdiq kelmaguncha coin qo‘shilmaydi. Screenshot aniq bo‘lmasa admin rad etishi mumkin.
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    // Theme
+    (function(){
+      const key='theme';
+      const html=document.documentElement;
+      const btn=document.getElementById('themeToggle');
+      const icon=document.getElementById('themeIcon');
+      const label=document.getElementById('themeLabel');
+      function apply(mode){
+        if(mode==='dark') html.classList.add('dark'); else html.classList.remove('dark');
+        localStorage.setItem(key, mode);
+        icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+      }
+      const saved = localStorage.getItem(key);
+      if(saved) apply(saved);
+      else apply((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark':'light');
+      btn.addEventListener('click', ()=> apply(html.classList.contains('dark') ? 'light' : 'dark'));
+    })();
+
+    const token = () => localStorage.getItem('token') || '';
+    const toast = (text, type='info') => {
+      const el = document.getElementById('toast');
+      el.textContent = text;
+      el.classList.remove('hidden');
+      el.style.background = type === 'error' ? 'var(--bad)' : 'var(--ok)';
+      el.style.border = '1px solid rgba(148,163,184,.2)';
+      el.style.color = type === 'error' ? 'rgba(220,38,38,.95)' : 'rgba(16,185,129,.95)';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=> el.classList.add('hidden'), 4200);
+    };
+
+    const fmtDate = (d) => { try { return new Date(d).toLocaleString('uz-UZ'); } catch { return ''; } };
+
+    function calcSom(coins){
+      const c = Number(coins||0);
+      return (isFinite(c) && c>0) ? (c*100) : 0;
+    }
+
+    function renderRequests(list){
+      const box = document.getElementById('reqList');
+      box.innerHTML = '';
+      if(!list || !list.length){
+        box.innerHTML = `<div class="text-xs muted2">Hozircha so‘rov yo‘q.</div>`;
+        return;
+      }
+      for(const r of list.slice(0,8)){
+        const st = r.status === 'approved' ? 'Tasdiqlandi' : (r.status === 'rejected' ? 'Rad etildi' : 'Kutilmoqda');
+        const badge = r.status === 'approved'
+          ? 'bg-emerald-500/15 text-emerald-500'
+          : (r.status === 'rejected' ? 'bg-red-500/15 text-red-500' : 'bg-amber-500/15 text-amber-500');
+        const row = document.createElement('div');
+        row.className = 'glass rounded-2xl px-3 py-2 flex items-center justify-between gap-3';
+        row.innerHTML = `
+          <div class="min-w-0">
+            <div class="text-xs font-extrabold">${r.coins} coin <span class="muted2">(${r.amountSom} so‘m)</span></div>
+            <div class="text-[11px] muted2 mt-0.5">${fmtDate(r.createdAt)}</div>
+          </div>
+          <div class="text-[11px] font-extrabold px-2 py-1 rounded-lg ${badge}">${st}</div>
+        `;
+        box.appendChild(row);
+      }
+    }
+
+    async function load(){
+      if(!token()){ window.location.href='/login.html'; return; }
+      // coins
+      const pr = await fetch('/api/pet/me', { headers: { 'Authorization': `Bearer ${token()}` } }).catch(()=>null);
+      if(!pr || !pr.ok){ localStorage.removeItem('token'); window.location.href='/login.html'; return; }
+      const pj = await pr.json().catch(()=>null);
+      document.getElementById('coins').textContent = pj.coins || 0;
+
+      // requests
+      const rr = await fetch('/api/wallet/topup-requests', { headers: { 'Authorization': `Bearer ${token()}` } }).catch(()=>null);
+      if(rr && rr.ok){
+        const rj = await rr.json().catch(()=>null);
+        renderRequests(rj?.requests || []);
+      }
+    }
+
+    // calc
+    const coinsInput = document.getElementById('coinsInput');
+    const somInput = document.getElementById('somInput');
+    function updatePrice(){
+      const som = calcSom(coinsInput.value);
+      somInput.value = `${som.toLocaleString('uz-UZ')} so‘m`;
+    }
+    coinsInput.addEventListener('input', updatePrice);
+    updatePrice();
+
+    // submit
+    const form = document.getElementById('topupForm');
+    const sendBtn = document.getElementById('sendBtn');
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const c = parseInt(coinsInput.value || '0', 10);
+      if(!c || c<=0) return toast("Coin miqdorini kiriting", 'error');
+      const file = document.getElementById('shot').files?.[0];
+      if(!file) return toast("Screenshot yuklang", 'error');
+
+      const fd = new FormData();
+      fd.append('coins', String(c));
+      fd.append('screenshot', file);
+
+      const original = sendBtn.innerHTML;
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Yuborilmoqda...';
+
+      try{
+        const res = await fetch('/api/wallet/topup-request', {
+          method:'POST',
+          headers: { 'Authorization': `Bearer ${token()}` }, // multipart => NO content-type
+          body: fd
+        });
+        const j = await res.json().catch(()=>null);
+        if(!res.ok) return toast(j?.error || "So‘rov yuborilmadi", 'error');
+        toast("So‘rov yuborildi. Admin tasdiqlashini kuting.", 'success');
+        form.reset();
+        updatePrice();
+        await load();
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = original;
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

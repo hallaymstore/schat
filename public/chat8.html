@@ -615,41 +615,6 @@
   })();
 </script>
 
-
-<style id="ultraContrastPatch">
-  /* Fix: message text readability */
-  .message-bubble,
-  .message-bubble *{
-    color: rgba(226,232,240,.94) !important;
-  }
-  /* Received bubble a bit brighter; Sent bubble deeper */
-  .message-bubble.received{
-    background: rgba(148,163,184,.18) !important;
-    border: 1px solid rgba(255,255,255,.14) !important;
-  }
-  .message-bubble.sent{
-    background: linear-gradient(135deg, rgba(99,102,241,.42), rgba(236,72,153,.26)) !important;
-    border: 1px solid rgba(255,255,255,.16) !important;
-  }
-  /* Time / meta text */
-  .message-time, .message-meta, .timestamp, small, .text-xs{
-    color: rgba(226,232,240,.70) !important;
-  }
-  /* Ensure the messages list isn't too dark */
-  #messagesContainer, .messages-container, .chat-messages{
-    background: rgba(2,6,23,.14) !important;
-  }
-  /* Inputs */
-  input, textarea{
-    background: rgba(2,6,23,.42) !important;
-    color: rgba(226,232,240,.96) !important;
-  }
-  /* Buttons/icons on dark */
-  button, .icon-btn{
-    color: rgba(226,232,240,.92) !important;
-  }
-</style>
-
 </head>
 <body class="bg-gray-50 min-h-screen">
     <!-- Navigation -->
