@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Test ishlash</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f6f7fb;color:#111}
+    header{background:#111827;color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    header .left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    header .badge{background:#10b981;padding:6px 10px;border-radius:999px;font-size:12px}
+    header .badge.teacher{background:#2563eb}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px;background:rgba(255,255,255,.08)}
+    .container{max-width:1100px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+    .card h2{margin:0 0 10px 0;font-size:20px}
+    .card h3{margin:0 0 10px 0;font-size:16px}
+    .muted{color:#6b7280;font-size:13px;line-height:1.45}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .btn{display:inline-block;border:1px solid #d1d5db;background:#fff;color:#111827;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:14px;cursor:pointer}
+    .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
+    .btn.danger{background:#ef4444;border-color:#ef4444;color:#fff}
+    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
+    .tag{display:inline-block;font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid #e5e7eb;background:#f9fafb;color:#111827}
+    .tag.open{border-color:#a7f3d0;background:#ecfdf5}
+    .tag.lock{border-color:#fecaca;background:#fef2f2}
+    .col-12{grid-column:span 12}
+    .col-8{grid-column:span 8}
+    .col-4{grid-column:span 4}
+    @media (max-width:980px){
+      .col-8,.col-4{grid-column:span 12}
+    }
+    .err{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
+    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
+    .qBox{border:1px solid #e5e7eb;border-radius:12px;padding:14px}
+    .qTitle{font-weight:700}
+    .opt{border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-top:10px;display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+    .opt input{margin-top:2px}
+    .opt:hover{background:#f9fafb}
+    .progress{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden}
+    .progress > div{height:100%;background:#2563eb;width:0%}
+    footer{padding:20px 16px;color:#6b7280;text-align:center}
+    .tiny{font-size:12px;color:#6b7280}
+    code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <div style="font-weight:700">QDTU LMS</div>
+      <div id="roleBadge" class="badge">Student</div>
+      <div id="mePill" class="pill" style="display:none"></div>
+    </div>
+    <div class="row">
+      <a class="btn ghost" href="/tests.html">Testlar</a>
+      <a class="btn ghost" id="dashLink" href="/student-dashboard.html">Dashboard</a>
+      <a class="btn ghost" href="/profile.html">Profil</a>
+      <button class="btn danger" id="logoutBtn">Chiqish</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="errBox" class="err"></div>
+    <div id="okBox" class="ok"></div>
+
+    <div class="grid">
+      <div class="card col-12">
+        <h2 id="testTitle">Test yuklanmoqda...</h2>
+        <div class="muted" id="testDesc">-</div>
+        <div class="row" style="margin-top:10px">
+          <span class="tag" id="tagSubject">-</span>
+          <span class="tag" id="tagFaculty">-</span>
+          <span class="tag" id="tagGroups">-</span>
+          <span class="tag" id="tagStatus">-</span>
+          <span class="tag" id="tagTeacher">-</span>
+        </div>
+      </div>
+
+      <div class="card col-8">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Savollar</h3>
+          <div class="tiny" id="posTxt">-</div>
+        </div>
+        <div style="margin-top:10px" class="progress"><div id="progBar"></div></div>
+
+        <div style="margin-top:12px" class="qBox" id="qBox">
+          <div class="qTitle" id="qTitle">-</div>
+          <div class="muted" id="qText" style="margin-top:8px">-</div>
+          <div id="opts"></div>
+        </div>
+
+        <div class="row" style="margin-top:12px;justify-content:space-between">
+          <div class="row">
+            <button class="btn" id="prevBtn">Orqaga</button>
+            <button class="btn primary" id="nextBtn">Keyingi</button>
+          </div>
+          <button class="btn danger" id="finishBtn">Testni yakunlash</button>
+        </div>
+      </div>
+
+      <div class="card col-4">
+        <h3>Holat</h3>
+        <div class="muted">
+          Javoblar avtomatik saqlanadi (demo: localStorage). Yakunda natija hisoblanadi.
+        </div>
+        <div class="row" style="margin-top:12px">
+          <span class="tag open" id="answeredTag">Javob: 0</span>
+          <span class="tag" id="totalTag">Savol: 0</span>
+        </div>
+
+        <div class="card" style="margin-top:14px;background:#f9fafb">
+          <h3 style="margin:0 0 8px 0">Natija</h3>
+          <div class="muted" id="resultBox">Test tugagach natija ko‘rinadi.</div>
+          <div class="row" style="margin-top:12px">
+            <a class="btn primary" id="certBtn" href="/certificate.html" style="display:none">Sertifikat</a>
+          </div>
+        </div>
+
+        <div class="tiny" style="margin-top:10px">
+          API bo‘lsa natija saqlash:
+          <ul style="margin:6px 0 0 18px">
+            <li><code>POST /api/tests/:id/submit</code></li>
+            <li>yoki <code>POST /api/submit-test</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Qarshi Davlat Texnika Universiteti — LMS (Test)</footer>
+
+<script>
+  const API_BASE = "";
+  function getToken(){ return localStorage.getItem("token") || ""; }
+  function qs(name){ return new URLSearchParams(location.search).get(name); }
+
+  function setErr(msg){
+    const box = document.getElementById("errBox");
+    box.textContent = msg; box.style.display = "block";
+    document.getElementById("okBox").style.display = "none";
+  }
+  function setOk(msg){
+    const box = document.getElementById("okBox");
+    box.textContent = msg; box.style.display = "block";
+    document.getElementById("errBox").style.display = "none";
+  }
+  function escapeHtml(str){
+    return String(str||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  // Demo storage
+  function demoKey(){ return "demoTests_v1"; }
+  function readDemoTests(){
+    try { return JSON.parse(localStorage.getItem(demoKey()) || "[]"); } catch { return []; }
+  }
+  function answersKey(userId, testId){ return "testAnswers_v1_" + (userId||"anon") + "_" + testId; }
+  function readAnswers(userId, testId){
+    try { return JSON.parse(localStorage.getItem(answersKey(userId, testId)) || "{}"); } catch { return {}; }
+  }
+  function writeAnswers(userId, testId, obj){
+    localStorage.setItem(answersKey(userId, testId), JSON.stringify(obj));
+  }
+  function resultKey(userId, testId){ return "testResult_v1_" + (userId||"anon") + "_" + testId; }
+  function writeResult(userId, testId, obj){
+    localStorage.setItem(resultKey(userId, testId), JSON.stringify(obj));
+  }
+
+  function normalizeTest(raw){
+    return {
+      id: raw._id || raw.id || raw.testId,
+      title: raw.title || raw.name || "Nomsiz test",
+      subject: raw.subject || raw.course || raw.fan || "",
+      description: raw.description || raw.desc || "",
+      status: raw.status || (raw.published ? "published" : "published"),
+      faculty: raw.faculty || raw.facultyName || "",
+      groups: Array.isArray(raw.groups) ? raw.groups : (raw.allowedGroups || []),
+      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
+      teacherId: raw.teacherId || raw.teacher?._id || raw.ownerId || "",
+      questionsText: raw.questionsText || raw.questions_raw || "",
+      questions: Array.isArray(raw.questions) ? raw.questions : null
+    };
+  }
+
+  function parseQuestionsFromText(text){
+    // Format:
+    // Q: ...
+    // A) ...
+    // B) ...
+    // C) ...
+    // D) ...
+    // ANS: B
+    // blank line then next
+    const lines = String(text||"").split(/\r?\n/);
+    const out = [];
+    let cur = null;
+
+    function pushCur(){
+      if(!cur) return;
+      if(cur.q && cur.options.length>=2 && cur.ans){
+        out.push(cur);
+      }
+      cur = null;
+    }
+
+    for(const raw of lines){
+      const line = raw.trim();
+      if(!line){
+        // allow blank separator
+        continue;
+      }
+      if(line.toUpperCase().startsWith("Q:")){
+        pushCur();
+        cur = { q: line.slice(2).trim(), options: [], ans: "" };
+        continue;
+      }
+      if(!cur) continue;
+
+      const m = line.match(/^([A-Da-d])\)\s*(.+)$/);
+      if(m){
+        cur.options.push({ key: m[1].toUpperCase(), text: m[2].trim() });
+        continue;
+      }
+      const a = line.toUpperCase().startsWith("ANS:");
+      if(a){
+        cur.ans = line.split(":")[1]?.trim().toUpperCase() || "";
+        continue;
+      }
+      // continuation: append to question
+      cur.q += " " + line;
+    }
+    pushCur();
+    // normalize to {id, text, options, answerKey}
+    return out.map((x, idx)=>({
+      id: "q" + (idx+1),
+      text: x.q,
+      options: x.options,
+      answerKey: x.ans
+    }));
+  }
+
+  function canStudentAccess(test, me){
+    if((test.status||"published") !== "published") return { ok:false, reason:"Test draft holatda." };
+
+    if(test.faculty && me.faculty && test.faculty !== me.faculty){
+      return { ok:false, reason:"Bu test boshqa fakultet uchun." };
+    }
+    const allowed = Array.isArray(test.groups) ? test.groups.filter(Boolean) : [];
+    if(allowed.length){
+      if(!me.group) return { ok:false, reason:"Sizda guruh belgilanmagan." };
+      const mg = String(me.group).trim().toLowerCase();
+      const ok = allowed.some(x=>String(x).trim().toLowerCase() === mg);
+      if(!ok) return { ok:false, reason:"Bu test sizning guruhingiz uchun ochiq emas." };
+    }
+    return { ok:true, reason:"" };
+  }
+
+  async function apiMe(){
+    const token = getToken();
+    if(!token){ location.href="/login.html"; return null; }
+    const res = await fetch(API_BASE + "/api/me", { headers:{ "Authorization":"Bearer " + token } });
+    if(!res.ok){
+      localStorage.removeItem("token");
+      location.href="/login.html";
+      return null;
+    }
+    return await res.json();
+  }
+
+  async function fetchTestFromAPI(id){
+    const token = getToken();
+    let res = await fetch(API_BASE + "/api/tests/" + encodeURIComponent(id), { headers:{ "Authorization":"Bearer " + token } });
+    if(res.ok){
+      const data = await res.json();
+      return normalizeTest(data.test || data);
+    }
+    // fallback list
+    res = await fetch(API_BASE + "/api/tests", { headers:{ "Authorization":"Bearer " + token } });
+    if(!res.ok) throw new Error("API not available");
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.tests || []);
+    const t = list.map(normalizeTest).find(x=>String(x.id)===String(id));
+    if(!t) throw new Error("Not found");
+    return t;
+  }
+
+  function fetchTestFromDemo(id){
+    const t = readDemoTests().map(normalizeTest).find(x=>String(x.id)===String(id));
+    if(!t) throw new Error("Not found");
+    return t;
+  }
+
+  async function submitResultToAPI(testId, payload){
+    const token = getToken();
+    let res = await fetch(API_BASE + "/api/tests/" + encodeURIComponent(testId) + "/submit", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + token },
+      body: JSON.stringify(payload)
+    });
+    if(res.ok) return await res.json();
+
+    res = await fetch(API_BASE + "/api/submit-test", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + token },
+      body: JSON.stringify({ testId, ...payload })
+    });
+    if(!res.ok) throw new Error("submit failed");
+    return await res.json();
+  }
+
+  // State
+  let ME=null, TEST=null, QUESTIONS=[], ANSWERS={}, INDEX=0, FINISHED=false;
+
+  function setHeader(me){
+    const role = (me.role||"student").toLowerCase();
+    const badge = document.getElementById("roleBadge");
+    badge.textContent = role==="teacher" ? "Teacher" : role==="admin" ? "Admin" : "Student";
+    badge.classList.toggle("teacher", role==="teacher");
+    badge.style.background = role==="teacher" ? "#2563eb" : (role==="admin" ? "#f59e0b" : "#10b981");
+
+    const mePill = document.getElementById("mePill");
+    mePill.textContent = (me.fullname||me.name||me.username||"") + " • " + (me.group || "Guruh yo‘q");
+    mePill.style.display = "inline-block";
+
+    document.getElementById("dashLink").href = role==="teacher" ? "/teacher-dashboard.html" : role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html";
+  }
+
+  function renderTestInfo(test){
+    document.getElementById("testTitle").textContent = test.title || "Test";
+    document.getElementById("testDesc").textContent = test.description || "-";
+    document.getElementById("tagSubject").textContent = test.subject || "Fan: -";
+    document.getElementById("tagFaculty").textContent = test.faculty || "Fakultet: -";
+    document.getElementById("tagGroups").textContent = (test.groups && test.groups.length) ? ("Guruh: " + test.groups.join(", ")) : "Guruh: Ochiq";
+    document.getElementById("tagStatus").textContent = (test.status||"published").toUpperCase();
+    document.getElementById("tagStatus").className = "tag " + ((test.status||"published")==="published" ? "open" : "lock");
+    document.getElementById("tagTeacher").textContent = "Teacher: " + (test.teacherName || "-");
+  }
+
+  function updateMeta(){
+    const total = QUESTIONS.length || 0;
+    const answered = Object.keys(ANSWERS).filter(k=>ANSWERS[k]).length;
+    document.getElementById("answeredTag").textContent = "Javob: " + answered;
+    document.getElementById("totalTag").textContent = "Savol: " + total;
+
+    const pos = total ? (INDEX+1) + "/" + total : "-";
+    document.getElementById("posTxt").textContent = "Pozitsiya: " + pos;
+
+    const pct = total ? Math.round((answered/total)*100) : 0;
+    document.getElementById("progBar").style.width = pct + "%";
+  }
+
+  function renderQuestion(){
+    if(!QUESTIONS.length){
+      setErr("Savollar topilmadi. tests.html dagi formatni tekshiring.");
+      return;
+    }
+    const q = QUESTIONS[INDEX];
+    document.getElementById("qTitle").textContent = "Savol " + (INDEX+1);
+    document.getElementById("qText").textContent = q.text || "-";
+
+    const opts = document.getElementById("opts");
+    opts.innerHTML = "";
+
+    const selected = ANSWERS[q.id] || "";
+
+    (q.options||[]).forEach(opt=>{
+      const id = "opt_" + q.id + "_" + opt.key;
+      const div = document.createElement("label");
+      div.className = "opt";
+      div.setAttribute("for", id);
+      div.innerHTML = `
+        <input type="radio" name="opt" id="${escapeHtml(id)}" value="${escapeHtml(opt.key)}" ${selected===opt.key ? "checked":""}/>
+        <div>
+          <div style="font-weight:700">${escapeHtml(opt.key)})</div>
+          <div class="muted">${escapeHtml(opt.text)}</div>
+        </div>
+      `;
+      div.addEventListener("click", ()=>{
+        ANSWERS[q.id] = opt.key;
+        saveAnswers();
+        updateMeta();
+      });
+      opts.appendChild(div);
+    });
+
+    document.getElementById("prevBtn").disabled = (INDEX===0);
+    document.getElementById("nextBtn").disabled = (INDEX===QUESTIONS.length-1);
+
+    updateMeta();
+  }
+
+  function saveAnswers(){
+    const uid = ME._id || ME.id || ME.username;
+    writeAnswers(uid, TEST.id, ANSWERS);
+  }
+
+  function computeScore(){
+    const total = QUESTIONS.length || 0;
+    let correct=0;
+    QUESTIONS.forEach(q=>{
+      const a = (ANSWERS[q.id] || "").toUpperCase();
+      if(a && a === String(q.answerKey||"").toUpperCase()) correct++;
+    });
+    const pct = total ? Math.round((correct/total)*100) : 0;
+    return { total, correct, pct };
+  }
+
+  async function finishTest(){
+    if(FINISHED) return;
+    FINISHED = true;
+
+    const uid = ME._id || ME.id || ME.username;
+    const score = computeScore();
+
+    // UI
+    const resTxt = `Natija: ${score.correct}/${score.total} • ${score.pct}%`;
+    document.getElementById("resultBox").textContent = resTxt;
+
+    // Save (API or demo)
+    const payload = {
+      answers: ANSWERS,
+      score: score.pct,
+      correct: score.correct,
+      total: score.total
+    };
+
+    try{
+      await submitResultToAPI(TEST.id, payload);
+      setOk("Natija saqlandi (API).");
+    }catch(e){
+      writeResult(uid, TEST.id, { ...payload, at: Date.now(), testTitle: TEST.title, subject: TEST.subject });
+      setOk("Natija saqlandi (demo/localStorage).");
+    }
+
+    // Certificate button (allow if >= 60%)
+    const certBtn = document.getElementById("certBtn");
+    if(score.pct >= 60){
+      certBtn.style.display = "inline-block";
+      certBtn.href = "/certificate.html?type=test&id=" + encodeURIComponent(TEST.id) + "&score=" + encodeURIComponent(score.pct);
+      certBtn.textContent = "Sertifikat olish (" + score.pct + "%)";
+    }else{
+      certBtn.style.display = "none";
+    }
+
+    document.getElementById("finishBtn").disabled = true;
+    document.getElementById("nextBtn").disabled = true;
+    document.getElementById("prevBtn").disabled = true;
+  }
+
+  async function init(){
+    const id = qs("id");
+    if(!id){ setErr("Test ID topilmadi."); return; }
+
+    ME = await apiMe();
+    if(!ME) return;
+    setHeader(ME);
+
+    // Load test
+    try{
+      TEST = await fetchTestFromAPI(id);
+    }catch(e){
+      try{ TEST = fetchTestFromDemo(id); }
+      catch{ setErr("Test topilmadi."); return; }
+    }
+    renderTestInfo(TEST);
+
+    const role = (ME.role||"student").toLowerCase();
+    if(role === "student"){
+      const access = canStudentAccess(TEST, ME);
+      if(!access.ok){
+        setErr("Siz bu testni ishlay olmaysiz: " + access.reason);
+        return;
+      }
+    }
+
+    // Questions
+    if(Array.isArray(TEST.questions) && TEST.questions.length){
+      // Expect {text, options:[{key,text}], answerKey}
+      QUESTIONS = TEST.questions.map((q, idx)=>({
+        id: q.id || ("q"+(idx+1)),
+        text: q.text || q.question || "",
+        options: q.options || [],
+        answerKey: q.answerKey || q.ans || q.correct || ""
+      }));
+    }else{
+      QUESTIONS = parseQuestionsFromText(TEST.questionsText);
+    }
+
+    if(!QUESTIONS.length){
+      setErr("Savollar topilmadi. tests.html create modalidagi formatda kiriting.");
+      return;
+    }
+
+    // Load previous answers
+    const uid = ME._id || ME.id || ME.username;
+    ANSWERS = readAnswers(uid, TEST.id) || {};
+    INDEX = 0;
+    renderQuestion();
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token");
+    location.href="/login.html";
+  });
+
+  document.getElementById("prevBtn").addEventListener("click", ()=>{
+    if(INDEX>0){ INDEX--; renderQuestion(); }
+  });
+  document.getElementById("nextBtn").addEventListener("click", ()=>{
+    if(INDEX < QUESTIONS.length-1){ INDEX++; renderQuestion(); }
+  });
+  document.getElementById("finishBtn").addEventListener("click", ()=>{
+    finishTest();
+  });
+
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+</script>
+</body>
+</html>

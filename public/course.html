@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kurs</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f6f7fb;color:#111}
+    header{background:#111827;color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    header .left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    header .badge{background:#2563eb;padding:6px 10px;border-radius:999px;font-size:12px}
+    header .badge.student{background:#10b981}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px;background:rgba(255,255,255,.08)}
+    .container{max-width:1100px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+    .card h2{margin:0 0 10px 0;font-size:20px}
+    .muted{color:#6b7280;font-size:13px;line-height:1.45}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .btn{display:inline-block;border:1px solid #d1d5db;background:#fff;color:#111827;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:14px;cursor:pointer}
+    .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
+    .btn.danger{background:#ef4444;border-color:#ef4444;color:#fff}
+    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
+    .tag{display:inline-block;font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid #e5e7eb;background:#f9fafb;color:#111827}
+    .tag.paid{border-color:#bfdbfe;background:#eff6ff}
+    .tag.free{border-color:#a7f3d0;background:#ecfdf5}
+    .tag.lock{border-color:#fecaca;background:#fef2f2}
+    .tag.open{border-color:#fde68a;background:#fffbeb}
+    .col-12{grid-column:span 12}
+    .col-7{grid-column:span 7}
+    .col-5{grid-column:span 5}
+    @media (max-width:980px){
+      .col-7,.col-5{grid-column:span 12}
+    }
+    .err{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
+    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
+    .cover{width:100%;border-radius:12px;border:1px solid #e5e7eb;max-height:260px;object-fit:cover;display:none}
+    .ytWrap{aspect-ratio:16/9;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;display:none}
+    .ytWrap iframe{width:100%;height:100%;border:0}
+    footer{padding:20px 16px;color:#6b7280;text-align:center}
+    .tiny{font-size:12px;color:#6b7280}
+    code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <div style="font-weight:700">QDTU LMS</div>
+      <div id="roleBadge" class="badge student">Student</div>
+      <div id="mePill" class="pill" style="display:none"></div>
+    </div>
+    <div class="row">
+      <a class="btn ghost" href="/courses.html">Kurslar</a>
+      <a class="btn ghost" id="dashLink" href="/student-dashboard.html">Dashboard</a>
+      <a class="btn ghost" href="/profile.html">Profil</a>
+      <button class="btn danger" id="logoutBtn">Chiqish</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="errBox" class="err"></div>
+    <div id="okBox" class="ok"></div>
+
+    <div class="grid">
+      <div class="card col-7">
+        <img id="coverImg" class="cover" alt="cover"/>
+        <h2 id="title">Yuklanmoqda...</h2>
+        <div class="row" style="margin-top:8px">
+          <span id="tagPrice" class="tag">-</span>
+          <span id="tagStatus" class="tag">-</span>
+          <span id="tagFaculty" class="tag">-</span>
+        </div>
+        <div class="muted" id="desc" style="margin-top:12px">-</div>
+
+        <div class="row" style="margin-top:14px">
+          <div class="muted"><b>O‘qituvchi:</b> <span id="teacher">-</span></div>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <div class="muted"><b>Guruhlar:</b> <span id="groups">-</span></div>
+        </div>
+
+        <div class="row" style="margin-top:14px">
+          <button class="btn primary" id="joinBtn" style="display:none">Kursga qo‘shilish</button>
+          <a class="btn primary" id="openBtn" href="#" style="display:none">Kursni ochish</a>
+          <a class="btn" id="editBtn" href="#" style="display:none">Edit (teacher)</a>
+        </div>
+
+        <div class="tiny" id="joinHint" style="margin-top:10px;display:none"></div>
+      </div>
+
+      <div class="card col-5">
+        <h3>Preview</h3>
+        <div class="muted">YouTube preview bo‘lsa shu yerda ko‘rinadi.</div>
+        <div style="margin-top:12px" class="ytWrap" id="ytWrap">
+          <iframe id="ytFrame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+
+        <div class="card" style="margin-top:14px;background:#f9fafb">
+          <h3 style="margin:0 0 8px 0">Qoidalar</h3>
+          <div class="muted">
+            <ul style="margin:0;padding-left:18px">
+              <li>Student faqat o‘z fakultet/guruhiga mos kursga qo‘shiladi.</li>
+              <li>Pullik kurs: coin student balansidan yechiladi.</li>
+              <li>Teacher balansiga 50% qo‘shiladi (backend bosqichida).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="tiny" style="margin-top:10px">
+          Backend endpointlar bo‘lsa: <code>POST /api/courses/:id/join</code> yoki <code>/api/join-course</code> ishlaydi.
+          Aks holda demo join localStorage orqali.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Qarshi Davlat Texnika Universiteti — LMS (Course)
+  </footer>
+
+<script>
+  const API_BASE = "";
+  function getToken(){ return localStorage.getItem("token") || ""; }
+  function qs(name){ return new URLSearchParams(location.search).get(name); }
+
+  function setErr(msg){
+    const box = document.getElementById("errBox");
+    box.textContent = msg; box.style.display = "block";
+    document.getElementById("okBox").style.display = "none";
+  }
+  function setOk(msg){
+    const box = document.getElementById("okBox");
+    box.textContent = msg; box.style.display = "block";
+    document.getElementById("errBox").style.display = "none";
+  }
+
+  function demoKey(){ return "demoCourses_v1"; }
+  function readDemoCourses(){
+    try { return JSON.parse(localStorage.getItem(demoKey()) || "[]"); } catch { return []; }
+  }
+  function joinedKey(userId){ return "joinedCourses_v1_" + (userId || "anon"); }
+  function readJoined(userId){
+    try { return JSON.parse(localStorage.getItem(joinedKey(userId)) || "[]"); } catch { return []; }
+  }
+  function writeJoined(userId, list){
+    localStorage.setItem(joinedKey(userId), JSON.stringify(list));
+  }
+
+  function normalizeCourse(raw){
+    return {
+      id: raw._id || raw.id || raw.courseId,
+      title: raw.title || raw.name || "Nomsiz kurs",
+      description: raw.description || raw.desc || "",
+      type: (raw.type || (raw.isPaid ? "paid" : "free") || "free"),
+      price: Number(raw.price ?? raw.cost ?? 0),
+      status: raw.status || (raw.published ? "published" : "published"),
+      faculty: raw.faculty || raw.facultyName || "",
+      groups: Array.isArray(raw.groups) ? raw.groups : (raw.allowedGroups || []),
+      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
+      teacherId: raw.teacherId || raw.teacher?._id || raw.ownerId || "",
+      youtubeUrl: raw.youtubeUrl || raw.youtube || "",
+      coverUrl: raw.coverUrl || raw.cover || ""
+    };
+  }
+
+  function courseTagHTML(c){
+    const t = c.type === "paid" ? `Pullik: ${c.price||0} coin` : `Bepul`;
+    const st = (c.status||"published") === "published" ? `Published` : `Draft`;
+    return { t, st };
+  }
+
+  async function apiMe(){
+    const token = getToken();
+    if(!token){ location.href = "/login.html"; return null; }
+    const res = await fetch(API_BASE + "/api/me", { headers: { "Authorization": "Bearer " + token } });
+    if(!res.ok){
+      localStorage.removeItem("token");
+      location.href = "/login.html";
+      return null;
+    }
+    return await res.json();
+  }
+
+  async function fetchCourseFromAPI(id){
+    const token = getToken();
+    let res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(id), { headers: { "Authorization":"Bearer " + token } });
+    if(res.ok){
+      const data = await res.json();
+      return normalizeCourse(data.course || data);
+    }
+    // fallback: list + find
+    res = await fetch(API_BASE + "/api/courses", { headers: { "Authorization":"Bearer " + token } });
+    if(!res.ok) throw new Error("API not available");
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.courses || []);
+    const c = list.map(normalizeCourse).find(x=>String(x.id)===String(id));
+    if(!c) throw new Error("Not found");
+    return c;
+  }
+
+  function fetchCourseFromDemo(id){
+    const list = readDemoCourses().map(normalizeCourse);
+    const c = list.find(x=>String(x.id)===String(id));
+    if(!c) throw new Error("Kurs topilmadi (demo)");
+    return c;
+  }
+
+  function canStudentJoin(course, me){
+    // if draft, only teacher/admin can view
+    if((course.status||"published") !== "published") return { ok:false, reason:"Bu kurs hozircha draft." };
+
+    // faculty restriction
+    if(course.faculty && me.faculty && course.faculty !== me.faculty){
+      return { ok:false, reason:"Bu kurs boshqa fakultet uchun." };
+    }
+
+    // group restriction
+    const allowedGroups = Array.isArray(course.groups) ? course.groups.filter(Boolean) : [];
+    if(allowedGroups.length){
+      if(!me.group) return { ok:false, reason:"Sizda guruh belgilanmagan." };
+      const meGroup = String(me.group).trim().toLowerCase();
+      const ok = allowedGroups.some(g=>String(g).trim().toLowerCase() === meGroup);
+      if(!ok) return { ok:false, reason:"Bu kurs sizning guruhingiz uchun ochiq emas." };
+    }
+
+    // paid check
+    if(course.type === "paid"){
+      const coins = Number(me.coins ?? me.coin ?? 0);
+      if(coins < Number(course.price||0)){
+        return { ok:false, reason:"Coin yetarli emas." };
+      }
+    }
+
+    return { ok:true, reason:"" };
+  }
+
+  function youtubeEmbed(url){
+    if(!url) return "";
+    try{
+      const u = new URL(url);
+      // youtu.be/ID or youtube.com/watch?v=ID or /embed/ID
+      let id = "";
+      if(u.hostname.includes("youtu.be")){
+        id = u.pathname.replace("/","");
+      }else if(u.searchParams.get("v")){
+        id = u.searchParams.get("v");
+      }else if(u.pathname.includes("/embed/")){
+        id = u.pathname.split("/embed/")[1];
+      }
+      if(!id) return "";
+      return "https://www.youtube.com/embed/" + id;
+    }catch(e){
+      return "";
+    }
+  }
+
+  function escapeHtml(str){
+    return String(str||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function render(course, me){
+    const role = (me.role || "student").toLowerCase();
+    const isTeacher = role === "teacher";
+    const isStudent = role === "student";
+    const isAdmin = role === "admin";
+
+    // top header
+    const badge = document.getElementById("roleBadge");
+    badge.textContent = isTeacher ? "Teacher" : isAdmin ? "Admin" : "Student";
+    badge.classList.toggle("student", !isTeacher);
+    badge.style.background = isTeacher ? "#2563eb" : (isAdmin ? "#f59e0b" : "#10b981");
+
+    const mePill = document.getElementById("mePill");
+    mePill.textContent = (me.fullname || me.name || me.username || "") + " • " + (me.group || "Guruh yo‘q");
+    mePill.style.display = "inline-block";
+
+    document.getElementById("dashLink").href = isTeacher ? "/teacher-dashboard.html" : isAdmin ? "/admin-dashboard.html" : "/student-dashboard.html";
+
+    // course data
+    document.getElementById("title").textContent = course.title || "Kurs";
+    document.getElementById("desc").textContent = course.description || "-";
+    document.getElementById("teacher").textContent = course.teacherName || "-";
+    document.getElementById("groups").innerHTML = (course.groups && course.groups.length) ? escapeHtml(course.groups.join(", ")) : "<span class='tag'>Ochiq</span>";
+
+    const tags = courseTagHTML(course);
+    const tagPrice = document.getElementById("tagPrice");
+    tagPrice.textContent = tags.t;
+    tagPrice.className = "tag " + (course.type==="paid" ? "paid" : "free");
+
+    const tagStatus = document.getElementById("tagStatus");
+    tagStatus.textContent = tags.st;
+    tagStatus.className = "tag " + ((course.status||"published")==="published" ? "open" : "lock");
+
+    const tagFaculty = document.getElementById("tagFaculty");
+    tagFaculty.textContent = course.faculty || "Fakultet: -";
+    tagFaculty.className = "tag";
+
+    // cover
+    if(course.coverUrl){
+      const img = document.getElementById("coverImg");
+      img.src = course.coverUrl;
+      img.style.display = "block";
+    }
+
+    // youtube
+    const emb = youtubeEmbed(course.youtubeUrl);
+    if(emb){
+      document.getElementById("ytWrap").style.display = "block";
+      document.getElementById("ytFrame").src = emb;
+    }
+
+    // Buttons
+    const joinBtn = document.getElementById("joinBtn");
+    const openBtn = document.getElementById("openBtn");
+    const editBtn = document.getElementById("editBtn");
+    const hint = document.getElementById("joinHint");
+
+    joinBtn.style.display = "none";
+    openBtn.style.display = "none";
+    editBtn.style.display = "none";
+    hint.style.display = "none";
+
+    // teacher can edit his course (in this version -> opens create modal in courses page)
+    if(isTeacher){
+      editBtn.style.display = "inline-block";
+      editBtn.href = "/courses.html?mode=teacher#edit=" + encodeURIComponent(course.id);
+    }
+
+    // student flow
+    if(isStudent){
+      const joined = readJoined(me._id || me.id || me.username);
+      const already = joined.some(x=>String(x)===String(course.id));
+      if(already){
+        openBtn.style.display = "inline-block";
+        openBtn.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id);
+        hint.style.display = "block";
+        hint.textContent = "Siz bu kursga qo‘shilgansiz. Davom etish uchun “Kursni ochish” ni bosing.";
+        return;
+      }
+
+      const check = canStudentJoin(course, me);
+      if(check.ok){
+        joinBtn.style.display = "inline-block";
+        hint.style.display = "block";
+        hint.textContent = (course.type==="paid")
+          ? `Bu kurs pullik. Narx: ${course.price||0} coin. “Kursga qo‘shilish” bosilganda coin yechish backend orqali bajariladi.`
+          : "Bu kurs bepul. “Kursga qo‘shilish” ni bosing.";
+      }else{
+        hint.style.display = "block";
+        hint.textContent = "Qo‘shilish mumkin emas: " + check.reason;
+      }
+    }
+  }
+
+  async function tryJoin(course, me){
+    const check = canStudentJoin(course, me);
+    if(!check.ok){
+      setErr("Qo‘shilish mumkin emas: " + check.reason);
+      return;
+    }
+
+    // Try API
+    try{
+      const token = getToken();
+      let res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(course.id) + "/join", {
+        method: "POST",
+        headers: { "Authorization":"Bearer " + token }
+      });
+      if(!res.ok){
+        // alt endpoint
+        res = await fetch(API_BASE + "/api/join-course", {
+          method: "POST",
+          headers: { "Content-Type":"application/json", "Authorization":"Bearer " + token },
+          body: JSON.stringify({ courseId: course.id })
+        });
+      }
+      if(!res.ok) throw new Error("API join failed");
+      setOk("Kursga qo‘shildingiz (API). Yo‘naltirilmoqda...");
+      setTimeout(()=> location.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id), 600);
+      return;
+    }catch(e){
+      // Demo join: store in localStorage (coin subtraction is demo only)
+      const uid = me._id || me.id || me.username;
+      const joined = readJoined(uid);
+      if(!joined.includes(course.id)){
+        joined.push(course.id);
+        writeJoined(uid, joined);
+      }
+      // demo: coin subtract locally (UI only)
+      if(course.type==="paid"){
+        const curCoins = Number(me.coins ?? me.coin ?? 0);
+        const newCoins = Math.max(0, curCoins - Number(course.price||0));
+        // cannot update server coins; store in localStorage cache for UI demonstration
+        localStorage.setItem("demoCoins_override_" + uid, String(newCoins));
+      }
+      setOk("Kursga qo‘shildingiz (demo). Yo‘naltirilmoqda...");
+      setTimeout(()=> location.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id), 600);
+    }
+  }
+
+  async function init(){
+    const id = qs("id");
+    if(!id){ setErr("Kurs ID topilmadi. courses.html sahifasidan kiriting."); return; }
+
+    const me = await apiMe();
+    if(!me) return;
+
+    // apply demo coins override if exists
+    const uid = me._id || me.id || me.username;
+    const override = localStorage.getItem("demoCoins_override_" + uid);
+    if(override !== null){
+      me.coins = Number(override);
+    }
+
+    let course = null;
+    try{
+      course = await fetchCourseFromAPI(id);
+    }catch(e){
+      try{
+        course = fetchCourseFromDemo(id);
+      }catch(err){
+        setErr("Kurs topilmadi.");
+        return;
+      }
+    }
+
+    // if draft and student -> block
+    const role = (me.role || "student").toLowerCase();
+    if(role === "student" && (course.status||"published") !== "published"){
+      setErr("Bu kurs draft holatda. Studentlar uchun yopiq.");
+      return;
+    }
+
+    render(course, me);
+
+    const joinBtn = document.getElementById("joinBtn");
+    joinBtn.addEventListener("click", ()=> tryJoin(course, me));
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token");
+    location.href = "/login.html";
+  });
+
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+</script>
+</body>
+</html>

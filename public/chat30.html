@@ -1068,7 +1068,6 @@ const floatingRobot = (() => {
         let peerConnection = null;
         let localStream = null;
         let remoteStream = null;
-        let pendingIceCandidates = [];
         let isCaller = false;
         let isInCall = false;
         let callStartTime = null;
@@ -2083,14 +2082,6 @@ const floatingRobot = (() => {
                         autoGainControl: true
                     }
                 });
-
-                // Show local preview
-                const localVideo = document.getElementById('localVideo');
-                if (localVideo) {
-                    localVideo.srcObject = localStream;
-                    localVideo.muted = true;
-                    try { await localVideo.play(); } catch (_) {}
-                }
                 
                 // Create peer connection
                 await createPeerConnection();
@@ -2392,13 +2383,6 @@ const floatingRobot = (() => {
                 if (pendingOffer) {
                     const offer = new RTCSessionDescription(pendingOffer);
                     await peerConnection.setRemoteDescription(offer);
-                    // Add any ICE candidates that arrived early
-                    if (pendingIceCandidates.length) {
-                        for (const c of pendingIceCandidates) {
-                            try { await peerConnection.addIceCandidate(c); } catch (_) {}
-                        }
-                        pendingIceCandidates = [];
-                    }
                     pendingOffer = null; // Clear after use
                 } else {
                     throw new Error('No offer available');
@@ -2460,14 +2444,6 @@ const floatingRobot = (() => {
                 
                 const answer = new RTCSessionDescription(data.answer);
                 await peerConnection.setRemoteDescription(answer);
-
-                // Add any ICE candidates that arrived early
-                if (pendingIceCandidates.length) {
-                    for (const c of pendingIceCandidates) {
-                        try { await peerConnection.addIceCandidate(c); } catch (_) {}
-                    }
-                    pendingIceCandidates = [];
-                }
                 
                 // Clear call timeout
                 if (callTimeout) {
@@ -2487,14 +2463,10 @@ const floatingRobot = (() => {
         async function handleIceCandidate(data) {
             try {
                 if (!peerConnection) return;
-
+                
                 const candidate = new RTCIceCandidate(data.candidate);
-                if (peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
-                    await peerConnection.addIceCandidate(candidate);
-                } else {
-                    pendingIceCandidates.push(candidate);
-                }
-
+                await peerConnection.addIceCandidate(candidate);
+                
             } catch (error) {
                 console.error('Error adding ICE candidate:', error);
             }
@@ -3100,310 +3072,6 @@ const floatingRobot = (() => {
             remoteStream
         };
     
-</script>
-
-<script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.min.js"></script>
-<script>
-  // LiveKit CDN fallback (optional): if unpkg fails/blocked, try jsdelivr.
-  (function(){
-    function loaded(){ return !!window.LivekitClient; }
-    if (loaded()) return;
-    var s = document.createElement('script');
-    s.src = "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js";
-    s.onload = function(){ console.log("✅ LiveKit client loaded (fallback jsdelivr)"); };
-    s.onerror = function(){ console.warn("❌ LiveKit client failed to load from fallback CDN"); };
-    document.head.appendChild(s);
-  })();
-</script>
-
-<script>
-/* =========================
-   LiveKit CALL OVERRIDES
-   Media is realtime via LiveKit Cloud (SFU). No storage recording here.
-   Requires server endpoint: GET /api/livekit/token
-   ========================= */
-(function(){
-  (async ()=>{
-    if (!(await waitForLiveKit(2000))) return;
-
-  async function waitForLiveKit(timeoutMs){
-  const t0 = Date.now();
-  while (!window.LivekitClient && (Date.now() - t0) < timeoutMs){
-    await new Promise(r => setTimeout(r, 50));
-  }
-  if (!window.LivekitClient){
-    console.warn("LiveKit client not loaded; calls will not work.");
-    return false;
-  }
-  return true;
-}
-
-  const { Room, createLocalTracks } = window.LivekitClient;
-
-  let lkRoom = null;
-  let lkLocalTracks = [];
-  let lkCallType = null; // 'video' | 'voice'
-  let lkRoomName = null;
-
-  // Safe stubs (if your redesign removed them)
-  window.showConnectingModal = window.showConnectingModal || function(title, subtext){
-    try{
-      const t = document.getElementById('connectingText');
-      const s = document.getElementById('connectingSubtext');
-      const m = document.getElementById('callConnectingModal');
-      if (t) t.textContent = title || 'Connecting...';
-      if (s) s.textContent = subtext || '';
-      if (m) m.classList.remove('hidden');
-    }catch(e){}
-  };
-
-  window.hideCallUI = window.hideCallUI || function(){
-    try{
-      const c = document.getElementById('callContainer');
-      if (c) c.style.display = 'none';
-      const inc = document.getElementById('incomingCallModal');
-      if (inc) inc.classList.add('hidden');
-      const conn = document.getElementById('callConnectingModal');
-      if (conn) conn.classList.add('hidden');
-    }catch(e){}
-  };
-
-  function getRoomNameForChat(){
-    // Use the already-created chat room if available
-    try{
-      if (typeof currentChatRoom !== 'undefined' && currentChatRoom) return currentChatRoom;
-    }catch(e){}
-    // Fallback: deterministic by user ids if present
-    try{
-      if (typeof currentUserId !== 'undefined' && typeof chatUserId !== 'undefined') {
-        const a = String(currentUserId);
-        const b = String(chatUserId);
-        return a < b ? `lk_${a}_${b}` : `lk_${b}_${a}`;
-      }
-    }catch(e){}
-    return "room1";
-  }
-
-  async function fetchToken(roomName, identity, name){
-    const url = `/api/livekit/token?room=${encodeURIComponent(roomName)}&identity=${encodeURIComponent(identity)}&name=${encodeURIComponent(name)}`;
-    const resp = await fetch(url, { method: 'GET' });
-    if (!resp.ok) {
-      const t = await resp.text().catch(()=> '');
-      throw new Error(`Token fetch failed: ${resp.status} ${t}`);
-    }
-    return resp.json();
-  }
-
-  function attachToBox(boxId, track){
-    const box = document.getElementById(boxId);
-    if (!box) return;
-    // Clear for video; keep audio hidden in body
-    if (track.kind === 'video') box.innerHTML = '';
-    const el = track.attach();
-    el.autoplay = true;
-    el.playsInline = true;
-    if (track.kind === 'video') {
-      el.style.width = '100%';
-      el.style.height = '100%';
-      el.style.objectFit = 'cover';
-      box.appendChild(el);
-    } else {
-      el.style.display = 'none';
-      document.body.appendChild(el);
-    }
-  }
-
-  async function joinLiveKit(callType){
-    lkCallType = callType;
-    lkRoomName = getRoomNameForChat();
-
-    const identity = (typeof currentUserId !== 'undefined' && currentUserId) ? String(currentUserId) : ('user_' + Math.random().toString(16).slice(2));
-    const name = (typeof currentUser !== 'undefined' && currentUser && currentUser.nickname) ? String(currentUser.nickname) : identity;
-
-    window.showConnectingModal(
-      callType === 'video' ? 'Connecting video call...' : 'Connecting voice call...',
-      'LiveKit orqali ulanyapti...'
-    );
-
-    const { token: _token, url: _url } = await fetchToken(lkRoomName, identity, name);
-    let token = _token;
-    const url = _url;
-    if (token && typeof token !== 'string') {
-      token = token.token || token.jwt || token.accessToken || token.authToken || '';
-    }
-    if (typeof token !== 'string' || !token.startsWith('ey')) {
-      console.error('LiveKit token invalid/empty:', _token);
-      throw new Error('LiveKit token invalid/empty (check server /api/livekit/token and LIVEKIT_API_SECRET)');
-    }
-    if (typeof url !== 'string' || !url.startsWith('ws')) {
-      console.error('LiveKit url invalid:', _url);
-      throw new Error('LiveKit URL invalid/empty');
-    }
-
-    lkRoom = new Room({ adaptiveStream: true, dynacast: true });
-
-    lkRoom.on('trackSubscribed', (track) => {
-      if (track.kind === 'video') attachToBox('remoteVideo', track);
-      if (track.kind === 'audio') attachToBox('remoteAudio', track); // if exists; otherwise body
-      // If your DOM doesn't have remoteAudio, attachToBox will put audio in body if called differently
-      if (track.kind === 'audio') {
-        // attach audio even if remoteAudio container doesn't exist
-        const el = track.attach();
-        el.autoplay = true;
-        el.style.display = 'none';
-        document.body.appendChild(el);
-      }
-    });
-
-    lkRoom.on('trackUnsubscribed', (track) => {
-      try { track.detach().forEach(el => el.remove()); } catch(e){}
-    });
-
-    await lkRoom.connect(url, token);
-
-    // Create local tracks based on call type
-    const needVideo = callType === 'video';
-    lkLocalTracks = await createLocalTracks({
-      audio: true,
-      video: needVideo ? { facingMode: 'user', width: 640, height: 360 } : false
-    });
-
-    for (const t of lkLocalTracks) {
-      await lkRoom.localParticipant.publishTrack(t);
-      if (t.kind === 'video') attachToBox('localVideo', t);
-      if (t.kind === 'audio') {
-        // keep local audio track silent to avoid echo
-      }
-    }
-
-    // Show call container if exists
-    try{
-      const cc = document.getElementById('callContainer');
-      if (cc) cc.style.display = 'block';
-      const conn = document.getElementById('callConnectingModal');
-      if (conn) conn.classList.add('hidden');
-    }catch(e){}
-
-    // Mark call state (if your existing variables exist)
-    try{ isInCall = true; }catch(e){}
-    try{ isCaller = true; }catch(e){}
-  }
-
-  async function leaveLiveKit(){
-    try{
-      if (lkLocalTracks && lkLocalTracks.length) {
-        for (const t of lkLocalTracks) { try{ t.stop(); }catch(e){} }
-      }
-      lkLocalTracks = [];
-    }catch(e){}
-
-    try{
-      if (lkRoom) {
-        lkRoom.disconnect();
-        lkRoom = null;
-      }
-    }catch(e){}
-
-    lkCallType = null;
-    lkRoomName = null;
-
-    // Clear UI boxes if present
-    const lv = document.getElementById('localVideo'); if (lv) lv.innerHTML = '';
-    const rv = document.getElementById('remoteVideo'); if (rv) rv.innerHTML = '';
-  }
-
-  // Override existing call functions to use LiveKit
-  window.startVideoCall = async function(){
-    try{
-      // notify other party (socket) – no SDP, only metadata
-      const roomName = getRoomNameForChat();
-      if (typeof socket !== 'undefined' && socket && typeof chatUserId !== 'undefined') {
-        socket.emit('callOffer', { to: chatUserId, from: currentUserId, offer: { room: roomName, type: 'video' }, callType: 'video' });
-      }
-      await joinLiveKit('video');
-    } catch (e) {
-      console.error('Error starting video call:', e);
-      try{ await leaveLiveKit(); }catch(_){}
-      try{ hideCallUI(); }catch(_){}
-      alert('Video call start error: ' + (e && e.message ? e.message : e));
-    }
-  };
-
-  window.startVoiceCall = async function(){
-    try{
-      const roomName = getRoomNameForChat();
-      if (typeof socket !== 'undefined' && socket && typeof chatUserId !== 'undefined') {
-        socket.emit('callOffer', { to: chatUserId, from: currentUserId, offer: { room: roomName, type: 'voice' }, callType: 'voice' });
-      }
-      await joinLiveKit('voice');
-    } catch (e) {
-      console.error('Error starting voice call:', e);
-      try{ await leaveLiveKit(); }catch(_){}
-      try{ hideCallUI(); }catch(_){}
-      alert('Voice call start error: ' + (e && e.message ? e.message : e));
-    }
-  };
-
-  // Accept incoming call: join same room
-  window.acceptCall = async function(){
-    try{
-      const offer = (typeof pendingOffer !== 'undefined' ? pendingOffer : null);
-      const callType = (offer && offer.type === 'voice') ? 'voice' : 'video';
-      // If offer has room, use it
-      if (offer && offer.room) {
-        try{ currentChatRoom = offer.room; }catch(e){}
-      }
-      if (typeof socket !== 'undefined' && socket && typeof chatUserId !== 'undefined') {
-        socket.emit('callAnswer', { to: chatUserId, from: currentUserId, answer: { ok: true, room: offer && offer.room ? offer.room : getRoomNameForChat(), type: callType } });
-      }
-      await joinLiveKit(callType);
-      // hide incoming modal
-      try{
-        const inc = document.getElementById('incomingCallModal');
-        if (inc) inc.classList.add('hidden');
-      }catch(e){}
-    } catch (e) {
-      console.error('Error accepting call:', e);
-      alert('Accept call error: ' + (e && e.message ? e.message : e));
-    }
-  };
-
-  window.declineCall = async function(){
-    try{
-      if (typeof socket !== 'undefined' && socket && typeof chatUserId !== 'undefined') {
-        socket.emit('callDeclined', { to: chatUserId, from: currentUserId });
-      }
-    }catch(e){}
-    try{
-      const inc = document.getElementById('incomingCallModal');
-      if (inc) inc.classList.add('hidden');
-    }catch(e){}
-    try{ pendingOffer = null; }catch(e){}
-  };
-
-  window.endCall = async function(){
-    try{
-      if (typeof socket !== 'undefined' && socket && typeof chatUserId !== 'undefined') {
-        socket.emit('callEnded', { to: chatUserId, from: currentUserId });
-      }
-    }catch(e){}
-    await leaveLiveKit();
-    try{ hideCallUI(); }catch(e){}
-    try{ isInCall = false; }catch(e){}
-  };
-
-  // If someone ends the call remotely, clean up
-  try{
-    if (typeof socket !== 'undefined' && socket) {
-      socket.on('callEnded', async () => {
-        await leaveLiveKit();
-        try{ hideCallUI(); }catch(e){}
-        try{ isInCall = false; }catch(e){}
-      });
-    }
-  }catch(e){}
-  })();
-})();
 </script>
 </body>
 </html>

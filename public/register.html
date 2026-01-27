@@ -308,7 +308,19 @@
               <i class="fa-solid fa-users-rectangle absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
               <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="studyGroup" placeholder="Masalan: 21-01" />
             </div>
+          
+          <div>
+            <label class="text-xs font-extrabold muted">Role</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-user-tag absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <select class="field w-full rounded-2xl px-11 py-3 text-sm" name="role" required>
+                <option value="student" selected>Student</option>
+                <option value="teacher">Teacher</option>
+              </select>
+            </div>
           </div>
+
+</div>
 
           <div>
             <label class="text-xs font-extrabold muted">Telefon</label>
@@ -493,7 +505,17 @@
             const token = extractToken(result);
             if(token) localStorage.setItem('token', token);
             showMessage("Ro‘yxatdan o‘tish muvaffaqiyatli! Yo‘naltirilmoqda...", 'success');
-            setTimeout(()=> window.location.href = '/messages.html', 900);
+            setTimeout(async ()=>{
+              try{
+                const t = localStorage.getItem('token');
+                const meRes = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${t}` } });
+                const me = await meRes.json().catch(()=>null);
+                const role = (me && me.user && me.user.role) ? String(me.user.role) : 'student';
+                window.location.href = (role==='teacher') ? '/teacher-dashboard.html' : (role==='admin' ? '/admin-dashboard.html' : '/student-dashboard.html');
+              }catch(_){
+                window.location.href = '/student-dashboard.html';
+              }
+            }, 900);
             return;
           }
 
@@ -614,7 +636,10 @@
           const res = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${token}` } });
           if(!res.ok) return localStorage.removeItem('token');
           const data = await res.json().catch(()=>null);
-          if(data && data.success) window.location.href = '/messages.html';
+          if(data && data.success){
+              const role = (data.user && data.user.role) ? String(data.user.role) : 'student';
+              window.location.href = (role==='teacher') ? '/teacher-dashboard.html' : (role==='admin' ? '/admin-dashboard.html' : '/student-dashboard.html');
+            }
           else localStorage.removeItem('token');
         }catch(_){}
       }

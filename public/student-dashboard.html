@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Student Panel — QDTU LMS</title>
+  <script>
+  tailwind = { config: { darkMode:'class', theme:{ extend:{
+    fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
+    boxShadow:{ glass:'0 20px 60px rgba(0,0,0,.18)' }
+  }}}};
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+:root{
+ --glass-bg: rgba(255,255,255,.58);
+ --glass-brd: rgba(255,255,255,.36);
+ --muted: rgba(15,23,42,.72);
+ --muted2: rgba(15,23,42,.55);
+ --grid: rgba(15,23,42,.06);
+ --ring: rgba(99,102,241,.45);
+ --ok: rgba(34,197,94,.18);
+ --bad: rgba(239,68,68,.18);
+}
+.dark{
+ --glass-bg: rgba(2,6,23,.58);
+ --glass-brd: rgba(148,163,184,.16);
+ --muted: rgba(226,232,240,.78);
+ --muted2: rgba(226,232,240,.55);
+ --grid: rgba(148,163,184,.08);
+ --ring: rgba(236,72,153,.35);
+ --ok: rgba(34,197,94,.14);
+ --bad: rgba(239,68,68,.14);
+}
+body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+.muted{ color: var(--muted); }
+.muted2{ color: var(--muted2); }
+.glass{
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-brd);
+  box-shadow: 0 20px 60px rgba(0,0,0,.18);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.btn-primary{ background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)); }
+.btn-primary:hover{ filter: brightness(1.05); }
+.btn-ghost:hover{ background: rgba(148,163,184,.12); }
+.glow-ring:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
+.bg-orbs{
+  position: fixed; inset: 0; z-index: -2; overflow: hidden;
+  background:
+    radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.38), transparent 60%),
+    radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.28), transparent 60%),
+    radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.22), transparent 60%),
+    linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
+}
+.dark .bg-orbs{
+  background:
+    radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.24), transparent 60%),
+    radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.19), transparent 60%),
+    radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.14), transparent 60%),
+    linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));
+}
+.bg-grid{
+  position: fixed; inset: 0; z-index: -1; pointer-events:none;
+  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 70px 70px;
+  mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+  opacity: .85;
+}
+.field{
+  background: rgba(255,255,255,.38);
+  border: 1px solid rgba(255,255,255,.28);
+}
+.dark .field{ background: rgba(2,6,23,.35); border: 1px solid rgba(148,163,184,.18); }
+.field:focus{ outline:none; box-shadow:0 0 0 5px var(--ring); border-color:transparent; }
+</style>
+<script>
+(function(){
+  const key='theme';
+  const saved=localStorage.getItem(key);
+  const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const mode=saved || (prefersDark?'dark':'light');
+  if(mode==='dark') document.documentElement.classList.add('dark');
+})();
+</script>
+</head>
+<body class="min-h-screen text-slate-900 dark:text-slate-100">
+  <div class="bg-orbs"></div><div class="bg-grid"></div>
+
+  <header class="sticky top-0 z-50">
+    <div class="mx-auto max-w-6xl px-4 py-4">
+      <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white shadow-glass">
+            <i class="fa-solid fa-user-graduate"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-extrabold tracking-tight">Student Panel</div>
+            <div class="text-xs muted" id="metaLine">—</div>
+          </div>
+          <span class="ml-2 text-xs font-extrabold px-3 py-1 rounded-full glass">STUDENT</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring">
+            <i id="themeIcon" class="fa-solid fa-moon"></i>
+            <span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
+          </button>
+          <a href="/messages.html" class="glass rounded-xl px-4 py-2 text-sm font-bold btn-ghost glow-ring">
+            <i class="fa-solid fa-message"></i><span class="ml-2 hidden sm:inline">Messages</span>
+          </a>
+          <a href="/profile.html" class="glass rounded-xl px-4 py-2 text-sm font-bold btn-ghost glow-ring">
+            <i class="fa-solid fa-id-badge"></i><span class="ml-2 hidden sm:inline">Profil</span>
+          </a>
+          <button id="logoutBtn" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
+            <i class="fa-solid fa-right-from-bracket"></i><span class="ml-2 hidden sm:inline">Chiqish</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    <div id="toast" class="fixed top-24 right-4 z-50"></div>
+
+    <section class="glass rounded-3xl p-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="text-sm font-extrabold muted">Hisob</div>
+          <div class="mt-1 text-2xl font-black tracking-tight" id="nameVal">—</div>
+          <div class="mt-1 text-sm muted2" id="subtitleVal">—</div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 w-full md:w-auto">
+          <div class="glass rounded-2xl px-5 py-4">
+            <div class="text-xs font-extrabold muted">Coin balans</div>
+            <div class="mt-1 text-2xl font-black" id="coinsVal">0</div>
+          </div>
+          <div class="glass rounded-2xl px-5 py-4">
+            <div class="text-xs font-extrabold muted">Sertifikatlar</div>
+            <div class="mt-1 text-2xl font-black" id="certCount">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 flex flex-wrap gap-3">
+        <a class="btn-primary text-white rounded-2xl px-5 py-3 font-extrabold glow-ring" href="/courses.html">
+          <i class="fa-solid fa-book-open mr-2"></i>Kurslar
+        </a>
+        <a class="glass rounded-2xl px-5 py-3 font-extrabold btn-ghost glow-ring" href="/tests.html">
+          <i class="fa-solid fa-list-check mr-2"></i>Testlar
+        </a>
+        <a class="glass rounded-2xl px-5 py-3 font-extrabold btn-ghost glow-ring" href="/certificate.html">
+          <i class="fa-solid fa-award mr-2"></i>Sertifikat
+        </a>
+      </div>
+    </section>
+
+    <section class="mt-6 grid lg:grid-cols-2 gap-6">
+      <div class="glass rounded-3xl p-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-black">Qo‘shilgan kurslar</h2>
+          <a class="text-sm font-extrabold underline" href="/courses.html">Barchasi</a>
+        </div>
+        <div class="mt-4 space-y-3" id="enrolledList">
+          <div class="muted2 text-sm">Yuklanmoqda...</div>
+        </div>
+      </div>
+
+      <div class="glass rounded-3xl p-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-black">Oxirgi test natijalari</h2>
+          <a class="text-sm font-extrabold underline" href="/tests.html">Testlar</a>
+        </div>
+        <div class="mt-4 space-y-3" id="recentTests">
+          <div class="muted2 text-sm">Yuklanmoqda...</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 glass rounded-3xl p-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-black">Sertifikatlarim</h2>
+        <a class="text-sm font-extrabold underline" href="/certificate.html">Yuklab olish</a>
+      </div>
+      <div class="mt-4 grid md:grid-cols-2 gap-3" id="certList">
+        <div class="muted2 text-sm">Yuklanmoqda...</div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const API_BASE = "";
+function token(){ return localStorage.getItem('token') || ''; }
+function authHeaders(json=true){
+  const h = { 'Authorization': 'Bearer ' + token() };
+  if(json) h['Content-Type']='application/json';
+  return h;
+}
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function apiJson(url, opt={}){
+  const res = await fetch(API_BASE + url, opt);
+  const j = await res.json().catch(()=>null);
+  if(!res.ok) throw new Error(j?.error || j?.message || `HTTP ${res.status}`);
+  return j;
+}
+function normalizeMe(me){
+  if(!me) return { user:null, role:'student' };
+  const u = me.user || me.data?.user || me;
+  const role = String(u?.role || (u?.isAdmin ? 'admin' : 'student') || 'student').toLowerCase();
+  return { user: u, role };
+}
+function showToast(text, type='info'){
+  const wrap = document.getElementById('toast');
+  if(!wrap) return alert(text);
+  const bg = type==='error' ? 'var(--bad)' : type==='success' ? 'var(--ok)' : 'rgba(99,102,241,.14)';
+  wrap.innerHTML = `<div class="glass rounded-2xl px-4 py-3 text-sm font-extrabold" style="background:${bg}; border:1px solid rgba(148,163,184,.22)">${esc(text)}</div>`;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> wrap.innerHTML='', 3400);
+}
+async function requireRole(allowed){
+  const t = token();
+  if(!t){ location.href='/login.html'; return null; }
+  const me = await apiJson('/api/me', { headers: authHeaders(false) });
+  const { user, role } = normalizeMe(me);
+  if(!allowed.includes(role)){
+    const target = role==='teacher' ? '/teacher-dashboard.html' : (role==='admin' ? '/admin-dashboard.html' : '/student-dashboard.html');
+    showToast(role==='student' ? "Siz student ekansiz. Student paneliga yo'naltirilmoqda..." : "Role mos emas. Yo'naltirilmoqda...", 'error');
+    setTimeout(()=> location.href = target, 650);
+    return null;
+  }
+  return user;
+}
+</script>
+
+<script>
+(function(){
+  const key='theme';
+  const html=document.documentElement;
+  const btn=document.getElementById('themeToggle');
+  const icon=document.getElementById('themeIcon');
+  const label=document.getElementById('themeLabel');
+  function apply(mode){
+    if(mode==='dark') html.classList.add('dark'); else html.classList.remove('dark');
+    localStorage.setItem(key, mode);
+    icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+  }
+  const saved=localStorage.getItem(key);
+  if(saved) apply(saved);
+  btn.addEventListener('click', ()=> apply(html.classList.contains('dark') ? 'light' : 'dark'));
+})();
+</script>
+
+<script>
+(async function init(){
+  const me = await requireRole(['student']).catch(e=>{ showToast(e.message,'error'); return null; });
+  if(!me) return;
+
+  const displayName = me.fullName || me.fullname || me.name || me.username || 'Student';
+  document.getElementById('nameVal').textContent = displayName;
+  const fac = me.faculty || '';
+  const grp = me.group || me.studyGroup || '';
+  document.getElementById('subtitleVal').textContent = [fac, grp].filter(Boolean).join(' • ') || '—';
+  document.getElementById('metaLine').textContent = [fac, grp].filter(Boolean).join(' • ') || 'QDTU LMS';
+
+  document.getElementById('coinsVal').textContent = String(me.coins ?? me.coin ?? 0);
+
+  document.getElementById('logoutBtn').addEventListener('click', ()=>{
+    localStorage.removeItem('token');
+    location.href='/login.html';
+  });
+
+  // optional endpoints
+  let enrolled = [];
+  try{
+    const j = await apiJson('/api/courses/my', { headers: authHeaders(false) });
+    enrolled = j.courses || j.enrollments || [];
+  }catch(e){ enrolled = []; }
+
+  const listEl = document.getElementById('enrolledList');
+  if(!enrolled.length){
+    listEl.innerHTML = `<div class="muted2 text-sm">Hozircha qo‘shilgan kurs yo‘q. <a class="font-extrabold underline" href="/courses.html">Kurslarni ko‘ring</a>.</div>`;
+  }else{
+    listEl.innerHTML = enrolled.slice(0,6).map(c=>{
+      const id = c._id || c.courseId || c.id;
+      const title = c.title || c.courseTitle || 'Kurs';
+      const isPaid = String(c.type||c.priceType||'free').toLowerCase()==='paid';
+      const badge = isPaid ? `${Number(c.price||0)} coin` : 'Bepul';
+      return `
+        <div class="glass rounded-2xl p-4 flex items-start justify-between gap-3">
+          <div>
+            <div class="font-extrabold">${esc(title)}</div>
+            <div class="text-xs muted2 mt-1">${esc(badge)}</div>
+          </div>
+          <a class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring"
+             href="/joinedcourse.html?id=${encodeURIComponent(id)}">Davom etish</a>
+        </div>
+      `;
+    }).join('');
+  }
+
+  let subs=[];
+  try{
+    const j = await apiJson('/api/tests/my-submissions', { headers: authHeaders(false) });
+    subs = j.submissions || [];
+  }catch(e){ subs=[]; }
+
+  const rt = document.getElementById('recentTests');
+  if(!subs.length){
+    rt.innerHTML = `<div class="muted2 text-sm">Hozircha test topshirilmagan. <a class="font-extrabold underline" href="/tests.html">Testlarni ko‘ring</a>.</div>`;
+  }else{
+    rt.innerHTML = subs.slice(0,6).map(s=>{
+      const tId = s.testId || s.sourceId || s.test?._id || '';
+      const title = s.testTitle || s.title || 'Test';
+      const score = (s.scorePercent ?? s.score ?? 0);
+      return `
+        <div class="glass rounded-2xl p-4 flex items-center justify-between gap-3">
+          <div>
+            <div class="font-extrabold">${esc(title)}</div>
+            <div class="text-xs muted2 mt-1">Natija: <span class="font-extrabold">${score}%</span></div>
+          </div>
+          <a class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring"
+             href="/test.html?id=${encodeURIComponent(tId)}">Ko‘rish</a>
+        </div>
+      `;
+    }).join('');
+  }
+
+  let certs=[];
+  try{
+    const j = await apiJson('/api/certificates/my', { headers: authHeaders(false) });
+    certs = j.certificates || [];
+  }catch(e){ certs=[]; }
+
+  document.getElementById('certCount').textContent = String(certs.length || 0);
+  const cl = document.getElementById('certList');
+  if(!certs.length){
+    cl.innerHTML = `<div class="muted2 text-sm">Hozircha sertifikat yo‘q. Kursni yakunlang yoki testdan 60%+ oling.</div>`;
+  }else{
+    cl.innerHTML = certs.slice(0,8).map(c=>{
+      const t = c.title || (c.type==='course'?'Kurs':'Test');
+      const score = c.score!=null ? ` • ${c.score}%` : '';
+      return `
+        <div class="glass rounded-2xl p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-extrabold">${esc(t)}</div>
+              <div class="text-xs muted2 mt-1">${esc(c.type)} • Serial: <span class="font-extrabold">${esc(c.serial)}</span>${score}</div>
+            </div>
+            <a class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring"
+               href="/certificate.html?type=${encodeURIComponent(c.type)}&id=${encodeURIComponent(c.sourceId)}&score=${encodeURIComponent(c.score ?? '')}">PDF</a>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+})().catch(e=> showToast(e.message,'error'));
+</script>
+</body></html>

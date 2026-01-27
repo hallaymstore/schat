@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Student Dashboard — QDTU Edu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .glass{background:rgba(255,255,255,.6);border:1px solid rgba(148,163,184,.22);backdrop-filter: blur(14px)}
+    .dark .glass{background:rgba(2,6,23,.6);border-color:rgba(148,163,184,.18)}
+    .muted{color:rgba(15,23,42,.70)}
+    .dark .muted{color:rgba(226,232,240,.70)}
+    .chip{border:1px solid rgba(148,163,184,.25);border-radius:999px;padding:.25rem .65rem;font-weight:800;font-size:.72rem}
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+  <div class="fixed inset-0 -z-10 pointer-events-none">
+    <div class="absolute inset-0"
+      style="background:
+        radial-gradient(1200px 800px at 15% 10%, rgba(99,102,241,.16), transparent 60%),
+        radial-gradient(1100px 740px at 85% 12%, rgba(236,72,153,.12), transparent 62%),
+        radial-gradient(1000px 700px at 50% 95%, rgba(34,197,94,.10), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,.22));">
+    </div>
+  </div>
+
+  <header class="px-4 md:px-8 pt-6">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
+      <a href="/index.html" class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl glass grid place-items-center font-black">Q</div>
+        <div>
+          <div class="font-extrabold leading-tight">QDTU Edu</div>
+          <div class="text-xs muted -mt-0.5">Student dashboard</div>
+        </div>
+      </a>
+
+      <div class="flex items-center gap-2">
+        <a href="/courses.html" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold hover:opacity-90">Kurslar</a>
+        <a href="/tests.html" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold hover:opacity-90">Testlar</a>
+        <a href="/certificate.html" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold hover:opacity-90">Sertifikat</a>
+        <button id="themeBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold hover:opacity-90">Rejim</button>
+        <button id="logoutBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold hover:opacity-90">Chiqish</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="px-4 md:px-8 pb-16">
+    <div class="max-w-6xl mx-auto mt-6 grid lg:grid-cols-12 gap-6">
+      <!-- left -->
+      <section class="lg:col-span-4 glass rounded-3xl p-6">
+        <div class="flex items-center gap-4">
+          <img id="avatar" class="w-16 h-16 rounded-2xl object-cover border border-slate-200/60 dark:border-slate-700/50" alt="avatar" src=""/>
+          <div class="min-w-0">
+            <div class="text-lg font-extrabold truncate" id="fullName">—</div>
+            <div class="text-sm muted truncate">@<span id="username">—</span></div>
+            <div class="mt-1 text-xs muted">Rol: <span class="font-bold">Student</span></div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid grid-cols-2 gap-3">
+          <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/50 p-4">
+            <div class="text-xs muted">Coin balans</div>
+            <div class="text-2xl font-black" id="coins">0</div>
+          </div>
+          <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/50 p-4">
+            <div class="text-xs muted">Guruh</div>
+            <div class="text-sm font-extrabold truncate" id="studyGroup">—</div>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 p-4">
+          <div class="text-xs muted">Filtrlar</div>
+          <div class="mt-3 grid gap-2">
+            <label class="text-sm font-bold">Fakultet</label>
+            <select id="facultyFilter" class="w-full px-4 py-3 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 bg-white/70 dark:bg-slate-950/40"></select>
+
+            <label class="text-sm font-bold mt-2">Qidiruv</label>
+            <input id="q" class="w-full px-4 py-3 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 bg-white/70 dark:bg-slate-950/40" placeholder="Kurs nomi bo‘yicha"/>
+            <button id="applyFilter" class="mt-2 px-4 py-3 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-extrabold">Natijani ko‘rsat</button>
+          </div>
+          <div class="mt-3 text-xs muted">Kurs pullik bo‘lsa, “Qo‘shilish” bosilganda coin yechiladi.</div>
+        </div>
+      </section>
+
+      <!-- right -->
+      <section class="lg:col-span-8 space-y-6">
+        <section class="glass rounded-3xl p-6">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="text-xl font-extrabold">Sizga tavsiya (guruh/fakultet bo‘yicha)</div>
+              <div class="text-sm muted mt-1">Faqat sizning fakultet/guruh talablariga mos kurslar ko‘rsatiladi (backend tayyor bo‘lsa). Hozircha local demo ishlaydi.</div>
+            </div>
+            <div class="text-xs muted text-right">
+              Sertifikat
+              <div class="font-bold">course / test</div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid md:grid-cols-2 gap-4" id="recommendedGrid"></div>
+        </section>
+
+        <section class="glass rounded-3xl p-6">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-xl font-extrabold">Mening kurslarim (joined)</div>
+              <div class="text-sm muted mt-1">Joined kursni o‘qish: <span class="chip">joinedcourse.html</span> sahifasiga o‘tadi.</div>
+            </div>
+            <button id="refreshJoined" class="px-4 py-2 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 font-extrabold text-sm">Yangilash</button>
+          </div>
+
+          <div class="mt-4 grid md:grid-cols-2 gap-4" id="joinedGrid"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <template id="courseCardTpl">
+    <div class="rounded-3xl border border-slate-200/60 dark:border-slate-700/50 p-5 bg-white/50 dark:bg-slate-950/20">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-extrabold text-lg truncate" data-k="title"></div>
+          <div class="text-xs muted mt-1" data-k="meta"></div>
+        </div>
+        <span class="text-xs font-extrabold px-3 py-1 rounded-full border border-slate-200/60 dark:border-slate-700/50" data-k="badge"></span>
+      </div>
+      <div class="text-sm muted mt-3 line-clamp-3" data-k="desc"></div>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <a class="px-3 py-2 rounded-xl border border-slate-200/60 dark:border-slate-700/50 font-extrabold text-sm" data-act="open" href="#">Kursni ko‘rish</a>
+        <button class="px-3 py-2 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-extrabold text-sm" data-act="join">Qo‘shilish</button>
+      </div>
+
+      <div class="mt-3 text-xs muted" data-k="msg"></div>
+    </div>
+  </template>
+
+<script>
+  const FACULTIES = [
+    "Barchasi",
+    "Neft-gaz va geologiya fakulteti",
+    "Iqtisodiyot va boshqaruv fakulteti",
+    "Energetika muhandisligi fakulteti",
+    "Transport va qurilish muhandisligi fakulteti",
+    "Raqamli texnologiyalar va sun'iy intellekt fakulteti",
+    "Shahrisabz oziq-ovqat muhandisligi fakulteti",
+    "Irrigatsiya muhandisligi fakulteti"
+  ];
+
+  const LS = {
+    teacherCourses: 'edu.teacher.courses',     // for demo: courses created on teacher page
+    studentJoined: 'edu.student.joined',      // joined course ids
+    studentCoinsShadow: 'edu.student.coinsShadow', // demo coins if /api/me doesn't exist
+    teacherBalance: 'edu.teacher.balance'
+  };
+
+  // Theme
+  const themeBtn = document.getElementById('themeBtn');
+  function applyTheme(mode){
+    if(mode === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+    localStorage.setItem('theme', mode);
+  }
+  applyTheme(localStorage.getItem('theme') || 'light');
+  themeBtn.addEventListener('click', () => applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
+
+  // Auth/API
+  function getToken(){ return localStorage.getItem('token') || ''; }
+  async function api(path, opts={}){
+    const headers = Object.assign({'Content-Type':'application/json'}, opts.headers || {});
+    const t = getToken();
+    if(t) headers.Authorization = 'Bearer ' + t;
+    const res = await fetch(path, {...opts, headers});
+    const data = await res.json().catch(()=> ({}));
+    if(!res.ok) throw Object.assign(new Error(data.error || ('HTTP ' + res.status)), {status: res.status, data});
+    return data;
+  }
+
+  // Utilities
+  function readJson(key, fallback){
+    try{ return JSON.parse(localStorage.getItem(key) || '') ?? fallback; }catch(_){ return fallback; }
+  }
+  function writeJson(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function badgeText(c){
+    if(c.type === 'paid') return `Pullik • ${c.price || 0} coin`;
+    return 'Bepul';
+  }
+
+  // Fill faculty filter
+  const facultyFilter = document.getElementById('facultyFilter');
+  facultyFilter.innerHTML = FACULTIES.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
+
+  // Load me
+  let me = { coins: 0, studyGroup: '' , faculty: '' };
+  async function loadMe(){
+    try{
+      const r = await api('/api/me');
+      const u = r.user || {};
+      document.getElementById('fullName').textContent = u.fullName || u.nickname || '—';
+      document.getElementById('username').textContent = u.username || '—';
+      document.getElementById('avatar').src = u.avatar || '';
+      document.getElementById('coins').textContent = (u.coins ?? 0);
+      document.getElementById('studyGroup').textContent = u.studyGroup || '—';
+
+      me = {
+        coins: Number(u.coins ?? 0),
+        studyGroup: (u.studyGroup || ''),
+        faculty: (u.university || '') // existing system uses "university" field; later you can add dedicated faculty field.
+      };
+
+    }catch(e){
+      // demo mode (no token/back-end)
+      const shadow = Number(localStorage.getItem(LS.studentCoinsShadow) || 0);
+      me.coins = shadow;
+      document.getElementById('coins').textContent = shadow;
+      document.getElementById('studyGroup').textContent = localStorage.getItem('studyGroup') || '—';
+    }
+  }
+
+  // Data: list courses (API-first; local fallback from teacher demo)
+  async function listCourses(filters){
+    // Future: GET /api/edu/courses?faculty=&group=&q=
+    try{
+      const qs = new URLSearchParams(filters || {}).toString();
+      const r = await api('/api/edu/courses?' + qs);
+      return r.courses || [];
+    }catch(_){
+      const all = readJson(LS.teacherCourses, []);
+      return all;
+    }
+  }
+
+  // Join course (payment split demo if no backend)
+  async function joinCourse(course){
+    // Future: POST /api/edu/courses/:id/join
+    try{
+      const r = await api(`/api/edu/courses/${encodeURIComponent(course.id)}/join`, {method:'POST'});
+      return { ok: true, coins: r.coins };
+    }catch(_){
+      const joined = new Set(readJson(LS.studentJoined, []));
+      if(joined.has(course.id)) return { ok: true, already: true, coins: me.coins };
+
+      // payment rules
+      const price = Number(course.price || 0);
+      if(course.type === 'paid' && price > 0){
+        if(me.coins < price) return { ok:false, reason:'Coin yetarli emas' };
+        me.coins -= price;
+        localStorage.setItem(LS.studentCoinsShadow, String(me.coins));
+        document.getElementById('coins').textContent = me.coins;
+
+        // split
+        const teacherShare = Math.floor(price * 0.5);
+        const adminShare = price - teacherShare;
+        const tb = Number(localStorage.getItem(LS.teacherBalance) || 0) + teacherShare;
+        localStorage.setItem(LS.teacherBalance, String(tb));
+        // adminShare will be handled by admin in backend later
+      }
+
+      joined.add(course.id);
+      writeJson(LS.studentJoined, Array.from(joined));
+      return { ok:true, coins: me.coins };
+    }
+  }
+
+  async function listJoinedCourses(){
+    try{
+      const r = await api('/api/edu/enrollments?mine=1');
+      return r.courses || [];
+    }catch(_){
+      const all = readJson(LS.teacherCourses, []);
+      const joinedIds = new Set(readJson(LS.studentJoined, []));
+      return all.filter(c => joinedIds.has(c.id));
+    }
+  }
+
+  // Render
+  const tpl = document.getElementById('courseCardTpl');
+  const recommendedGrid = document.getElementById('recommendedGrid');
+  const joinedGrid = document.getElementById('joinedGrid');
+
+  function makeCard(course, {mode}){
+    const node = tpl.content.cloneNode(true);
+    const root = node.querySelector('div');
+    root.querySelector('[data-k="title"]').textContent = course.title || '—';
+    root.querySelector('[data-k="meta"]').textContent =
+      `${course.faculty || '—'} • ${course.group ? ('Guruh: ' + course.group) : 'Hammaga'} • Darslar: ${(course.lessons||[]).length}`;
+    root.querySelector('[data-k="badge"]').textContent = badgeText(course);
+    root.querySelector('[data-k="desc"]').textContent = course.desc || '';
+
+    const openA = root.querySelector('[data-act="open"]');
+    openA.href = `/course.html?id=${encodeURIComponent(course.id)}`;
+
+    const joinBtn = root.querySelector('[data-act="join"]');
+    const msg = root.querySelector('[data-k="msg"]');
+
+    if(mode === 'joined'){
+      joinBtn.textContent = 'O‘qishni davom ettirish';
+      joinBtn.addEventListener('click', () => location.href = `/joinedcourse.html?id=${encodeURIComponent(course.id)}`);
+      msg.textContent = 'Status: joined';
+    }else{
+      joinBtn.addEventListener('click', async () => {
+        msg.textContent = 'Tekshirilmoqda...';
+        const r = await joinCourse(course);
+        if(!r.ok){
+          msg.textContent = '❌ ' + r.reason;
+          msg.className = 'mt-3 text-xs text-rose-600 font-bold';
+          return;
+        }
+        msg.textContent = r.already ? '✅ Siz allaqachon qo‘shilgansiz.' : '✅ Kursga qo‘shildingiz.';
+        msg.className = 'mt-3 text-xs text-emerald-600 font-bold';
+        await renderJoined();
+      });
+    }
+    return node;
+  }
+
+  async function renderRecommended(){
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    const fac = facultyFilter.value;
+    const filters = {};
+    if(fac && fac !== 'Barchasi') filters.faculty = fac;
+    if(q) filters.q = q;
+
+    const courses = await listCourses(filters);
+
+    // front-end filter: group match
+    const filtered = courses.filter(c => {
+      if(fac && fac !== 'Barchasi' && c.faculty !== fac) return false;
+      if(q && !(String(c.title||'').toLowerCase().includes(q) || String(c.desc||'').toLowerCase().includes(q))) return false;
+      // group restriction: if course.group is set, must match user group
+      if(c.group && me.studyGroup && String(c.group).trim() !== String(me.studyGroup).trim()) return false;
+      return true;
+    });
+
+    recommendedGrid.innerHTML = '';
+    if(!filtered.length){
+      recommendedGrid.innerHTML = `<div class="md:col-span-2 rounded-3xl border border-slate-200/60 dark:border-slate-700/50 p-6 text-sm muted">
+        Mos kurs topilmadi. Filtrlarni o‘zgartiring yoki o‘qituvchi yangi kurs joylasin.
+      </div>`;
+      return;
+    }
+
+    for(const c of filtered.slice(0, 20)){
+      recommendedGrid.appendChild(makeCard(c, {mode:'all'}));
+    }
+  }
+
+  async function renderJoined(){
+    const courses = await listJoinedCourses();
+    joinedGrid.innerHTML = '';
+    if(!courses.length){
+      joinedGrid.innerHTML = `<div class="md:col-span-2 rounded-3xl border border-slate-200/60 dark:border-slate-700/50 p-6 text-sm muted">
+        Sizda joined kurslar yo‘q. Yuqoridagi ro‘yxatdan kursga qo‘shiling.
+      </div>`;
+      return;
+    }
+    for(const c of courses){
+      joinedGrid.appendChild(makeCard(c, {mode:'joined'}));
+    }
+  }
+
+  // actions
+  document.getElementById('applyFilter').addEventListener('click', renderRecommended);
+  document.getElementById('refreshJoined').addEventListener('click', renderJoined);
+
+  // logout
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    try{ await api('/api/logout', {method:'POST'}); }catch(_){}
+    localStorage.removeItem('token');
+    location.href = '/login.html';
+  });
+
+  // init
+  loadMe().then(() => {
+    renderRecommended();
+    renderJoined();
+  });
+</script>
+</body>
+</html>

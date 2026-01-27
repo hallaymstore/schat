@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Joined Course</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f6f7fb;color:#111}
+    header{background:#111827;color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    header .left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    header .badge{background:#10b981;padding:6px 10px;border-radius:999px;font-size:12px}
+    header .badge.teacher{background:#2563eb}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px;background:rgba(255,255,255,.08)}
+    .container{max-width:1200px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+    .card h2{margin:0 0 10px 0;font-size:20px}
+    .card h3{margin:0 0 10px 0;font-size:16px}
+    .muted{color:#6b7280;font-size:13px;line-height:1.45}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .btn{display:inline-block;border:1px solid #d1d5db;background:#fff;color:#111827;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:14px;cursor:pointer}
+    .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
+    .btn.danger{background:#ef4444;border-color:#ef4444;color:#fff}
+    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
+    .tag{display:inline-block;font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid #e5e7eb;background:#f9fafb;color:#111827}
+    .tag.done{border-color:#a7f3d0;background:#ecfdf5}
+    .tag.todo{border-color:#fde68a;background:#fffbeb}
+    .col-12{grid-column:span 12}
+    .col-8{grid-column:span 8}
+    .col-4{grid-column:span 4}
+    @media (max-width:980px){
+      .col-8,.col-4{grid-column:span 12}
+    }
+    .err{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
+    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
+    .step{border:1px solid #e5e7eb;border-radius:12px;padding:12px 12px;background:#fff;margin-top:10px}
+    .stepTitle{font-weight:700}
+    .stepMeta{margin-top:6px}
+    .stepBtn{margin-top:10px}
+    .viewer{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff}
+    .viewer .head{padding:12px 14px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .viewer .body{padding:14px}
+    .ytWrap{aspect-ratio:16/9;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;display:none}
+    .ytWrap iframe{width:100%;height:100%;border:0}
+    .pdfWrap{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;display:none}
+    .pdfWrap iframe{width:100%;height:520px;border:0}
+    .textWrap{display:none;white-space:pre-wrap;line-height:1.6}
+    .progress{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden}
+    .progress > div{height:100%;background:#2563eb;width:0%}
+    footer{padding:20px 16px;color:#6b7280;text-align:center}
+    .tiny{font-size:12px;color:#6b7280}
+    code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <div style="font-weight:700">QDTU LMS</div>
+      <div id="roleBadge" class="badge">Student</div>
+      <div id="mePill" class="pill" style="display:none"></div>
+    </div>
+    <div class="row">
+      <a class="btn ghost" href="/courses.html">Kurslar</a>
+      <a class="btn ghost" id="dashLink" href="/student-dashboard.html">Dashboard</a>
+      <button class="btn danger" id="logoutBtn">Chiqish</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="errBox" class="err"></div>
+    <div id="okBox" class="ok"></div>
+
+    <div class="grid">
+      <div class="card col-12">
+        <h2 id="courseTitle">Kurs yuklanmoqda...</h2>
+        <div class="muted" id="courseDesc">-</div>
+        <div class="row" style="margin-top:10px">
+          <span class="tag" id="courseFaculty">-</span>
+          <span class="tag" id="coursePrice">-</span>
+          <span class="tag" id="courseStatus">-</span>
+          <span class="tag" id="courseTeacher">-</span>
+        </div>
+      </div>
+
+      <div class="card col-4">
+        <h3>Reja (ketma-ket)</h3>
+        <div class="muted">Har bir bo‘limni ketma-ket bajaring. Keyingi bo‘lim faqat oldingisi yakunlanganda ochiladi.</div>
+        <div style="margin-top:12px" class="progress"><div id="progBar"></div></div>
+        <div class="tiny" style="margin-top:8px" id="progTxt">0%</div>
+
+        <div id="steps"></div>
+
+        <div class="tiny" style="margin-top:12px">
+          Backend endpointlar bo‘lsa materiallar shu orqali olinadi:
+          <ul style="margin:6px 0 0 18px">
+            <li><code>GET /api/courses/:id/content</code></li>
+            <li><code>POST /api/courses/:id/progress</code></li>
+          </ul>
+          Hozircha demo: localStorage.
+        </div>
+      </div>
+
+      <div class="card col-8">
+        <div class="viewer">
+          <div class="head">
+            <div>
+              <div style="font-weight:700" id="viewerTitle">Bo‘lim tanlang</div>
+              <div class="tiny" id="viewerMeta">-</div>
+            </div>
+            <div class="row">
+              <button class="btn" id="markDoneBtn" style="display:none">Bajarildi</button>
+              <button class="btn primary" id="nextBtn" style="display:none">Keyingisi</button>
+            </div>
+          </div>
+          <div class="body">
+            <div id="ytWrap" class="ytWrap">
+              <iframe id="ytFrame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div id="pdfWrap" class="pdfWrap" style="margin-top:12px">
+              <iframe id="pdfFrame"></iframe>
+            </div>
+            <div id="textWrap" class="textWrap" style="margin-top:12px"></div>
+            <div id="emptyWrap" class="muted">Chap tomondan bo‘limni tanlang.</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px;background:#f9fafb">
+          <h3 style="margin:0 0 8px 0">Eslatma</h3>
+          <div class="muted">
+            Sertifikat olish uchun kurs bo‘yicha barcha bo‘limlar bajarilgan bo‘lishi kerak (yakuniy bosqichda <code>certificate.html</code> bilan ulanadi).
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Qarshi Davlat Texnika Universiteti — LMS (Joined Course)</footer>
+
+<script>
+  const API_BASE = "";
+  function getToken(){ return localStorage.getItem("token") || ""; }
+  function qs(name){ return new URLSearchParams(location.search).get(name); }
+
+  function setErr(msg){
+    const box = document.getElementById("errBox");
+    box.textContent = msg; box.style.display = "block";
+    document.getElementById("okBox").style.display = "none";
+  }
+  function setOk(msg){
+    const box = document.getElementById("okBox");
+    box.textContent = msg; box.style.display = "block";
+    document.getElementById("errBox").style.display = "none";
+  }
+  function escapeHtml(str){
+    return String(str||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  // Demo storage
+  function demoCoursesKey(){ return "demoCourses_v1"; }
+  function readDemoCourses(){
+    try { return JSON.parse(localStorage.getItem(demoCoursesKey()) || "[]"); } catch { return []; }
+  }
+  function joinedKey(userId){ return "joinedCourses_v1_" + (userId || "anon"); }
+  function readJoined(userId){
+    try { return JSON.parse(localStorage.getItem(joinedKey(userId)) || "[]"); } catch { return []; }
+  }
+
+  function contentKey(courseId){ return "courseContent_v1_" + courseId; }
+  function progressKey(userId, courseId){ return "courseProgress_v1_" + (userId||"anon") + "_" + courseId; }
+  function readProgress(userId, courseId){
+    try { return JSON.parse(localStorage.getItem(progressKey(userId, courseId)) || "{}"); } catch { return {}; }
+  }
+  function writeProgress(userId, courseId, obj){
+    localStorage.setItem(progressKey(userId, courseId), JSON.stringify(obj));
+  }
+
+  function normalizeCourse(raw){
+    return {
+      id: raw._id || raw.id || raw.courseId,
+      title: raw.title || raw.name || "Nomsiz kurs",
+      description: raw.description || raw.desc || "",
+      type: (raw.type || (raw.isPaid ? "paid" : "free") || "free"),
+      price: Number(raw.price ?? raw.cost ?? 0),
+      status: raw.status || (raw.published ? "published" : "published"),
+      faculty: raw.faculty || raw.facultyName || "",
+      groups: Array.isArray(raw.groups) ? raw.groups : (raw.allowedGroups || []),
+      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
+      teacherId: raw.teacherId || raw.teacher?._id || raw.ownerId || "",
+      youtubeUrl: raw.youtubeUrl || raw.youtube || "",
+      coverUrl: raw.coverUrl || raw.cover || ""
+    };
+  }
+
+  function normalizeStep(raw){
+    return {
+      id: raw.id || raw._id || ("s_" + Math.random().toString(16).slice(2)),
+      type: raw.type || "text", // youtube|text|pdf
+      title: raw.title || "Bo‘lim",
+      text: raw.text || raw.content || "",
+      youtubeUrl: raw.youtubeUrl || raw.youtube || "",
+      pdfUrl: raw.pdfUrl || raw.pdf || raw.url || ""
+    };
+  }
+
+  function seedDemoContentIfMissing(course){
+    const k = contentKey(course.id);
+    const existing = localStorage.getItem(k);
+    if(existing) return;
+
+    const seed = [
+      { id:"s1", type:"youtube", title:"Kirish video", youtubeUrl: course.youtubeUrl || "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
+      { id:"s2", type:"text", title:"Nazariy qism", text:"Bu yerda kursning nazariy matni bo‘ladi.\n\nKeyingi bosqichlarda teacher paneldan real kontent qo‘shamiz." },
+      { id:"s3", type:"pdf", title:"PDF material", pdfUrl:"https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
+    ];
+    localStorage.setItem(k, JSON.stringify(seed));
+  }
+
+  function readDemoContent(courseId){
+    try{
+      const list = JSON.parse(localStorage.getItem(contentKey(courseId)) || "[]");
+      return Array.isArray(list) ? list.map(normalizeStep) : [];
+    }catch{
+      return [];
+    }
+  }
+
+  function youtubeEmbed(url){
+    if(!url) return "";
+    try{
+      const u = new URL(url);
+      let id = "";
+      if(u.hostname.includes("youtu.be")){
+        id = u.pathname.replace("/","");
+      }else if(u.searchParams.get("v")){
+        id = u.searchParams.get("v");
+      }else if(u.pathname.includes("/embed/")){
+        id = u.pathname.split("/embed/")[1];
+      }
+      if(!id) return "";
+      return "https://www.youtube.com/embed/" + id;
+    }catch(e){
+      return "";
+    }
+  }
+
+  async function apiMe(){
+    const token = getToken();
+    if(!token){ location.href="/login.html"; return null; }
+    const res = await fetch(API_BASE + "/api/me", { headers: { "Authorization":"Bearer " + token } });
+    if(!res.ok){
+      localStorage.removeItem("token");
+      location.href="/login.html";
+      return null;
+    }
+    return await res.json();
+  }
+
+  async function fetchCourseFromAPI(id){
+    const token = getToken();
+    let res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(id), { headers:{ "Authorization":"Bearer " + token } });
+    if(res.ok){
+      const data = await res.json();
+      return normalizeCourse(data.course || data);
+    }
+    // fallback list
+    res = await fetch(API_BASE + "/api/courses", { headers:{ "Authorization":"Bearer " + token } });
+    if(!res.ok) throw new Error("API not available");
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.courses || []);
+    const c = list.map(normalizeCourse).find(x=>String(x.id)===String(id));
+    if(!c) throw new Error("Not found");
+    return c;
+  }
+
+  function fetchCourseFromDemo(id){
+    const c = readDemoCourses().map(normalizeCourse).find(x=>String(x.id)===String(id));
+    if(!c) throw new Error("Not found");
+    return c;
+  }
+
+  async function fetchContentFromAPI(courseId){
+    const token = getToken();
+    const res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(courseId) + "/content", { headers:{ "Authorization":"Bearer " + token } });
+    if(!res.ok) throw new Error("No content API");
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.items || data.content || []);
+    return list.map(normalizeStep);
+  }
+
+  let ME=null, COURSE=null, STEPS=[], PROG={}, ACTIVE_INDEX=-1;
+
+  function setHeader(me){
+    const role = (me.role||"student").toLowerCase();
+    const badge = document.getElementById("roleBadge");
+    badge.textContent = role==="teacher" ? "Teacher" : role==="admin" ? "Admin" : "Student";
+    badge.classList.toggle("teacher", role==="teacher");
+    badge.style.background = role==="teacher" ? "#2563eb" : (role==="admin" ? "#f59e0b" : "#10b981");
+
+    const mePill = document.getElementById("mePill");
+    mePill.textContent = (me.fullname||me.name||me.username||"") + " • " + (me.group || "Guruh yo‘q");
+    mePill.style.display = "inline-block";
+
+    document.getElementById("dashLink").href = role==="teacher" ? "/teacher-dashboard.html" : role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html";
+  }
+
+  function setCourseInfo(course){
+    document.getElementById("courseTitle").textContent = course.title || "Kurs";
+    document.getElementById("courseDesc").textContent = course.description || "-";
+    document.getElementById("courseFaculty").textContent = course.faculty || "Fakultet: -";
+    document.getElementById("courseTeacher").textContent = "Teacher: " + (course.teacherName || "-");
+
+    const priceTag = document.getElementById("coursePrice");
+    if(course.type==="paid"){
+      priceTag.textContent = "Pullik: " + (course.price||0) + " coin";
+    }else{
+      priceTag.textContent = "Bepul";
+    }
+    const st = document.getElementById("courseStatus");
+    st.textContent = (course.status||"published")==="published" ? "Published" : "Draft";
+  }
+
+  function calcProgress(){
+    const total = STEPS.length || 0;
+    if(!total){
+      document.getElementById("progBar").style.width = "0%";
+      document.getElementById("progTxt").textContent = "0%";
+      return;
+    }
+    let done=0;
+    STEPS.forEach(s=>{ if(PROG[s.id]===true) done++; });
+    const pct = Math.round((done/total)*100);
+    document.getElementById("progBar").style.width = pct + "%";
+    document.getElementById("progTxt").textContent = `${done}/${total} • ${pct}%`;
+  }
+
+  function canOpenStep(index){
+    if(index===0) return true;
+    // must complete all previous steps
+    for(let i=0;i<index;i++){
+      if(PROG[STEPS[i].id]!==true) return false;
+    }
+    return true;
+  }
+
+  function renderSteps(){
+    const wrap = document.getElementById("steps");
+    wrap.innerHTML = "";
+    STEPS.forEach((s, idx)=>{
+      const locked = !canOpenStep(idx);
+      const done = PROG[s.id]===true;
+      const div = document.createElement("div");
+      div.className = "step";
+      div.innerHTML = `
+        <div class="stepTitle">${idx+1}. ${escapeHtml(s.title)}</div>
+        <div class="stepMeta">
+          <span class="tag">${escapeHtml((s.type||"text").toUpperCase())}</span>
+          ${done ? `<span class="tag done">Bajarildi</span>` : `<span class="tag todo">${locked ? "Yopiq" : "Bajarilmagan"}</span>`}
+        </div>
+        <div class="stepBtn">
+          <button class="btn ${locked ? "" : "primary"}" data-open="${escapeHtml(s.id)}" ${locked ? "disabled" : ""}>Ochish</button>
+        </div>
+      `;
+      wrap.appendChild(div);
+    });
+
+    wrap.querySelectorAll("button[data-open]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = btn.getAttribute("data-open");
+        const idx = STEPS.findIndex(x=>String(x.id)===String(id));
+        if(idx>=0) openStep(idx);
+      });
+    });
+
+    calcProgress();
+  }
+
+  function clearViewer(){
+    document.getElementById("ytWrap").style.display = "none";
+    document.getElementById("pdfWrap").style.display = "none";
+    document.getElementById("textWrap").style.display = "none";
+    document.getElementById("emptyWrap").style.display = "block";
+    document.getElementById("ytFrame").src = "";
+    document.getElementById("pdfFrame").src = "";
+    document.getElementById("textWrap").textContent = "";
+  }
+
+  function openStep(index){
+    if(index<0 || index>=STEPS.length) return;
+    if(!canOpenStep(index)) return;
+
+    ACTIVE_INDEX = index;
+    const s = STEPS[index];
+
+    document.getElementById("viewerTitle").textContent = `${index+1}. ${s.title}`;
+    document.getElementById("viewerMeta").textContent = `Turi: ${s.type.toUpperCase()} • Holat: ${PROG[s.id]===true ? "Bajarildi" : "Bajarilmagan"}`;
+
+    clearViewer();
+    document.getElementById("emptyWrap").style.display = "none";
+
+    if(s.type==="youtube"){
+      const emb = youtubeEmbed(s.youtubeUrl);
+      if(emb){
+        document.getElementById("ytWrap").style.display = "block";
+        document.getElementById("ytFrame").src = emb;
+      }else{
+        document.getElementById("textWrap").style.display = "block";
+        document.getElementById("textWrap").textContent = "YouTube URL noto‘g‘ri yoki mavjud emas.";
+      }
+    }else if(s.type==="pdf"){
+      if(s.pdfUrl){
+        document.getElementById("pdfWrap").style.display = "block";
+        document.getElementById("pdfFrame").src = s.pdfUrl;
+      }else{
+        document.getElementById("textWrap").style.display = "block";
+        document.getElementById("textWrap").textContent = "PDF URL mavjud emas.";
+      }
+    }else{
+      document.getElementById("textWrap").style.display = "block";
+      document.getElementById("textWrap").textContent = s.text || "";
+    }
+
+    // buttons
+    const markDoneBtn = document.getElementById("markDoneBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    markDoneBtn.style.display = PROG[s.id]===true ? "none" : "inline-block";
+    nextBtn.style.display = (index < STEPS.length-1) ? "inline-block" : "none";
+
+    // next enabled only if current done
+    nextBtn.disabled = (PROG[s.id]!==true);
+
+    renderSteps();
+  }
+
+  async function saveProgressToAPI(courseId, progObj){
+    const token = getToken();
+    const res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(courseId) + "/progress", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + token },
+      body: JSON.stringify({ progress: progObj })
+    });
+    if(!res.ok) throw new Error("progress api failed");
+  }
+
+  async function markDone(){
+    if(ACTIVE_INDEX<0) return;
+    const s = STEPS[ACTIVE_INDEX];
+    PROG[s.id] = true;
+
+    // Try API save; fallback localStorage
+    try{
+      await saveProgressToAPI(COURSE.id, PROG);
+      setOk("Progress saqlandi (API).");
+    }catch(e){
+      writeProgress(ME._id || ME.id || ME.username, COURSE.id, PROG);
+      setOk("Progress saqlandi (demo/localStorage).");
+    }
+
+    document.getElementById("viewerMeta").textContent = `Turi: ${s.type.toUpperCase()} • Holat: Bajarildi`;
+    document.getElementById("markDoneBtn").style.display = "none";
+    document.getElementById("nextBtn").disabled = false;
+    renderSteps();
+  }
+
+  function goNext(){
+    if(ACTIVE_INDEX<0) return;
+    const cur = STEPS[ACTIVE_INDEX];
+    if(PROG[cur.id]!==true){
+      setErr("Avval joriy bo‘limni 'Bajarildi' qiling.");
+      return;
+    }
+    const nextIndex = ACTIVE_INDEX + 1;
+    if(nextIndex < STEPS.length && canOpenStep(nextIndex)){
+      openStep(nextIndex);
+    }
+  }
+
+  async function init(){
+    const courseId = qs("id");
+    if(!courseId){ setErr("Kurs ID topilmadi."); return; }
+
+    ME = await apiMe();
+    if(!ME) return;
+    setHeader(ME);
+
+    // Access control: student must be joined
+    const role = (ME.role||"student").toLowerCase();
+    const uid = ME._id || ME.id || ME.username;
+
+    // Load course
+    try{
+      COURSE = await fetchCourseFromAPI(courseId);
+    }catch(e){
+      try{ COURSE = fetchCourseFromDemo(courseId); }
+      catch{ setErr("Kurs topilmadi."); return; }
+    }
+    setCourseInfo(COURSE);
+
+    if(role === "student"){
+      const joined = readJoined(uid);
+      const ok = joined.some(x=>String(x)===String(COURSE.id));
+      if(!ok){
+        setErr("Siz bu kursga qo‘shilmagansiz. Avval course.html orqali qo‘shiling.");
+        return;
+      }
+    }
+
+    // Load content
+    try{
+      STEPS = await fetchContentFromAPI(COURSE.id);
+    }catch(e){
+      seedDemoContentIfMissing(COURSE);
+      STEPS = readDemoContent(COURSE.id);
+    }
+
+    if(!STEPS.length){
+      setErr("Bu kursda hozircha materiallar yo‘q.");
+      return;
+    }
+
+    // Load progress
+    PROG = readProgress(uid, COURSE.id) || {};
+
+    renderSteps();
+    // Auto open first available
+    const first = STEPS.findIndex((s,idx)=> canOpenStep(idx));
+    openStep(first>=0 ? first : 0);
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token");
+    location.href="/login.html";
+  });
+
+  document.getElementById("markDoneBtn").addEventListener("click", markDone);
+  document.getElementById("nextBtn").addEventListener("click", goNext);
+
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+</script>
+</body>
+</html>

@@ -181,7 +181,7 @@
           Platformani <span class="u-anim">tezda</span> oching
         </h2>
         <p class="mt-3 muted text-base leading-relaxed">
-          Login (username) va parolni kiriting. Agar server token qaytarsa, u avtomatik saqlanadi va siz /student-dashboard.html sahifasiga o‘tasiz.
+          Login (username) va parolni kiriting. Agar server token qaytarsa, u avtomatik saqlanadi va siz /messages.html sahifasiga o‘tasiz.
         </p>
         <div class="mt-5 text-sm muted2">
           Agar login ishlamasa: F12 → Network → <span class="font-extrabold">/api/login</span> response’ni ko‘ring.
@@ -355,34 +355,6 @@
         return result.token || result.accessToken || (result.data && (result.data.token || result.data.accessToken)) || null;
       }
 
-      async function fetchMeAndRedirect(token){
-        // After successful login/register: get role and redirect to proper dashboard
-        try{
-          const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
-          const j = await safeJson(res);
-          const role = (j && j.user && j.user.role) ? String(j.user.role).toLowerCase() : 'student';
-          const target = role === 'teacher'
-            ? '/teacher-dashboard.html'
-            : (role === 'admin' ? '/admin-dashboard.html' : '/student-dashboard.html');
-          window.location.href = target;
-        }catch(e){
-          // fallback
-          window.location.href = '/student-dashboard.html';
-        }
-      }
-
-      function hasToken(){
-        return !!localStorage.getItem('token');
-      }
-
-      async function redirectIfLoggedIn(){
-        const t = localStorage.getItem('token');
-        if(!t) return;
-        // if already logged in, go dashboard
-        await fetchMeAndRedirect(t);
-      }
-
-
       function isSuccess(res, result){
         if(result && typeof result.success === 'boolean') return result.success;
         if(res && res.ok){
@@ -426,7 +398,7 @@
             const token = extractToken(result);
             if(token) localStorage.setItem('token', token);
             showMessage("Muvaffaqiyatli kirildi! Yo‘naltirilmoqda...", 'success');
-            setTimeout(()=> fetchMeAndRedirect(token || localStorage.getItem('token')), 300);
+            setTimeout(()=> window.location.href = '/messages.html', 700);
             return;
           }
 
@@ -522,7 +494,7 @@
           const res = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${token}` } });
           if(!res.ok) return localStorage.removeItem('token');
           const data = await res.json().catch(()=>null);
-          if(data && data.success){ const role = (data.user && data.user.role) ? String(data.user.role).toLowerCase() : 'student'; const target = role==='teacher' ? '/teacher-dashboard.html' : (role==='admin' ? '/admin-dashboard.html' : '/student-dashboard.html'); window.location.href = target; }
+          if(data && data.success) window.location.href = '/messages.html';
           else localStorage.removeItem('token');
         }catch(_){}
       }
