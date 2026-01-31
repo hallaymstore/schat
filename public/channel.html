@@ -81,7 +81,45 @@
       <div class="pt-10 px-6 pb-6">
         <p id="channelDescription" class="text-gray-700"></p>
 
-        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        
+        <!-- Live Stream (owner broadcast, viewers watch) -->
+        <div id="liveSection" class="mt-4 p-4 rounded-2xl bg-white border shadow-sm">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-700">
+                  <i class="fas fa-broadcast-tower"></i>
+                </span>
+                <div>
+                  <div class="font-semibold text-gray-900">Live stream</div>
+                  <div id="liveStatusText" class="text-sm text-gray-600">Checking status…</div>
+                </div>
+              </div>
+              <div id="liveHint" class="text-xs text-gray-500 mt-1">
+                Channel egasi Live boshlasa, shu yerda tomosha qilasiz. (WebRTC one-to-many)
+              </div>
+            </div>
+
+            <div id="liveControls" class="flex flex-wrap gap-2 justify-start md:justify-end"></div>
+          </div>
+
+          <div id="livePlayerWrap" class="hidden mt-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="rounded-2xl overflow-hidden border bg-black">
+                <video id="liveRemoteVideo" autoplay playsinline controls class="w-full h-full" style="max-height:60vh; object-fit:cover;"></video>
+              </div>
+              <div class="rounded-2xl overflow-hidden border bg-black hidden" id="liveLocalWrap">
+                <video id="liveLocalPreview" autoplay playsinline muted class="w-full h-full" style="max-height:60vh; object-fit:cover;"></video>
+              </div>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-2 text-sm">
+              <span id="liveMeta" class="text-gray-600"></span>
+            </div>
+          </div>
+        </div>
+
+<div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div class="p-4 rounded-xl bg-gray-50 border">
             <div class="text-xs text-gray-500">Subscribers</div>
             <div id="subscriberCount" class="text-xl font-bold text-gray-900">0</div>
@@ -257,13 +295,335 @@
   const focusPostId = urlParams.get('postId');
 
   if (!isObjectId(channelId)) {
-    showError('Invalid or missing channelId in URL. Redirecting to channels list...');
-    setTimeout(() => location.href = '/channels.html', 1200);
+    const uname = urlParams.get('username') || urlParams.get('u');
+    if (uname) {
+      showError('Resolving channel by username…');
+      (async () => {
+        try {
+          const res = await fetch(`/api/channels/by-username/${encodeURIComponent(uname)}`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || ('Request failed: ' + res.status));
+          const cid = data.channel?._id || data.channelId || data._id || null;
+          if (!isObjectId(cid)) throw new Error('Channel not found');
+          // Replace URL with channelId form (canonical) and reload
+          location.replace(`/channel14.html?channelId=${cid}`);
+        } catch (e) {
+          showError(e.message || 'Failed to resolve channel');
+          setTimeout(() => location.href = '/channels.html', 1200);
+        }
+      })();
+    } else {
+      showError('Invalid or missing channelId in URL. Redirecting to channels list...');
+      setTimeout(() => location.href = '/channels.html', 1200);
+    }
   }
 
   let socket = null;
   let channel = null;
   let posts = [];
+
+  // ----------------- Live Stream (WebRTC one-to-many) -----------------
+  let currentUserId = null;
+
+  // Host state: viewerId -> RTCPeerConnection
+  const liveHostPCs = new Map();
+
+  // Viewer state: single RTCPeerConnection to host
+  let liveViewerPC = null;
+
+  let liveLocalStream = null;     // host local media (camera/screen)
+  let liveIsHost = false;
+  let liveIsLive = false;
+  let liveHostId = null;
+  let liveStartedAt = null;
+  let liveMode = null;
+
+  const ICE_SERVERS = (function buildIceServers(){
+    const servers = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ];
+    // Optional TURN (if you later add it)
+    // You can set these in window.TURN_URL / TURN_USERNAME / TURN_CREDENTIAL in a <script> tag or server template.
+    if (window.TURN_URL && window.TURN_USERNAME && window.TURN_CREDENTIAL) {
+      servers.push({
+        urls: String(window.TURN_URL),
+        username: String(window.TURN_USERNAME),
+        credential: String(window.TURN_CREDENTIAL)
+      });
+    }
+    return servers;
+  })();
+
+  function decodeJwtPayload(tok){
+    try{
+      const parts = String(tok||'').split('.');
+      if (parts.length < 2) return null;
+      const base64 = parts[1].replace(/-/g,'+').replace(/_/g,'/');
+      const json = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+      return JSON.parse(json);
+    }catch(e){ return null; }
+  }
+
+  function getUserIdFromToken(tok){
+    const p = decodeJwtPayload(tok);
+    if (!p) return null;
+    return p.userId || p.id || p._id || null;
+  }
+
+  function isChannelOwner(){
+    const cid = channel?.creatorId?._id || channel?.creatorId;
+    return cid && currentUserId && String(cid) === String(currentUserId);
+  }
+
+function canManageChannel(){
+  if (!channel || !currentUserId) return false;
+  if (isChannelOwner()) return true;
+  const mods = channel.moderators || [];
+  return mods.some(m => String(m?._id || m) === String(currentUserId));
+}
+
+
+  function setLiveStatusText(text){
+    const el = document.getElementById('liveStatusText');
+    if (el) el.textContent = text;
+  }
+
+  function setLiveMeta(){
+    const el = document.getElementById('liveMeta');
+    if (!el) return;
+    if (!liveIsLive) { el.textContent = ''; return; }
+    const dt = liveStartedAt ? new Date(liveStartedAt) : null;
+    const when = dt ? dt.toLocaleString() : '';
+    el.textContent = `Host: ${liveHostId || '-'}  •  Mode: ${liveMode || '-'}  •  Started: ${when}`;
+  }
+
+  function showLivePlayer(show){
+    const wrap = document.getElementById('livePlayerWrap');
+    if (!wrap) return;
+    if (show) wrap.classList.remove('hidden');
+    else wrap.classList.add('hidden');
+  }
+
+  function setVideoEl(elId, stream){
+    const v = document.getElementById(elId);
+    if (!v) return;
+    v.srcObject = stream || null;
+    if (stream) {
+      v.muted = (elId === 'liveLocalPreview');
+      v.playsInline = true;
+      v.autoplay = true;
+    }
+  }
+
+  function renderLiveControls(){
+    const box = document.getElementById('liveControls');
+    if (!box) return;
+    box.innerHTML = '';
+
+    // Always show a refresh status button
+    const btnPing = document.createElement('button');
+    btnPing.className = 'px-3 py-2 rounded-xl bg-gray-100 text-gray-800 font-semibold hover:bg-gray-200 border';
+    btnPing.innerHTML = '<i class="fas fa-sync mr-2"></i>Status';
+    btnPing.onclick = () => { if (socket && socket.connected) socket.emit('channelLive:ping', { channelId }); };
+    box.appendChild(btnPing);
+
+    if (isChannelOwner()) {
+      liveIsHost = true;
+
+      if (!liveIsLive) {
+        const btnCam = document.createElement('button');
+        btnCam.className = 'px-3 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700';
+        btnCam.innerHTML = '<i class="fas fa-video mr-2"></i>Start (Camera)';
+        btnCam.onclick = () => startLive('camera');
+        box.appendChild(btnCam);
+
+        const btnScr = document.createElement('button');
+        btnScr.className = 'px-3 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700';
+        btnScr.innerHTML = '<i class="fas fa-desktop mr-2"></i>Start (Screen)';
+        btnScr.onclick = () => startLive('screen');
+        box.appendChild(btnScr);
+      } else {
+        const btnStop = document.createElement('button');
+        btnStop.className = 'px-3 py-2 rounded-xl bg-gray-900 text-white font-semibold hover:bg-black';
+        btnStop.innerHTML = '<i class="fas fa-stop mr-2"></i>Stop';
+        btnStop.onclick = () => stopLive();
+        box.appendChild(btnStop);
+      }
+    } else {
+      // Viewer controls
+      liveIsHost = false;
+
+      if (liveIsLive) {
+        const btnJoin = document.createElement('button');
+        btnJoin.className = 'px-3 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700';
+        btnJoin.innerHTML = '<i class="fas fa-play mr-2"></i>Join Live';
+        btnJoin.onclick = () => joinLive();
+        box.appendChild(btnJoin);
+
+        const btnLeave = document.createElement('button');
+        btnLeave.className = 'px-3 py-2 rounded-xl bg-gray-100 text-gray-800 font-semibold hover:bg-gray-200 border';
+        btnLeave.innerHTML = '<i class="fas fa-door-open mr-2"></i>Leave';
+        btnLeave.onclick = () => leaveLive();
+        box.appendChild(btnLeave);
+      } else {
+        const btnDisabled = document.createElement('button');
+        btnDisabled.className = 'px-3 py-2 rounded-xl bg-gray-100 text-gray-400 font-semibold border cursor-not-allowed';
+        btnDisabled.innerHTML = '<i class="fas fa-circle mr-2"></i>Offline';
+        btnDisabled.disabled = true;
+        box.appendChild(btnDisabled);
+      }
+    }
+  }
+
+  async function startLive(mode){
+    try {
+      hideError();
+      if (!socket || !socket.connected) throw new Error('Socket not connected');
+      if (!isChannelOwner()) throw new Error('Only channel owner can start live');
+
+      // Capture media
+      let stream = null;
+      if (mode === 'screen') {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      }
+      liveLocalStream = stream;
+
+      // Preview
+      document.getElementById('liveLocalWrap').classList.remove('hidden');
+      setVideoEl('liveLocalPreview', stream);
+
+      socket.emit('channelLive:start', { channelId, mode });
+
+    } catch (e){
+      showError(e.message || 'Failed to start live');
+    }
+  }
+
+  function stopTracks(stream){
+    try{
+      if (!stream) return;
+      stream.getTracks().forEach(t => { try{ t.stop(); }catch(e){} });
+    }catch(e){}
+  }
+
+  async function stopLive(){
+    try {
+      if (!socket || !socket.connected) return;
+      socket.emit('channelLive:stop', { channelId });
+    } catch(e){}
+    cleanupLiveAll();
+  }
+
+  function cleanupHostPCs(){
+    for (const [viewerId, pc] of liveHostPCs.entries()) {
+      try { pc.close(); } catch(e){}
+      liveHostPCs.delete(viewerId);
+    }
+  }
+
+  function cleanupViewerPC(){
+    try { if (liveViewerPC) liveViewerPC.close(); } catch(e){}
+    liveViewerPC = null;
+  }
+
+  function cleanupLiveAll(){
+    cleanupHostPCs();
+    cleanupViewerPC();
+    stopTracks(liveLocalStream);
+    liveLocalStream = null;
+
+    setVideoEl('liveLocalPreview', null);
+    setVideoEl('liveRemoteVideo', null);
+
+    document.getElementById('liveLocalWrap').classList.add('hidden');
+    showLivePlayer(false);
+
+    // keep status fields; they will be updated via status events
+  }
+
+  function joinLive(){
+    try {
+      hideError();
+      if (!socket || !socket.connected) throw new Error('Socket not connected');
+      socket.emit('channelLive:join', { channelId });
+    } catch(e){ showError(e.message || 'Failed to join live'); }
+  }
+
+  function leaveLive(){
+    try {
+      if (socket && socket.connected) socket.emit('channelLive:leave', { channelId });
+    } catch(e){}
+    cleanupViewerPC();
+    setVideoEl('liveRemoteVideo', null);
+    showLivePlayer(false);
+  }
+
+  async function createHostPCForViewer(viewerId){
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    liveHostPCs.set(viewerId, pc);
+
+    // Add tracks to pc
+    if (liveLocalStream) {
+      liveLocalStream.getTracks().forEach(track => pc.addTrack(track, liveLocalStream));
+    }
+
+    pc.onicecandidate = (ev) => {
+      if (ev.candidate) {
+        socket.emit('channelLive:ice', { channelId, to: viewerId, candidate: ev.candidate });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      // optional: could display state per viewer
+      // console.log('Host->Viewer pc state', viewerId, pc.connectionState);
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed' || pc.connectionState === 'disconnected') {
+        try { pc.close(); } catch(e){}
+        liveHostPCs.delete(viewerId);
+      }
+    };
+
+    const offer = await pc.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false });
+    await pc.setLocalDescription(offer);
+
+    socket.emit('channelLive:offer', { channelId, to: viewerId, sdp: pc.localDescription });
+  }
+
+  async function ensureViewerPC(){
+    if (liveViewerPC) return liveViewerPC;
+
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    liveViewerPC = pc;
+
+    pc.ontrack = (ev) => {
+      // First stream is enough for viewer
+      const [stream] = ev.streams || [];
+      if (stream) {
+        setVideoEl('liveRemoteVideo', stream);
+        showLivePlayer(true);
+      }
+    };
+
+    pc.onicecandidate = (ev) => {
+      if (ev.candidate) {
+        socket.emit('channelLive:ice', { channelId, candidate: ev.candidate });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+        try { pc.close(); } catch(e){}
+        liveViewerPC = null;
+      }
+    };
+
+    return pc;
+  }
+
 
   // ----------------- Socket -----------------
   function initSocket(){
@@ -271,6 +631,9 @@
     socket.on('connect', () => {
       socket.emit('authenticate', token);
       if (isObjectId(channelId)) socket.emit('joinChannel', channelId);
+
+      // Live status (non-intrusive)
+      if (isObjectId(channelId)) socket.emit('channelLive:ping', { channelId });
     });
 
     socket.on('channelPost:new', (payload) => {
@@ -288,7 +651,164 @@
         }
       }
     });
-  }
+  
+
+    // Live: status updates for everyone (channel room listeners)
+    socket.on('channelLive:status', (payload) => {
+      try {
+        if (!payload || payload.channelId !== channelId) return;
+        liveIsLive = !!payload.isLive;
+        liveHostId = payload.hostId || null;
+        liveStartedAt = payload.startedAt || null;
+        liveMode = payload.mode || null;
+
+        if (liveIsLive) {
+          setLiveStatusText('🔴 LIVE now • Viewers: ' + (payload.viewersCount ?? '—'));
+        } else {
+          setLiveStatusText('Offline');
+          // If live ended while watching, cleanup viewer PC
+          cleanupViewerPC();
+          setVideoEl('liveRemoteVideo', null);
+          showLivePlayer(false);
+        }
+
+        setLiveMeta();
+        renderLiveControls();
+      } catch(e){}
+    });
+
+    // Host-only: viewer joined => host must create offer
+    socket.on('channelLive:viewerJoin', async (payload) => {
+      try {
+        if (!isChannelOwner()) return;
+        const viewerId = String(payload?.viewerId || '');
+        const cid = String(payload?.channelId || '');
+        if (!viewerId || cid !== channelId) return;
+        if (!liveLocalStream) return; // host hasn't started capture
+
+        // Avoid duplicate
+        if (liveHostPCs.has(viewerId)) return;
+
+        await createHostPCForViewer(viewerId);
+      } catch(e){
+        console.error('viewerJoin error', e);
+      }
+    });
+
+    socket.on('channelLive:viewerLeft', (payload) => {
+      try {
+        if (!isChannelOwner()) return;
+        const viewerId = String(payload?.viewerId || '');
+        const cid = String(payload?.channelId || '');
+        if (!viewerId || cid !== channelId) return;
+
+        const pc = liveHostPCs.get(viewerId);
+        if (pc) {
+          try { pc.close(); } catch(e){}
+          liveHostPCs.delete(viewerId);
+        }
+      } catch(e){}
+    });
+
+    // Viewer: receive offer from host
+    socket.on('channelLive:offer', async (payload) => {
+      try {
+        if (!payload || String(payload.channelId||'') !== String(channelId)) return;
+        const sdp = payload.sdp;
+        if (!sdp) return;
+
+        const pc = await ensureViewerPC();
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.emit('channelLive:answer', { channelId, sdp: pc.localDescription });
+      } catch(e){
+        showError(e.message || 'Failed to accept live stream');
+      }
+    });
+
+    // Host: receive answer from viewer
+    socket.on('channelLive:answer', async (payload) => {
+      try {
+        if (!isChannelOwner()) return;
+        if (!payload || String(payload.channelId||'') !== String(channelId)) return;
+        const viewerId = String(payload.from || '');
+        const sdp = payload.sdp;
+        if (!viewerId || !sdp) return;
+
+        const pc = liveHostPCs.get(viewerId);
+        if (!pc) return;
+
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      } catch(e){
+        console.error('host setRemote answer error', e);
+      }
+    });
+
+    // ICE (both)
+    socket.on('channelLive:ice', async (payload) => {
+      try {
+        if (!payload || String(payload.channelId||'') !== String(channelId)) return;
+        const from = String(payload.from || '');
+        const cand = payload.candidate;
+        if (!cand) return;
+
+        if (isChannelOwner()) {
+          // ICE from viewer => add to that pc
+          const pc = liveHostPCs.get(from);
+          if (!pc) return;
+          await pc.addIceCandidate(new RTCIceCandidate(cand));
+        } else {
+          // ICE from host => add to viewer pc
+          if (!liveViewerPC) return;
+          await liveViewerPC.addIceCandidate(new RTCIceCandidate(cand));
+        }
+      } catch(e){}
+    });
+
+    // Ended broadcast
+    socket.on('channelLive:ended', (payload) => {
+      try {
+        if (!payload || String(payload.channelId||'') !== String(channelId)) return;
+        setLiveStatusText('Offline');
+        liveIsLive = false;
+        setLiveMeta();
+        renderLiveControls();
+        cleanupLiveAll();
+      } catch(e){}
+    });
+
+    socket.on('channelLive:started', (payload) => {
+      try {
+        if (!payload || String(payload.channelId||'') !== String(channelId)) return;
+        // Host confirmation
+        setLiveStatusText('🔴 LIVE now');
+        showLivePlayer(true);
+        setLiveMeta();
+        renderLiveControls();
+      } catch(e){}
+    });
+
+    socket.on('channelLive:joined', (payload) => {
+      try {
+        if (!payload || String(payload.channelId||'') !== String(channelId)) return;
+        // Viewer joined: wait for offer
+        setLiveStatusText('Joining live…');
+        showLivePlayer(true);
+        setLiveMeta();
+      } catch(e){}
+    });
+
+    socket.on('channelLive:error', (payload) => {
+      try {
+        showError(payload?.error || 'Live error');
+      } catch(e){}
+    });
+}
+
+    
+
 
   // ----------------- API -----------------
   async function apiGet(url){
@@ -369,18 +889,28 @@
         }catch(e){ showError(e.message); }
       };
 
-      // Manage button
+      
+// Manage button (only owner/moderator)
       const manageBtn = document.getElementById('manageBtn');
-      // Only creator or moderator can manage; server will enforce anyway.
-      manageBtn.onclick = openManage;
+      if (!canManageChannel()) {
+        manageBtn.classList.add('hidden');
+      } else {
+        manageBtn.classList.remove('hidden');
+        manageBtn.onclick = openManage;
+      }
 
-      // Prefill manage form
+// Prefill manage form
       document.getElementById('editName').value = channel.name || '';
       document.getElementById('editUsername').value = channel.username || '';
       document.getElementById('editDescription').value = channel.description || '';
       document.getElementById('editCategory').value = channel.category || '';
       document.getElementById('editUniversity').value = channel.university || '';
       document.getElementById('editIsPublic').checked = !!channel.isPublic;
+
+      // Live controls depend on ownership + status
+      renderLiveControls();
+      try { if (socket && socket.connected) socket.emit('channelLive:ping', { channelId }); } catch(e){}
+
 
     } catch(e){
       showError(e.message);
@@ -481,7 +1011,7 @@
 
             <div class="flex-1"></div>
 
-            <a class="text-xs text-gray-500 hover:text-gray-800" href="/channel.html?channelId=${channelId}&postId=${p._id}">
+            <a class="text-xs text-gray-500 hover:text-gray-800" href="/channel14.html?channelId=${channelId}&postId=${p._id}">
               Permalink highlight
             </a>
           </div>
@@ -741,8 +1271,23 @@
 
   // ----------------- Init -----------------
   (async function init(){
+// Identify current user (prefer server, fallback to JWT decode)
+currentUserId = getUserIdFromToken(token);
+try{
+  const meRes = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+  const meData = await meRes.json().catch(()=> ({}));
+  if (meRes.ok) {
+    const uid = meData.user?._id || meData.user?.id || meData._id || meData.id || null;
+    if (uid) currentUserId = uid;
+  }
+}catch(e){}
+
     initSocket();
     await loadChannel();
+    renderLiveControls();
+    // initial ping (also done on socket connect)
+    try { if (socket && socket.connected) socket.emit('channelLive:ping', { channelId }); } catch(e){}
+
     await loadPosts(false);
   })();
 </script>
