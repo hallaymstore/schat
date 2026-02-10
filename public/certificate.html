@@ -3,503 +3,800 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sertifikat</title>
+  <title>Sertifikat — QDTU LMS</title>
   <style>
-    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f6f7fb;color:#111}
-    header{background:#111827;color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-    header .left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    header .badge{background:#10b981;padding:6px 10px;border-radius:999px;font-size:12px}
-    header .badge.teacher{background:#2563eb}
-    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px;background:rgba(255,255,255,.08)}
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
+      --primary:#2563eb; --primary2:#7c3aed; --danger:#ef4444; --ok:#10b981; --warn:#f59e0b;
+      --shadow: 0 18px 50px rgba(2,6,23,.10);
+      --ring: 0 0 0 4px rgba(37,99,235,.18);
+      --grid: rgba(15,23,42,.06);
+    }
+    .dark{
+      --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --border:#223047;
+      --shadow: 0 20px 70px rgba(0,0,0,.45);
+      --grid: rgba(148,163,184,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text)}
+    a{color:inherit}
+    .bg{
+      position:fixed; inset:0; z-index:-2;
+      background:
+        radial-gradient(1100px 500px at 10% 10%, rgba(37,99,235,.22), transparent 60%),
+        radial-gradient(900px 500px at 92% 18%, rgba(124,58,237,.18), transparent 60%),
+        radial-gradient(900px 600px at 50% 92%, rgba(16,185,129,.14), transparent 60%),
+        linear-gradient(180deg, var(--bg), var(--bg));
+    }
+    .gridbg{
+      position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 72%);
+      opacity:.85;
+    }
+
+    header{
+      position:sticky; top:0; z-index:50;
+      padding:14px 16px;
+      backdrop-filter: blur(10px);
+      background: color-mix(in oklab, var(--bg) 72%, transparent);
+      border-bottom:1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    }
+    .nav{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    }
+    .brand{display:flex; align-items:center; gap:10px}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      box-shadow: var(--shadow);
+    }
+    .pills{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .pill{font-size:12px; padding:7px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 80%, transparent); background: color-mix(in oklab, var(--card) 85%, transparent)}
+    .badge{font-weight:900; letter-spacing:.6px}
+    .badge.student{color:var(--ok)}
+    .badge.teacher{color:color-mix(in oklab, var(--primary) 88%, white)}
+    .badge.admin{color:var(--warn)}
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      color:var(--text);
+      padding:10px 12px; border-radius:12px; text-decoration:none; cursor:pointer;
+      box-shadow: 0 1px 0 rgba(0,0,0,.03);
+      transition: transform .08s ease, filter .12s ease, background .12s ease;
+      user-select:none;
+      font-weight:650;
+    }
+    .btn:hover{filter:brightness(1.02)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background: linear-gradient(135deg, var(--primary), var(--primary2)); color:#fff; border-color:transparent}
+    .btn.danger{background: linear-gradient(135deg, #ef4444, #fb7185); color:#fff; border-color:transparent}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:8px 10px; border-radius:11px; font-size:13px; font-weight:800}
+
     .container{max-width:1200px;margin:18px auto;padding:0 16px}
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
-    .card h2{margin:0 0 10px 0;font-size:20px}
-    .card h3{margin:0 0 10px 0;font-size:16px}
-    .muted{color:#6b7280;font-size:13px;line-height:1.45}
-    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    .btn{display:inline-block;border:1px solid #d1d5db;background:#fff;color:#111827;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:14px;cursor:pointer}
-    .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
-    .btn.danger{background:#ef4444;border-color:#ef4444;color:#fff}
-    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
-    .input, select{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;box-sizing:border-box;background:#fff}
+    .card{
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:16px; padding:16px;
+      box-shadow: 0 8px 28px rgba(2,6,23,.06);
+    }
     .col-12{grid-column:span 12}
     .col-7{grid-column:span 7}
     .col-5{grid-column:span 5}
-    @media (max-width:980px){
-      .col-7,.col-5{grid-column:span 12}
+    @media (max-width:980px){ .col-7,.col-5{grid-column:span 12} }
+
+    .muted{color:var(--muted);font-size:13px;line-height:1.55}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .divider{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:12px 0}
+    .tiny{font-size:12px;color:var(--muted)}
+    footer{padding:18px 16px;color:var(--muted);text-align:center}
+
+    .err,.ok,.warn{
+      border-radius:14px; padding:12px 14px; margin:14px 0; display:none;
+      border:1px solid transparent;
     }
-    .err{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
-    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
-    .canvasWrap{border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;background:#fff}
-    canvas{width:100%;height:auto;display:block}
-    .tiny{font-size:12px;color:#6b7280}
-    footer{padding:20px 16px;color:#6b7280;text-align:center}
-    code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
+    .err{background: color-mix(in oklab, #ffedd5 65%, var(--card)); border-color:#fed7aa; color:#9a3412}
+    .ok{background: color-mix(in oklab, #dcfce7 50%, var(--card)); border-color:#86efac; color:#065f46}
+    .warn{background: color-mix(in oklab, #fef9c3 55%, var(--card)); border-color:#fde68a; color:#854d0e}
+
+    .input, select, textarea{
+      width:100%; padding:11px 12px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:12px; font-size:14px;
+      background: color-mix(in oklab, var(--card) 95%, transparent);
+      color:var(--text);
+      outline:none;
+    }
+    .input:focus, select:focus, textarea:focus{box-shadow: var(--ring); border-color:transparent}
+    code{background:color-mix(in oklab, var(--card) 92%, transparent);border:1px solid color-mix(in oklab, var(--border) 85%, transparent);border-radius:10px;padding:2px 7px}
+
+    /* canvas preview */
+    .preview{
+      border-radius:18px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      overflow:hidden;
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      box-shadow: 0 20px 80px rgba(2,6,23,.10);
+    }
+    .previewHeader{
+      padding:12px 14px;
+      background: linear-gradient(135deg, rgba(37,99,235,.92), rgba(124,58,237,.90));
+      color:#fff;
+      display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+    }
+    .canvasWrap{padding:12px;background:color-mix(in oklab, var(--card) 96%, transparent)}
+    canvas{width:100%; height:auto; display:block; border-radius:14px; border:1px solid rgba(255,255,255,.08)}
+    .kv{display:grid;grid-template-columns: 1fr 1fr; gap:10px}
+    @media (max-width:980px){ .kv{grid-template-columns:1fr} }
+    .kv .box{padding:12px;border-radius:16px;border:1px dashed color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent)}
+    .kv .label{font-size:12px;color:var(--muted)}
+    .kv .value{font-weight:950;margin-top:6px}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
   </style>
+  <script>
+    (function(){
+      const key="theme";
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark ? "dark" : "light");
+      if(mode==="dark") document.documentElement.classList.add("dark");
+    })();
+  </script>
 </head>
 <body>
+  <div class="bg"></div><div class="gridbg"></div>
+
   <header>
-    <div class="left">
-      <div style="font-weight:700">QDTU LMS</div>
-      <div id="roleBadge" class="badge">Student</div>
-      <div id="mePill" class="pill" style="display:none"></div>
-    </div>
-    <div class="row">
-      <a class="btn ghost" href="/student-dashboard.html" id="dashLink">Dashboard</a>
-      <a class="btn ghost" href="/courses.html">Kurslar</a>
-      <a class="btn ghost" href="/tests.html">Testlar</a>
-      <button class="btn danger" id="logoutBtn">Chiqish</button>
+    <div class="nav">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="pills">
+          <span id="roleBadge" class="pill badge student">STUDENT</span>
+          <span id="mePill" class="pill" style="display:none"></span>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn ghost small" id="themeBtn">🌓 Tema</button>
+        <a class="btn ghost small" href="/courses.html">Kurslar</a>
+        <a class="btn ghost small" href="/tests.html">Testlar</a>
+        <a class="btn ghost small" id="dashLink" href="/student-dashboard.html">Dashboard</a>
+        <button class="btn danger small" id="logoutBtn">Chiqish</button>
+      </div>
     </div>
   </header>
 
   <div class="container">
     <div id="errBox" class="err"></div>
     <div id="okBox" class="ok"></div>
+    <div id="warnBox" class="warn"></div>
 
     <div class="grid">
-      <div class="card col-5">
-        <h2>Sertifikat generator</h2>
+      <div class="card col-7">
+        <h2 style="margin:0 0 6px 0;font-size:20px">Sertifikat yaratish</h2>
         <div class="muted">
-          Sertifikat canvas’da chiziladi va PDF ko‘rinishida yuklab olinadi.
-          Ism-familiya va guruh avtomatik olinadi.
+          Sertifikat ikki rejimda:
+          <b>Course completion</b> (progress 100%) va (ixtiyoriy) <b>Test passed</b> sharti.
+          API bo‘lsa server tekshiradi, bo‘lmasa demo tekshiruv ishlaydi.
         </div>
 
-        <div style="margin-top:12px" class="grid">
-          <div class="col-12">
-            <div class="muted">Tur</div>
-            <select id="typeSel" class="input">
-              <option value="course">Course</option>
-              <option value="test">Test</option>
-            </select>
+        <div class="divider"></div>
+
+        <div class="kv">
+          <div class="box">
+            <div class="label">F.I.Sh</div>
+            <div class="value" id="fullNameVal">—</div>
           </div>
-          <div class="col-12">
-            <div class="muted">Manba ID (courseId yoki testId)</div>
-            <input id="sourceId" class="input" placeholder="ID..." />
+          <div class="box">
+            <div class="label">Fakultet / Guruh</div>
+            <div class="value" id="fgVal">—</div>
           </div>
-          <div class="col-12">
-            <div class="muted">Natija (test uchun %)</div>
-            <input id="scoreInp" class="input" type="number" min="0" max="100" placeholder="Masalan: 80" />
+          <div class="box">
+            <div class="label">Kurs</div>
+            <div class="value" id="courseVal">—</div>
           </div>
-          <div class="col-12">
-            <div class="muted">Sana</div>
-            <input id="dateInp" class="input" />
-          </div>
-          <div class="col-12">
-            <button class="btn primary" id="renderBtn">Sertifikatni chizish</button>
-            <button class="btn" id="downloadBtn">PDF yuklab olish</button>
+          <div class="box">
+            <div class="label">Sertifikat ID</div>
+            <div class="value mono" id="certIdVal">—</div>
           </div>
         </div>
 
-        <div class="tiny" style="margin-top:12px">
-          PDF export uchun CDN kutubxonalar ishlatiladi: <code>jspdf</code>. Agar CDN blok bo‘lsa — brauzerning Print-to-PDF funksiyasidan foydalaning.
+        <div class="divider"></div>
+
+        <div class="row">
+          <label style="flex:1;min-width:220px">
+            <div class="tiny">Sana</div>
+            <input id="dateInp" class="input" type="date" />
+          </label>
+          <label style="flex:1;min-width:220px">
+            <div class="tiny">Imzo (matn ko‘rinishida)</div>
+            <input id="signInp" class="input" placeholder="Masalan: Dekan / LMS Admin" value="QDTU LMS" />
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <label style="flex:1;min-width:220px">
+            <div class="tiny">QR Verify URL (ixtiyoriy)</div>
+            <input id="verifyUrlInp" class="input" placeholder="Masalan: https://lms.example/verify?id=..." />
+          </label>
+        </div>
+
+        <div class="tiny" style="margin-top:10px">
+          Agar verify URL kiritilmasa, avtomatik: <code>/certificate.html?verify=ID</code> ishlatiladi.
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <button class="btn primary" id="checkBtn">✅ Eligibility tekshirish</button>
+          <button class="btn" id="renderBtn" disabled>🎨 Sertifikat chizish</button>
+          <button class="btn" id="pdfBtn" disabled>⬇️ PDF yuklash</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <h3 style="margin:0 0 8px 0">Verify</h3>
+        <div class="muted">
+          Sertifikatni tekshirish: URL orqali yoki sertifikat ID orqali.
+          <b>verify</b> rejimi: <code>?verify=CERT_ID</code>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <input id="verifyInp" class="input" placeholder="CERT_ID ni kiriting..." style="flex:1;min-width:240px" />
+          <button class="btn" id="verifyBtn">Tekshirish</button>
+        </div>
+
+        <div class="tiny" style="margin-top:10px">
+          API bo‘lsa: <code>GET /api/certificates/verify?id=</code>.
+          Demo bo‘lsa localStorage: <code>cert_store_v1</code>.
         </div>
       </div>
 
-      <div class="card col-7">
-        <h3>Preview</h3>
-        <div class="canvasWrap">
-          <canvas id="certCanvas" width="1600" height="1131"></canvas>
+      <div class="card col-5">
+        <div class="preview">
+          <div class="previewHeader">
+            <div style="font-weight:950">Preview</div>
+            <div class="tiny" id="previewHint" style="color:rgba(255,255,255,.92)">Eligibility tekshiring → Render → PDF</div>
+          </div>
+          <div class="canvasWrap">
+            <canvas id="cv" width="1400" height="1000"></canvas>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <footer>Qarshi Davlat Texnika Universiteti — LMS (Certificate)</footer>
-
-  <!-- jsPDF (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <footer>QDTU LMS — Certificate (Canvas → PDF)</footer>
 
 <script>
   const API_BASE = "";
-  function getToken(){ return localStorage.getItem("token") || ""; }
+  const $ = (id)=> document.getElementById(id);
   function qs(name){ return new URLSearchParams(location.search).get(name); }
+  function getToken(){ return localStorage.getItem("token") || ""; }
 
-  function setErr(msg){
-    const box = document.getElementById("errBox");
-    box.textContent = msg; box.style.display = "block";
-    document.getElementById("okBox").style.display = "none";
-  }
-  function setOk(msg){
-    const box = document.getElementById("okBox");
-    box.textContent = msg; box.style.display = "block";
-    document.getElementById("errBox").style.display = "none";
-  }
+  function setErr(msg){ $("errBox").textContent=msg; $("errBox").style.display="block"; $("okBox").style.display="none"; $("warnBox").style.display="none"; }
+  function setOk(msg){ $("okBox").textContent=msg; $("okBox").style.display="block"; $("errBox").style.display="none"; $("warnBox").style.display="none"; }
+  function setWarn(msg){ $("warnBox").textContent=msg; $("warnBox").style.display="block"; $("errBox").style.display="none"; }
+  function clearMsg(){ $("errBox").style.display="none"; $("okBox").style.display="none"; $("warnBox").style.display="none"; }
 
-  function escapeText(str){ return String(str||""); }
-
-  async function apiMe(){
+  async function apiFetch(url, opts={}){
     const token = getToken();
-    if(!token){ location.href="/login.html"; return null; }
-    const res = await fetch(API_BASE + "/api/me", { headers:{ "Authorization":"Bearer " + token } });
-    if(!res.ok){
-      localStorage.removeItem("token");
-      location.href="/login.html";
-      return null;
-    }
-    return await res.json();
-  }
-
-  function demoCoursesKey(){ return "demoCourses_v1"; }
-  function demoTestsKey(){ return "demoTests_v1"; }
-  function readDemo(key){
-    try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
-  }
-  function normalizeCourse(raw){
-    return {
-      id: raw._id || raw.id || raw.courseId,
-      title: raw.title || raw.name || "Nomsiz kurs",
-      faculty: raw.faculty || raw.facultyName || "",
-      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || ""
-    };
-  }
-  function normalizeTest(raw){
-    return {
-      id: raw._id || raw.id || raw.testId,
-      title: raw.title || raw.name || "Nomsiz test",
-      subject: raw.subject || raw.course || raw.fan || "",
-      faculty: raw.faculty || raw.facultyName || "",
-      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || ""
-    };
-  }
-
-  async function fetchCourseTitle(id){
-    const token = getToken();
-    try{
-      let res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(id), { headers:{ "Authorization":"Bearer " + token } });
-      if(res.ok){
-        const data = await res.json();
-        const c = normalizeCourse(data.course || data);
-        return c;
-      }
-      res = await fetch(API_BASE + "/api/courses", { headers:{ "Authorization":"Bearer " + token } });
-      if(res.ok){
-        const data = await res.json();
-        const list = (Array.isArray(data) ? data : (data.courses||[])).map(normalizeCourse);
-        const c = list.find(x=>String(x.id)===String(id));
-        if(c) return c;
-      }
-    }catch(e){}
-    // demo fallback
-    const list = readDemo(demoCoursesKey()).map(normalizeCourse);
-    return list.find(x=>String(x.id)===String(id)) || { id, title:"Kurs", faculty:"", teacherName:"" };
-  }
-
-  async function fetchTestTitle(id){
-    const token = getToken();
-    try{
-      let res = await fetch(API_BASE + "/api/tests/" + encodeURIComponent(id), { headers:{ "Authorization":"Bearer " + token } });
-      if(res.ok){
-        const data = await res.json();
-        const t = normalizeTest(data.test || data);
-        return t;
-      }
-      res = await fetch(API_BASE + "/api/tests", { headers:{ "Authorization":"Bearer " + token } });
-      if(res.ok){
-        const data = await res.json();
-        const list = (Array.isArray(data) ? data : (data.tests||[])).map(normalizeTest);
-        const t = list.find(x=>String(x.id)===String(id));
-        if(t) return t;
-      }
-    }catch(e){}
-    // demo fallback
-    const list = readDemo(demoTestsKey()).map(normalizeTest);
-    return list.find(x=>String(x.id)===String(id)) || { id, title:"Test", subject:"", faculty:"", teacherName:"" };
-  }
-
-  // Certificate canvas drawing
-  function drawCertificate(ctx, data){
-    const W = ctx.canvas.width, H = ctx.canvas.height;
-    ctx.clearRect(0,0,W,H);
-
-    // Background
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0,0,W,H);
-
-    // Decorative border
-    ctx.lineWidth = 18;
-    ctx.strokeStyle = "#111827";
-    ctx.strokeRect(40,40,W-80,H-80);
-
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = "#2563eb";
-    ctx.strokeRect(78,78,W-156,H-156);
-
-    // Header band
-    ctx.fillStyle = "#111827";
-    ctx.fillRect(78,78,W-156,150);
-
-    // University title
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 46px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("QARSHI DAVLAT TEXNIKA UNIVERSITETI", W/2, 150);
-
-    ctx.font = "24px Arial";
-    ctx.fillText("O'quv platformasi (LMS)", W/2, 195);
-
-    // Certificate title
-    ctx.fillStyle = "#111827";
-    ctx.font = "bold 72px Arial";
-    ctx.fillText("SERTIFIKAT", W/2, 330);
-
-    // Subtitle
-    ctx.font = "28px Arial";
-    ctx.fillStyle = "#374151";
-    ctx.fillText("Ushbu sertifikat quyidagi shaxsga taqdim etiladi:", W/2, 390);
-
-    // Name
-    ctx.font = "bold 64px Arial";
-    ctx.fillStyle = "#111827";
-    ctx.fillText(data.fullname || "F.I.SH", W/2, 500);
-
-    // Group & faculty
-    ctx.font = "28px Arial";
-    ctx.fillStyle = "#374151";
-    ctx.fillText("Guruh: " + (data.group || "-") + "    •    Fakultet: " + (data.faculty || "-"), W/2, 565);
-
-    // Achievement line
-    ctx.font = "30px Arial";
-    ctx.fillStyle = "#111827";
-
-    let ach = "";
-    if(data.type === "test"){
-      ach = "Testdan muvaffaqiyatli o'tganligi uchun";
+    const headers = Object.assign({}, opts.headers || {});
+    if(token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + url, Object.assign({}, opts, { headers }));
+    let data = null;
+    const ct = res.headers.get("content-type") || "";
+    if(ct.includes("application/json")){
+      try{ data = await res.json(); }catch{ data = null; }
     }else{
-      ach = "Kursni muvaffaqiyatli yakunlaganligi uchun";
+      try{ data = await res.text(); }catch{ data = null; }
     }
-    ctx.fillText(ach, W/2, 640);
-
-    // Course/Test title
-    ctx.font = "bold 38px Arial";
-    ctx.fillStyle = "#2563eb";
-    const title = data.itemTitle || (data.type==="test" ? "Test" : "Kurs");
-    wrapText(ctx, title, W/2, 710, W-260, 46);
-
-    // Score for test
-    if(data.type === "test"){
-      ctx.font = "28px Arial";
-      ctx.fillStyle = "#111827";
-      ctx.fillText("Natija: " + (data.score ?? "-") + "%", W/2, 830);
+    if(!res.ok){
+      const msg = (data && data.error) ? data.error : ("So'rov xatosi: " + res.status);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.data = data;
+      throw err;
     }
-
-    // Date + serial
-    ctx.font = "22px Arial";
-    ctx.fillStyle = "#374151";
-    ctx.textAlign = "left";
-    ctx.fillText("Sana: " + (data.dateStr || "-"), 120, H-210);
-
-    ctx.textAlign = "right";
-    ctx.fillText("Sertifikat ID: " + (data.serial || "-"), W-120, H-210);
-
-    // Signature lines
-    ctx.textAlign = "left";
-    ctx.strokeStyle = "#9ca3af";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(120, H-140);
-    ctx.lineTo(520, H-140);
-    ctx.stroke();
-    ctx.fillStyle = "#374151";
-    ctx.font = "20px Arial";
-    ctx.fillText("Mas'ul shaxs imzosi", 120, H-110);
-
-    ctx.textAlign = "right";
-    ctx.beginPath();
-    ctx.moveTo(W-520, H-140);
-    ctx.lineTo(W-120, H-140);
-    ctx.stroke();
-    ctx.fillText("Universitet muhri", W-120, H-110);
-
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#6b7280";
-    ctx.font = "18px Arial";
-    ctx.fillText("QDTU LMS • Onlayn ta'lim platformasi", W/2, H-70);
+    return data;
   }
 
-  function wrapText(ctx, text, x, y, maxWidth, lineHeight){
-    // center aligned wrap
-    const words = String(text||"").split(" ");
-    let line = "";
-    const lines = [];
-    for(const w of words){
-      const testLine = line ? line + " " + w : w;
-      const metrics = ctx.measureText(testLine);
-      if(metrics.width > maxWidth && line){
-        lines.push(line);
-        line = w;
-      }else{
-        line = testLine;
-      }
-    }
-    if(line) lines.push(line);
+  // theme/logout
+  $("themeBtn").addEventListener("click", ()=>{
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+  });
+  $("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token"); location.href="/login.html";
+  });
 
-    ctx.textAlign = "center";
-    lines.slice(0,2).forEach((ln,i)=>{
-      ctx.fillText(ln, x, y + i*lineHeight);
-    });
+  function todayISO(){
+    const d = new Date();
+    const tz = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+    return tz.toISOString().slice(0,10);
   }
 
-  function makeSerial(type, sourceId){
+  function randomId(){
+    // short unique id: YYYYMMDD-XXXXXX
     const d = new Date();
     const y = d.getFullYear();
     const m = String(d.getMonth()+1).padStart(2,"0");
     const day = String(d.getDate()).padStart(2,"0");
     const rnd = Math.random().toString(16).slice(2,8).toUpperCase();
-    return `${type.toUpperCase()}-${y}${m}${day}-${String(sourceId||"X").slice(0,6)}-${rnd}`;
+    return `${y}${m}${day}-${rnd}`;
   }
 
-  async function renderNow(){
-    const type = document.getElementById("typeSel").value;
-    const sourceId = (document.getElementById("sourceId").value||"").trim();
-    const score = Number(document.getElementById("scoreInp").value||0);
+  function esc(str){ return String(str??""); }
 
-    if(!sourceId){
-      setErr("Manba ID (courseId/testId) majburiy.");
-      return;
-    }
+  // demo store
+  function storeKey(){ return "cert_store_v1"; }
+  function readStore(){ try{ return JSON.parse(localStorage.getItem(storeKey()) || "{}"); }catch{ return {}; } }
+  function writeStore(obj){ localStorage.setItem(storeKey(), JSON.stringify(obj)); }
 
-    const me = window.ME;
-    if(!me) return;
+  // progress fallback (shared with joinedcourse/student dashboard)
+  function progressKey(uid, courseId){ return `progress_v1_${uid || "anon"}_${courseId}`; }
+  function readProgress(uid, courseId){ try{ return JSON.parse(localStorage.getItem(progressKey(uid, courseId)) || "{}"); }catch{ return {}; } }
 
-    let item = null;
-    if(type==="test"){
-      item = await fetchTestTitle(sourceId);
-    }else{
-      item = await fetchCourseTitle(sourceId);
-    }
+  async function apiMe(){
+    const token = getToken();
+    if(!token){ location.href="/login.html"; return null; }
+    try{ return await apiFetch("/api/me"); }
+    catch(e){ localStorage.removeItem("token"); location.href="/login.html"; return null; }
+  }
 
-    const dateStr = (document.getElementById("dateInp").value||"").trim();
-    const serial = makeSerial(type, sourceId);
-
-    const data = {
-      type,
-      sourceId,
-      itemTitle: type==="test" ? (item.title + (item.subject ? " ("+item.subject+")" : "")) : item.title,
-      score: type==="test" ? (isNaN(score)?0:score) : null,
-      fullname: (me.fullname || me.name || me.username || "").trim(),
-      group: me.group || "-",
-      faculty: me.faculty || item.faculty || "-",
-      dateStr: dateStr || new Date().toISOString().slice(0,10),
-      serial
+  function normalizeCourse(raw){
+    return {
+      id: raw._id || raw.id || raw.courseId,
+      title: raw.title || raw.name || "Nomsiz kurs",
+      faculty: raw.faculty || raw.facultyName || "",
+      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
+      testId: raw.testId || raw.test?._id || raw.test || ""
     };
-
-    const c = document.getElementById("certCanvas");
-    const ctx = c.getContext("2d");
-    drawCertificate(ctx, data);
-
-    // Save a minimal record (demo)
-    try{
-      const key = "certRecords_v1_" + (me._id || me.id || me.username || "anon");
-      const list = JSON.parse(localStorage.getItem(key) || "[]");
-      list.unshift({ ...data, at: Date.now() });
-      localStorage.setItem(key, JSON.stringify(list.slice(0,50)));
-    }catch(e){}
-
-    setOk("Sertifikat chizildi. PDF yuklab olish mumkin.");
   }
 
-  async function downloadPDF(){
-    const canvas = document.getElementById("certCanvas");
-    const imgData = canvas.toDataURL("image/png", 1.0);
-
-    // Prefer jsPDF
+  async function fetchCourse(courseId){
     try{
-      if(!window.jspdf || !window.jspdf.jsPDF) throw new Error("jsPDF not loaded");
-      const { jsPDF } = window.jspdf;
-      // A4 landscape: 297x210 mm
-      const doc = new jsPDF({ orientation:"landscape", unit:"mm", format:"a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-
-      // Maintain aspect ratio
-      const imgW = pageWidth;
-      const imgH = pageWidth * (canvas.height / canvas.width);
-      const y = (pageHeight - imgH) / 2;
-      doc.addImage(imgData, "PNG", 0, y, imgW, imgH, undefined, "FAST");
-      const fileName = "certificate_" + (Date.now()) + ".pdf";
-      doc.save(fileName);
-      setOk("PDF yuklab olindi.");
-      return;
+      const data = await apiFetch("/api/courses/" + encodeURIComponent(courseId));
+      return normalizeCourse(data.course || data);
     }catch(e){
-      // Fallback: open image in new tab and print to PDF
-      const win = window.open("");
-      if(!win){
-        setErr("Popup bloklangan. Brauzer ruxsat bering yoki Print-to-PDF ishlating.");
-        return;
-      }
-      win.document.write("<title>Sertifikat</title>");
-      win.document.write("<img style='width:100%' src='" + imgData + "'/>");
-      win.document.close();
-      win.focus();
-      setOk("PDF uchun: yangi oynada Print (Ctrl+P) → Save as PDF.");
+      try{
+        const data = await apiFetch("/api/courses");
+        const list = Array.isArray(data) ? data : (data.courses || []);
+        const c = list.map(normalizeCourse).find(x=>String(x.id)===String(courseId));
+        if(c) return c;
+      }catch(_){}
+      // demo fallback (from courses page)
+      try{
+        const demo = JSON.parse(localStorage.getItem("demoCourses_v2") || "[]");
+        const c = demo.map(normalizeCourse).find(x=>String(x.id)===String(courseId));
+        if(c) return c;
+      }catch(_){}
+      throw new Error("Kurs topilmadi.");
     }
   }
+
+  async function checkEligibilityAPI(courseId){
+    // preferred
+    try{
+      const data = await apiFetch("/api/certificate/check?courseId=" + encodeURIComponent(courseId));
+      return { ok: !!(data.ok || data.eligible), data };
+    }catch(e){
+      // optional alternate
+      try{
+        const data = await apiFetch("/api/certificates/eligible?courseId=" + encodeURIComponent(courseId));
+        return { ok: !!(data.ok || data.eligible), data };
+      }catch(_){
+        return null;
+      }
+    }
+  }
+
+  function checkEligibilityDemo(me, courseId, course){
+    const uid = me._id || me.id || me.username;
+    const p = readProgress(uid, courseId);
+    const doneLessonIds = Array.isArray(p.doneLessonIds) ? p.doneLessonIds : [];
+    const totalLessons = Number(p.totalLessons || 0);
+    const pct = totalLessons ? Math.round((doneLessonIds.length/totalLessons)*100) : (doneLessonIds.length ? 100 : 0);
+    const testPassed = !!p.testPassed; // may be set by backend in real scenario
+    // demo policy: allow if pct==100 (testPassed optional)
+    return { eligible: pct>=100, pct, testPassed };
+  }
+
+  // QR generator (mini, simplified): uses external-free simple pattern (NOT full QR spec)
+  // We draw a scannable-like code but not guaranteed QR standard. If you want real QR, backend should generate image.
+  function drawPseudoQR(ctx, x, y, size, text){
+    // deterministic pattern from text hash
+    function hash(s){
+      let h=2166136261;
+      for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return h>>>0;
+    }
+    const h = hash(String(text||""));
+    const n = 29; // grid
+    const cell = size/n;
+    // border
+    ctx.fillStyle = "white"; ctx.fillRect(x-10,y-10,size+20,size+20);
+    ctx.strokeStyle = "rgba(15,23,42,.25)"; ctx.strokeRect(x-10,y-10,size+20,size+20);
+    // finder squares
+    function finder(px,py){
+      ctx.fillStyle="#0f172a"; ctx.fillRect(px,py,cell*7,cell*7);
+      ctx.fillStyle="white"; ctx.fillRect(px+cell,py+cell,cell*5,cell*5);
+      ctx.fillStyle="#0f172a"; ctx.fillRect(px+cell*2,py+cell*2,cell*3,cell*3);
+    }
+    finder(x,y); finder(x+cell*(n-7),y); finder(x,y+cell*(n-7));
+
+    // data
+    for(let r=0;r<n;r++){
+      for(let c=0;c<n;c++){
+        // skip finder areas
+        const inFinder = (c<8 && r<8) || (c>n-9 && r<8) || (c<8 && r>n-9);
+        if(inFinder) continue;
+        const bit = ((h + r*131 + c*17 + (r<<2)) >>> ((r+c)%16)) & 1;
+        if(bit){
+          ctx.fillStyle="#0f172a";
+          ctx.fillRect(x+c*cell, y+r*cell, Math.ceil(cell), Math.ceil(cell));
+        }
+      }
+    }
+    ctx.fillStyle="rgba(15,23,42,.75)";
+    ctx.font = "22px ui-monospace, Menlo, Consolas, monospace";
+    ctx.fillText("VERIFY", x, y+size+28);
+  }
+
+  // certificate rendering
+  function drawCertificate(payload){
+    const cv = $("cv");
+    const ctx = cv.getContext("2d");
+    const W = cv.width, H = cv.height;
+    // background
+    ctx.clearRect(0,0,W,H);
+    // paper gradient
+    const g = ctx.createLinearGradient(0,0,W,H);
+    g.addColorStop(0,"#ffffff");
+    g.addColorStop(1,"#f8fafc");
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    // border
+    ctx.lineWidth = 10;
+    const b = ctx.createLinearGradient(0,0,W,0);
+    b.addColorStop(0,"#2563eb");
+    b.addColorStop(1,"#7c3aed");
+    ctx.strokeStyle = b;
+    ctx.strokeRect(30,30,W-60,H-60);
+
+    // inner border
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(15,23,42,.18)";
+    ctx.strokeRect(55,55,W-110,H-110);
+
+    // top ribbons
+    ctx.save();
+    ctx.globalAlpha = 0.14;
+    ctx.fillStyle = "#2563eb";
+    ctx.beginPath();
+    ctx.moveTo(60,120); ctx.lineTo(W-60,60); ctx.lineTo(W-60,190); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle="#7c3aed";
+    ctx.beginPath();
+    ctx.moveTo(60,60); ctx.lineTo(W-60,140); ctx.lineTo(W-60,60); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // title
+    ctx.fillStyle = "#0f172a";
+    ctx.textAlign="center";
+    ctx.font = "900 86px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("SERTIFIKAT", W/2, 210);
+
+    ctx.font = "500 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle="rgba(15,23,42,.75)";
+    ctx.fillText("Ushbu sertifikat quyidagi tinglovchiga beriladi:", W/2, 260);
+
+    // name
+    ctx.font = "900 60px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#111827";
+    ctx.fillText(payload.fullName.toUpperCase(), W/2, 360);
+
+    // course line
+    ctx.font = "600 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle="rgba(15,23,42,.78)";
+    ctx.fillText(`"${payload.courseTitle}" kursini muvaffaqiyatli yakunlagani uchun`, W/2, 430);
+
+    // meta boxes
+    ctx.textAlign="left";
+    const bxY = 520;
+    const bxW = (W-180)/2;
+    function box(x,y,label,value){
+      ctx.fillStyle="rgba(37,99,235,.08)";
+      ctx.fillRect(x,y,bxW,98);
+      ctx.strokeStyle="rgba(15,23,42,.14)";
+      ctx.strokeRect(x,y,bxW,98);
+      ctx.fillStyle="rgba(15,23,42,.70)";
+      ctx.font="700 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.fillText(label, x+18, y+32);
+      ctx.fillStyle="#0f172a";
+      ctx.font="900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.fillText(value, x+18, y+66);
+    }
+    box(90,bxY,"Fakultet / Guruh", payload.fg,);
+    box(90+bxW+0,bxY,"Sana", payload.dateHuman);
+
+    box(90,bxY+120,"Sertifikat ID", payload.certId);
+    box(90+bxW+0,bxY+120,"Teacher", payload.teacherName || "—");
+
+    // signature
+    ctx.textAlign="left";
+    ctx.fillStyle="rgba(15,23,42,.78)";
+    ctx.font="700 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Imzo:", 90, H-170);
+    ctx.font="900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle="#0f172a";
+    ctx.fillText(payload.signature, 90, H-125);
+    ctx.strokeStyle="rgba(15,23,42,.25)";
+    ctx.beginPath();
+    ctx.moveTo(90,H-110); ctx.lineTo(520,H-110);
+    ctx.stroke();
+
+    // QR
+    drawPseudoQR(ctx, W-320, H-340, 220, payload.verifyUrl);
+
+    // footer
+    ctx.textAlign="center";
+    ctx.fillStyle="rgba(15,23,42,.55)";
+    ctx.font="600 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Qarshi Davlat Texnika Universiteti • QDTU LMS", W/2, H-72);
+  }
+
+  function downloadPDF(){
+    // pure frontend: use browser print-to-PDF fallback by opening image in new window
+    // We generate a high-res PNG and open it; user can Print → Save as PDF.
+    const cv = $("cv");
+    const png = cv.toDataURL("image/png");
+    const w = window.open("", "_blank");
+    if(!w){ setErr("Pop-up bloklangan. Browserda pop-up ruxsat bering."); return; }
+    w.document.write(`
+      <html><head><title>Certificate PDF</title></head>
+      <body style="margin:0;display:grid;place-items:center;background:#111">
+        <img src="${png}" style="max-width:100%;height:auto"/>
+        <script>setTimeout(()=>{window.print();}, 400);<\/script>
+      </body></html>
+    `);
+    w.document.close();
+  }
+
+  // verify flow
+  async function verifyById(id){
+    clearMsg();
+    if(!id){ return setErr("CERT_ID kiriting."); }
+    // API try
+    try{
+      const data = await apiFetch("/api/certificates/verify?id=" + encodeURIComponent(id));
+      if(data && (data.ok || data.valid)){
+        const info = data.certificate || data.data || data;
+        setOk("✅ Sertifikat tasdiqlandi (API).");
+        return info;
+      }
+      setErr("Sertifikat topilmadi (API).");
+      return null;
+    }catch(e){
+      // demo
+      const store = readStore();
+      const info = store[String(id)];
+      if(info){
+        setOk("✅ Sertifikat tasdiqlandi (demo/localStorage).");
+        return info;
+      }
+      setErr("Sertifikat topilmadi.");
+      return null;
+    }
+  }
+
+  // main state
+  let state = { me:null, course:null, courseId:"", certId:"", eligible:false, payload:null };
+
+  function setRoleUI(me){
+    const role = String(me.role || "student").toLowerCase();
+    const badge = $("roleBadge");
+    badge.classList.remove("student","teacher","admin");
+    badge.classList.add(role==="teacher" ? "teacher" : role==="admin" ? "admin" : "student");
+    badge.textContent = role.toUpperCase();
+    const name = me.fullname || me.name || me.username || "—";
+    $("mePill").textContent = name;
+    $("mePill").style.display="inline-flex";
+    $("dashLink").href = role==="teacher" ? "/teacher-dashboard.html" : role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html";
+  }
+
+  function humanDate(iso){
+    try{
+      const d = new Date(iso);
+      return d.toLocaleDateString("uz-UZ", { year:"numeric", month:"long", day:"numeric" });
+    }catch(e){ return iso; }
+  }
+
+  async function eligibilityCheck(){
+    clearMsg();
+    const courseId = state.courseId;
+    if(!courseId){ return setErr("Course ID topilmadi. certificate.html?type=course&sourceId=COURSE_ID bilan kiring."); }
+
+    // API check first
+    const api = await checkEligibilityAPI(courseId);
+    if(api){
+      state.eligible = !!api.ok;
+      if(state.eligible) setOk("✅ Eligibility tasdiqlandi (API).");
+      else setErr("❌ Eligibility rad etildi (API).");
+      $("renderBtn").disabled = !state.eligible;
+      $("pdfBtn").disabled = true;
+      return;
+    }
+
+    // demo fallback
+    const demo = checkEligibilityDemo(state.me, courseId, state.course);
+    if(demo.eligible){
+      setOk(`✅ Eligibility (demo): progress ${demo.pct}%` + (demo.testPassed ? " • test passed" : ""));
+      state.eligible = true;
+    }else{
+      setErr(`❌ Eligibility (demo): progress ${demo.pct}% (100% bo‘lishi kerak)`);
+      state.eligible = false;
+    }
+    $("renderBtn").disabled = !state.eligible;
+    $("pdfBtn").disabled = true;
+  }
+
+  function buildPayload(){
+    const fullName = $("fullNameVal").textContent || "—";
+    const fg = $("fgVal").textContent || "—";
+    const courseTitle = state.course?.title || "—";
+    const teacherName = state.course?.teacherName || "—";
+    const dateISO = $("dateInp").value || todayISO();
+    const signature = ($("signInp").value || "QDTU LMS").trim();
+    const certId = state.certId || randomId();
+    state.certId = certId;
+    $("certIdVal").textContent = certId;
+
+    const verifyUrlUser = ($("verifyUrlInp").value || "").trim();
+    const verifyUrl = verifyUrlUser || (location.origin ? (location.origin + "/certificate.html?verify=" + encodeURIComponent(certId)) : ("/certificate.html?verify=" + encodeURIComponent(certId)));
+    const dateHuman = humanDate(dateISO);
+
+    return { certId, verifyUrl, fullName, fg, courseTitle, teacherName, dateISO, dateHuman, signature };
+  }
+
+  function persistCertificate(payload){
+    // API attempt
+    (async ()=>{
+      try{
+        await apiFetch("/api/certificates", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({
+            certId: payload.certId,
+            courseId: state.courseId,
+            verifyUrl: payload.verifyUrl,
+            fullName: payload.fullName,
+            facultyGroup: payload.fg,
+            courseTitle: payload.courseTitle,
+            teacherName: payload.teacherName,
+            dateISO: payload.dateISO,
+            signature: payload.signature
+          })
+        });
+        setOk("✅ Sertifikat saqlandi (API).");
+      }catch(e){
+        // demo store
+        const store = readStore();
+        store[String(payload.certId)] = {
+          certId: payload.certId,
+          courseId: state.courseId,
+          verifyUrl: payload.verifyUrl,
+          fullName: payload.fullName,
+          fg: payload.fg,
+          courseTitle: payload.courseTitle,
+          teacherName: payload.teacherName,
+          dateISO: payload.dateISO,
+          signature: payload.signature,
+          createdAt: Date.now()
+        };
+        writeStore(store);
+        setWarn("API topilmadi. Sertifikat demo/localStorage ga saqlandi (verify ishlaydi).");
+      }
+    })();
+  }
+
+  $("checkBtn").addEventListener("click", eligibilityCheck);
+
+  $("renderBtn").addEventListener("click", ()=>{
+    clearMsg();
+    if(!state.eligible){ return setErr("Avval eligibility tekshiring."); }
+    const payload = buildPayload();
+    state.payload = payload;
+    drawCertificate(payload);
+    persistCertificate(payload);
+    $("pdfBtn").disabled = false;
+    setOk("🎨 Sertifikat chizildi. PDF uchun yuklab oling yoki print qiling.");
+  });
+
+  $("pdfBtn").addEventListener("click", ()=>{
+    if(!$("pdfBtn").disabled) downloadPDF();
+  });
+
+  $("verifyBtn").addEventListener("click", async ()=>{
+    const id = ($("verifyInp").value || "").trim();
+    const info = await verifyById(id);
+    if(info){
+      // draw verified certificate preview
+      const payload = {
+        certId: info.certId || id,
+        verifyUrl: info.verifyUrl || (location.origin ? location.origin + "/certificate.html?verify=" + encodeURIComponent(id) : "/certificate.html?verify=" + encodeURIComponent(id)),
+        fullName: info.fullName || "—",
+        fg: info.fg || info.facultyGroup || "—",
+        courseTitle: info.courseTitle || "—",
+        teacherName: info.teacherName || "—",
+        dateISO: info.dateISO || todayISO(),
+        dateHuman: humanDate(info.dateISO || todayISO()),
+        signature: info.signature || "QDTU LMS"
+      };
+      drawCertificate(payload);
+      $("pdfBtn").disabled = false;
+    }
+  });
 
   async function init(){
-    window.ME = await apiMe();
-    if(!window.ME) return;
-
-    const role = (window.ME.role||"student").toLowerCase();
-    const badge = document.getElementById("roleBadge");
-    badge.textContent = role==="teacher" ? "Teacher" : role==="admin" ? "Admin" : "Student";
-    badge.classList.toggle("teacher", role==="teacher");
-    badge.style.background = role==="teacher" ? "#2563eb" : (role==="admin" ? "#f59e0b" : "#10b981");
-
-    const mePill = document.getElementById("mePill");
-    mePill.textContent = (window.ME.fullname||window.ME.name||window.ME.username||"") + " • " + (window.ME.group || "Guruh yo‘q");
-    mePill.style.display = "inline-block";
-
-    document.getElementById("dashLink").href = role==="teacher" ? "/teacher-dashboard.html" : role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html";
-
-    // Prefill from query params
-    const type = (qs("type") || "course").toLowerCase();
-    const id = qs("id") || "";
-    const score = qs("score") || "";
-    document.getElementById("typeSel").value = (type==="test" ? "test" : "course");
-    document.getElementById("sourceId").value = id;
-    document.getElementById("scoreInp").value = score;
-
-    // date default (local)
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    const dd = String(d.getDate()).padStart(2,"0");
-    document.getElementById("dateInp").value = `${yyyy}-${mm}-${dd}`;
-
-    // Auto-render if id exists
-    if(id){
-      await renderNow();
-    }else{
-      // draw placeholder
-      const ctx = document.getElementById("certCanvas").getContext("2d");
-      drawCertificate(ctx, {
-        type: "course",
-        itemTitle: "Kurs/Test nomi",
-        fullname: (window.ME.fullname||window.ME.name||window.ME.username||""),
-        group: window.ME.group || "-",
-        faculty: window.ME.faculty || "-",
-        dateStr: document.getElementById("dateInp").value,
-        serial: makeSerial("course", "X")
-      });
+    const verify = qs("verify");
+    if(verify){
+      $("verifyInp").value = verify;
+      await $("verifyBtn").click();
+      return;
     }
+
+    const type = qs("type") || "course";
+    const sourceId = qs("sourceId") || qs("courseId") || "";
+    if(type !== "course"){ setWarn("Hozircha faqat course sertifikati qo‘llab-quvvatlanadi."); }
+
+    const me = await apiMe();
+    if(!me) return;
+    state.me = me;
+    setRoleUI(me);
+
+    const role = String(me.role || "student").toLowerCase();
+    if(role !== "student" && role !== "admin"){
+      setErr("Sertifikat yaratish student/admin uchun. Teacher dashboard orqali boshqariladi.");
+      return;
+    }
+
+    // fill identity
+    const name = me.fullname || me.name || me.username || "—";
+    $("fullNameVal").textContent = name;
+    const fg = `${me.faculty || "—"} • ${me.group || "—"}`;
+    $("fgVal").textContent = fg;
+
+    $("dateInp").value = todayISO();
+
+    if(!sourceId){
+      setErr("Course ID topilmadi. certificate.html?type=course&sourceId=COURSE_ID bilan kiring.");
+      return;
+    }
+    state.courseId = sourceId;
+
+    const course = await fetchCourse(sourceId);
+    state.course = course;
+    $("courseVal").textContent = course.title || "—";
+
+    // pre-create id
+    state.certId = randomId();
+    $("certIdVal").textContent = state.certId;
+    $("verifyUrlInp").placeholder = (location.origin ? (location.origin + "/certificate.html?verify=" + encodeURIComponent(state.certId)) : ("/certificate.html?verify=" + encodeURIComponent(state.certId)));
+
+    // auto check eligibility softly
+    setWarn("Avval eligibility tekshiring. Progress 100% bo‘lsa sertifikat yaratish mumkin.");
   }
 
-  document.getElementById("logoutBtn").addEventListener("click", ()=>{
-    localStorage.removeItem("token");
-    location.href="/login.html";
-  });
-
-  document.getElementById("renderBtn").addEventListener("click", renderNow);
-  document.getElementById("downloadBtn").addEventListener("click", downloadPDF);
-
-  // Type change: score enable/disable
-  document.getElementById("typeSel").addEventListener("change", ()=>{
-    const t = document.getElementById("typeSel").value;
-    document.getElementById("scoreInp").disabled = (t !== "test");
-  });
-
-  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+  init().catch(e=> setErr(e?.message || "Xatolik yuz berdi."));
 </script>
 </body>
 </html>

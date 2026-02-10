@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Testlar</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f6f7fb;color:#111}
+    header{background:#111827;color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    header .left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    header .badge{background:#10b981;padding:6px 10px;border-radius:999px;font-size:12px}
+    header .badge.teacher{background:#2563eb}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px;background:rgba(255,255,255,.08)}
+    .container{max-width:1200px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+    .card h3{margin:0 0 10px 0;font-size:16px}
+    .muted{color:#6b7280;font-size:13px;line-height:1.45}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .btn{display:inline-block;border:1px solid #d1d5db;background:#fff;color:#111827;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:14px;cursor:pointer}
+    .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
+    .btn.danger{background:#ef4444;border-color:#ef4444;color:#fff}
+    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
+    .input, select, textarea{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;box-sizing:border-box;background:#fff}
+    label{font-size:13px;color:#374151}
+    .col-12{grid-column:span 12}
+    .col-8{grid-column:span 8}
+    .col-4{grid-column:span 4}
+    .col-6{grid-column:span 6}
+    .col-3{grid-column:span 3}
+    @media (max-width:980px){
+      .col-8,.col-4,.col-6,.col-3{grid-column:span 12}
+    }
+    .err{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
+    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
+    .tr{background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-top:10px}
+    .trow{display:grid;grid-template-columns: 2.2fr 1fr 1fr 1fr 1fr;gap:10px;padding:12px 14px;align-items:center}
+    .title{font-weight:700}
+    .tag{display:inline-block;font-size:12px;padding:5px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f9fafb;color:#111827}
+    .tag.open{border-color:#a7f3d0;background:#ecfdf5}
+    .tag.lock{border-color:#fecaca;background:#fef2f2}
+    .tiny{font-size:12px;color:#6b7280}
+    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
+    .modal{max-width:920px;width:100%;background:#fff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden}
+    .modal header{background:#111827;color:#fff;padding:14px 16px}
+    .modal .body{padding:16px}
+    code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
+    footer{padding:20px 16px;color:#6b7280;text-align:center}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <div style="font-weight:700">QDTU LMS</div>
+      <div id="roleBadge" class="badge">Student</div>
+      <div id="mePill" class="pill" style="display:none"></div>
+    </div>
+    <div class="row">
+      <a class="btn ghost" href="/courses.html">Kurslar</a>
+      <a class="btn ghost" id="dashLink" href="/student-dashboard.html">Dashboard</a>
+      <a class="btn ghost" href="/profile.html">Profil</a>
+      <button class="btn danger" id="logoutBtn">Chiqish</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="errBox" class="err"></div>
+    <div id="okBox" class="ok"></div>
+
+    <div class="grid">
+      <div class="card col-8">
+        <h3>Testlar</h3>
+        <div class="muted">
+          Barcha fandan testlar. Filtr va qidiruv bilan. Student — test ishlaydi. Teacher — test yaratadi.
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <input id="q" class="input" placeholder="Qidirish: test nomi, fan, o‘qituvchi..." style="flex:1;min-width:220px" />
+          <select id="facultyFilter" style="max-width:360px">
+            <option value="">Fakultet (barchasi)</option>
+          </select>
+          <select id="statusFilter" style="max-width:220px">
+            <option value="">Status (barchasi)</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <input id="groupFilter" class="input" placeholder="Guruh filtri (misol: MMT-520-25)" style="flex:1;min-width:220px" />
+          <input id="subjectFilter" class="input" placeholder="Fan filtri (misol: Fizika)" style="max-width:260px" />
+          <button class="btn" id="refreshBtn">Yangilash</button>
+          <button class="btn primary" id="createBtn" style="display:none">+ Yangi test</button>
+        </div>
+      </div>
+
+      <div class="card col-4">
+        <h3>Qoidalar</h3>
+        <div class="muted">
+          Testlar ham fakultet/guruh bo‘yicha cheklanishi mumkin.
+          Student faqat mos testni ishlaydi.
+        </div>
+        <div class="tiny" style="margin-top:10px">
+          Backend endpointlar bo‘lsa:
+          <ul style="margin:6px 0 0 18px">
+            <li><code>GET /api/tests</code></li>
+            <li><code>POST /api/tests</code></li>
+            <li><code>PUT /api/tests/:id</code></li>
+          </ul>
+          Aks holda demo: localStorage.
+        </div>
+      </div>
+
+      <div class="card col-12">
+        <div class="row" style="justify-content:space-between">
+          <div class="muted" id="countTxt">Yuklanmoqda...</div>
+          <div class="tiny">API bo‘lmasa demo testlar ishlaydi (localStorage).</div>
+        </div>
+        <div id="list" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE MODAL -->
+  <div id="modalBackdrop" class="modalBackdrop">
+    <div class="modal">
+      <header>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div style="font-weight:700">Yangi test yaratish</div>
+          <button class="btn ghost" id="closeModalBtn" style="border-color:rgba(255,255,255,.25);color:#fff">Yopish</button>
+        </div>
+      </header>
+      <div class="body">
+        <div class="grid">
+          <div class="col-6">
+            <label>Test nomi</label>
+            <input id="t_title" class="input" placeholder="Masalan: Fizika 1 - Oraliq nazorat" />
+          </div>
+          <div class="col-3">
+            <label>Fan</label>
+            <input id="t_subject" class="input" placeholder="Fizika" />
+          </div>
+          <div class="col-3">
+            <label>Status</label>
+            <select id="t_status">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+
+          <div class="col-6">
+            <label>Fakultet</label>
+            <select id="t_faculty"></select>
+          </div>
+          <div class="col-6">
+            <label>Guruhlar (vergul bilan, bo‘sh bo‘lsa ochiq)</label>
+            <input id="t_groups" class="input" placeholder="MMT-520-25, ..." />
+          </div>
+
+          <div class="col-12">
+            <label>Qisqa tavsif</label>
+            <textarea id="t_desc" class="input" rows="3" placeholder="Test haqida qisqacha..."></textarea>
+          </div>
+
+          <div class="col-12">
+            <label>Savollar (oddiy format)</label>
+            <textarea id="t_questions" class="input" rows="8" placeholder="Har savol blok:&#10;Q: Savol matni&#10;A) variant&#10;B) variant&#10;C) variant&#10;D) variant&#10;ANS: B&#10;&#10;Keyingi savol..."></textarea>
+            <div class="tiny" style="margin-top:6px">
+              Bu sahifa faqat ro‘yxat + create uchun. Test ishlash ketma-ketligi <code>test.html</code>da bo‘ladi.
+            </div>
+          </div>
+
+          <div class="col-12">
+            <button class="btn primary" id="saveTestBtn">Saqlash</button>
+            <button class="btn" id="saveDraftBtn">Draft saqlash</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Qarshi Davlat Texnika Universiteti — LMS (Tests)</footer>
+
+<script>
+  const API_BASE = "";
+  const FACULTIES = [
+    "Neft-gaz va geologiya fakulteti",
+    "Iqtisodiyot va boshqaruv fakulteti",
+    "Energetika muhandisligi fakulteti",
+    "Transport va qurilish muhandisligi fakulteti",
+    "Raqamli texnologiyalar va sun'iy intellekt fakulteti",
+    "Shahrisabz oziq-ovqat muhandisligi fakulteti",
+    "Irrigatsiya muhandisligi fakulteti"
+  ];
+
+  function getToken(){ return localStorage.getItem("token") || ""; }
+  function qs(name){ return new URLSearchParams(location.search).get(name); }
+  function setErr(msg){
+    const box = document.getElementById("errBox");
+    box.textContent = msg; box.style.display = "block";
+    document.getElementById("okBox").style.display = "none";
+  }
+  function setOk(msg){
+    const box = document.getElementById("okBox");
+    box.textContent = msg; box.style.display = "block";
+    document.getElementById("errBox").style.display = "none";
+  }
+  function escapeHtml(str){
+    return String(str||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  // Demo storage
+  function demoKey(){ return "demoTests_v1"; }
+  function readDemoTests(){
+    try { return JSON.parse(localStorage.getItem(demoKey()) || "[]"); } catch { return []; }
+  }
+  function writeDemoTests(list){
+    localStorage.setItem(demoKey(), JSON.stringify(list));
+  }
+  function seedDemoIfEmpty(){
+    const cur = readDemoTests();
+    if(cur.length) return;
+    const seed = [
+      {
+        id:"t1",
+        title:"Fizika 1 — Kirish testi",
+        subject:"Fizika",
+        description:"Asosiy tushunchalar bo‘yicha test.",
+        status:"published",
+        faculty:"Energetika muhandisligi fakulteti",
+        groups:[],
+        teacherName:"Teacher Demo",
+        teacherId:"t_demo",
+        createdAt: Date.now() - 7200000,
+        questionsText:"Q: Kuchning SI birligi?\nA) kg\nB) N\nC) J\nD) W\nANS: B"
+      },
+      {
+        id:"t2",
+        title:"Raqamli texnologiyalar — SI asoslari",
+        subject:"Sun'iy intellekt",
+        description:"SI terminlari va bazaviy savollar.",
+        status:"published",
+        faculty:"Raqamli texnologiyalar va sun'iy intellekt fakulteti",
+        groups:["MMT-520-25"],
+        teacherName:"Teacher Demo",
+        teacherId:"t_demo",
+        createdAt: Date.now() - 3600000,
+        questionsText:"Q: Machine Learning nima?\nA) Qurilish\nB) O‘rganish algoritmlari\nC) Geologiya\nD) Transport\nANS: B"
+      }
+    ];
+    writeDemoTests(seed);
+  }
+
+  function normalizeTest(raw){
+    return {
+      id: raw._id || raw.id || raw.testId,
+      title: raw.title || raw.name || "Nomsiz test",
+      subject: raw.subject || raw.course || raw.fan || "",
+      description: raw.description || raw.desc || "",
+      status: raw.status || (raw.published ? "published" : "published"),
+      faculty: raw.faculty || raw.facultyName || "",
+      groups: Array.isArray(raw.groups) ? raw.groups : (raw.allowedGroups || []),
+      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
+      teacherId: raw.teacherId || raw.teacher?._id || raw.ownerId || "",
+      createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : (raw.createdAtMs || Date.now()),
+      questionsText: raw.questionsText || raw.questions_raw || ""
+    };
+  }
+
+  async function apiMe(){
+    const token = getToken();
+    if(!token){ location.href="/login.html"; return null; }
+    const res = await fetch(API_BASE + "/api/me", { headers:{ "Authorization":"Bearer " + token } });
+    if(!res.ok){
+      localStorage.removeItem("token");
+      location.href="/login.html";
+      return null;
+    }
+    return await res.json();
+  }
+
+  async function fetchTestsFromAPI(){
+    const token = getToken();
+    const res = await fetch(API_BASE + "/api/tests", { headers:{ "Authorization":"Bearer " + token } });
+    if(!res.ok) throw new Error("API not available");
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.tests || []);
+    return list.map(normalizeTest);
+  }
+
+  function fetchTestsFromDemo(){
+    seedDemoIfEmpty();
+    return readDemoTests().map(normalizeTest);
+  }
+
+  function fillFacultySelects(){
+    const f1 = document.getElementById("facultyFilter");
+    const f2 = document.getElementById("t_faculty");
+    f2.innerHTML = "";
+    FACULTIES.forEach(x=>{
+      const o1 = document.createElement("option"); o1.value=x; o1.textContent=x;
+      f1.appendChild(o1);
+      const o2 = document.createElement("option"); o2.value=x; o2.textContent=x;
+      f2.appendChild(o2);
+    });
+  }
+
+  function matchFilters(t){
+    const q = (document.getElementById("q").value||"").trim().toLowerCase();
+    const f = document.getElementById("facultyFilter").value || "";
+    const s = (document.getElementById("subjectFilter").value||"").trim().toLowerCase();
+    const g = (document.getElementById("groupFilter").value||"").trim().toLowerCase();
+    const st = document.getElementById("statusFilter").value || "";
+
+    if(f && (t.faculty||"") !== f) return false;
+    if(st && (t.status||"published") !== st) return false;
+
+    if(q){
+      const hay = `${t.title} ${t.subject} ${t.teacherName} ${t.description}`.toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    if(s){
+      if(!(t.subject||"").toLowerCase().includes(s)) return false;
+    }
+    if(g){
+      const groups = (t.groups||[]).map(x=>String(x).toLowerCase());
+      if(groups.length && !groups.some(x=>x.includes(g))) return false;
+    }
+    return true;
+  }
+
+  function canStudentAccess(t, me){
+    // published only
+    if((t.status||"published") !== "published") return false;
+
+    if(t.faculty && me.faculty && t.faculty !== me.faculty) return false;
+
+    const allowed = Array.isArray(t.groups) ? t.groups.filter(Boolean) : [];
+    if(allowed.length){
+      if(!me.group) return false;
+      const mg = String(me.group).trim().toLowerCase();
+      return allowed.some(x=>String(x).trim().toLowerCase() === mg);
+    }
+    return true;
+  }
+
+  function openModal(){
+    document.getElementById("modalBackdrop").style.display = "flex";
+  }
+  function closeModal(){
+    document.getElementById("modalBackdrop").style.display = "none";
+    delete document.getElementById("saveTestBtn").dataset.editing;
+    delete document.getElementById("saveDraftBtn").dataset.editing;
+  }
+
+  async function saveTest(me, publish){
+    const title = (document.getElementById("t_title").value||"").trim();
+    const subject = (document.getElementById("t_subject").value||"").trim();
+    const desc = (document.getElementById("t_desc").value||"").trim();
+    const status = publish ? "published" : "draft";
+    const faculty = document.getElementById("t_faculty").value;
+    const groupsRaw = (document.getElementById("t_groups").value||"").trim();
+    const groups = groupsRaw ? groupsRaw.split(",").map(x=>x.trim()).filter(Boolean) : [];
+    const questionsText = (document.getElementById("t_questions").value||"").trim();
+
+    if(!title){ setErr("Test nomi majburiy."); return; }
+    if(!subject){ setErr("Fan (subject) majburiy."); return; }
+    if(!questionsText){ setErr("Savollar matni majburiy."); return; }
+
+    const editingId = document.getElementById("saveTestBtn").dataset.editing || document.getElementById("saveDraftBtn").dataset.editing || "";
+
+    // Try API
+    try{
+      const token = getToken();
+      const payload = { title, subject, description: desc, status, faculty, groups, questionsText };
+      let url = API_BASE + "/api/tests";
+      let method = "POST";
+      if(editingId){
+        url = API_BASE + "/api/tests/" + encodeURIComponent(editingId);
+        method = "PUT";
+      }
+      const res = await fetch(url, {
+        method,
+        headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + token },
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok) throw new Error("API save failed");
+      setOk("Test saqlandi (API).");
+      closeModal();
+      await loadAndRender();
+      return;
+    }catch(e){
+      // Demo
+      seedDemoIfEmpty();
+      const list = readDemoTests();
+      if(editingId){
+        const idx = list.findIndex(x=>String(x.id)===String(editingId));
+        if(idx>=0){
+          list[idx] = { ...list[idx], title, subject, description: desc, status, faculty, groups, questionsText, updatedAt: Date.now() };
+        }
+      }else{
+        const id = "t_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+        list.push({
+          id, title, subject, description: desc, status, faculty, groups, questionsText,
+          teacherName: me.fullname || me.name || me.username || "Teacher",
+          teacherId: me._id || me.id || "t_local",
+          createdAt: Date.now()
+        });
+      }
+      writeDemoTests(list);
+      setOk("Test saqlandi (demo/localStorage).");
+      closeModal();
+      await loadAndRender();
+    }
+  }
+
+  function render(list, me){
+    const role = (me.role||"student").toLowerCase();
+    const isTeacher = role==="teacher";
+    const isStudent = role==="student";
+    const isAdmin = role==="admin";
+
+    const badge = document.getElementById("roleBadge");
+    badge.textContent = isTeacher ? "Teacher" : isAdmin ? "Admin" : "Student";
+    badge.classList.toggle("teacher", isTeacher);
+    badge.style.background = isTeacher ? "#2563eb" : (isAdmin ? "#f59e0b" : "#10b981");
+
+    const mePill = document.getElementById("mePill");
+    mePill.textContent = (me.fullname||me.name||me.username||"") + " • " + (me.group || "Guruh yo‘q");
+    mePill.style.display = "inline-block";
+
+    document.getElementById("dashLink").href = isTeacher ? "/teacher-dashboard.html" : isAdmin ? "/admin-dashboard.html" : "/student-dashboard.html";
+
+    const filtered = list
+      .filter(matchFilters)
+      .sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+
+    const container = document.getElementById("list");
+    container.innerHTML = "";
+    document.getElementById("countTxt").textContent = `Topildi: ${filtered.length} ta test`;
+
+    if(!filtered.length){
+      container.innerHTML = `<div class="muted">Hech narsa topilmadi.</div>`;
+      return;
+    }
+
+    filtered.forEach(t=>{
+      // access tag
+      let accessOk = true;
+      if(isStudent){
+        accessOk = canStudentAccess(t, me);
+      }
+
+      const row = document.createElement("div");
+      row.className = "tr";
+      row.innerHTML = `
+        <div class="trow">
+          <div>
+            <div class="title">${escapeHtml(t.title)}</div>
+            <div class="muted" style="margin-top:6px">${escapeHtml(t.description||"")}</div>
+            <div style="margin-top:8px">
+              <span class="tag">${escapeHtml(t.subject||"-")}</span>
+              <span class="tag ${ (t.status||"published")==="published" ? "open":"lock"}">${escapeHtml((t.status||"published").toUpperCase())}</span>
+              ${isStudent ? (accessOk ? `<span class="tag open">Mos</span>` : `<span class="tag lock">Mos emas</span>`) : ""}
+            </div>
+          </div>
+          <div>
+            <div class="muted">O‘qituvchi</div>
+            <div style="font-weight:600">${escapeHtml(t.teacherName||"-")}</div>
+          </div>
+          <div>
+            <div class="muted">Fakultet</div>
+            <div style="font-weight:600">${escapeHtml(t.faculty||"-")}</div>
+          </div>
+          <div>
+            <div class="muted">Guruh</div>
+            <div style="font-weight:600">${(t.groups && t.groups.length) ? escapeHtml(t.groups.join(", ")) : "<span class='tag'>Ochiq</span>"}</div>
+          </div>
+          <div class="row" style="justify-content:flex-end">
+            <a class="btn primary" href="/test.html?id=${encodeURIComponent(t.id)}" ${isStudent && !accessOk ? "style='pointer-events:none;opacity:.5'" : ""}>Boshlash</a>
+            ${isTeacher ? `<button class="btn" data-edit="${escapeHtml(t.id)}">Edit</button>` : ``}
+          </div>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+
+    if(isTeacher){
+      container.querySelectorAll("button[data-edit]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const id = btn.getAttribute("data-edit");
+          const t = list.find(x=>String(x.id)===String(id));
+          if(!t) return;
+          openModal();
+          document.getElementById("t_title").value = t.title || "";
+          document.getElementById("t_subject").value = t.subject || "";
+          document.getElementById("t_desc").value = t.description || "";
+          document.getElementById("t_status").value = t.status || "draft";
+          document.getElementById("t_faculty").value = t.faculty || FACULTIES[0];
+          document.getElementById("t_groups").value = (t.groups||[]).join(", ");
+          document.getElementById("t_questions").value = t.questionsText || "";
+          document.getElementById("saveTestBtn").dataset.editing = id;
+          document.getElementById("saveDraftBtn").dataset.editing = id;
+        });
+      });
+    }
+  }
+
+  let ME=null;
+  let TESTS=[];
+
+  async function loadAndRender(){
+    document.getElementById("errBox").style.display = "none";
+    document.getElementById("okBox").style.display = "none";
+    try{
+      TESTS = await fetchTestsFromAPI();
+    }catch(e){
+      TESTS = fetchTestsFromDemo();
+    }
+    render(TESTS, ME);
+  }
+
+  async function init(){
+    fillFacultySelects();
+    ME = await apiMe();
+    if(!ME) return;
+
+    const role = (ME.role||"student").toLowerCase();
+    const createBtn = document.getElementById("createBtn");
+    if(role==="teacher"){
+      createBtn.style.display = "inline-block";
+    }
+
+    await loadAndRender();
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token");
+    location.href="/login.html";
+  });
+
+  document.getElementById("refreshBtn").addEventListener("click", loadAndRender);
+
+  ["q","facultyFilter","statusFilter","groupFilter","subjectFilter"].forEach(id=>{
+    document.getElementById(id).addEventListener("input", ()=> render(TESTS, ME));
+    document.getElementById(id).addEventListener("change", ()=> render(TESTS, ME));
+  });
+
+  document.getElementById("createBtn").addEventListener("click", ()=>{
+    openModal();
+    document.getElementById("t_title").value="";
+    document.getElementById("t_subject").value="";
+    document.getElementById("t_desc").value="";
+    document.getElementById("t_status").value="draft";
+    document.getElementById("t_faculty").value=FACULTIES[0];
+    document.getElementById("t_groups").value="";
+    document.getElementById("t_questions").value="";
+  });
+
+  document.getElementById("closeModalBtn").addEventListener("click", closeModal);
+  document.getElementById("modalBackdrop").addEventListener("click", (e)=>{
+    if(e.target.id==="modalBackdrop") closeModal();
+  });
+
+  document.getElementById("saveTestBtn").addEventListener("click", ()=> saveTest(ME, true));
+  document.getElementById("saveDraftBtn").addEventListener("click", ()=> saveTest(ME, false));
+
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+</script>
+</body>
+</html>

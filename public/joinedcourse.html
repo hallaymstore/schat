@@ -3,66 +3,198 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Joined Course</title>
+  <title>Kursni o‘rganish — QDTU LMS</title>
   <style>
-    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f6f7fb;color:#111}
-    header{background:#111827;color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-    header .left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    header .badge{background:#10b981;padding:6px 10px;border-radius:999px;font-size:12px}
-    header .badge.teacher{background:#2563eb}
-    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px;background:rgba(255,255,255,.08)}
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
+      --primary:#2563eb; --primary2:#7c3aed; --danger:#ef4444; --ok:#10b981; --warn:#f59e0b;
+      --shadow: 0 18px 50px rgba(2,6,23,.10);
+      --ring: 0 0 0 4px rgba(37,99,235,.18);
+      --grid: rgba(15,23,42,.06);
+    }
+    .dark{
+      --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --border:#223047;
+      --shadow: 0 20px 70px rgba(0,0,0,.45);
+      --grid: rgba(148,163,184,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text)}
+    a{color:inherit}
+    .bg{
+      position:fixed; inset:0; z-index:-2;
+      background:
+        radial-gradient(1100px 500px at 10% 10%, rgba(37,99,235,.22), transparent 60%),
+        radial-gradient(900px 500px at 92% 18%, rgba(124,58,237,.18), transparent 60%),
+        radial-gradient(900px 600px at 50% 92%, rgba(16,185,129,.14), transparent 60%),
+        linear-gradient(180deg, var(--bg), var(--bg));
+    }
+    .gridbg{
+      position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 72%);
+      opacity:.85;
+    }
+
+    header{
+      position:sticky; top:0; z-index:50;
+      padding:14px 16px;
+      backdrop-filter: blur(10px);
+      background: color-mix(in oklab, var(--bg) 72%, transparent);
+      border-bottom:1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    }
+    .nav{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    }
+    .brand{display:flex; align-items:center; gap:10px}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      box-shadow: var(--shadow);
+    }
+    .pills{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .pill{font-size:12px; padding:7px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 80%, transparent); background: color-mix(in oklab, var(--card) 85%, transparent)}
+    .badge{font-weight:900; letter-spacing:.6px}
+    .badge.student{color:var(--ok)}
+    .badge.teacher{color:color-mix(in oklab, var(--primary) 88%, white)}
+    .badge.admin{color:var(--warn)}
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      color:var(--text);
+      padding:10px 12px; border-radius:12px; text-decoration:none; cursor:pointer;
+      box-shadow: 0 1px 0 rgba(0,0,0,.03);
+      transition: transform .08s ease, filter .12s ease, background .12s ease;
+      user-select:none;
+      font-weight:650;
+    }
+    .btn:hover{filter:brightness(1.02)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background: linear-gradient(135deg, var(--primary), var(--primary2)); color:#fff; border-color:transparent}
+    .btn.danger{background: linear-gradient(135deg, #ef4444, #fb7185); color:#fff; border-color:transparent}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:8px 10px; border-radius:11px; font-size:13px; font-weight:800}
+
     .container{max-width:1200px;margin:18px auto;padding:0 16px}
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
-    .card h2{margin:0 0 10px 0;font-size:20px}
-    .card h3{margin:0 0 10px 0;font-size:16px}
-    .muted{color:#6b7280;font-size:13px;line-height:1.45}
-    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    .btn{display:inline-block;border:1px solid #d1d5db;background:#fff;color:#111827;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:14px;cursor:pointer}
-    .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
-    .btn.danger{background:#ef4444;border-color:#ef4444;color:#fff}
-    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
-    .tag{display:inline-block;font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid #e5e7eb;background:#f9fafb;color:#111827}
-    .tag.done{border-color:#a7f3d0;background:#ecfdf5}
-    .tag.todo{border-color:#fde68a;background:#fffbeb}
+    .card{
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:16px; padding:16px;
+      box-shadow: 0 8px 28px rgba(2,6,23,.06);
+    }
     .col-12{grid-column:span 12}
     .col-8{grid-column:span 8}
     .col-4{grid-column:span 4}
-    @media (max-width:980px){
-      .col-8,.col-4{grid-column:span 12}
+    @media (max-width:980px){ .col-8,.col-4{grid-column:span 12} }
+
+    .muted{color:var(--muted);font-size:13px;line-height:1.55}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .divider{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:12px 0}
+    .tiny{font-size:12px;color:var(--muted)}
+    footer{padding:18px 16px;color:var(--muted);text-align:center}
+
+    .err,.ok{
+      border-radius:14px; padding:12px 14px; margin:14px 0; display:none;
+      border:1px solid transparent;
     }
-    .err{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
-    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
-    .step{border:1px solid #e5e7eb;border-radius:12px;padding:12px 12px;background:#fff;margin-top:10px}
-    .stepTitle{font-weight:700}
-    .stepMeta{margin-top:6px}
-    .stepBtn{margin-top:10px}
-    .viewer{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff}
-    .viewer .head{padding:12px 14px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
-    .viewer .body{padding:14px}
-    .ytWrap{aspect-ratio:16/9;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;display:none}
+    .err{background: color-mix(in oklab, #ffedd5 65%, var(--card)); border-color:#fed7aa; color:#9a3412}
+    .ok{background: color-mix(in oklab, #dcfce7 50%, var(--card)); border-color:#86efac; color:#065f46}
+
+    .tag{display:inline-flex; gap:8px; align-items:center; font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent)}
+    .tag.free{border-color:#86efac; background: color-mix(in oklab, #dcfce7 35%, var(--card))}
+    .tag.paid{border-color:#93c5fd; background: color-mix(in oklab, #dbeafe 35%, var(--card))}
+    .tag.open{border-color:#fde68a; background: color-mix(in oklab, #fef9c3 35%, var(--card))}
+    .tag.lock{border-color:#fecaca; background: color-mix(in oklab, #fee2e2 35%, var(--card))}
+    .tag.chip{padding:6px 10px; font-weight:900}
+
+    .progressWrap{margin-top:10px}
+    .bar{height:12px;border-radius:999px;background:color-mix(in oklab, var(--border) 85%, transparent); overflow:hidden}
+    .bar > div{height:100%; width:0%; background: linear-gradient(135deg, var(--primary), var(--primary2)); transition: width .25s ease}
+    .barMeta{display:flex;justify-content:space-between;gap:10px;margin-top:8px}
+    .barMeta b{font-weight:900}
+
+    .viewer{
+      border-radius:16px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      overflow:hidden;
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      min-height:260px;
+    }
+    .viewerHeader{
+      padding:12px 14px;
+      background: color-mix(in oklab, var(--card) 88%, transparent);
+      border-bottom:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    }
+    .viewerBody{padding:14px}
+    .ytWrap{aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid color-mix(in oklab, var(--border) 85%, transparent); display:none}
     .ytWrap iframe{width:100%;height:100%;border:0}
-    .pdfWrap{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;display:none}
-    .pdfWrap iframe{width:100%;height:520px;border:0}
-    .textWrap{display:none;white-space:pre-wrap;line-height:1.6}
-    .progress{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden}
-    .progress > div{height:100%;background:#2563eb;width:0%}
-    footer{padding:20px 16px;color:#6b7280;text-align:center}
-    .tiny{font-size:12px;color:#6b7280}
-    code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
+    .pdfWrap{height:520px;border-radius:14px;overflow:hidden;border:1px solid color-mix(in oklab, var(--border) 85%, transparent); display:none}
+    .pdfWrap iframe{width:100%;height:100%;border:0}
+    .txtWrap{display:none; white-space:pre-wrap; line-height:1.65; font-size:14px}
+
+    .lessonList{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+    .lesson{
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:16px;
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      padding:12px;
+      display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
+      transition: transform .08s ease, filter .12s ease;
+      cursor:pointer;
+    }
+    .lesson:hover{filter:brightness(1.01)}
+    .lesson:active{transform:translateY(1px)}
+    .lesson.locked{opacity:.62; cursor:not-allowed}
+    .lesson .left{display:flex; gap:12px; align-items:flex-start}
+    .dot{
+      width:42px; height:42px; border-radius:16px;
+      background: linear-gradient(135deg, rgba(37,99,235,.22), rgba(124,58,237,.18));
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      display:grid; place-items:center;
+      font-weight:950;
+    }
+    .lesson.locked .dot{background:linear-gradient(135deg, rgba(239,68,68,.18), rgba(245,158,11,.14))}
+    .lTitle{font-weight:950}
+    .lMeta{margin-top:4px}
+    .right{display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end}
+    .pillMini{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent); font-weight:900}
+    code{background:color-mix(in oklab, var(--card) 92%, transparent);border:1px solid color-mix(in oklab, var(--border) 85%, transparent);border-radius:10px;padding:2px 7px}
   </style>
+  <script>
+    (function(){
+      const key="theme";
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark ? "dark" : "light");
+      if(mode==="dark") document.documentElement.classList.add("dark");
+    })();
+  </script>
 </head>
 <body>
+  <div class="bg"></div><div class="gridbg"></div>
+
   <header>
-    <div class="left">
-      <div style="font-weight:700">QDTU LMS</div>
-      <div id="roleBadge" class="badge">Student</div>
-      <div id="mePill" class="pill" style="display:none"></div>
-    </div>
-    <div class="row">
-      <a class="btn ghost" href="/courses.html">Kurslar</a>
-      <a class="btn ghost" id="dashLink" href="/student-dashboard.html">Dashboard</a>
-      <button class="btn danger" id="logoutBtn">Chiqish</button>
+    <div class="nav">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="pills">
+          <span id="roleBadge" class="pill badge student">STUDENT</span>
+          <span id="mePill" class="pill" style="display:none"></span>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn ghost small" id="themeBtn">🌓 Tema</button>
+        <a class="btn ghost small" href="/courses.html">Kurslar</a>
+        <a class="btn ghost small" id="dashLink" href="/student-dashboard.html">Dashboard</a>
+        <button class="btn danger small" id="logoutBtn">Chiqish</button>
+      </div>
     </div>
   </header>
 
@@ -71,112 +203,160 @@
     <div id="okBox" class="ok"></div>
 
     <div class="grid">
-      <div class="card col-12">
-        <h2 id="courseTitle">Kurs yuklanmoqda...</h2>
-        <div class="muted" id="courseDesc">-</div>
-        <div class="row" style="margin-top:10px">
-          <span class="tag" id="courseFaculty">-</span>
-          <span class="tag" id="coursePrice">-</span>
-          <span class="tag" id="courseStatus">-</span>
-          <span class="tag" id="courseTeacher">-</span>
+      <div class="card col-8">
+        <div class="row" style="justify-content:space-between;align-items:flex-start">
+          <div>
+            <h2 id="courseTitle" style="margin:0;font-size:20px">Yuklanmoqda...</h2>
+            <div class="muted" id="courseDesc" style="margin-top:6px">—</div>
+            <div class="row" style="margin-top:10px">
+              <span id="tagPrice" class="tag chip">—</span>
+              <span id="tagFaculty" class="tag chip">—</span>
+              <span id="tagTeacher" class="tag chip">—</span>
+            </div>
+          </div>
+          <div class="row" style="justify-content:flex-end">
+            <a class="btn small" id="openCourseBtn" href="/course.html">Kurs info</a>
+            <a class="btn small" id="goTestsBtn" href="/tests.html">Testlar</a>
+          </div>
+        </div>
+
+        <div class="progressWrap">
+          <div class="bar"><div id="barFill"></div></div>
+          <div class="barMeta">
+            <div class="tiny">Progress: <b id="pctTxt">0%</b></div>
+            <div class="tiny">Tugagan darslar: <b id="doneTxt">0</b>/<span id="allTxt">0</span></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="viewer" id="viewer">
+          <div class="viewerHeader">
+            <div>
+              <div style="font-weight:950" id="viewerTitle">Dars tanlang</div>
+              <div class="tiny" id="viewerMeta">—</div>
+            </div>
+            <div class="row">
+              <button class="btn small" id="markDoneBtn" style="display:none">✅ Tugatdim</button>
+              <button class="btn small" id="nextBtn" style="display:none">Keyingisi →</button>
+            </div>
+          </div>
+          <div class="viewerBody">
+            <div class="ytWrap" id="ytWrap"><iframe id="ytFrame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+            <div class="pdfWrap" id="pdfWrap"><iframe id="pdfFrame"></iframe></div>
+            <div class="txtWrap" id="txtWrap"></div>
+            <div class="muted" id="emptyHint">Chapdan dars tanlang — video / PDF / matn shu yerda ochiladi.</div>
+          </div>
         </div>
       </div>
 
       <div class="card col-4">
-        <h3>Reja (ketma-ket)</h3>
-        <div class="muted">Har bir bo‘limni ketma-ket bajaring. Keyingi bo‘lim faqat oldingisi yakunlanganda ochiladi.</div>
-        <div style="margin-top:12px" class="progress"><div id="progBar"></div></div>
-        <div class="tiny" style="margin-top:8px" id="progTxt">0%</div>
-
-        <div id="steps"></div>
-
-        <div class="tiny" style="margin-top:12px">
-          Backend endpointlar bo‘lsa materiallar shu orqali olinadi:
-          <ul style="margin:6px 0 0 18px">
-            <li><code>GET /api/courses/:id/content</code></li>
-            <li><code>POST /api/courses/:id/progress</code></li>
-          </ul>
-          Hozircha demo: localStorage.
-        </div>
-      </div>
-
-      <div class="card col-8">
-        <div class="viewer">
-          <div class="head">
-            <div>
-              <div style="font-weight:700" id="viewerTitle">Bo‘lim tanlang</div>
-              <div class="tiny" id="viewerMeta">-</div>
-            </div>
-            <div class="row">
-              <button class="btn" id="markDoneBtn" style="display:none">Bajarildi</button>
-              <button class="btn primary" id="nextBtn" style="display:none">Keyingisi</button>
-            </div>
-          </div>
-          <div class="body">
-            <div id="ytWrap" class="ytWrap">
-              <iframe id="ytFrame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-            </div>
-            <div id="pdfWrap" class="pdfWrap" style="margin-top:12px">
-              <iframe id="pdfFrame"></iframe>
-            </div>
-            <div id="textWrap" class="textWrap" style="margin-top:12px"></div>
-            <div id="emptyWrap" class="muted">Chap tomondan bo‘limni tanlang.</div>
-          </div>
+        <h3 style="margin:0 0 8px 0">Darslar</h3>
+        <div class="muted">
+          Ketma-ketlik: oldingi dars tugamasa keyingisi bloklanadi (config orqali o‘chirsa ham bo‘ladi).
         </div>
 
-        <div class="card" style="margin-top:14px;background:#f9fafb">
-          <h3 style="margin:0 0 8px 0">Eslatma</h3>
-          <div class="muted">
-            Sertifikat olish uchun kurs bo‘yicha barcha bo‘limlar bajarilgan bo‘lishi kerak (yakuniy bosqichda <code>certificate.html</code> bilan ulanadi).
-          </div>
+        <div class="divider"></div>
+
+        <div id="lessonList" class="lessonList">
+          <div class="muted">Yuklanmoqda...</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <button class="btn primary" id="continueBtn" style="display:none">Davom ettirish</button>
+          <a class="btn primary" id="certificateBtn" href="/certificate.html" style="display:none">Sertifikat olish</a>
+        </div>
+
+        <div class="tiny" id="certHint" style="margin-top:10px">
+          Sertifikat sharti: kurs progress 100% va (ixtiyoriy) testdan o‘tganlik. API bo‘lsa tekshiradi.
+        </div>
+
+        <div class="tiny" style="margin-top:10px">
+          Progress API: <code>GET /api/progress?courseId=</code>, <code>POST /api/progress</code> (fallback localStorage).
         </div>
       </div>
     </div>
   </div>
 
-  <footer>Qarshi Davlat Texnika Universiteti — LMS (Joined Course)</footer>
+  <footer>QDTU LMS — Joined Course (Lessons + Progress)</footer>
 
 <script>
   const API_BASE = "";
-  function getToken(){ return localStorage.getItem("token") || ""; }
-  function qs(name){ return new URLSearchParams(location.search).get(name); }
+  const SEQUENTIAL_LOCK = true;
 
+  const $ = (id)=> document.getElementById(id);
+  function qs(name){ return new URLSearchParams(location.search).get(name); }
+  function getToken(){ return localStorage.getItem("token") || ""; }
+
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
   function setErr(msg){
-    const box = document.getElementById("errBox");
-    box.textContent = msg; box.style.display = "block";
-    document.getElementById("okBox").style.display = "none";
+    $("errBox").textContent = msg; $("errBox").style.display="block"; $("okBox").style.display="none";
   }
   function setOk(msg){
-    const box = document.getElementById("okBox");
-    box.textContent = msg; box.style.display = "block";
-    document.getElementById("errBox").style.display = "none";
+    $("okBox").textContent = msg; $("okBox").style.display="block"; $("errBox").style.display="none";
   }
-  function escapeHtml(str){
-    return String(str||"")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+  function clearMsg(){ $("errBox").style.display="none"; $("okBox").style.display="none"; }
+
+  async function apiFetch(url, opts={}){
+    const token = getToken();
+    const headers = Object.assign({}, opts.headers || {});
+    if(token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + url, Object.assign({}, opts, { headers }));
+    let data = null;
+    const ct = res.headers.get("content-type") || "";
+    if(ct.includes("application/json")){
+      try{ data = await res.json(); }catch{ data = null; }
+    }else{
+      try{ data = await res.text(); }catch{ data = null; }
+    }
+    if(!res.ok){
+      const msg = (data && data.error) ? data.error : ("So'rov xatosi: " + res.status);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
   }
 
-  // Demo storage
-  function demoCoursesKey(){ return "demoCourses_v1"; }
-  function readDemoCourses(){
-    try { return JSON.parse(localStorage.getItem(demoCoursesKey()) || "[]"); } catch { return []; }
-  }
-  function joinedKey(userId){ return "joinedCourses_v1_" + (userId || "anon"); }
-  function readJoined(userId){
-    try { return JSON.parse(localStorage.getItem(joinedKey(userId)) || "[]"); } catch { return []; }
+  $("themeBtn").addEventListener("click", ()=>{
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+  });
+
+  $("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token");
+    location.href="/login.html";
+  });
+
+  function youtubeEmbed(url){
+    if(!url) return "";
+    try{
+      const u = new URL(url);
+      let id = "";
+      if(u.hostname.includes("youtu.be")) id = u.pathname.replace("/","");
+      else if(u.searchParams.get("v")) id = u.searchParams.get("v");
+      else if(u.pathname.includes("/embed/")) id = u.pathname.split("/embed/")[1];
+      if(!id) return "";
+      return "https://www.youtube.com/embed/" + id;
+    }catch(e){ return ""; }
   }
 
-  function contentKey(courseId){ return "courseContent_v1_" + courseId; }
-  function progressKey(userId, courseId){ return "courseProgress_v1_" + (userId||"anon") + "_" + courseId; }
-  function readProgress(userId, courseId){
-    try { return JSON.parse(localStorage.getItem(progressKey(userId, courseId)) || "{}"); } catch { return {}; }
+  // ---------- DEMO STORAGE ----------
+  function demoCoursesKey(){ return "demoCourses_v2"; }
+  function readDemoCourses(){ try{ return JSON.parse(localStorage.getItem(demoCoursesKey()) || "[]"); }catch{ return []; } }
+  function progressKey(uid, courseId){ return `progress_v1_${uid || "anon"}_${courseId}`; }
+  function readProgress(uid, courseId){
+    try{ return JSON.parse(localStorage.getItem(progressKey(uid, courseId)) || "{}"); }catch{ return {}; }
   }
-  function writeProgress(userId, courseId, obj){
-    localStorage.setItem(progressKey(userId, courseId), JSON.stringify(obj));
+  function writeProgress(uid, courseId, obj){
+    localStorage.setItem(progressKey(uid, courseId), JSON.stringify(obj));
   }
 
   function normalizeCourse(raw){
@@ -191,356 +371,413 @@
       groups: Array.isArray(raw.groups) ? raw.groups : (raw.allowedGroups || []),
       teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
       teacherId: raw.teacherId || raw.teacher?._id || raw.ownerId || "",
-      youtubeUrl: raw.youtubeUrl || raw.youtube || "",
-      coverUrl: raw.coverUrl || raw.cover || ""
+      lessons: Array.isArray(raw.lessons) ? raw.lessons : (raw.modules || raw.content || []),
+      testId: raw.testId || raw.test?._id || raw.test || ""
     };
   }
 
-  function normalizeStep(raw){
+  function normalizeLesson(raw, idx){
+    // accepted keys: type, title, url, text, pdfUrl, youtubeUrl
+    const type = (raw.type || raw.kind || "").toLowerCase();
+    const title = raw.title || raw.name || `Dars ${idx+1}`;
+    const youtubeUrl = raw.youtubeUrl || raw.youtube || raw.videoUrl || "";
+    const pdfUrl = raw.pdfUrl || raw.pdf || raw.documentUrl || "";
+    const text = raw.text || raw.body || "";
+    let resolvedType = type;
+    if(!resolvedType){
+      if(youtubeUrl) resolvedType="video";
+      else if(pdfUrl) resolvedType="pdf";
+      else if(text) resolvedType="text";
+      else resolvedType="text";
+    }
     return {
-      id: raw.id || raw._id || ("s_" + Math.random().toString(16).slice(2)),
-      type: raw.type || "text", // youtube|text|pdf
-      title: raw.title || "Bo‘lim",
-      text: raw.text || raw.content || "",
-      youtubeUrl: raw.youtubeUrl || raw.youtube || "",
-      pdfUrl: raw.pdfUrl || raw.pdf || raw.url || ""
+      id: raw._id || raw.id || `l${idx+1}`,
+      idx,
+      title,
+      type: resolvedType,
+      youtubeUrl,
+      pdfUrl,
+      text
     };
   }
 
-  function seedDemoContentIfMissing(course){
-    const k = contentKey(course.id);
-    const existing = localStorage.getItem(k);
-    if(existing) return;
-
-    const seed = [
-      { id:"s1", type:"youtube", title:"Kirish video", youtubeUrl: course.youtubeUrl || "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
-      { id:"s2", type:"text", title:"Nazariy qism", text:"Bu yerda kursning nazariy matni bo‘ladi.\n\nKeyingi bosqichlarda teacher paneldan real kontent qo‘shamiz." },
-      { id:"s3", type:"pdf", title:"PDF material", pdfUrl:"https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
+  function seedDemoLessons(course){
+    // if no lessons in demo, generate a decent set
+    return [
+      { id:"l1", idx:0, title:"Kirish va kurs rejasi", type:"video", youtubeUrl:"https://www.youtube.com/watch?v=dQw4w9WgXcQ", pdfUrl:"", text:"" },
+      { id:"l2", idx:1, title:"Nazariy material (PDF)", type:"pdf", youtubeUrl:"", pdfUrl:"/uploads/sample.pdf", text:"" },
+      { id:"l3", idx:2, title:"Amaliy topshiriq (matn)", type:"text", youtubeUrl:"", pdfUrl:"", text:"1) Konspekt yozing.\n2) 10 ta savol tuzing.\n3) O'zingizga xulosa chiqaring." }
     ];
-    localStorage.setItem(k, JSON.stringify(seed));
-  }
-
-  function readDemoContent(courseId){
-    try{
-      const list = JSON.parse(localStorage.getItem(contentKey(courseId)) || "[]");
-      return Array.isArray(list) ? list.map(normalizeStep) : [];
-    }catch{
-      return [];
-    }
-  }
-
-  function youtubeEmbed(url){
-    if(!url) return "";
-    try{
-      const u = new URL(url);
-      let id = "";
-      if(u.hostname.includes("youtu.be")){
-        id = u.pathname.replace("/","");
-      }else if(u.searchParams.get("v")){
-        id = u.searchParams.get("v");
-      }else if(u.pathname.includes("/embed/")){
-        id = u.pathname.split("/embed/")[1];
-      }
-      if(!id) return "";
-      return "https://www.youtube.com/embed/" + id;
-    }catch(e){
-      return "";
-    }
   }
 
   async function apiMe(){
     const token = getToken();
     if(!token){ location.href="/login.html"; return null; }
-    const res = await fetch(API_BASE + "/api/me", { headers: { "Authorization":"Bearer " + token } });
-    if(!res.ok){
+    try{
+      return await apiFetch("/api/me");
+    }catch(e){
       localStorage.removeItem("token");
       location.href="/login.html";
       return null;
     }
-    return await res.json();
   }
 
-  async function fetchCourseFromAPI(id){
-    const token = getToken();
-    let res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(id), { headers:{ "Authorization":"Bearer " + token } });
-    if(res.ok){
-      const data = await res.json();
+  async function fetchCourse(courseId){
+    // try direct
+    try{
+      const data = await apiFetch("/api/courses/" + encodeURIComponent(courseId));
       return normalizeCourse(data.course || data);
+    }catch(e){
+      // fallback list
+      try{
+        const data = await apiFetch("/api/courses");
+        const list = Array.isArray(data) ? data : (data.courses || []);
+        const c = list.map(normalizeCourse).find(x=>String(x.id)===String(courseId));
+        if(c) return c;
+      }catch(_){}
+      // demo fallback
+      const demo = readDemoCourses().map(normalizeCourse).find(x=>String(x.id)===String(courseId));
+      if(!demo) throw new Error("Kurs topilmadi.");
+      return demo;
     }
-    // fallback list
-    res = await fetch(API_BASE + "/api/courses", { headers:{ "Authorization":"Bearer " + token } });
-    if(!res.ok) throw new Error("API not available");
-    const data = await res.json();
-    const list = Array.isArray(data) ? data : (data.courses || []);
-    const c = list.map(normalizeCourse).find(x=>String(x.id)===String(id));
-    if(!c) throw new Error("Not found");
-    return c;
   }
 
-  function fetchCourseFromDemo(id){
-    const c = readDemoCourses().map(normalizeCourse).find(x=>String(x.id)===String(id));
-    if(!c) throw new Error("Not found");
-    return c;
+  async function fetchProgress(uid, courseId){
+    // API first
+    try{
+      const data = await apiFetch("/api/progress?courseId=" + encodeURIComponent(courseId));
+      // expected: { courseId, doneLessonIds:[], lastLessonId, percent, testPassed }
+      return {
+        doneLessonIds: Array.isArray(data.doneLessonIds) ? data.doneLessonIds.map(String) : (Array.isArray(data.done) ? data.done.map(String) : []),
+        lastLessonId: data.lastLessonId ? String(data.lastLessonId) : "",
+        testPassed: !!(data.testPassed || data.passed),
+      };
+    }catch(e){
+      // localStorage fallback
+      const p = readProgress(uid, courseId);
+      return {
+        doneLessonIds: Array.isArray(p.doneLessonIds) ? p.doneLessonIds.map(String) : [],
+        lastLessonId: p.lastLessonId ? String(p.lastLessonId) : "",
+        testPassed: !!p.testPassed,
+      };
+    }
   }
 
-  async function fetchContentFromAPI(courseId){
-    const token = getToken();
-    const res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(courseId) + "/content", { headers:{ "Authorization":"Bearer " + token } });
-    if(!res.ok) throw new Error("No content API");
-    const data = await res.json();
-    const list = Array.isArray(data) ? data : (data.items || data.content || []);
-    return list.map(normalizeStep);
+  async function saveProgress(uid, courseId, progress){
+    // API first
+    try{
+      await apiFetch("/api/progress", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ courseId, ...progress })
+      });
+      return true;
+    }catch(e){
+      writeProgress(uid, courseId, progress);
+      return false;
+    }
   }
 
-  let ME=null, COURSE=null, STEPS=[], PROG={}, ACTIVE_INDEX=-1;
-
-  function setHeader(me){
-    const role = (me.role||"student").toLowerCase();
-    const badge = document.getElementById("roleBadge");
-    badge.textContent = role==="teacher" ? "Teacher" : role==="admin" ? "Admin" : "Student";
-    badge.classList.toggle("teacher", role==="teacher");
-    badge.style.background = role==="teacher" ? "#2563eb" : (role==="admin" ? "#f59e0b" : "#10b981");
-
-    const mePill = document.getElementById("mePill");
-    mePill.textContent = (me.fullname||me.name||me.username||"") + " • " + (me.group || "Guruh yo‘q");
-    mePill.style.display = "inline-block";
-
-    document.getElementById("dashLink").href = role==="teacher" ? "/teacher-dashboard.html" : role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html";
+  async function checkCertificate(courseId){
+    // API if exists
+    try{
+      const data = await apiFetch("/api/certificate/check?courseId=" + encodeURIComponent(courseId));
+      return !!(data.ok || data.eligible);
+    }catch(e){
+      return null; // unknown
+    }
   }
 
-  function setCourseInfo(course){
-    document.getElementById("courseTitle").textContent = course.title || "Kurs";
-    document.getElementById("courseDesc").textContent = course.description || "-";
-    document.getElementById("courseFaculty").textContent = course.faculty || "Fakultet: -";
-    document.getElementById("courseTeacher").textContent = "Teacher: " + (course.teacherName || "-");
+  // ---------- UI state ----------
+  let state = {
+    me:null,
+    course:null,
+    lessons:[],
+    progress:{ doneLessonIds:[], lastLessonId:"", testPassed:false },
+    activeLessonId:"",
+  };
 
-    const priceTag = document.getElementById("coursePrice");
-    if(course.type==="paid"){
-      priceTag.textContent = "Pullik: " + (course.price||0) + " coin";
+  function setRoleUI(me){
+    const role = String(me.role || "student").toLowerCase();
+    const badge = $("roleBadge");
+    badge.classList.remove("student","teacher","admin");
+    badge.classList.add(role==="teacher" ? "teacher" : role==="admin" ? "admin" : "student");
+    badge.textContent = role.toUpperCase();
+
+    const name = me.fullname || me.name || me.username || "—";
+    const group = me.group || "Guruh yo‘q";
+    const faculty = me.faculty || "Fakultet yo‘q";
+    $("mePill").textContent = `${name} • ${faculty} • ${group}`;
+    $("mePill").style.display = "inline-flex";
+
+    $("dashLink").href = role==="teacher" ? "/teacher-dashboard.html"
+      : role==="admin" ? "/admin-dashboard.html"
+      : "/student-dashboard.html";
+  }
+
+  function renderHeader(){
+    const c = state.course;
+    $("courseTitle").textContent = c.title || "Kurs";
+    $("courseDesc").textContent = c.description || "—";
+    $("tagTeacher").textContent = "Teacher: " + (c.teacherName || "—");
+    $("tagFaculty").textContent = c.faculty || "—";
+    if(c.type === "paid"){
+      $("tagPrice").textContent = "Pullik • " + Number(c.price||0) + " coin";
+      $("tagPrice").className = "tag chip paid";
     }else{
-      priceTag.textContent = "Bepul";
+      $("tagPrice").textContent = "Bepul";
+      $("tagPrice").className = "tag chip free";
     }
-    const st = document.getElementById("courseStatus");
-    st.textContent = (course.status||"published")==="published" ? "Published" : "Draft";
+    $("openCourseBtn").href = "/course.html?id=" + encodeURIComponent(c.id);
   }
 
-  function calcProgress(){
-    const total = STEPS.length || 0;
-    if(!total){
-      document.getElementById("progBar").style.width = "0%";
-      document.getElementById("progTxt").textContent = "0%";
-      return;
-    }
-    let done=0;
-    STEPS.forEach(s=>{ if(PROG[s.id]===true) done++; });
-    const pct = Math.round((done/total)*100);
-    document.getElementById("progBar").style.width = pct + "%";
-    document.getElementById("progTxt").textContent = `${done}/${total} • ${pct}%`;
+  function calcPercent(){
+    const total = state.lessons.length || 0;
+    const doneCount = state.progress.doneLessonIds.length;
+    const pct = total ? Math.round((doneCount / total) * 100) : 0;
+    return { total, doneCount, pct };
   }
 
-  function canOpenStep(index){
-    if(index===0) return true;
-    // must complete all previous steps
-    for(let i=0;i<index;i++){
-      if(PROG[STEPS[i].id]!==true) return false;
-    }
-    return true;
+  function renderProgress(){
+    const { total, doneCount, pct } = calcPercent();
+    $("barFill").style.width = pct + "%";
+    $("pctTxt").textContent = pct + "%";
+    $("doneTxt").textContent = String(doneCount);
+    $("allTxt").textContent = String(total);
   }
 
-  function renderSteps(){
-    const wrap = document.getElementById("steps");
-    wrap.innerHTML = "";
-    STEPS.forEach((s, idx)=>{
-      const locked = !canOpenStep(idx);
-      const done = PROG[s.id]===true;
-      const div = document.createElement("div");
-      div.className = "step";
-      div.innerHTML = `
-        <div class="stepTitle">${idx+1}. ${escapeHtml(s.title)}</div>
-        <div class="stepMeta">
-          <span class="tag">${escapeHtml((s.type||"text").toUpperCase())}</span>
-          ${done ? `<span class="tag done">Bajarildi</span>` : `<span class="tag todo">${locked ? "Yopiq" : "Bajarilmagan"}</span>`}
+  function isLessonDone(lessonId){
+    return state.progress.doneLessonIds.includes(String(lessonId));
+  }
+
+  function isLessonLocked(idx){
+    if(!SEQUENTIAL_LOCK) return false;
+    if(idx === 0) return false;
+    const prev = state.lessons[idx-1];
+    return prev ? !isLessonDone(prev.id) : false;
+  }
+
+  function renderLessonList(){
+    const list = $("lessonList");
+    list.innerHTML = "";
+    state.lessons.forEach((l, idx)=>{
+      const locked = isLessonLocked(idx);
+      const done = isLessonDone(l.id);
+      const active = String(state.activeLessonId) === String(l.id);
+      const item = document.createElement("div");
+      item.className = "lesson" + (locked ? " locked" : "");
+      item.innerHTML = `
+        <div class="left">
+          <div class="dot">${idx+1}</div>
+          <div>
+            <div class="lTitle">${escapeHtml(l.title)}</div>
+            <div class="tiny lMeta">${escapeHtml((l.type||"").toUpperCase())} • ${done ? "✅ tugagan" : locked ? "🔒 bloklangan" : "⏳ davom etmoqda"}</div>
+          </div>
         </div>
-        <div class="stepBtn">
-          <button class="btn ${locked ? "" : "primary"}" data-open="${escapeHtml(s.id)}" ${locked ? "disabled" : ""}>Ochish</button>
+        <div class="right">
+          ${done ? `<span class="pillMini">DONE</span>` : ``}
+          ${active ? `<span class="pillMini">ACTIVE</span>` : ``}
         </div>
       `;
-      wrap.appendChild(div);
-    });
-
-    wrap.querySelectorAll("button[data-open]").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        const id = btn.getAttribute("data-open");
-        const idx = STEPS.findIndex(x=>String(x.id)===String(id));
-        if(idx>=0) openStep(idx);
+      item.addEventListener("click", ()=>{
+        if(locked){ setErr("Oldingi darsni tugatmasangiz, keyingisi ochilmaydi."); return; }
+        openLesson(l.id);
       });
+      list.appendChild(item);
     });
-
-    calcProgress();
   }
 
-  function clearViewer(){
-    document.getElementById("ytWrap").style.display = "none";
-    document.getElementById("pdfWrap").style.display = "none";
-    document.getElementById("textWrap").style.display = "none";
-    document.getElementById("emptyWrap").style.display = "block";
-    document.getElementById("ytFrame").src = "";
-    document.getElementById("pdfFrame").src = "";
-    document.getElementById("textWrap").textContent = "";
+  function hideAllViewer(){
+    $("ytWrap").style.display="none";
+    $("pdfWrap").style.display="none";
+    $("txtWrap").style.display="none";
+    $("emptyHint").style.display="none";
+    $("ytFrame").src = "about:blank";
+    $("pdfFrame").src = "about:blank";
+    $("txtWrap").textContent = "";
   }
 
-  function openStep(index){
-    if(index<0 || index>=STEPS.length) return;
-    if(!canOpenStep(index)) return;
+  function openLesson(lessonId){
+    clearMsg();
+    const l = state.lessons.find(x=>String(x.id)===String(lessonId));
+    if(!l){ setErr("Dars topilmadi."); return; }
+    state.activeLessonId = String(lessonId);
 
-    ACTIVE_INDEX = index;
-    const s = STEPS[index];
+    // store lastLessonId
+    state.progress.lastLessonId = String(lessonId);
+    saveProgress(state.me._id || state.me.id || state.me.username, state.course.id, state.progress);
 
-    document.getElementById("viewerTitle").textContent = `${index+1}. ${s.title}`;
-    document.getElementById("viewerMeta").textContent = `Turi: ${s.type.toUpperCase()} • Holat: ${PROG[s.id]===true ? "Bajarildi" : "Bajarilmagan"}`;
+    renderLessonList();
 
-    clearViewer();
-    document.getElementById("emptyWrap").style.display = "none";
+    $("viewerTitle").textContent = l.title;
+    $("viewerMeta").textContent = `${(l.type||"").toUpperCase()} • ${isLessonDone(l.id) ? "tugagan" : "tugallanmagan"}`;
+    $("markDoneBtn").style.display = isLessonDone(l.id) ? "none" : "inline-flex";
 
-    if(s.type==="youtube"){
-      const emb = youtubeEmbed(s.youtubeUrl);
-      if(emb){
-        document.getElementById("ytWrap").style.display = "block";
-        document.getElementById("ytFrame").src = emb;
+    // Next
+    const idx = l.idx;
+    const hasNext = idx < state.lessons.length - 1;
+    $("nextBtn").style.display = hasNext ? "inline-flex" : "none";
+
+    hideAllViewer();
+    if(l.type === "video" && l.youtubeUrl){
+      const embed = youtubeEmbed(l.youtubeUrl);
+      if(embed){
+        $("ytFrame").src = embed;
+        $("ytWrap").style.display="block";
       }else{
-        document.getElementById("textWrap").style.display = "block";
-        document.getElementById("textWrap").textContent = "YouTube URL noto‘g‘ri yoki mavjud emas.";
+        $("txtWrap").textContent = "Video URL xato yoki qo‘llab-quvvatlanmaydi.";
+        $("txtWrap").style.display="block";
       }
-    }else if(s.type==="pdf"){
-      if(s.pdfUrl){
-        document.getElementById("pdfWrap").style.display = "block";
-        document.getElementById("pdfFrame").src = s.pdfUrl;
-      }else{
-        document.getElementById("textWrap").style.display = "block";
-        document.getElementById("textWrap").textContent = "PDF URL mavjud emas.";
-      }
+    }else if(l.type === "pdf" && l.pdfUrl){
+      $("pdfFrame").src = l.pdfUrl;
+      $("pdfWrap").style.display="block";
     }else{
-      document.getElementById("textWrap").style.display = "block";
-      document.getElementById("textWrap").textContent = s.text || "";
+      $("txtWrap").textContent = l.text || "Matn mavjud emas.";
+      $("txtWrap").style.display="block";
     }
-
-    // buttons
-    const markDoneBtn = document.getElementById("markDoneBtn");
-    const nextBtn = document.getElementById("nextBtn");
-
-    markDoneBtn.style.display = PROG[s.id]===true ? "none" : "inline-block";
-    nextBtn.style.display = (index < STEPS.length-1) ? "inline-block" : "none";
-
-    // next enabled only if current done
-    nextBtn.disabled = (PROG[s.id]!==true);
-
-    renderSteps();
-  }
-
-  async function saveProgressToAPI(courseId, progObj){
-    const token = getToken();
-    const res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(courseId) + "/progress", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + token },
-      body: JSON.stringify({ progress: progObj })
-    });
-    if(!res.ok) throw new Error("progress api failed");
   }
 
   async function markDone(){
-    if(ACTIVE_INDEX<0) return;
-    const s = STEPS[ACTIVE_INDEX];
-    PROG[s.id] = true;
+    const id = state.activeLessonId;
+    if(!id) return;
+    if(isLessonDone(id)) return;
 
-    // Try API save; fallback localStorage
-    try{
-      await saveProgressToAPI(COURSE.id, PROG);
-      setOk("Progress saqlandi (API).");
-    }catch(e){
-      writeProgress(ME._id || ME.id || ME.username, COURSE.id, PROG);
-      setOk("Progress saqlandi (demo/localStorage).");
+    state.progress.doneLessonIds.push(String(id));
+    // dedupe
+    state.progress.doneLessonIds = [...new Set(state.progress.doneLessonIds.map(String))];
+    await saveProgress(state.me._id || state.me.id || state.me.username, state.course.id, state.progress);
+
+    setOk("Dars tugallandi. Progress saqlandi.");
+    renderProgress();
+    renderLessonList();
+
+    // auto open next if available and not locked
+    const cur = state.lessons.find(x=>String(x.id)===String(id));
+    if(cur && cur.idx < state.lessons.length-1){
+      const next = state.lessons[cur.idx+1];
+      if(next && !isLessonLocked(next.idx)) openLesson(next.id);
     }
 
-    document.getElementById("viewerMeta").textContent = `Turi: ${s.type.toUpperCase()} • Holat: Bajarildi`;
-    document.getElementById("markDoneBtn").style.display = "none";
-    document.getElementById("nextBtn").disabled = false;
-    renderSteps();
+    await updateCertificateUI();
   }
 
-  function goNext(){
-    if(ACTIVE_INDEX<0) return;
-    const cur = STEPS[ACTIVE_INDEX];
-    if(PROG[cur.id]!==true){
-      setErr("Avval joriy bo‘limni 'Bajarildi' qiling.");
+  function continueFromLast(){
+    const last = state.progress.lastLessonId;
+    if(last){
+      const l = state.lessons.find(x=>String(x.id)===String(last));
+      if(l && !isLessonLocked(l.idx)) { openLesson(l.id); return; }
+    }
+    // else first unlocked not done
+    const idx = state.lessons.findIndex((l,i)=> !isLessonLocked(i) && !isLessonDone(l.id));
+    if(idx>=0) openLesson(state.lessons[idx].id);
+    else if(state.lessons[0]) openLesson(state.lessons[0].id);
+  }
+
+  async function updateCertificateUI(){
+    const { pct } = calcPercent();
+    const certBtn = $("certificateBtn");
+    const contBtn = $("continueBtn");
+
+    contBtn.style.display = state.lessons.length ? "inline-flex" : "none";
+    contBtn.onclick = continueFromLast;
+
+    // Default: certificate only when 100%
+    if(pct < 100){
+      certBtn.style.display = "none";
+      $("certHint").textContent = "Sertifikat sharti: kurs progress 100%.";
       return;
     }
-    const nextIndex = ACTIVE_INDEX + 1;
-    if(nextIndex < STEPS.length && canOpenStep(nextIndex)){
-      openStep(nextIndex);
+
+    // At 100%, try API check (optional: require testPassed too)
+    const apiEligible = await checkCertificate(state.course.id);
+    if(apiEligible === true){
+      certBtn.style.display = "inline-flex";
+      $("certHint").textContent = "Sertifikat olish mumkin (server tasdiqladi).";
+    }else if(apiEligible === false){
+      certBtn.style.display = "none";
+      $("certHint").textContent = "Server bo‘yicha sertifikat hozircha ruxsat berilmadi (ehtimol test sharti).";
+    }else{
+      // Unknown: allow navigation with parameters
+      certBtn.style.display = "inline-flex";
+      $("certHint").textContent = "Progress 100%. Sertifikat sahifasida yakuniy tekshiruv bo‘lishi mumkin.";
     }
+
+    certBtn.href = "/certificate.html?type=course&sourceId=" + encodeURIComponent(state.course.id);
   }
+
+  $("markDoneBtn").addEventListener("click", markDone);
+  $("nextBtn").addEventListener("click", ()=>{
+    const cur = state.lessons.find(x=>String(x.id)===String(state.activeLessonId));
+    if(!cur) return;
+    const next = state.lessons[cur.idx+1];
+    if(!next) return;
+    if(isLessonLocked(next.idx)){ setErr("Keyingi dars hozircha bloklangan."); return; }
+    openLesson(next.id);
+  });
 
   async function init(){
     const courseId = qs("id");
-    if(!courseId){ setErr("Kurs ID topilmadi."); return; }
+    if(!courseId){ setErr("Course ID topilmadi. course.html dan kiring."); return; }
 
-    ME = await apiMe();
-    if(!ME) return;
-    setHeader(ME);
+    const me = await apiMe();
+    if(!me) return;
+    setRoleUI(me);
 
-    // Access control: student must be joined
-    const role = (ME.role||"student").toLowerCase();
-    const uid = ME._id || ME.id || ME.username;
-
-    // Load course
-    try{
-      COURSE = await fetchCourseFromAPI(courseId);
-    }catch(e){
-      try{ COURSE = fetchCourseFromDemo(courseId); }
-      catch{ setErr("Kurs topilmadi."); return; }
-    }
-    setCourseInfo(COURSE);
-
-    if(role === "student"){
-      const joined = readJoined(uid);
-      const ok = joined.some(x=>String(x)===String(COURSE.id));
-      if(!ok){
-        setErr("Siz bu kursga qo‘shilmagansiz. Avval course.html orqali qo‘shiling.");
-        return;
-      }
-    }
-
-    // Load content
-    try{
-      STEPS = await fetchContentFromAPI(COURSE.id);
-    }catch(e){
-      seedDemoContentIfMissing(COURSE);
-      STEPS = readDemoContent(COURSE.id);
-    }
-
-    if(!STEPS.length){
-      setErr("Bu kursda hozircha materiallar yo‘q.");
+    const role = String(me.role || "student").toLowerCase();
+    if(role !== "student" && role !== "admin"){
+      setErr("Bu sahifa student flow uchun. Teacher uchun teacher dashboard ishlatiladi.");
       return;
     }
 
-    // Load progress
-    PROG = readProgress(uid, COURSE.id) || {};
+    const c = await fetchCourse(courseId);
+    state.course = c;
 
-    renderSteps();
-    // Auto open first available
-    const first = STEPS.findIndex((s,idx)=> canOpenStep(idx));
-    openStep(first>=0 ? first : 0);
+    // student must be joined: API check optional; local fallback uses joinedCourses list
+    // If you want strict check, enable it in backend. Here we allow access for smoother demo.
+
+    renderHeader();
+
+    // lessons
+    const rawLessons = Array.isArray(c.lessons) ? c.lessons : [];
+    const lessons = rawLessons.length
+      ? rawLessons.map((x,i)=> normalizeLesson(x,i))
+      : seedDemoLessons(c).map((x,i)=> normalizeLesson(x,i));
+    state.lessons = lessons.map((x,i)=> ({...x, idx:i}));
+
+    // progress
+    const uid = me._id || me.id || me.username;
+    state.progress = await fetchProgress(uid, c.id);
+
+    // fix progress list: remove invalid ids
+    const valid = new Set(state.lessons.map(l=>String(l.id)));
+    state.progress.doneLessonIds = (state.progress.doneLessonIds || []).filter(id=> valid.has(String(id)));
+
+    renderProgress();
+
+    // initial active
+    const last = state.progress.lastLessonId;
+    state.activeLessonId = last && valid.has(String(last)) ? String(last) : (state.lessons[0] ? String(state.lessons[0].id) : "");
+    renderLessonList();
+
+    // open a lesson automatically (continue flow)
+    if(state.activeLessonId){
+      // ensure not locked
+      const l = state.lessons.find(x=>String(x.id)===String(state.activeLessonId));
+      if(l && !isLessonLocked(l.idx)) openLesson(l.id);
+      else continueFromLast();
+    }
+
+    await updateCertificateUI();
+
+    // link tests: if course has testId, deep-link test.html?id=
+    if(c.testId){
+      $("goTestsBtn").href = "/test.html?id=" + encodeURIComponent(c.testId) + "&courseId=" + encodeURIComponent(c.id);
+    }else{
+      $("goTestsBtn").href = "/tests.html?courseId=" + encodeURIComponent(c.id);
+    }
   }
 
-  document.getElementById("logoutBtn").addEventListener("click", ()=>{
-    localStorage.removeItem("token");
-    location.href="/login.html";
-  });
-
-  document.getElementById("markDoneBtn").addEventListener("click", markDone);
-  document.getElementById("nextBtn").addEventListener("click", goNext);
-
-  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+  init().catch(e=> setErr(e?.message || "Xatolik yuz berdi."));
 </script>
 </body>
 </html>

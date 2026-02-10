@@ -3,57 +3,157 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Kurs</title>
+  <title>Kurs — QDTU LMS</title>
   <style>
-    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f6f7fb;color:#111}
-    header{background:#111827;color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-    header .left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    header .badge{background:#2563eb;padding:6px 10px;border-radius:999px;font-size:12px}
-    header .badge.student{background:#10b981}
-    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px;background:rgba(255,255,255,.08)}
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
+      --primary:#2563eb; --primary2:#7c3aed; --danger:#ef4444; --ok:#10b981; --warn:#f59e0b;
+      --shadow: 0 18px 50px rgba(2,6,23,.10);
+      --ring: 0 0 0 4px rgba(37,99,235,.18);
+      --grid: rgba(15,23,42,.06);
+    }
+    .dark{
+      --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --border:#223047;
+      --shadow: 0 20px 70px rgba(0,0,0,.45);
+      --grid: rgba(148,163,184,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text)}
+    .bg{
+      position:fixed; inset:0; z-index:-2;
+      background:
+        radial-gradient(1100px 500px at 10% 10%, rgba(37,99,235,.22), transparent 60%),
+        radial-gradient(900px 500px at 92% 18%, rgba(124,58,237,.18), transparent 60%),
+        radial-gradient(900px 600px at 50% 92%, rgba(16,185,129,.14), transparent 60%),
+        linear-gradient(180deg, var(--bg), var(--bg));
+    }
+    .gridbg{
+      position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 72%);
+      opacity:.85;
+    }
+
+    header{
+      position:sticky; top:0; z-index:50;
+      padding:14px 16px;
+      backdrop-filter: blur(10px);
+      background: color-mix(in oklab, var(--bg) 72%, transparent);
+      border-bottom:1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    }
+    .nav{
+      max-width:1100px; margin:0 auto;
+      display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    }
+    .brand{display:flex; align-items:center; gap:10px}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      box-shadow: var(--shadow);
+    }
+    .pills{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .pill{font-size:12px; padding:7px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 80%, transparent); background: color-mix(in oklab, var(--card) 85%, transparent)}
+    .badge{font-weight:900; letter-spacing:.6px}
+    .badge.student{color:var(--ok)}
+    .badge.teacher{color:color-mix(in oklab, var(--primary) 88%, white)}
+    .badge.admin{color:var(--warn)}
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      color:var(--text);
+      padding:10px 12px; border-radius:12px; text-decoration:none; cursor:pointer;
+      box-shadow: 0 1px 0 rgba(0,0,0,.03);
+      transition: transform .08s ease, filter .12s ease, background .12s ease;
+      user-select:none;
+      font-weight:650;
+    }
+    .btn:hover{filter:brightness(1.02)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background: linear-gradient(135deg, var(--primary), var(--primary2)); color:#fff; border-color:transparent}
+    .btn.danger{background: linear-gradient(135deg, #ef4444, #fb7185); color:#fff; border-color:transparent}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:8px 10px; border-radius:11px; font-size:13px; font-weight:700}
+
     .container{max-width:1100px;margin:18px auto;padding:0 16px}
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
-    .card h2{margin:0 0 10px 0;font-size:20px}
-    .muted{color:#6b7280;font-size:13px;line-height:1.45}
-    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    .btn{display:inline-block;border:1px solid #d1d5db;background:#fff;color:#111827;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:14px;cursor:pointer}
-    .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
-    .btn.danger{background:#ef4444;border-color:#ef4444;color:#fff}
-    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
-    .tag{display:inline-block;font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid #e5e7eb;background:#f9fafb;color:#111827}
-    .tag.paid{border-color:#bfdbfe;background:#eff6ff}
-    .tag.free{border-color:#a7f3d0;background:#ecfdf5}
-    .tag.lock{border-color:#fecaca;background:#fef2f2}
-    .tag.open{border-color:#fde68a;background:#fffbeb}
+    .card{
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:16px; padding:16px;
+      box-shadow: 0 8px 28px rgba(2,6,23,.06);
+    }
     .col-12{grid-column:span 12}
     .col-7{grid-column:span 7}
     .col-5{grid-column:span 5}
-    @media (max-width:980px){
-      .col-7,.col-5{grid-column:span 12}
+    @media (max-width:980px){ .col-7,.col-5{grid-column:span 12} }
+
+    .muted{color:var(--muted);font-size:13px;line-height:1.55}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .err,.ok{
+      border-radius:14px; padding:12px 14px; margin:14px 0; display:none;
+      border:1px solid transparent;
     }
-    .err{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
-    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
-    .cover{width:100%;border-radius:12px;border:1px solid #e5e7eb;max-height:260px;object-fit:cover;display:none}
-    .ytWrap{aspect-ratio:16/9;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;display:none}
+    .err{background: color-mix(in oklab, #ffedd5 65%, var(--card)); border-color:#fed7aa; color:#9a3412}
+    .ok{background: color-mix(in oklab, #dcfce7 50%, var(--card)); border-color:#86efac; color:#065f46}
+
+    .tag{display:inline-flex; gap:8px; align-items:center; font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent)}
+    .tag.free{border-color:#86efac; background: color-mix(in oklab, #dcfce7 35%, var(--card))}
+    .tag.paid{border-color:#93c5fd; background: color-mix(in oklab, #dbeafe 35%, var(--card))}
+    .tag.open{border-color:#fde68a; background: color-mix(in oklab, #fef9c3 35%, var(--card))}
+    .tag.lock{border-color:#fecaca; background: color-mix(in oklab, #fee2e2 35%, var(--card))}
+    .tag.chip{padding:6px 10px; font-weight:900}
+
+    .cover{
+      width:100%; max-height:290px; object-fit:cover; border-radius:14px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      display:none;
+    }
+    .ytWrap{
+      aspect-ratio:16/9; border-radius:14px; overflow:hidden;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      display:none;
+      background: color-mix(in oklab, var(--card) 94%, transparent);
+    }
     .ytWrap iframe{width:100%;height:100%;border:0}
-    footer{padding:20px 16px;color:#6b7280;text-align:center}
-    .tiny{font-size:12px;color:#6b7280}
-    code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
+    .divider{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:12px 0}
+    .tiny{font-size:12px;color:var(--muted)}
+    footer{padding:18px 16px;color:var(--muted);text-align:center}
+    code{background:color-mix(in oklab, var(--card) 92%, transparent);border:1px solid color-mix(in oklab, var(--border) 85%, transparent);border-radius:10px;padding:2px 7px}
+    .cta{padding:12px;border-radius:16px;border:1px dashed color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent)}
   </style>
+  <script>
+    (function(){
+      const key="theme";
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark ? "dark" : "light");
+      if(mode==="dark") document.documentElement.classList.add("dark");
+    })();
+  </script>
 </head>
 <body>
+  <div class="bg"></div><div class="gridbg"></div>
+
   <header>
-    <div class="left">
-      <div style="font-weight:700">QDTU LMS</div>
-      <div id="roleBadge" class="badge student">Student</div>
-      <div id="mePill" class="pill" style="display:none"></div>
-    </div>
-    <div class="row">
-      <a class="btn ghost" href="/courses.html">Kurslar</a>
-      <a class="btn ghost" id="dashLink" href="/student-dashboard.html">Dashboard</a>
-      <a class="btn ghost" href="/profile.html">Profil</a>
-      <button class="btn danger" id="logoutBtn">Chiqish</button>
+    <div class="nav">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="pills">
+          <span id="roleBadge" class="pill badge student">STUDENT</span>
+          <span id="mePill" class="pill" style="display:none"></span>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn ghost small" id="themeBtn" title="Tema">🌓 Tema</button>
+        <a class="btn ghost small" href="/courses.html">Kurslar</a>
+        <a class="btn ghost small" id="dashLink" href="/student-dashboard.html">Dashboard</a>
+        <a class="btn ghost small" href="/tests.html">Testlar</a>
+        <button class="btn danger small" id="logoutBtn">Chiqish</button>
+      </div>
     </div>
   </header>
 
@@ -64,87 +164,131 @@
     <div class="grid">
       <div class="card col-7">
         <img id="coverImg" class="cover" alt="cover"/>
-        <h2 id="title">Yuklanmoqda...</h2>
-        <div class="row" style="margin-top:8px">
-          <span id="tagPrice" class="tag">-</span>
-          <span id="tagStatus" class="tag">-</span>
-          <span id="tagFaculty" class="tag">-</span>
-        </div>
-        <div class="muted" id="desc" style="margin-top:12px">-</div>
+        <h2 id="title" style="margin:0 0 6px 0; font-size:20px">Yuklanmoqda...</h2>
 
-        <div class="row" style="margin-top:14px">
-          <div class="muted"><b>O‘qituvchi:</b> <span id="teacher">-</span></div>
+        <div class="row" style="margin-top:8px">
+          <span id="tagPrice" class="tag chip">—</span>
+          <span id="tagStatus" class="tag chip">—</span>
+          <span id="tagFaculty" class="tag chip">—</span>
+        </div>
+
+        <div class="muted" id="desc" style="margin-top:12px">—</div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <div class="muted"><b>O‘qituvchi:</b> <span id="teacher">—</span></div>
         </div>
         <div class="row" style="margin-top:6px">
-          <div class="muted"><b>Guruhlar:</b> <span id="groups">-</span></div>
+          <div class="muted"><b>Guruhlar:</b> <span id="groups">—</span></div>
         </div>
 
         <div class="row" style="margin-top:14px">
           <button class="btn primary" id="joinBtn" style="display:none">Kursga qo‘shilish</button>
           <a class="btn primary" id="openBtn" href="#" style="display:none">Kursni ochish</a>
-          <a class="btn" id="editBtn" href="#" style="display:none">Edit (teacher)</a>
+          <a class="btn" id="editBtn" href="#" style="display:none">Teacher: Tahrirlash</a>
         </div>
 
         <div class="tiny" id="joinHint" style="margin-top:10px;display:none"></div>
+
+        <div class="cta" style="margin-top:14px">
+          <div style="font-weight:900">Keyingi qadam</div>
+          <div class="tiny" style="margin-top:6px">
+            Kursga qo‘shilgandan so‘ng <code>joinedcourse.html</code> sahifasida darslarni ketma-ket bajarish va progress saqlash ishlaydi.
+            Kursni to‘liq tugatsangiz <code>certificate.html</code> orqali sertifikat olish mumkin (backend tekshiradi).
+          </div>
+        </div>
       </div>
 
       <div class="card col-5">
-        <h3>Preview</h3>
+        <h3 style="margin:0 0 10px 0">Preview</h3>
         <div class="muted">YouTube preview bo‘lsa shu yerda ko‘rinadi.</div>
+
         <div style="margin-top:12px" class="ytWrap" id="ytWrap">
           <iframe id="ytFrame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
 
-        <div class="card" style="margin-top:14px;background:#f9fafb">
-          <h3 style="margin:0 0 8px 0">Qoidalar</h3>
-          <div class="muted">
-            <ul style="margin:0;padding-left:18px">
-              <li>Student faqat o‘z fakultet/guruhiga mos kursga qo‘shiladi.</li>
-              <li>Pullik kurs: coin student balansidan yechiladi.</li>
-              <li>Teacher balansiga 50% qo‘shiladi (backend bosqichida).</li>
-            </ul>
-          </div>
+        <div class="divider"></div>
+
+        <div class="muted">
+          Qoidalar:
+          <ul style="margin:8px 0 0 18px; padding:0">
+            <li>Student faqat o‘z fakultet/guruhiga mos kursga qo‘shiladi.</li>
+            <li>Pullik kurs: coin student balansidan yechiladi.</li>
+            <li>Teacher balansiga 50% qo‘shiladi (server83.js logikasiga mos).</li>
+          </ul>
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          Backend endpointlar bo‘lsa: <code>POST /api/courses/:id/join</code> yoki <code>/api/join-course</code> ishlaydi.
-          Aks holda demo join localStorage orqali.
+          Join endpoint: <code>POST /api/courses/:id/join</code> (fallback: <code>/api/join-course</code>).
         </div>
       </div>
     </div>
   </div>
 
-  <footer>
-    Qarshi Davlat Texnika Universiteti — LMS (Course)
-  </footer>
+  <footer>Qarshi Davlat Texnika Universiteti — LMS (Course)</footer>
 
 <script>
   const API_BASE = "";
+  const $ = (id)=> document.getElementById(id);
+
   function getToken(){ return localStorage.getItem("token") || ""; }
   function qs(name){ return new URLSearchParams(location.search).get(name); }
 
-  function setErr(msg){
-    const box = document.getElementById("errBox");
-    box.textContent = msg; box.style.display = "block";
-    document.getElementById("okBox").style.display = "none";
-  }
-  function setOk(msg){
-    const box = document.getElementById("okBox");
-    box.textContent = msg; box.style.display = "block";
-    document.getElementById("errBox").style.display = "none";
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
   }
 
-  function demoKey(){ return "demoCourses_v1"; }
-  function readDemoCourses(){
-    try { return JSON.parse(localStorage.getItem(demoKey()) || "[]"); } catch { return []; }
+  function setErr(msg){
+    const box = $("errBox");
+    box.textContent = msg; box.style.display = "block";
+    $("okBox").style.display = "none";
   }
+  function setOk(msg){
+    const box = $("okBox");
+    box.textContent = msg; box.style.display = "block";
+    $("errBox").style.display = "none";
+  }
+  function clearMsg(){ $("errBox").style.display="none"; $("okBox").style.display="none"; }
+
+  async function apiFetch(url, opts={}){
+    const token = getToken();
+    const headers = Object.assign({}, opts.headers || {});
+    if(token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + url, Object.assign({}, opts, { headers }));
+    let data = null;
+    const ct = res.headers.get("content-type") || "";
+    if(ct.includes("application/json")){
+      try{ data = await res.json(); }catch{ data = null; }
+    }else{
+      try{ data = await res.text(); }catch{ data = null; }
+    }
+    if(!res.ok){
+      const msg = (data && data.error) ? data.error : ("So'rov xatosi: " + res.status);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  $("themeBtn").addEventListener("click", ()=>{
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+  });
+
+  // demo storage (for offline)
+  function demoKey(){ return "demoCourses_v2"; }
+  function readDemoCourses(){ try{ return JSON.parse(localStorage.getItem(demoKey()) || "[]"); }catch{ return []; } }
   function joinedKey(userId){ return "joinedCourses_v1_" + (userId || "anon"); }
-  function readJoined(userId){
-    try { return JSON.parse(localStorage.getItem(joinedKey(userId)) || "[]"); } catch { return []; }
-  }
-  function writeJoined(userId, list){
-    localStorage.setItem(joinedKey(userId), JSON.stringify(list));
-  }
+  function readJoined(userId){ try{ return JSON.parse(localStorage.getItem(joinedKey(userId)) || "[]"); }catch{ return []; } }
+  function writeJoined(userId, list){ localStorage.setItem(joinedKey(userId), JSON.stringify(list)); }
 
   function normalizeCourse(raw){
     return {
@@ -163,58 +307,53 @@
     };
   }
 
-  function courseTagHTML(c){
-    const t = c.type === "paid" ? `Pullik: ${c.price||0} coin` : `Bepul`;
-    const st = (c.status||"published") === "published" ? `Published` : `Draft`;
+  function courseTags(course){
+    const t = course.type === "paid" ? `Pullik: ${Number(course.price||0)} coin` : `Bepul`;
+    const st = (course.status||"published") === "published" ? `Published` : `Draft`;
     return { t, st };
   }
 
   async function apiMe(){
     const token = getToken();
     if(!token){ location.href = "/login.html"; return null; }
-    const res = await fetch(API_BASE + "/api/me", { headers: { "Authorization": "Bearer " + token } });
-    if(!res.ok){
+    try{
+      return await apiFetch("/api/me");
+    }catch(e){
       localStorage.removeItem("token");
-      location.href = "/login.html";
+      location.href="/login.html";
       return null;
     }
-    return await res.json();
   }
 
   async function fetchCourseFromAPI(id){
-    const token = getToken();
-    let res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(id), { headers: { "Authorization":"Bearer " + token } });
-    if(res.ok){
-      const data = await res.json();
+    // try direct
+    try{
+      const data = await apiFetch("/api/courses/" + encodeURIComponent(id));
       return normalizeCourse(data.course || data);
+    }catch(e){
+      // fallback list + find
+      const data = await apiFetch("/api/courses");
+      const list = Array.isArray(data) ? data : (data.courses || []);
+      const c = list.map(normalizeCourse).find(x=>String(x.id)===String(id));
+      if(!c) throw new Error("Kurs topilmadi.");
+      return c;
     }
-    // fallback: list + find
-    res = await fetch(API_BASE + "/api/courses", { headers: { "Authorization":"Bearer " + token } });
-    if(!res.ok) throw new Error("API not available");
-    const data = await res.json();
-    const list = Array.isArray(data) ? data : (data.courses || []);
-    const c = list.map(normalizeCourse).find(x=>String(x.id)===String(id));
-    if(!c) throw new Error("Not found");
-    return c;
   }
 
   function fetchCourseFromDemo(id){
     const list = readDemoCourses().map(normalizeCourse);
     const c = list.find(x=>String(x.id)===String(id));
-    if(!c) throw new Error("Kurs topilmadi (demo)");
+    if(!c) throw new Error("Kurs topilmadi (demo).");
     return c;
   }
 
   function canStudentJoin(course, me){
-    // if draft, only teacher/admin can view
     if((course.status||"published") !== "published") return { ok:false, reason:"Bu kurs hozircha draft." };
 
-    // faculty restriction
     if(course.faculty && me.faculty && course.faculty !== me.faculty){
       return { ok:false, reason:"Bu kurs boshqa fakultet uchun." };
     }
 
-    // group restriction
     const allowedGroups = Array.isArray(course.groups) ? course.groups.filter(Boolean) : [];
     if(allowedGroups.length){
       if(!me.group) return { ok:false, reason:"Sizda guruh belgilanmagan." };
@@ -223,11 +362,10 @@
       if(!ok) return { ok:false, reason:"Bu kurs sizning guruhingiz uchun ochiq emas." };
     }
 
-    // paid check
     if(course.type === "paid"){
       const coins = Number(me.coins ?? me.coin ?? 0);
       if(coins < Number(course.price||0)){
-        return { ok:false, reason:"Coin yetarli emas." };
+        return { ok:false, reason:"Coin yetarli emas. Balansni to‘ldiring." };
       }
     }
 
@@ -238,7 +376,6 @@
     if(!url) return "";
     try{
       const u = new URL(url);
-      // youtu.be/ID or youtube.com/watch?v=ID or /embed/ID
       let id = "";
       if(u.hostname.includes("youtu.be")){
         id = u.pathname.replace("/","");
@@ -254,89 +391,86 @@
     }
   }
 
-  function escapeHtml(str){
-    return String(str||"")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+  function setRoleUI(me){
+    const role = String(me.role || "student").toLowerCase();
+    const badge = $("roleBadge");
+    badge.classList.remove("student","teacher","admin");
+    badge.classList.add(role==="teacher" ? "teacher" : role==="admin" ? "admin" : "student");
+    badge.textContent = role.toUpperCase();
+
+    const name = me.fullname || me.name || me.username || "—";
+    const group = me.group || "Guruh yo‘q";
+    const faculty = me.faculty || "Fakultet yo‘q";
+    $("mePill").textContent = `${name} • ${faculty} • ${group}`;
+    $("mePill").style.display = "inline-flex";
+
+    $("dashLink").href = role==="teacher" ? "/teacher-dashboard.html"
+      : role==="admin" ? "/admin-dashboard.html"
+      : "/student-dashboard.html";
   }
 
   function render(course, me){
-    const role = (me.role || "student").toLowerCase();
+    const role = String(me.role || "student").toLowerCase();
     const isTeacher = role === "teacher";
     const isStudent = role === "student";
     const isAdmin = role === "admin";
 
-    // top header
-    const badge = document.getElementById("roleBadge");
-    badge.textContent = isTeacher ? "Teacher" : isAdmin ? "Admin" : "Student";
-    badge.classList.toggle("student", !isTeacher);
-    badge.style.background = isTeacher ? "#2563eb" : (isAdmin ? "#f59e0b" : "#10b981");
+    setRoleUI(me);
 
-    const mePill = document.getElementById("mePill");
-    mePill.textContent = (me.fullname || me.name || me.username || "") + " • " + (me.group || "Guruh yo‘q");
-    mePill.style.display = "inline-block";
+    $("title").textContent = course.title || "Kurs";
+    $("desc").textContent = course.description || "—";
+    $("teacher").textContent = course.teacherName || "—";
+    $("groups").innerHTML = (course.groups && course.groups.length) ? escapeHtml(course.groups.join(", ")) : "<span class='tag'>Ochiq</span>";
 
-    document.getElementById("dashLink").href = isTeacher ? "/teacher-dashboard.html" : isAdmin ? "/admin-dashboard.html" : "/student-dashboard.html";
-
-    // course data
-    document.getElementById("title").textContent = course.title || "Kurs";
-    document.getElementById("desc").textContent = course.description || "-";
-    document.getElementById("teacher").textContent = course.teacherName || "-";
-    document.getElementById("groups").innerHTML = (course.groups && course.groups.length) ? escapeHtml(course.groups.join(", ")) : "<span class='tag'>Ochiq</span>";
-
-    const tags = courseTagHTML(course);
-    const tagPrice = document.getElementById("tagPrice");
+    const tags = courseTags(course);
+    const tagPrice = $("tagPrice");
     tagPrice.textContent = tags.t;
-    tagPrice.className = "tag " + (course.type==="paid" ? "paid" : "free");
+    tagPrice.className = "tag chip " + (course.type==="paid" ? "paid" : "free");
 
-    const tagStatus = document.getElementById("tagStatus");
+    const tagStatus = $("tagStatus");
     tagStatus.textContent = tags.st;
-    tagStatus.className = "tag " + ((course.status||"published")==="published" ? "open" : "lock");
+    tagStatus.className = "tag chip " + ((course.status||"published")==="published" ? "open" : "lock");
 
-    const tagFaculty = document.getElementById("tagFaculty");
-    tagFaculty.textContent = course.faculty || "Fakultet: -";
-    tagFaculty.className = "tag";
+    const tagFaculty = $("tagFaculty");
+    tagFaculty.textContent = course.faculty || "—";
 
-    // cover
-    if(course.coverUrl){
-      const img = document.getElementById("coverImg");
-      img.src = course.coverUrl;
-      img.style.display = "block";
+    const coverImg = $("coverImg");
+    const cover = String(course.coverUrl || "").trim();
+    if(cover){
+      coverImg.src = cover;
+      coverImg.style.display = "block";
+      coverImg.addEventListener("error", ()=>{ coverImg.style.display="none"; });
     }
 
-    // youtube
-    const emb = youtubeEmbed(course.youtubeUrl);
-    if(emb){
-      document.getElementById("ytWrap").style.display = "block";
-      document.getElementById("ytFrame").src = emb;
+    const embed = youtubeEmbed(course.youtubeUrl || "");
+    if(embed){
+      $("ytFrame").src = embed;
+      $("ytWrap").style.display = "block";
     }
 
-    // Buttons
-    const joinBtn = document.getElementById("joinBtn");
-    const openBtn = document.getElementById("openBtn");
-    const editBtn = document.getElementById("editBtn");
-    const hint = document.getElementById("joinHint");
+    const uid = me._id || me.id || me.username;
+    const joined = readJoined(uid);
+    const already = joined.some(x=>String(x)===String(course.id));
+
+    const joinBtn = $("joinBtn");
+    const openBtn = $("openBtn");
+    const editBtn = $("editBtn");
+    const hint = $("joinHint");
 
     joinBtn.style.display = "none";
     openBtn.style.display = "none";
     editBtn.style.display = "none";
     hint.style.display = "none";
 
-    // teacher can edit his course (in this version -> opens create modal in courses page)
     if(isTeacher){
-      editBtn.style.display = "inline-block";
-      editBtn.href = "/courses.html?mode=teacher#edit=" + encodeURIComponent(course.id);
+      editBtn.style.display = "inline-flex";
+      editBtn.href = "/courses.html#edit=" + encodeURIComponent(course.id);
     }
 
     // student flow
     if(isStudent){
-      const joined = readJoined(me._id || me.id || me.username);
-      const already = joined.some(x=>String(x)===String(course.id));
       if(already){
-        openBtn.style.display = "inline-block";
+        openBtn.style.display = "inline-flex";
         openBtn.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id);
         hint.style.display = "block";
         hint.textContent = "Siz bu kursga qo‘shilgansiz. Davom etish uchun “Kursni ochish” ni bosing.";
@@ -344,27 +478,32 @@
       }
 
       const check = canStudentJoin(course, me);
+      hint.style.display = "block";
       if(check.ok){
-        joinBtn.style.display = "inline-block";
-        hint.style.display = "block";
+        joinBtn.style.display = "inline-flex";
         hint.textContent = (course.type==="paid")
-          ? `Bu kurs pullik. Narx: ${course.price||0} coin. “Kursga qo‘shilish” bosilganda coin yechish backend orqali bajariladi.`
+          ? `Bu kurs pullik. Narx: ${Number(course.price||0)} coin. “Kursga qo‘shilish” bosilganda coin yechish server83.js backend’da bajariladi.`
           : "Bu kurs bepul. “Kursga qo‘shilish” ni bosing.";
       }else{
-        hint.style.display = "block";
         hint.textContent = "Qo‘shilish mumkin emas: " + check.reason;
       }
+    }
+
+    // admin can open course like viewer
+    if(isAdmin){
+      openBtn.style.display = "inline-flex";
+      openBtn.textContent = "Admin: ko‘rish (joined)";
+      openBtn.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id);
+      hint.style.display = "block";
+      hint.textContent = "Admin rejimi: kursni tekshirish uchun ochib ko‘rishingiz mumkin.";
     }
   }
 
   async function tryJoin(course, me){
+    clearMsg();
     const check = canStudentJoin(course, me);
-    if(!check.ok){
-      setErr("Qo‘shilish mumkin emas: " + check.reason);
-      return;
-    }
+    if(!check.ok){ setErr("Qo‘shilish mumkin emas: " + check.reason); return; }
 
-    // Try API
     try{
       const token = getToken();
       let res = await fetch(API_BASE + "/api/courses/" + encodeURIComponent(course.id) + "/join", {
@@ -372,36 +511,43 @@
         headers: { "Authorization":"Bearer " + token }
       });
       if(!res.ok){
-        // alt endpoint
         res = await fetch(API_BASE + "/api/join-course", {
           method: "POST",
           headers: { "Content-Type":"application/json", "Authorization":"Bearer " + token },
           body: JSON.stringify({ courseId: course.id })
         });
       }
-      if(!res.ok) throw new Error("API join failed");
+      if(!res.ok){
+        const data = await res.json().catch(()=> ({}));
+        throw new Error(data.error || "API join failed");
+      }
+
       setOk("Kursga qo‘shildingiz (API). Yo‘naltirilmoqda...");
-      setTimeout(()=> location.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id), 600);
+      setTimeout(()=> location.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id), 550);
       return;
     }catch(e){
-      // Demo join: store in localStorage (coin subtraction is demo only)
+      // Demo join
       const uid = me._id || me.id || me.username;
       const joined = readJoined(uid);
       if(!joined.includes(course.id)){
         joined.push(course.id);
         writeJoined(uid, joined);
       }
-      // demo: coin subtract locally (UI only)
+      // demo: coin subtract UI-only
       if(course.type==="paid"){
         const curCoins = Number(me.coins ?? me.coin ?? 0);
         const newCoins = Math.max(0, curCoins - Number(course.price||0));
-        // cannot update server coins; store in localStorage cache for UI demonstration
         localStorage.setItem("demoCoins_override_" + uid, String(newCoins));
       }
       setOk("Kursga qo‘shildingiz (demo). Yo‘naltirilmoqda...");
-      setTimeout(()=> location.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id), 600);
+      setTimeout(()=> location.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id), 550);
     }
   }
+
+  $("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token");
+    location.href = "/login.html";
+  });
 
   async function init(){
     const id = qs("id");
@@ -410,7 +556,7 @@
     const me = await apiMe();
     if(!me) return;
 
-    // apply demo coins override if exists
+    // apply demo coins override if exists (UI)
     const uid = me._id || me.id || me.username;
     const override = localStorage.getItem("demoCoins_override_" + uid);
     if(override !== null){
@@ -424,13 +570,13 @@
       try{
         course = fetchCourseFromDemo(id);
       }catch(err){
-        setErr("Kurs topilmadi.");
+        setErr(err?.message || "Kurs topilmadi.");
         return;
       }
     }
 
-    // if draft and student -> block
-    const role = (me.role || "student").toLowerCase();
+    // student cannot see draft
+    const role = String(me.role || "student").toLowerCase();
     if(role === "student" && (course.status||"published") !== "published"){
       setErr("Bu kurs draft holatda. Studentlar uchun yopiq.");
       return;
@@ -438,16 +584,10 @@
 
     render(course, me);
 
-    const joinBtn = document.getElementById("joinBtn");
-    joinBtn.addEventListener("click", ()=> tryJoin(course, me));
+    $("joinBtn").addEventListener("click", ()=> tryJoin(course, me));
   }
 
-  document.getElementById("logoutBtn").addEventListener("click", ()=>{
-    localStorage.removeItem("token");
-    location.href = "/login.html";
-  });
-
-  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+  init().catch((e)=> setErr(e?.message || "Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
 </script>
 </body>
 </html>

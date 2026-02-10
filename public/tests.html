@@ -3,63 +3,197 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Testlar</title>
+  <title>Testlar — QDTU LMS</title>
   <style>
-    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f6f7fb;color:#111}
-    header{background:#111827;color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-    header .left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    header .badge{background:#10b981;padding:6px 10px;border-radius:999px;font-size:12px}
-    header .badge.teacher{background:#2563eb}
-    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px;background:rgba(255,255,255,.08)}
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
+      --primary:#2563eb; --primary2:#7c3aed; --danger:#ef4444; --ok:#10b981; --warn:#f59e0b;
+      --shadow: 0 18px 50px rgba(2,6,23,.10);
+      --ring: 0 0 0 4px rgba(37,99,235,.18);
+      --grid: rgba(15,23,42,.06);
+    }
+    .dark{
+      --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --border:#223047;
+      --shadow: 0 20px 70px rgba(0,0,0,.45);
+      --grid: rgba(148,163,184,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text)}
+    a{color:inherit}
+    .bg{
+      position:fixed; inset:0; z-index:-2;
+      background:
+        radial-gradient(1100px 500px at 10% 10%, rgba(37,99,235,.22), transparent 60%),
+        radial-gradient(900px 500px at 92% 18%, rgba(124,58,237,.18), transparent 60%),
+        radial-gradient(900px 600px at 50% 92%, rgba(16,185,129,.14), transparent 60%),
+        linear-gradient(180deg, var(--bg), var(--bg));
+    }
+    .gridbg{
+      position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 72%);
+      opacity:.85;
+    }
+
+    header{
+      position:sticky; top:0; z-index:50;
+      padding:14px 16px;
+      backdrop-filter: blur(10px);
+      background: color-mix(in oklab, var(--bg) 72%, transparent);
+      border-bottom:1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    }
+    .nav{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    }
+    .brand{display:flex; align-items:center; gap:10px}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      box-shadow: var(--shadow);
+    }
+    .pills{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .pill{font-size:12px; padding:7px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 80%, transparent); background: color-mix(in oklab, var(--card) 85%, transparent)}
+    .badge{font-weight:900; letter-spacing:.6px}
+    .badge.student{color:var(--ok)}
+    .badge.teacher{color:color-mix(in oklab, var(--primary) 88%, white)}
+    .badge.admin{color:var(--warn)}
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      color:var(--text);
+      padding:10px 12px; border-radius:12px; text-decoration:none; cursor:pointer;
+      box-shadow: 0 1px 0 rgba(0,0,0,.03);
+      transition: transform .08s ease, filter .12s ease, background .12s ease;
+      user-select:none;
+      font-weight:650;
+    }
+    .btn:hover{filter:brightness(1.02)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background: linear-gradient(135deg, var(--primary), var(--primary2)); color:#fff; border-color:transparent}
+    .btn.danger{background: linear-gradient(135deg, #ef4444, #fb7185); color:#fff; border-color:transparent}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:8px 10px; border-radius:11px; font-size:13px; font-weight:800}
+
     .container{max-width:1200px;margin:18px auto;padding:0 16px}
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
-    .card h3{margin:0 0 10px 0;font-size:16px}
-    .muted{color:#6b7280;font-size:13px;line-height:1.45}
-    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    .btn{display:inline-block;border:1px solid #d1d5db;background:#fff;color:#111827;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:14px;cursor:pointer}
-    .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
-    .btn.danger{background:#ef4444;border-color:#ef4444;color:#fff}
-    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
-    .input, select, textarea{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;box-sizing:border-box;background:#fff}
-    label{font-size:13px;color:#374151}
+    .card{
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:16px; padding:16px;
+      box-shadow: 0 8px 28px rgba(2,6,23,.06);
+    }
     .col-12{grid-column:span 12}
     .col-8{grid-column:span 8}
     .col-4{grid-column:span 4}
-    .col-6{grid-column:span 6}
-    .col-3{grid-column:span 3}
-    @media (max-width:980px){
-      .col-8,.col-4,.col-6,.col-3{grid-column:span 12}
+    @media (max-width:980px){ .col-8,.col-4{grid-column:span 12} }
+
+    .muted{color:var(--muted);font-size:13px;line-height:1.55}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .divider{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:12px 0}
+    .tiny{font-size:12px;color:var(--muted)}
+    footer{padding:18px 16px;color:var(--muted);text-align:center}
+
+    .err,.ok{
+      border-radius:14px; padding:12px 14px; margin:14px 0; display:none;
+      border:1px solid transparent;
     }
-    .err{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
-    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
-    .tr{background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-top:10px}
-    .trow{display:grid;grid-template-columns: 2.2fr 1fr 1fr 1fr 1fr;gap:10px;padding:12px 14px;align-items:center}
-    .title{font-weight:700}
-    .tag{display:inline-block;font-size:12px;padding:5px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f9fafb;color:#111827}
-    .tag.open{border-color:#a7f3d0;background:#ecfdf5}
-    .tag.lock{border-color:#fecaca;background:#fef2f2}
-    .tiny{font-size:12px;color:#6b7280}
-    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
-    .modal{max-width:920px;width:100%;background:#fff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden}
-    .modal header{background:#111827;color:#fff;padding:14px 16px}
+    .err{background: color-mix(in oklab, #ffedd5 65%, var(--card)); border-color:#fed7aa; color:#9a3412}
+    .ok{background: color-mix(in oklab, #dcfce7 50%, var(--card)); border-color:#86efac; color:#065f46}
+
+    .input, select, textarea{
+      width:100%; padding:11px 12px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:12px; font-size:14px;
+      background: color-mix(in oklab, var(--card) 95%, transparent);
+      color:var(--text);
+      outline:none;
+    }
+    .input:focus, select:focus, textarea:focus{box-shadow: var(--ring); border-color:transparent}
+
+    .list{display:grid; grid-template-columns:repeat(12,1fr); gap:12px; margin-top:12px}
+    .item{
+      grid-column:span 6;
+      border-radius:16px; overflow:hidden;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      padding:12px;
+      transition: transform .08s ease, filter .12s ease;
+      cursor:pointer;
+    }
+    .item:hover{filter:brightness(1.01)}
+    .item:active{transform:translateY(1px)}
+    @media (max-width:980px){ .item{grid-column:span 12} }
+
+    .title{font-weight:950}
+    .meta{margin-top:6px; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+    .tag{display:inline-flex; gap:8px; align-items:center; font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent); font-weight:900}
+    .tag.open{border-color:#86efac; background: color-mix(in oklab, #dcfce7 35%, var(--card))}
+    .tag.lock{border-color:#fecaca; background: color-mix(in oklab, #fee2e2 35%, var(--card))}
+    .tag.warn{border-color:#fde68a; background: color-mix(in oklab, #fef9c3 35%, var(--card))}
+    code{background:color-mix(in oklab, var(--card) 92%, transparent);border:1px solid color-mix(in oklab, var(--border) 85%, transparent);border-radius:10px;padding:2px 7px}
+
+    .skeleton{
+      border-radius:16px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: linear-gradient(90deg,
+        color-mix(in oklab, var(--card) 92%, transparent) 0%,
+        color-mix(in oklab, var(--card) 80%, transparent) 45%,
+        color-mix(in oklab, var(--card) 92%, transparent) 100%);
+      background-size: 220% 100%;
+      animation: shimmer 1.15s linear infinite;
+      height:130px;
+      grid-column:span 6;
+    }
+    @keyframes shimmer{0%{background-position: 200% 0}100%{background-position:-200% 0}}
+
+    /* modal */
+    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:70}
+    .modal{max-width:980px;width:100%;border-radius:18px;overflow:hidden;background:var(--card);
+      border:1px solid color-mix(in oklab, var(--border) 70%, transparent); box-shadow: var(--shadow);}
+    .modal header{
+      background: linear-gradient(135deg, rgba(37,99,235,.95), rgba(124,58,237,.92));
+      color:#fff; padding:14px 16px; border-bottom:none;
+    }
     .modal .body{padding:16px}
-    code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
-    footer{padding:20px 16px;color:#6b7280;text-align:center}
+    .qrow{display:grid;grid-template-columns: 1.2fr 1fr 1fr; gap:10px; align-items:start; padding:10px; border-radius:14px;
+      border:1px dashed color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent); margin-top:10px}
+    @media (max-width:980px){ .qrow{grid-template-columns:1fr} }
   </style>
+  <script>
+    (function(){
+      const key="theme";
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark ? "dark" : "light");
+      if(mode==="dark") document.documentElement.classList.add("dark");
+    })();
+  </script>
 </head>
 <body>
+  <div class="bg"></div><div class="gridbg"></div>
+
   <header>
-    <div class="left">
-      <div style="font-weight:700">QDTU LMS</div>
-      <div id="roleBadge" class="badge">Student</div>
-      <div id="mePill" class="pill" style="display:none"></div>
-    </div>
-    <div class="row">
-      <a class="btn ghost" href="/courses.html">Kurslar</a>
-      <a class="btn ghost" id="dashLink" href="/student-dashboard.html">Dashboard</a>
-      <a class="btn ghost" href="/profile.html">Profil</a>
-      <button class="btn danger" id="logoutBtn">Chiqish</button>
+    <div class="nav">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="pills">
+          <span id="roleBadge" class="pill badge student">STUDENT</span>
+          <span id="mePill" class="pill" style="display:none"></span>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn ghost small" id="themeBtn">🌓 Tema</button>
+        <a class="btn ghost small" href="/courses.html">Kurslar</a>
+        <a class="btn ghost small" id="dashLink" href="/student-dashboard.html">Dashboard</a>
+        <a class="btn ghost small" href="/certificate.html">Sertifikat</a>
+        <button class="btn danger small" id="logoutBtn">Chiqish</button>
+      </div>
     </div>
   </header>
 
@@ -69,508 +203,563 @@
 
     <div class="grid">
       <div class="card col-8">
-        <h3>Testlar</h3>
-        <div class="muted">
-          Barcha fandan testlar. Filtr va qidiruv bilan. Student — test ishlaydi. Teacher — test yaratadi.
-        </div>
+        <h2 style="margin:0 0 6px 0;font-size:18px">Testlar</h2>
+        <div class="muted">Student — test ishlaydi. Teacher — test yaratadi/tahrirlaydi. Kurs bo‘yicha filtrlash mavjud.</div>
 
-        <div class="row" style="margin-top:12px">
-          <input id="q" class="input" placeholder="Qidirish: test nomi, fan, o‘qituvchi..." style="flex:1;min-width:220px" />
-          <select id="facultyFilter" style="max-width:360px">
-            <option value="">Fakultet (barchasi)</option>
-          </select>
-          <select id="statusFilter" style="max-width:220px">
+        <div class="divider"></div>
+
+        <div class="row">
+          <input id="q" class="input" placeholder="Qidirish: test nomi, kurs, o‘qituvchi..." style="flex:1;min-width:240px" />
+          <select id="statusFilter" style="max-width:260px">
             <option value="">Status (barchasi)</option>
             <option value="published">Published</option>
             <option value="draft">Draft</option>
           </select>
+          <select id="sortSel" style="max-width:260px">
+            <option value="new">Saralash: yangi</option>
+            <option value="old">Saralash: eski</option>
+            <option value="title">Saralash: nom</option>
+          </select>
         </div>
 
         <div class="row" style="margin-top:10px">
-          <input id="groupFilter" class="input" placeholder="Guruh filtri (misol: MMT-520-25)" style="flex:1;min-width:220px" />
-          <input id="subjectFilter" class="input" placeholder="Fan filtri (misol: Fizika)" style="max-width:260px" />
+          <input id="courseFilter" class="input" placeholder="Course ID filter (ixtiyoriy)" style="flex:1;min-width:240px" />
           <button class="btn" id="refreshBtn">Yangilash</button>
           <button class="btn primary" id="createBtn" style="display:none">+ Yangi test</button>
         </div>
+        <div class="tiny" style="margin-top:10px">Course’dan kelganda: <code>?courseId=...</code> bilan avtomatik filtrlanadi.</div>
       </div>
 
       <div class="card col-4">
-        <h3>Qoidalar</h3>
+        <h3 style="margin:0 0 10px 0">Rejim / API</h3>
         <div class="muted">
-          Testlar ham fakultet/guruh bo‘yicha cheklanishi mumkin.
-          Student faqat mos testni ishlaydi.
+          API mavjud bo‘lsa: <code>/api/tests</code> (GET/POST/PUT/DELETE) ishlaydi.
+          Aks holda demo localStorage ishlaydi.
         </div>
-        <div class="tiny" style="margin-top:10px">
-          Backend endpointlar bo‘lsa:
-          <ul style="margin:6px 0 0 18px">
-            <li><code>GET /api/tests</code></li>
-            <li><code>POST /api/tests</code></li>
-            <li><code>PUT /api/tests/:id</code></li>
-          </ul>
-          Aks holda demo: localStorage.
+        <div class="divider"></div>
+        <div class="tiny" id="modeTxt">—</div>
+        <div class="divider"></div>
+        <div class="row">
+          <button class="btn small" id="clearBtn">Filterlarni tozalash</button>
         </div>
       </div>
 
       <div class="card col-12">
-        <div class="row" style="justify-content:space-between">
-          <div class="muted" id="countTxt">Yuklanmoqda...</div>
-          <div class="tiny">API bo‘lmasa demo testlar ishlaydi (localStorage).</div>
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div>
+            <div class="muted" id="countTxt">Yuklanmoqda...</div>
+            <div class="tiny" id="hintTxt">—</div>
+          </div>
         </div>
-        <div id="list" style="margin-top:10px"></div>
+
+        <div id="list" class="list" style="margin-top:12px">
+          <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- CREATE MODAL -->
-  <div id="modalBackdrop" class="modalBackdrop">
+  <!-- CREATE/EDIT MODAL (teacher/admin) -->
+  <div id="modalBackdrop" class="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal">
       <header>
         <div class="row" style="justify-content:space-between;align-items:center">
-          <div style="font-weight:700">Yangi test yaratish</div>
-          <button class="btn ghost" id="closeModalBtn" style="border-color:rgba(255,255,255,.25);color:#fff">Yopish</button>
+          <div style="font-weight:950" id="modalTitle">Yangi test</div>
+          <button class="btn ghost small" id="closeModalBtn" style="border-color:rgba(255,255,255,.35);color:#fff">Yopish</button>
+        </div>
+        <div class="tiny" style="color:rgba(255,255,255,.9);margin-top:6px">
+          Test “published” bo‘lsa studentlar ko‘radi. “draft” bo‘lsa yopiq.
         </div>
       </header>
+
       <div class="body">
         <div class="grid">
-          <div class="col-6">
-            <label>Test nomi</label>
-            <input id="t_title" class="input" placeholder="Masalan: Fizika 1 - Oraliq nazorat" />
+          <div class="col-8">
+            <label class="tiny">Test nomi</label>
+            <input id="t_title" class="input" placeholder="Masalan: 1-mavzu testi" />
           </div>
-          <div class="col-3">
-            <label>Fan</label>
-            <input id="t_subject" class="input" placeholder="Fizika" />
-          </div>
-          <div class="col-3">
-            <label>Status</label>
-            <select id="t_status">
+          <div class="col-4">
+            <label class="tiny">Status</label>
+            <select id="t_status" class="input">
               <option value="draft">Draft</option>
               <option value="published">Published</option>
             </select>
           </div>
 
-          <div class="col-6">
-            <label>Fakultet</label>
-            <select id="t_faculty"></select>
+          <div class="col-4">
+            <label class="tiny">Course ID</label>
+            <input id="t_courseId" class="input" placeholder="course id" />
           </div>
-          <div class="col-6">
-            <label>Guruhlar (vergul bilan, bo‘sh bo‘lsa ochiq)</label>
-            <input id="t_groups" class="input" placeholder="MMT-520-25, ..." />
+          <div class="col-4">
+            <label class="tiny">Time limit (min)</label>
+            <input id="t_timeMin" class="input" type="number" min="1" value="10" />
+          </div>
+          <div class="col-4">
+            <label class="tiny">Passing %</label>
+            <input id="t_passPct" class="input" type="number" min="1" max="100" value="60" />
           </div>
 
           <div class="col-12">
-            <label>Qisqa tavsif</label>
+            <label class="tiny">Tavsif (ixtiyoriy)</label>
             <textarea id="t_desc" class="input" rows="3" placeholder="Test haqida qisqacha..."></textarea>
           </div>
 
           <div class="col-12">
-            <label>Savollar (oddiy format)</label>
-            <textarea id="t_questions" class="input" rows="8" placeholder="Har savol blok:&#10;Q: Savol matni&#10;A) variant&#10;B) variant&#10;C) variant&#10;D) variant&#10;ANS: B&#10;&#10;Keyingi savol..."></textarea>
-            <div class="tiny" style="margin-top:6px">
-              Bu sahifa faqat ro‘yxat + create uchun. Test ishlash ketma-ketligi <code>test.html</code>da bo‘ladi.
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:950">Savollar</div>
+                <div class="tiny">Har savolda 4 variant. To‘g‘ri javob: A/B/C/D.</div>
+              </div>
+              <button class="btn small" id="addQBtn">+ Savol qo‘shish</button>
             </div>
+
+            <div id="qWrap"></div>
           </div>
 
-          <div class="col-12">
-            <button class="btn primary" id="saveTestBtn">Saqlash</button>
-            <button class="btn" id="saveDraftBtn">Draft saqlash</button>
+          <div class="col-12 row" style="justify-content:space-between; margin-top:12px">
+            <div class="row">
+              <button class="btn primary" id="saveBtn">Saqlash</button>
+              <button class="btn" id="saveDraftBtn">Draft saqlash</button>
+            </div>
+            <button class="btn danger" id="deleteBtn" style="display:none">O‘chirish</button>
           </div>
         </div>
+
+        <div class="divider"></div>
+        <div class="tiny">Student ishlashi: <code>/test.html?id=TEST_ID</code></div>
       </div>
     </div>
   </div>
 
-  <footer>Qarshi Davlat Texnika Universiteti — LMS (Tests)</footer>
+  <footer>QDTU LMS — Tests</footer>
 
 <script>
   const API_BASE = "";
-  const FACULTIES = [
-    "Neft-gaz va geologiya fakulteti",
-    "Iqtisodiyot va boshqaruv fakulteti",
-    "Energetika muhandisligi fakulteti",
-    "Transport va qurilish muhandisligi fakulteti",
-    "Raqamli texnologiyalar va sun'iy intellekt fakulteti",
-    "Shahrisabz oziq-ovqat muhandisligi fakulteti",
-    "Irrigatsiya muhandisligi fakulteti"
-  ];
-
-  function getToken(){ return localStorage.getItem("token") || ""; }
+  const $ = (id)=> document.getElementById(id);
   function qs(name){ return new URLSearchParams(location.search).get(name); }
-  function setErr(msg){
-    const box = document.getElementById("errBox");
-    box.textContent = msg; box.style.display = "block";
-    document.getElementById("okBox").style.display = "none";
-  }
-  function setOk(msg){
-    const box = document.getElementById("okBox");
-    box.textContent = msg; box.style.display = "block";
-    document.getElementById("errBox").style.display = "none";
-  }
-  function escapeHtml(str){
-    return String(str||"")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+  function getToken(){ return localStorage.getItem("token") || ""; }
+
+  function setErr(msg){ $("errBox").textContent=msg; $("errBox").style.display="block"; $("okBox").style.display="none"; }
+  function setOk(msg){ $("okBox").textContent=msg; $("okBox").style.display="block"; $("errBox").style.display="none"; }
+  function clearMsg(){ $("errBox").style.display="none"; $("okBox").style.display="none"; }
+
+  async function apiFetch(url, opts={}){
+    const token = getToken();
+    const headers = Object.assign({}, opts.headers || {});
+    if(token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + url, Object.assign({}, opts, { headers }));
+    let data = null;
+    const ct = res.headers.get("content-type") || "";
+    if(ct.includes("application/json")){
+      try{ data = await res.json(); }catch{ data = null; }
+    }else{
+      try{ data = await res.text(); }catch{ data = null; }
+    }
+    if(!res.ok){
+      const msg = (data && data.error) ? data.error : ("So'rov xatosi: " + res.status);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
   }
 
-  // Demo storage
-  function demoKey(){ return "demoTests_v1"; }
-  function readDemoTests(){
-    try { return JSON.parse(localStorage.getItem(demoKey()) || "[]"); } catch { return []; }
-  }
-  function writeDemoTests(list){
-    localStorage.setItem(demoKey(), JSON.stringify(list));
-  }
-  function seedDemoIfEmpty(){
-    const cur = readDemoTests();
+  // theme
+  $("themeBtn").addEventListener("click", ()=>{
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+  });
+
+  $("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token");
+    location.href="/login.html";
+  });
+
+  // demo storage
+  function demoKey(){ return "demoTests_v2"; }
+  function readDemo(){ try{ return JSON.parse(localStorage.getItem(demoKey()) || "[]"); }catch{ return []; } }
+  function writeDemo(list){ localStorage.setItem(demoKey(), JSON.stringify(list)); }
+  function seedDemo(){
+    const cur = readDemo();
     if(cur.length) return;
     const seed = [
       {
         id:"t1",
-        title:"Fizika 1 — Kirish testi",
-        subject:"Fizika",
-        description:"Asosiy tushunchalar bo‘yicha test.",
+        title:"Energetika — 1-mavzu",
+        description:"Nazariy savollar.",
         status:"published",
-        faculty:"Energetika muhandisligi fakulteti",
-        groups:[],
+        courseId:"c1",
+        timeMin:10,
+        passPct:60,
         teacherName:"Teacher Demo",
-        teacherId:"t_demo",
-        createdAt: Date.now() - 7200000,
-        questionsText:"Q: Kuchning SI birligi?\nA) kg\nB) N\nC) J\nD) W\nANS: B"
-      },
-      {
-        id:"t2",
-        title:"Raqamli texnologiyalar — SI asoslari",
-        subject:"Sun'iy intellekt",
-        description:"SI terminlari va bazaviy savollar.",
-        status:"published",
-        faculty:"Raqamli texnologiyalar va sun'iy intellekt fakulteti",
-        groups:["MMT-520-25"],
-        teacherName:"Teacher Demo",
-        teacherId:"t_demo",
-        createdAt: Date.now() - 3600000,
-        questionsText:"Q: Machine Learning nima?\nA) Qurilish\nB) O‘rganish algoritmlari\nC) Geologiya\nD) Transport\nANS: B"
+        createdAt: Date.now() - 86400000,
+        questions:[
+          { q:"Energiya nimaga teng?", a:"Ish", b:"Kuch", c:"Bosim", d:"Tezlik", correct:"A" },
+          { q:"Quvvat birligi?", a:"Vatt", b:"Nyuton", c:"Paskal", d:"Joul", correct:"A" }
+        ]
       }
     ];
-    writeDemoTests(seed);
+    writeDemo(seed);
   }
 
   function normalizeTest(raw){
     return {
       id: raw._id || raw.id || raw.testId,
       title: raw.title || raw.name || "Nomsiz test",
-      subject: raw.subject || raw.course || raw.fan || "",
       description: raw.description || raw.desc || "",
-      status: raw.status || (raw.published ? "published" : "published"),
-      faculty: raw.faculty || raw.facultyName || "",
-      groups: Array.isArray(raw.groups) ? raw.groups : (raw.allowedGroups || []),
+      status: raw.status || (raw.published ? "published" : "draft"),
+      courseId: raw.courseId || raw.course?._id || raw.course || "",
+      timeMin: Number(raw.timeMin || raw.durationMin || 10),
+      passPct: Number(raw.passPct || raw.passingPercent || 60),
       teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
-      teacherId: raw.teacherId || raw.teacher?._id || raw.ownerId || "",
       createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : (raw.createdAtMs || Date.now()),
-      questionsText: raw.questionsText || raw.questions_raw || ""
+      questions: Array.isArray(raw.questions) ? raw.questions : (raw.items || [])
     };
   }
 
   async function apiMe(){
     const token = getToken();
     if(!token){ location.href="/login.html"; return null; }
-    const res = await fetch(API_BASE + "/api/me", { headers:{ "Authorization":"Bearer " + token } });
-    if(!res.ok){
-      localStorage.removeItem("token");
-      location.href="/login.html";
-      return null;
+    try{ return await apiFetch("/api/me"); }
+    catch(e){ localStorage.removeItem("token"); location.href="/login.html"; return null; }
+  }
+
+  // fetch tests
+  let state = { me:null, list:[], mode:"", isDemo:false };
+
+  async function fetchTests(){
+    try{
+      const data = await apiFetch("/api/tests");
+      const list = Array.isArray(data) ? data : (data.tests || []);
+      state.isDemo = false;
+      state.mode = "API";
+      return list.map(normalizeTest);
+    }catch(e){
+      seedDemo();
+      state.isDemo = true;
+      state.mode = "DEMO(localStorage)";
+      return readDemo().map(normalizeTest);
     }
-    return await res.json();
-  }
-
-  async function fetchTestsFromAPI(){
-    const token = getToken();
-    const res = await fetch(API_BASE + "/api/tests", { headers:{ "Authorization":"Bearer " + token } });
-    if(!res.ok) throw new Error("API not available");
-    const data = await res.json();
-    const list = Array.isArray(data) ? data : (data.tests || []);
-    return list.map(normalizeTest);
-  }
-
-  function fetchTestsFromDemo(){
-    seedDemoIfEmpty();
-    return readDemoTests().map(normalizeTest);
-  }
-
-  function fillFacultySelects(){
-    const f1 = document.getElementById("facultyFilter");
-    const f2 = document.getElementById("t_faculty");
-    f2.innerHTML = "";
-    FACULTIES.forEach(x=>{
-      const o1 = document.createElement("option"); o1.value=x; o1.textContent=x;
-      f1.appendChild(o1);
-      const o2 = document.createElement("option"); o2.value=x; o2.textContent=x;
-      f2.appendChild(o2);
-    });
   }
 
   function matchFilters(t){
-    const q = (document.getElementById("q").value||"").trim().toLowerCase();
-    const f = document.getElementById("facultyFilter").value || "";
-    const s = (document.getElementById("subjectFilter").value||"").trim().toLowerCase();
-    const g = (document.getElementById("groupFilter").value||"").trim().toLowerCase();
-    const st = document.getElementById("statusFilter").value || "";
+    const q = ($("q").value || "").trim().toLowerCase();
+    const st = $("statusFilter").value || "";
+    const course = ($("courseFilter").value || "").trim();
 
-    if(f && (t.faculty||"") !== f) return false;
-    if(st && (t.status||"published") !== st) return false;
+    if(st && String(t.status) !== st) return false;
+    if(course && String(t.courseId) !== course) return false;
 
     if(q){
-      const hay = `${t.title} ${t.subject} ${t.teacherName} ${t.description}`.toLowerCase();
+      const hay = `${t.title} ${t.description} ${t.teacherName} ${t.courseId}`.toLowerCase();
       if(!hay.includes(q)) return false;
     }
-    if(s){
-      if(!(t.subject||"").toLowerCase().includes(s)) return false;
-    }
-    if(g){
-      const groups = (t.groups||[]).map(x=>String(x).toLowerCase());
-      if(groups.length && !groups.some(x=>x.includes(g))) return false;
-    }
     return true;
   }
 
-  function canStudentAccess(t, me){
-    // published only
-    if((t.status||"published") !== "published") return false;
-
-    if(t.faculty && me.faculty && t.faculty !== me.faculty) return false;
-
-    const allowed = Array.isArray(t.groups) ? t.groups.filter(Boolean) : [];
-    if(allowed.length){
-      if(!me.group) return false;
-      const mg = String(me.group).trim().toLowerCase();
-      return allowed.some(x=>String(x).trim().toLowerCase() === mg);
-    }
-    return true;
+  function applySort(list){
+    const key = $("sortSel").value;
+    const out = [...list];
+    if(key==="new") out.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+    else if(key==="old") out.sort((a,b)=> (a.createdAt||0)-(b.createdAt||0));
+    else if(key==="title") out.sort((a,b)=> String(a.title||"").localeCompare(String(b.title||""), "uz"));
+    return out;
   }
 
-  function openModal(){
-    document.getElementById("modalBackdrop").style.display = "flex";
-  }
-  function closeModal(){
-    document.getElementById("modalBackdrop").style.display = "none";
-    delete document.getElementById("saveTestBtn").dataset.editing;
-    delete document.getElementById("saveDraftBtn").dataset.editing;
-  }
-
-  async function saveTest(me, publish){
-    const title = (document.getElementById("t_title").value||"").trim();
-    const subject = (document.getElementById("t_subject").value||"").trim();
-    const desc = (document.getElementById("t_desc").value||"").trim();
-    const status = publish ? "published" : "draft";
-    const faculty = document.getElementById("t_faculty").value;
-    const groupsRaw = (document.getElementById("t_groups").value||"").trim();
-    const groups = groupsRaw ? groupsRaw.split(",").map(x=>x.trim()).filter(Boolean) : [];
-    const questionsText = (document.getElementById("t_questions").value||"").trim();
-
-    if(!title){ setErr("Test nomi majburiy."); return; }
-    if(!subject){ setErr("Fan (subject) majburiy."); return; }
-    if(!questionsText){ setErr("Savollar matni majburiy."); return; }
-
-    const editingId = document.getElementById("saveTestBtn").dataset.editing || document.getElementById("saveDraftBtn").dataset.editing || "";
-
-    // Try API
-    try{
-      const token = getToken();
-      const payload = { title, subject, description: desc, status, faculty, groups, questionsText };
-      let url = API_BASE + "/api/tests";
-      let method = "POST";
-      if(editingId){
-        url = API_BASE + "/api/tests/" + encodeURIComponent(editingId);
-        method = "PUT";
-      }
-      const res = await fetch(url, {
-        method,
-        headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + token },
-        body: JSON.stringify(payload)
-      });
-      if(!res.ok) throw new Error("API save failed");
-      setOk("Test saqlandi (API).");
-      closeModal();
-      await loadAndRender();
-      return;
-    }catch(e){
-      // Demo
-      seedDemoIfEmpty();
-      const list = readDemoTests();
-      if(editingId){
-        const idx = list.findIndex(x=>String(x.id)===String(editingId));
-        if(idx>=0){
-          list[idx] = { ...list[idx], title, subject, description: desc, status, faculty, groups, questionsText, updatedAt: Date.now() };
-        }
-      }else{
-        const id = "t_" + Math.random().toString(16).slice(2) + "_" + Date.now();
-        list.push({
-          id, title, subject, description: desc, status, faculty, groups, questionsText,
-          teacherName: me.fullname || me.name || me.username || "Teacher",
-          teacherId: me._id || me.id || "t_local",
-          createdAt: Date.now()
-        });
-      }
-      writeDemoTests(list);
-      setOk("Test saqlandi (demo/localStorage).");
-      closeModal();
-      await loadAndRender();
-    }
-  }
-
-  function render(list, me){
-    const role = (me.role||"student").toLowerCase();
+  function render(){
+    const wrap = $("list");
+    wrap.innerHTML = "";
+    $("modeTxt").textContent = "Rejim: " + state.mode;
+    const role = String(state.me?.role || "student").toLowerCase();
     const isTeacher = role==="teacher";
-    const isStudent = role==="student";
     const isAdmin = role==="admin";
 
-    const badge = document.getElementById("roleBadge");
-    badge.textContent = isTeacher ? "Teacher" : isAdmin ? "Admin" : "Student";
-    badge.classList.toggle("teacher", isTeacher);
-    badge.style.background = isTeacher ? "#2563eb" : (isAdmin ? "#f59e0b" : "#10b981");
+    $("dashLink").href = isTeacher ? "/teacher-dashboard.html" : isAdmin ? "/admin-dashboard.html" : "/student-dashboard.html";
+    const badge = $("roleBadge");
+    badge.classList.remove("student","teacher","admin");
+    badge.classList.add(isTeacher ? "teacher" : isAdmin ? "admin" : "student");
+    badge.textContent = (role || "student").toUpperCase();
 
-    const mePill = document.getElementById("mePill");
-    mePill.textContent = (me.fullname||me.name||me.username||"") + " • " + (me.group || "Guruh yo‘q");
-    mePill.style.display = "inline-block";
+    const name = state.me?.fullname || state.me?.name || state.me?.username || "—";
+    $("mePill").textContent = name;
+    $("mePill").style.display = "inline-flex";
 
-    document.getElementById("dashLink").href = isTeacher ? "/teacher-dashboard.html" : isAdmin ? "/admin-dashboard.html" : "/student-dashboard.html";
+    $("createBtn").style.display = (isTeacher || isAdmin) ? "inline-flex" : "none";
 
-    const filtered = list
-      .filter(matchFilters)
-      .sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
-
-    const container = document.getElementById("list");
-    container.innerHTML = "";
-    document.getElementById("countTxt").textContent = `Topildi: ${filtered.length} ta test`;
+    const filtered = applySort(state.list.filter(matchFilters));
+    $("countTxt").textContent = `Topildi: ${filtered.length} ta test`;
+    $("hintTxt").textContent = state.isDemo ? "Demo rejim: testlar localStorage’da." : "API rejim: testlar server’dan.";
 
     if(!filtered.length){
-      container.innerHTML = `<div class="muted">Hech narsa topilmadi.</div>`;
+      wrap.innerHTML = `<div class="muted" style="grid-column:span 12">Hech narsa topilmadi.</div>`;
       return;
     }
 
     filtered.forEach(t=>{
-      // access tag
-      let accessOk = true;
-      if(isStudent){
-        accessOk = canStudentAccess(t, me);
-      }
-
-      const row = document.createElement("div");
-      row.className = "tr";
-      row.innerHTML = `
-        <div class="trow">
-          <div>
-            <div class="title">${escapeHtml(t.title)}</div>
-            <div class="muted" style="margin-top:6px">${escapeHtml(t.description||"")}</div>
-            <div style="margin-top:8px">
-              <span class="tag">${escapeHtml(t.subject||"-")}</span>
-              <span class="tag ${ (t.status||"published")==="published" ? "open":"lock"}">${escapeHtml((t.status||"published").toUpperCase())}</span>
-              ${isStudent ? (accessOk ? `<span class="tag open">Mos</span>` : `<span class="tag lock">Mos emas</span>`) : ""}
-            </div>
-          </div>
-          <div>
-            <div class="muted">O‘qituvchi</div>
-            <div style="font-weight:600">${escapeHtml(t.teacherName||"-")}</div>
-          </div>
-          <div>
-            <div class="muted">Fakultet</div>
-            <div style="font-weight:600">${escapeHtml(t.faculty||"-")}</div>
-          </div>
-          <div>
-            <div class="muted">Guruh</div>
-            <div style="font-weight:600">${(t.groups && t.groups.length) ? escapeHtml(t.groups.join(", ")) : "<span class='tag'>Ochiq</span>"}</div>
-          </div>
-          <div class="row" style="justify-content:flex-end">
-            <a class="btn primary" href="/test.html?id=${encodeURIComponent(t.id)}" ${isStudent && !accessOk ? "style='pointer-events:none;opacity:.5'" : ""}>Boshlash</a>
-            ${isTeacher ? `<button class="btn" data-edit="${escapeHtml(t.id)}">Edit</button>` : ``}
-          </div>
+      const el = document.createElement("div");
+      el.className = "item";
+      const statusTag = (t.status==="published")
+        ? `<span class="tag open">Published</span>`
+        : `<span class="tag lock">Draft</span>`;
+      el.innerHTML = `
+        <div class="title">${t.title}</div>
+        <div class="muted" style="margin-top:6px">${(t.description||"").slice(0,120)}${(t.description||"").length>120?"…":""}</div>
+        <div class="meta">
+          ${statusTag}
+          <span class="tag">Course: ${t.courseId || "-"}</span>
+          <span class="tag">Savol: ${Array.isArray(t.questions)?t.questions.length:0}</span>
+          <span class="tag warn">Time: ${Number(t.timeMin||10)} min</span>
+          <span class="tag">Pass: ${Number(t.passPct||60)}%</span>
+          <span class="tag">Teacher: ${t.teacherName || "-"}</span>
+        </div>
+        <div class="row" style="margin-top:10px; justify-content:flex-end">
+          <a class="btn small primary" href="/test.html?id=${encodeURIComponent(t.id)}">Testni boshlash</a>
+          ${(isTeacher || isAdmin) ? `<button class="btn small" data-act="edit" data-id="${t.id}">Tahrirlash</button>` : ``}
         </div>
       `;
-      container.appendChild(row);
-    });
-
-    if(isTeacher){
-      container.querySelectorAll("button[data-edit]").forEach(btn=>{
-        btn.addEventListener("click", ()=>{
-          const id = btn.getAttribute("data-edit");
-          const t = list.find(x=>String(x.id)===String(id));
-          if(!t) return;
-          openModal();
-          document.getElementById("t_title").value = t.title || "";
-          document.getElementById("t_subject").value = t.subject || "";
-          document.getElementById("t_desc").value = t.description || "";
-          document.getElementById("t_status").value = t.status || "draft";
-          document.getElementById("t_faculty").value = t.faculty || FACULTIES[0];
-          document.getElementById("t_groups").value = (t.groups||[]).join(", ");
-          document.getElementById("t_questions").value = t.questionsText || "";
-          document.getElementById("saveTestBtn").dataset.editing = id;
-          document.getElementById("saveDraftBtn").dataset.editing = id;
-        });
+      el.addEventListener("click", (ev)=>{
+        const target = ev.target;
+        if(target && (target.closest("a") || target.closest("button"))) return;
+        location.href = "/test.html?id=" + encodeURIComponent(t.id);
       });
-    }
+      const edit = el.querySelector('[data-act="edit"]');
+      if(edit){
+        edit.addEventListener("click", (ev)=>{ ev.preventDefault(); ev.stopPropagation(); openEdit(t.id); });
+      }
+      wrap.appendChild(el);
+    });
   }
 
-  let ME=null;
-  let TESTS=[];
+  // modal
+  function openModal(){ $("modalBackdrop").style.display="flex"; document.body.style.overflow="hidden"; }
+  function closeModal(){ $("modalBackdrop").style.display="none"; document.body.style.overflow="";
+    delete $("saveBtn").dataset.editing; delete $("saveDraftBtn").dataset.editing; $("deleteBtn").style.display="none";
+    $("qWrap").innerHTML=""; }
 
-  async function loadAndRender(){
-    document.getElementById("errBox").style.display = "none";
-    document.getElementById("okBox").style.display = "none";
+  $("closeModalBtn").addEventListener("click", closeModal);
+  $("modalBackdrop").addEventListener("click", (e)=>{ if(e.target===$("modalBackdrop")) closeModal(); });
+  document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
+
+  function addQuestionRow(q=null){
+    const wrap = $("qWrap");
+    const idx = wrap.children.length + 1;
+    const row = document.createElement("div");
+    row.className = "qrow";
+    row.innerHTML = `
+      <div>
+        <div class="tiny" style="font-weight:900">Savol ${idx}</div>
+        <textarea class="input" data-k="q" rows="3" placeholder="Savol matni...">${q?.q || ""}</textarea>
+        <div class="row" style="justify-content:space-between; margin-top:8px">
+          <div class="tiny">To‘g‘ri: A/B/C/D</div>
+          <button class="btn small danger" data-act="rm">O‘chirish</button>
+        </div>
+      </div>
+      <div>
+        <div class="tiny">Variantlar</div>
+        <input class="input" data-k="a" placeholder="A" value="${q?.a || ""}" style="margin-top:6px"/>
+        <input class="input" data-k="b" placeholder="B" value="${q?.b || ""}" style="margin-top:8px"/>
+        <input class="input" data-k="c" placeholder="C" value="${q?.c || ""}" style="margin-top:8px"/>
+        <input class="input" data-k="d" placeholder="D" value="${q?.d || ""}" style="margin-top:8px"/>
+      </div>
+      <div>
+        <div class="tiny">To‘g‘ri javob</div>
+        <select class="input" data-k="correct" style="margin-top:6px">
+          <option ${q?.correct==="A"?"selected":""}>A</option>
+          <option ${q?.correct==="B"?"selected":""}>B</option>
+          <option ${q?.correct==="C"?"selected":""}>C</option>
+          <option ${q?.correct==="D"?"selected":""}>D</option>
+        </select>
+        <div class="tiny" style="margin-top:12px">Tavsiyalar:</div>
+        <ul class="tiny" style="margin:6px 0 0 18px; padding:0">
+          <li>Variantlarni qisqa yozing</li>
+          <li>1 savol = 1 g‘oya</li>
+          <li>To‘g‘ri javob aniq bo‘lsin</li>
+        </ul>
+      </div>
+    `;
+    row.querySelector('[data-act="rm"]').addEventListener("click", (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      row.remove();
+      // renumber
+      [...wrap.children].forEach((ch,i)=> ch.querySelector(".tiny").textContent = "Savol " + (i+1));
+    });
+    wrap.appendChild(row);
+  }
+
+  $("addQBtn").addEventListener("click", ()=> addQuestionRow());
+
+  function fillModal(t){
+    $("t_title").value = t?.title || "";
+    $("t_desc").value = t?.description || "";
+    $("t_status").value = t?.status || "draft";
+    $("t_courseId").value = t?.courseId || "";
+    $("t_timeMin").value = Number(t?.timeMin || 10);
+    $("t_passPct").value = Number(t?.passPct || 60);
+    $("qWrap").innerHTML = "";
+    const qs = Array.isArray(t?.questions) ? t.questions : [];
+    if(qs.length) qs.forEach(q=> addQuestionRow(q));
+    else addQuestionRow();
+  }
+
+  function collectQuestions(){
+    const rows = [...$("qWrap").children];
+    const out = [];
+    for(const r of rows){
+      const get = (k)=> (r.querySelector(`[data-k="${k}"]`)?.value || "").trim();
+      const q = get("q");
+      const a = get("a"), b=get("b"), c=get("c"), d=get("d");
+      const correct = (get("correct") || "A").toUpperCase();
+      if(!q) continue;
+      if(!a || !b || !c || !d) throw new Error("Har savolda 4 ta variant bo‘lsin (A/B/C/D).");
+      if(!["A","B","C","D"].includes(correct)) throw new Error("To‘g‘ri javob A/B/C/D bo‘lishi kerak.");
+      out.push({ q, a, b, c, d, correct });
+    }
+    if(out.length < 1) throw new Error("Kamida 1 ta savol bo‘lishi kerak.");
+    return out;
+  }
+
+  async function saveTest(publish){
+    clearMsg();
+    const title = ($("t_title").value || "").trim();
+    const description = ($("t_desc").value || "").trim();
+    const courseId = ($("t_courseId").value || "").trim();
+    const status = publish ? "published" : ($("t_status").value || "draft");
+    const timeMin = Number($("t_timeMin").value || 10);
+    const passPct = Number($("t_passPct").value || 60);
+    if(!title) return setErr("Test nomi majburiy.");
+    if(!courseId) return setErr("Course ID majburiy (kurs bilan bog‘lash uchun).");
+    if(isNaN(timeMin) || timeMin < 1) return setErr("Time limit 1 minutdan katta bo‘lsin.");
+    if(isNaN(passPct) || passPct < 1 || passPct > 100) return setErr("Passing % 1..100 oralig‘ida bo‘lsin.");
+
+    let questions;
+    try{ questions = collectQuestions(); }catch(e){ return setErr(e.message || "Savollar xato."); }
+
+    const editingId = $("saveBtn").dataset.editing || $("saveDraftBtn").dataset.editing || "";
+
+    // API attempt
     try{
-      TESTS = await fetchTestsFromAPI();
+      const payload = { title, description, status, courseId, timeMin, passPct, questions };
+      let url="/api/tests", method="POST";
+      if(editingId){ url="/api/tests/" + encodeURIComponent(editingId); method="PUT"; }
+      await apiFetch(url, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
+      setOk("Test saqlandi (API).");
+      closeModal();
+      await reload();
+      return;
     }catch(e){
-      TESTS = fetchTestsFromDemo();
+      // demo
+      seedDemo();
+      const list = readDemo();
+      if(editingId){
+        const idx = list.findIndex(x=>String(x.id)===String(editingId));
+        if(idx>=0){
+          list[idx] = { ...list[idx], title, description, status, courseId, timeMin, passPct, questions, updatedAt: Date.now() };
+        }
+      }else{
+        const id = "t_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+        list.push({
+          id, title, description, status, courseId, timeMin, passPct, questions,
+          teacherName: state.me?.fullname || state.me?.name || state.me?.username || "Teacher",
+          createdAt: Date.now()
+        });
+      }
+      writeDemo(list);
+      setOk("Test saqlandi (demo/localStorage).");
+      closeModal();
+      await reload();
     }
-    render(TESTS, ME);
   }
+
+  async function deleteTest(id){
+    if(!id) return;
+    clearMsg();
+    // API attempt
+    try{
+      await apiFetch("/api/tests/" + encodeURIComponent(id), { method:"DELETE" });
+      setOk("Test o‘chirildi (API).");
+      closeModal();
+      await reload();
+      return;
+    }catch(e){
+      seedDemo();
+      const list = readDemo().filter(x=>String(x.id)!==String(id));
+      writeDemo(list);
+      setOk("Test o‘chirildi (demo/localStorage).");
+      closeModal();
+      await reload();
+    }
+  }
+
+  function openEdit(id){
+    const role = String(state.me?.role || "student").toLowerCase();
+    if(role!=="teacher" && role!=="admin"){ setErr("Faqat teacher/admin tahrirlashi mumkin."); return; }
+    const t = state.list.find(x=>String(x.id)===String(id));
+    if(!t){ setErr("Test topilmadi."); return; }
+
+    $("modalTitle").textContent = "Testni tahrirlash";
+    fillModal(t);
+    $("saveBtn").dataset.editing = id;
+    $("saveDraftBtn").dataset.editing = id;
+    $("deleteBtn").style.display="inline-flex";
+    $("deleteBtn").onclick = ()=> deleteTest(id);
+    openModal();
+  }
+
+  $("saveBtn").addEventListener("click", ()=> saveTest(true));
+  $("saveDraftBtn").addEventListener("click", ()=> saveTest(false));
+
+  $("createBtn").addEventListener("click", ()=>{
+    $("modalTitle").textContent = "Yangi test";
+    fillModal(null);
+    delete $("saveBtn").dataset.editing;
+    delete $("saveDraftBtn").dataset.editing;
+    $("deleteBtn").style.display="none";
+    openModal();
+  });
+
+  // init
+  async function reload(){
+    clearMsg();
+    $("list").innerHTML = `<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>`;
+    state.list = await fetchTests();
+    render();
+  }
+
+  $("refreshBtn").addEventListener("click", reload);
+  $("clearBtn").addEventListener("click", ()=>{
+    $("q").value=""; $("statusFilter").value=""; $("sortSel").value="new"; $("courseFilter").value="";
+    render();
+  });
+
+  ["q","statusFilter","sortSel","courseFilter"].forEach(id=>{
+    $(id).addEventListener("input", ()=> render());
+    $(id).addEventListener("change", ()=> render());
+  });
 
   async function init(){
-    fillFacultySelects();
-    ME = await apiMe();
-    if(!ME) return;
+    const me = await apiMe();
+    if(!me) return;
+    state.me = me;
 
-    const role = (ME.role||"student").toLowerCase();
-    const createBtn = document.getElementById("createBtn");
-    if(role==="teacher"){
-      createBtn.style.display = "inline-block";
-    }
+    const role = String(me.role || "student").toLowerCase();
+    const badge = $("roleBadge");
+    badge.classList.remove("student","teacher","admin");
+    badge.classList.add(role==="teacher" ? "teacher" : role==="admin" ? "admin" : "student");
+    badge.textContent = role.toUpperCase();
 
-    await loadAndRender();
+    const name = me.fullname || me.name || me.username || "—";
+    $("mePill").textContent = `${name}`;
+    $("mePill").style.display = "inline-flex";
+
+    // courseId from query
+    const cid = qs("courseId");
+    if(cid){ $("courseFilter").value = cid; }
+
+    await reload();
   }
 
-  document.getElementById("logoutBtn").addEventListener("click", ()=>{
-    localStorage.removeItem("token");
-    location.href="/login.html";
-  });
-
-  document.getElementById("refreshBtn").addEventListener("click", loadAndRender);
-
-  ["q","facultyFilter","statusFilter","groupFilter","subjectFilter"].forEach(id=>{
-    document.getElementById(id).addEventListener("input", ()=> render(TESTS, ME));
-    document.getElementById(id).addEventListener("change", ()=> render(TESTS, ME));
-  });
-
-  document.getElementById("createBtn").addEventListener("click", ()=>{
-    openModal();
-    document.getElementById("t_title").value="";
-    document.getElementById("t_subject").value="";
-    document.getElementById("t_desc").value="";
-    document.getElementById("t_status").value="draft";
-    document.getElementById("t_faculty").value=FACULTIES[0];
-    document.getElementById("t_groups").value="";
-    document.getElementById("t_questions").value="";
-  });
-
-  document.getElementById("closeModalBtn").addEventListener("click", closeModal);
-  document.getElementById("modalBackdrop").addEventListener("click", (e)=>{
-    if(e.target.id==="modalBackdrop") closeModal();
-  });
-
-  document.getElementById("saveTestBtn").addEventListener("click", ()=> saveTest(ME, true));
-  document.getElementById("saveDraftBtn").addEventListener("click", ()=> saveTest(ME, false));
-
-  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+  init().catch(e=> setErr(e?.message || "Xatolik yuz berdi."));
 </script>
 </body>
 </html>

@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin panel — SChat</title>
+  <meta name="description" content="Admin panel: top-up so‘rovlari, foydalanuvchilar, kanallar, guruhlar, xizmatlar va xabarlar boshqaruvi."/>
+  <script>
+    tailwind = { config: { darkMode:'class', theme:{ extend:{
+      fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
+      keyframes:{
+        shimmer:{'0%':{backgroundPosition:'0% 50%'},'100%':{backgroundPosition:'100% 50%'}},
+        pop:{'0%':{transform:'scale(.98)',opacity:.0},'100%':{transform:'scale(1)',opacity:1}}
+      },
+      animation:{ shimmer:'shimmer 6s ease-in-out infinite', pop:'pop .45s ease-out both' }
+    }}}};
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,.58);
+      --glass-brd: rgba(255,255,255,.36);
+      --muted: rgba(15,23,42,.72);
+      --muted2: rgba(15,23,42,.55);
+      --grid: rgba(15,23,42,.06);
+      --ring: rgba(99,102,241,.45);
+      --ok: rgba(34,197,94,.18);
+      --bad: rgba(239,68,68,.18);
+    }
+    .dark{
+      --glass-bg: rgba(2,6,23,.58);
+      --glass-brd: rgba(148,163,184,.16);
+      --muted: rgba(226,232,240,.78);
+      --muted2: rgba(226,232,240,.55);
+      --grid: rgba(148,163,184,.08);
+      --ring: rgba(236,72,153,.35);
+      --ok: rgba(34,197,94,.14);
+      --bad: rgba(239,68,68,.14);
+    }
+    body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .muted{ color: var(--muted); }
+    .muted2{ color: var(--muted2); }
+    .glass{
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .btn-primary{ background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)); }
+    .btn-primary:hover{ filter: brightness(1.05); }
+    .btn-ghost:hover{ background: rgba(148,163,184,.12); }
+    .glow-ring:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
+    .u-anim{
+      background: linear-gradient(90deg, rgba(99,102,241,1), rgba(236,72,153,1));
+      background-size: 200% 200%;
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      animation: shimmer 6s ease-in-out infinite;
+    }
+    .bg-orbs{
+      position: fixed; inset: 0; z-index: -2; overflow: hidden;
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.38), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.28), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.22), transparent 60%),
+        linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
+    }
+    .dark .bg-orbs{
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.24), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.19), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.14), transparent 60%),
+        linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));
+    }
+    .bg-grid{
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 70px 70px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+      opacity: .85;
+    }
+    .g-border{ position: relative; }
+    .g-border:before{
+      content:"";
+      position:absolute; inset:-1px; border-radius: 1.5rem;
+      background: linear-gradient(135deg, rgba(99,102,241,.55), rgba(236,72,153,.45), rgba(34,197,94,.35));
+      z-index:-1;
+    }
+    .field{
+      background: rgba(255,255,255,.38);
+      border: 1px solid rgba(255,255,255,.28);
+    }
+    .dark .field{
+      background: rgba(2,6,23,.35);
+      border: 1px solid rgba(148,163,184,.18);
+    }
+    .field:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); border-color: transparent; }
+    .pill{ background: rgba(148,163,184,.14); border: 1px solid rgba(148,163,184,.18); }
+    .row:hover{ background: rgba(148,163,184,.10); }
+  </style>
+  <script>
+    (function(){
+      const key='theme';
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark?'dark':'light');
+      if(mode==='dark') document.documentElement.classList.add('dark');
+    })();
+  </script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body class="min-h-screen text-slate-900 dark:text-slate-100">
+  <div class="bg-orbs"></div>
+  <div class="bg-grid"></div>
+
+  <header class="sticky top-0 z-50">
+    <div class="mx-auto max-w-7xl px-4 py-4">
+      <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
+        <a href="/profile.html" class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-extrabold tracking-tight">Admin panel</div>
+            <div class="text-xs muted">Boshqaruv • Nazorat • Tozalash</div>
+          </div>
+        </a>
+
+        <div class="flex items-center gap-2">
+          <div class="glass rounded-xl px-3 py-2 text-sm font-extrabold">
+            <i class="fa-solid fa-circle-check mr-2"></i><span id="meAdmin">Tekshirilmoqda…</span>
+          </div>
+          <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring">
+            <i id="themeIcon" class="fa-solid fa-moon"></i><span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
+          </button>
+          <button id="logoutBtn" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i><span class="ml-2 hidden sm:inline">Chiqish</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-8">
+    <div id="toast" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-[60] glass rounded-2xl px-4 py-3 text-sm font-extrabold"></div>
+
+    <section class="glass rounded-3xl p-6 g-border animate-pop">
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-shield"></i>
+            <span>Admin nazorati</span>
+          </div>
+          <h1 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+            Platformani <span class="u-anim">tartibga soling</span>
+          </h1>
+          <p class="mt-2 muted2 text-sm sm:text-base">
+            Top-up so‘rovlari, foydalanuvchilar, kanallar, guruhlar, xizmatlar va shaxsiy xabarlarni ko‘rish hamda o‘chirish.
+            Ehtiyotkorlik bilan ishlating.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="glass rounded-2xl p-4">
+            <div class="text-[11px] font-extrabold muted">Foydalanuvchi</div>
+            <div class="mt-1 text-xl font-black" id="cUsers">—</div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-[11px] font-extrabold muted">Kanallar</div>
+            <div class="mt-1 text-xl font-black" id="cChannels">—</div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-[11px] font-extrabold muted">Guruhlar</div>
+            <div class="mt-1 text-xl font-black" id="cGroups">—</div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-[11px] font-extrabold muted">Kutilgan top-up</div>
+            <div class="mt-1 text-xl font-black" id="cTopups">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-2">
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="topups"><i class="fa-solid fa-coins mr-2"></i>Top-up so‘rovlari</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="users"><i class="fa-solid fa-users mr-2"></i>Foydalanuvchilar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="channels"><i class="fa-solid fa-hashtag mr-2"></i>Kanallar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="groups"><i class="fa-solid fa-people-group mr-2"></i>Guruhlar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="realtime"><i class="fa-solid fa-satellite-dish mr-2"></i>Real-time</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="services"><i class="fa-solid fa-store mr-2"></i>Xizmatlar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="pms"><i class="fa-solid fa-envelope mr-2"></i>Shaxsiy xabarlar</button>
+      </div>
+    </section>
+
+    <section class="mt-6 glass rounded-3xl p-6 g-border animate-pop">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div>
+          <div class="text-lg font-black" id="tabTitle">—</div>
+          <div class="text-xs muted2 mt-1" id="tabSub">—</div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+            <input id="q" class="field rounded-2xl px-11 py-3 text-sm w-[260px] max-w-full" placeholder="Qidirish (ixtiyoriy)"/>
+          </div>
+          <button id="refreshBtn" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow-ring">
+            Yangilash <i class="fa-solid fa-rotate ml-2"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="content" class="mt-5"></div>
+      <div id="pager" class="mt-5 flex items-center justify-between hidden">
+        <button id="prevBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">Oldingi</button>
+        <div class="text-xs muted2">Sahifa: <span id="pageNo" class="font-extrabold">1</span></div>
+        <button id="nextBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">Keyingi</button>
+      </div>
+    </section>
+
+    <!-- Modal -->
+    <div id="modal" class="hidden fixed inset-0 z-[70]">
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="absolute inset-0 flex items-end sm:items-center justify-center p-4">
+        <div class="glass rounded-3xl w-full max-w-xl p-5 sm:p-6 g-border">
+          <div class="flex items-center justify-between">
+            <div>
+              <div id="mTitle" class="text-lg font-black">—</div>
+              <div id="mSub" class="text-xs muted2 mt-1">—</div>
+            </div>
+            <button id="mClose" class="glass rounded-xl px-3 py-2 btn-ghost glow-ring"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div id="mBody" class="mt-4"></div>
+          <div class="mt-5 flex items-center justify-end gap-2">
+            <button id="mCancel" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">Bekor</button>
+            <button id="mOk" class="btn-primary rounded-xl px-4 py-2 text-sm font-extrabold text-white glow-ring">Saqlash</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Small DOM helpers (jQuery-free)
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    // Theme
+    (function(){
+      const key='theme';
+      const html=document.documentElement;
+      const btn=document.getElementById('themeToggle');
+      const icon=document.getElementById('themeIcon');
+      const label=document.getElementById('themeLabel');
+      function apply(mode){
+        if(mode==='dark') html.classList.add('dark'); else html.classList.remove('dark');
+        localStorage.setItem(key, mode);
+        icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+      }
+      const saved = localStorage.getItem(key);
+      if(saved) apply(saved);
+      else apply((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark':'light');
+      btn.addEventListener('click', ()=> apply(html.classList.contains('dark') ? 'light' : 'dark'));
+    })();
+
+    const token = () => localStorage.getItem('token') || '';
+    const toast = (text, type='info') => {
+      const el = document.getElementById('toast');
+      el.textContent = text;
+      el.classList.remove('hidden');
+      el.style.background = type === 'error' ? 'var(--bad)' : 'var(--ok)';
+      el.style.border = '1px solid rgba(148,163,184,.2)';
+      el.style.color = type === 'error' ? 'rgba(220,38,38,.95)' : 'rgba(16,185,129,.95)';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=> el.classList.add('hidden'), 4200);
+    };
+
+    const fmtDate = (d) => { try { return new Date(d).toLocaleString('uz-UZ'); } catch { return ''; } };
+
+    // Modal
+    const modal = {
+      root: document.getElementById('modal'),
+      title: document.getElementById('mTitle'),
+      sub: document.getElementById('mSub'),
+      body: document.getElementById('mBody'),
+      ok: document.getElementById('mOk'),
+      cancel: document.getElementById('mCancel'),
+      close: document.getElementById('mClose'),
+      show({title, sub, bodyHTML, okText='Saqlash', onOk}){
+        this.title.textContent = title || '';
+        this.sub.textContent = sub || '';
+        this.body.innerHTML = bodyHTML || '';
+        this.ok.textContent = okText;
+        this.root.classList.remove('hidden');
+        this.ok.onclick = async ()=>{
+          this.ok.disabled = true;
+          try{ await onOk?.(); this.hide(); } finally { this.ok.disabled=false; }
+        };
+      },
+      hide(){ this.root.classList.add('hidden'); this.ok.onclick=null; }
+    };
+    modal.cancel.onclick = ()=> modal.hide();
+    modal.close.onclick = ()=> modal.hide();
+
+    // State
+    let tab = 'topups';
+    let page = 1;
+    let limit = 25;
+
+    const tabMeta = {
+      topups: { title:'Top-up so‘rovlari', sub:'Kutilayotgan so‘rovlarni tasdiqlang yoki rad eting.' },
+      users: { title:'Foydalanuvchilar', sub:'Profil/coin/admin flag boshqaruvi. Ehtiyotkorlik bilan o‘chiring.' },
+      channels: { title:'Kanallar', sub:'Kanallar ro‘yxati va o‘chirish. (Postlar bilan.)' },
+      groups: { title:'Guruhlar', sub:'Guruhlar ro‘yxati va o‘chirish. (Xabarlar bilan.)' },
+      services: { title:'Xizmatlar', sub:'Services ro‘yxati va o‘chirish. (Order/Review bilan.)' },
+      pms: { title:'Shaxsiy xabarlar', sub:'Private message’larni ko‘rish va o‘chirish (moderatsiya).' },
+      realtime: { title:'Real-time', sub:'Online foydalanuvchilar va aktiv call/live ro‘yxati (real vaqt).' },
+    };
+
+    function setTab(newTab){
+      tab = newTab;
+      page = 1;
+      document.getElementById('tabTitle').textContent = tabMeta[tab].title;
+      document.getElementById('tabSub').textContent = tabMeta[tab].sub;
+      document.querySelectorAll('.tab').forEach(b=>{
+        const active = b.dataset.tab === tab;
+        b.classList.toggle('active', active);
+        b.style.background = active ? 'rgba(99,102,241,.16)' : 'rgba(148,163,184,.14)';
+        b.style.border = active ? '1px solid rgba(99,102,241,.35)' : '1px solid rgba(148,163,184,.18)';
+      });
+      loadList();
+    }
+
+    async function api(path, opts={}){
+      const res = await fetch(path, {
+        ...opts,
+        headers: { 'Authorization': `Bearer ${token()}`, ...(opts.headers||{}) }
+      });
+      const j = await res.json().catch(()=>null);
+      return { res, j };
+    }
+
+    async function ensureAdmin(){
+      if(!token()){ window.location.href='/login.html'; return; }
+
+      // ✅ Correct auth endpoint (was /api/pet/me -> caused 404 and forced logout)
+      const {res, j} = await api('/api/me');
+      if(!res.ok){
+        localStorage.removeItem('token');
+        window.location.href='/login.html';
+        return;
+      }
+
+      // server usually returns {success:true, user:{...}}
+      const u = (j && (j.user || j.data?.user || j)) || {};
+      const role = String(u.role || '').toLowerCase();
+      const isAdmin = !!u.isAdmin || role === 'admin';
+
+      if(!isAdmin){
+        toast("Admin huquqi yo‘q.", 'error');
+        document.getElementById('meAdmin').textContent = 'Admin EMAS';
+        setTimeout(()=> window.location.href='/profile.html', 1500);
+        return;
+      }
+
+      document.getElementById('meAdmin').textContent = 'Admin OK';
+      await loadOverview();
+      setTab('topups');
+    }
+
+    async function loadOverview(){
+      const {res, j} = await api('/api/admin/overview');
+      if(!res.ok) return;
+      document.getElementById('cUsers').textContent = j.users ?? '—';
+      document.getElementById('cChannels').textContent = j.channels ?? '—';
+      document.getElementById('cGroups').textContent = j.groups ?? '—';
+      document.getElementById('cTopups').textContent = j.topupsPending ?? '—';
+    }
+
+    function pagerShow(show, pageNo){
+      const p = document.getElementById('pager');
+      p.classList.toggle('hidden', !show);
+      document.getElementById('pageNo').textContent = pageNo;
+    }
+
+    function setLoading(){
+      document.getElementById('content').innerHTML = `<div class="text-sm muted2"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Yuklanmoqda…</div>`;
+      pagerShow(false, page);
+    }
+
+    function tableWrap(inner){
+      return `<div class="overflow-auto rounded-2xl border border-white/20">
+        <table class="min-w-full text-sm">
+          ${inner}
+        </table>
+      </div>`;
+    }
+
+    async function loadList(){
+      setLoading();
+      const q = document.getElementById('q').value.trim();
+      if(tab === 'topups') return loadTopups(q);
+      if(tab === 'users') return loadUsers(q);
+      if(tab === 'channels') return loadChannels(q);
+      if(tab === 'groups') return loadGroups(q);
+      if(tab === 'services') return loadServices(q);
+      if(tab === 'pms') return loadPMs(q);
+      if(tab === 'realtime') return loadRealtime();
+    }
+
+    // TOPUPS
+    async function loadTopups(){
+      const {res, j} = await api('/api/admin/topup-requests?status=pending');
+      if(!res.ok) return toast(j?.error || "Top-up ro‘yxatini olishda xatolik", 'error');
+
+      const list = j.requests || [];
+      if(!list.length){
+        document.getElementById('content').innerHTML = `<div class="text-sm muted2">Kutilayotgan so‘rov yo‘q.</div>`;
+        pagerShow(false, page);
+        return;
+      }
+
+      const rows = list.map(r => {
+        const u = r.userId || {};
+        return `
+          <tr class="row border-b border-white/10">
+            <td class="p-3">
+              <div class="font-extrabold">${u.username || '—'}</div>
+              <div class="text-xs muted2">${u.nickname || u.fullName || ''}</div>
+            </td>
+            <td class="p-3">
+              <div class="font-extrabold">${r.coins} coin</div>
+              <div class="text-xs muted2">${r.amountSom} so‘m</div>
+            </td>
+            <td class="p-3 text-xs muted2">${fmtDate(r.createdAt)}</td>
+            <td class="p-3">
+              <a class="underline font-extrabold" target="_blank" href="${r.screenshotUrl || '#'}">Screenshot</a>
+            </td>
+            <td class="p-3">
+              <div class="flex gap-2 justify-end">
+                <button class="approve btn-primary text-white rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${r._id}">Tasdiqlash</button>
+                <button class="reject glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${r._id}">Rad</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('content').innerHTML = tableWrap(`
+        <thead>
+          <tr class="text-left text-xs muted2">
+            <th class="p-3">Foydalanuvchi</th>
+            <th class="p-3">So‘rov</th>
+            <th class="p-3">Sana</th>
+            <th class="p-3">Proof</th>
+            <th class="p-3 text-right">Amal</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      `);
+
+      document.querySelectorAll('.approve').forEach(b => b.onclick = ()=> approveTopup(b.dataset.id));
+      document.querySelectorAll('.reject').forEach(b => b.onclick = ()=> rejectTopup(b.dataset.id));
+      pagerShow(false, page);
+    }
+
+    async function approveTopup(id){
+      modal.show({
+        title: "Top-up tasdiqlash",
+        sub: "Ixtiyoriy admin izohini kiriting",
+        okText: "Tasdiqlash",
+        bodyHTML: `
+          <label class="text-xs font-extrabold muted">Admin izohi (ixtiyoriy)</label>
+          <textarea id="note" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3" placeholder="Masalan: To‘lov tasdiqlandi."></textarea>
+          <div class="mt-3 text-xs muted2">Tasdiqlansa coin foydalanuvchi balansiga qo‘shiladi.</div>
+        `,
+        onOk: async ()=>{
+          const adminNote = document.getElementById('note').value || '';
+          const {res, j} = await api(`/api/admin/topup-requests/${id}/approve`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ adminNote })
+          });
+          if(!res.ok) return toast(j?.error || "Tasdiqlab bo‘lmadi", 'error');
+          toast("Tasdiqlandi. Balans yangilandi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    async function rejectTopup(id){
+      modal.show({
+        title: "Top-up rad etish",
+        sub: "Rad etish sababi (ixtiyoriy)",
+        okText: "Rad etish",
+        bodyHTML: `
+          <label class="text-xs font-extrabold muted">Sabab</label>
+          <textarea id="note" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3" placeholder="Masalan: Screenshot noaniq."></textarea>
+        `,
+        onOk: async ()=>{
+          const adminNote = document.getElementById('note').value || 'Rad etildi';
+          const {res, j} = await api(`/api/admin/topup-requests/${id}/reject`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ adminNote })
+          });
+          if(!res.ok) return toast(j?.error || "Rad etib bo‘lmadi", 'error');
+          toast("Rad etildi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    // USERS
+    async function loadUsers(q){
+      const {res, j} = await api(`/api/admin/users?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Users yuklanmadi", 'error');
+      const list = j.users || [];
+      const total = j.total || 0;
+
+      if(!list.length){
+        document.getElementById('content').innerHTML = `<div class="text-sm muted2">Topilmadi.</div>`;
+        pagerShow(page>1, page);
+        return;
+      }
+
+      const rows = list.map(u => `
+        <tr class="row border-b border-white/10">
+          <td class="p-3">
+            <div class="flex items-center gap-3">
+              <img src="${u.avatar||''}" class="w-9 h-9 rounded-xl object-cover border border-white/20" onerror="this.style.display='none'"/>
+              <div class="min-w-0">
+                <div class="font-extrabold truncate">${u.username}</div>
+                <div class="text-xs muted2 truncate">${u.nickname||u.fullName||''}</div>
+              </div>
+            </div>
+          </td>
+          <td class="p-3 text-xs muted2">${u.university||'—'}</td>
+          <td class="p-3"><span class="font-extrabold">${u.coins||0}</span> <span class="text-xs muted2">coin</span></td>
+          <td class="p-3 text-xs">${u.isAdmin ? '<span class="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-500 font-extrabold">Admin</span>' : '<span class="px-2 py-1 rounded-lg bg-slate-500/15 text-slate-400 font-extrabold">User</span>'}</td>
+          <td class="p-3 text-right">
+            <div class="flex justify-end gap-2">
+              <button class="edit glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}"><i class="fa-solid fa-pen mr-2"></i>Tahrir</button>
+              <button class="coin btn-primary text-white rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}"><i class="fa-solid fa-coins mr-2"></i>Coin</button>
+              <button class="del glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}" data-name="${u.username}"><i class="fa-solid fa-trash mr-2"></i>O‘chirish</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('content').innerHTML = tableWrap(`
+        <thead><tr class="text-left text-xs muted2">
+          <th class="p-3">User</th><th class="p-3">Universitet</th><th class="p-3">Coin</th><th class="p-3">Role</th><th class="p-3 text-right">Amal</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      `);
+
+      document.querySelectorAll('.coin').forEach(b=> b.onclick = ()=> openCoinModal(b.dataset.id));
+      document.querySelectorAll('.edit').forEach(b=> b.onclick = ()=> openEditUser(b.dataset.id));
+      document.querySelectorAll('.del').forEach(b=> b.onclick = ()=> delUser(b.dataset.id, b.dataset.name));
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+    function openCoinModal(userId){
+      modal.show({
+        title: "Coin balansini o‘zgartirish",
+        sub: "Delta qo‘shish yoki SetTo bilan aniq qiymat berish",
+        okText: "Saqlash",
+        bodyHTML: `
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-extrabold muted">Delta (+/-)</label>
+              <input id="delta" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" type="number" value="0"/>
+              <div class="text-xs muted2 mt-1">Masalan: +50 yoki -10</div>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">SetTo (ixtiyoriy)</label>
+              <input id="setTo" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" type="number" placeholder="Masalan: 1200"/>
+              <div class="text-xs muted2 mt-1">Kiritilsa delta e’tiborsiz</div>
+            </div>
+          </div>
+        `,
+        onOk: async ()=>{
+          const delta = Number(document.getElementById('delta').value || 0);
+          const setToRaw = document.getElementById('setTo').value;
+          const payload = (setToRaw !== '' && setToRaw !== null) ? { setTo: Number(setToRaw) } : { delta };
+          const {res, j} = await api(`/api/admin/users/${userId}/coins`, {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) return toast(j?.error || "Coin yangilanmadi", 'error');
+          toast("Coin yangilandi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    function openEditUser(userId){
+      modal.show({
+        title: "User profilini tahrirlash",
+        sub: "Asosiy maydonlar (nickname/bio/avatar/university) va admin flag",
+        okText: "Saqlash",
+        bodyHTML: `
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-extrabold muted">Nickname</label>
+              <input id="nickname" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Nickname"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Universitet</label>
+              <input id="university" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Universitet"/>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Avatar URL</label>
+              <input id="avatar" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="https://..."/>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Bio</label>
+              <textarea id="bio" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3" placeholder="Bio..."></textarea>
+            </div>
+            <div class="sm:col-span-2 flex items-center gap-2">
+              <input id="isAdmin" type="checkbox" class="scale-110">
+              <label for="isAdmin" class="text-sm font-extrabold">Admin qilish</label>
+              <span class="text-xs muted2">Ehtiyot bo‘ling.</span>
+            </div>
+          </div>
+        `,
+        onOk: async ()=>{
+          const payload = {
+            nickname: document.getElementById('nickname').value,
+            university: document.getElementById('university').value,
+            avatar: document.getElementById('avatar').value,
+            bio: document.getElementById('bio').value,
+            isAdmin: document.getElementById('isAdmin').checked
+          };
+          const {res, j} = await api(`/api/admin/users/${userId}`, {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) return toast(j?.error || "User yangilanmadi", 'error');
+          toast("User saqlandi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    async function delUser(userId, username){
+      modal.show({
+        title: "Foydalanuvchini o‘chirish",
+        sub: `Bu amal qaytarilmaydi: ${username}`,
+        okText: "O‘chirish",
+        bodyHTML: `<div class="text-sm muted2">
+          <div class="glass rounded-2xl p-4">
+            <div class="font-extrabold text-red-500">Diqqat!</div>
+            <div class="mt-2">User va uning xabarlari/postlari (best-effort) o‘chiriladi.</div>
+          </div>
+        </div>`,
+        onOk: async ()=>{
+          const {res, j} = await api(`/api/admin/users/${userId}`, { method:'DELETE' });
+          if(!res.ok) return toast(j?.error || "O‘chirish muvaffaqiyatsiz", 'error');
+          toast("O‘chirildi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    // CHANNELS/GROUPS/SERVICES/PMS generic
+    async function loadChannels(q){
+      const {res, j} = await api(`/api/admin/channels?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Kanallar yuklanmadi", 'error');
+      renderSimpleList(j.channels||[], j.total||0, 'channels');
+    }
+    async function loadGroups(q){
+      const {res, j} = await api(`/api/admin/groups?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Guruhlar yuklanmadi", 'error');
+      renderSimpleList(j.groups||[], j.total||0, 'groups');
+    }
+    async function loadServices(q){
+      const {res, j} = await api(`/api/admin/services?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Xizmatlar yuklanmadi", 'error');
+      renderSimpleList(j.services||[], j.total||0, 'services');
+    }
+    async function loadPMs(q){
+      const {res, j} = await api(`/api/admin/private-messages?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Xabarlar yuklanmadi", 'error');
+      renderPMs(j.messages||[], j.total||0);
+    }
+
+    function renderSimpleList(list, total, type){
+      if(!list.length){
+        document.getElementById('content').innerHTML = `<div class="text-sm muted2">Topilmadi.</div>`;
+        pagerShow(total>limit, page);
+        return;
+      }
+      const rows = list.map(x => `
+        <tr class="row border-b border-white/10">
+          <td class="p-3">
+            <div class="font-extrabold">${x.name || x.title || '—'}</div>
+            <div class="text-xs muted2">ID: <span class="font-mono">${x._id}</span></div>
+          </td>
+          <td class="p-3 text-xs muted2">${(x.description||'').slice(0,120)}</td>
+          <td class="p-3 text-xs muted2">${fmtDate(x.createdAt)}</td>
+          <td class="p-3 text-right">
+            <button class="delItem glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-type="${type}" data-id="${x._id}">
+              <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('content').innerHTML = tableWrap(`
+        <thead><tr class="text-left text-xs muted2">
+          <th class="p-3">Nomi</th><th class="p-3">Tavsif</th><th class="p-3">Sana</th><th class="p-3 text-right">Amal</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      `);
+
+      document.querySelectorAll('.delItem').forEach(b=> b.onclick = ()=> delItem(b.dataset.type, b.dataset.id));
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+    function renderPMs(list, total){
+      if(!list.length){
+        document.getElementById('content').innerHTML = `<div class="text-sm muted2">Topilmadi.</div>`;
+        pagerShow(total>limit, page);
+        return;
+      }
+      const rows = list.map(m => `
+        <tr class="row border-b border-white/10">
+          <td class="p-3">
+            <div class="font-extrabold">${(m.content||'').slice(0,70) || '—'}</div>
+            <div class="text-xs muted2">ID: <span class="font-mono">${m._id}</span></div>
+          </td>
+          <td class="p-3 text-xs muted2">${fmtDate(m.createdAt)}</td>
+          <td class="p-3 text-right">
+            <button class="delPm glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${m._id}">
+              <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('content').innerHTML = tableWrap(`
+        <thead><tr class="text-left text-xs muted2"><th class="p-3">Xabar</th><th class="p-3">Sana</th><th class="p-3 text-right">Amal</th></tr></thead>
+        <tbody>${rows}</tbody>
+      `);
+      document.querySelectorAll('.delPm').forEach(b=> b.onclick = ()=> delPM(b.dataset.id));
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+    async function delItem(type, id){
+      const endpoint = type==='channels' ? `/api/admin/channels/${id}` :
+                       type==='groups' ? `/api/admin/groups/${id}` :
+                       type==='services' ? `/api/admin/services/${id}` : '';
+      if(!endpoint) return;
+      modal.show({
+        title: "O‘chirishni tasdiqlang",
+        sub: "Bu amal qaytarilmaydi.",
+        okText: "O‘chirish",
+        bodyHTML: `<div class="glass rounded-2xl p-4 text-sm muted2">
+          ID: <span class="font-mono font-extrabold">${id}</span>
+        </div>`,
+        onOk: async ()=>{
+          const {res, j} = await api(endpoint, { method:'DELETE' });
+          if(!res.ok) return toast(j?.error || "O‘chirish xatosi", 'error');
+          toast("O‘chirildi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    async function delPM(id){
+      modal.show({
+        title: "Xabarni o‘chirish",
+        sub: "Moderatsiya uchun. Qaytarilmaydi.",
+        okText: "O‘chirish",
+        bodyHTML: `<div class="glass rounded-2xl p-4 text-sm muted2">ID: <span class="font-mono font-extrabold">${id}</span></div>`,
+        onOk: async ()=>{
+          const {res, j} = await api(`/api/admin/private-messages/${id}`, { method:'DELETE' });
+          if(!res.ok) return toast(j?.error || "O‘chirish xatosi", 'error');
+          toast("O‘chirildi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    // UI wiring
+    document.querySelectorAll('.tab').forEach(b => b.onclick = ()=> setTab(b.dataset.tab));
+    document.getElementById('refreshBtn').onclick = ()=> loadList();
+    document.getElementById('q').addEventListener('keydown', (e)=>{ if(e.key==='Enter') loadList(); });
+
+    document.getElementById('prevBtn').onclick = ()=>{ if(page>1){ page--; loadList(); } };
+    document.getElementById('nextBtn').onclick = ()=>{ page++; loadList(); };
+    document.getElementById('logoutBtn').onclick = ()=>{ localStorage.removeItem('token'); window.location.href='/login.html'; };
+
+    ensureAdmin();
+  
+
+    // =================== REALTIME TAB (ADMIN) ===================
+    let adminSocket = null;
+    let realtimeBound = false;
+
+    function realtimeHTML(){
+      return `
+        <div class="grid lg:grid-cols-3 gap-4">
+          <div class="glass rounded-3xl p-5 g-border">
+            <div class="text-xs muted2">Online</div>
+            <div class="mt-1 text-3xl font-black" id="rtOnlineCount">—</div>
+            <div class="mt-3 text-xs muted2">Oxirgi yangilanish: <span id="rtUpdatedAt">—</span></div>
+          </div>
+          <div class="glass rounded-3xl p-5 g-border">
+            <div class="text-xs muted2">1v1 qo‘ng‘iroqlar</div>
+            <div class="mt-1 text-3xl font-black"><span id="rtPrivateCallsCount">—</span></div>
+            <div class="mt-3 text-xs muted2">Shaxsiy call’lar</div>
+          </div>
+          <div class="glass rounded-3xl p-5 g-border">
+            <div class="text-xs muted2">Guruh / Kanal</div>
+            <div class="mt-1 text-3xl font-black"><span id="rtGroupCallsCount">—</span> / <span id="rtChannelLivesCount">—</span></div>
+            <div class="mt-3 text-xs muted2">Guruh call / Channel live</div>
+          </div>
+        </div>
+
+        <div class="mt-6 grid lg:grid-cols-2 gap-4">
+          <div class="glass rounded-3xl p-5 g-border">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="text-lg font-extrabold"><i class="fa-solid fa-user-clock mr-2"></i>Online foydalanuvchilar</h3>
+              <button class="pill px-4 py-2 text-sm font-extrabold glow-ring" id="rtRefreshBtn"><i class="fa-solid fa-rotate mr-2"></i>Refresh</button>
+            </div>
+            <div class="mt-4 overflow-auto">
+              <table class="w-full text-sm">
+                <thead class="text-left muted2">
+                  <tr>
+                    <th class="py-2 pr-3">UserID</th>
+                    <th class="py-2 pr-3">Sockets</th>
+                    <th class="py-2 pr-3">Last active</th>
+                    <th class="py-2 pr-3">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="rtOnlineTable" class="divide-y divide-white/10"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-5 g-border">
+            <h3 class="text-lg font-extrabold"><i class="fa-solid fa-phone-volume mr-2"></i>1v1 qo‘ng‘iroqlar (real-time)</h3>
+            <div class="mt-4 overflow-auto">
+              <table class="w-full text-sm">
+                <thead class="text-left muted2">
+                  <tr>
+                    <th class="py-2 pr-3">CallID</th>
+                    <th class="py-2 pr-3">Type</th>
+                    <th class="py-2 pr-3">Status</th>
+                    <th class="py-2 pr-3">Caller → Receiver</th>
+                  </tr>
+                </thead>
+                <tbody id="rtPrivateCallsTable" class="divide-y divide-white/10"></tbody>
+              </table>
+            </div>
+
+            <div class="mt-6">
+              <h3 class="text-lg font-extrabold"><i class="fa-solid fa-users mr-2"></i>Guruh call’lar</h3>
+              <div class="mt-3 overflow-auto">
+                <table class="w-full text-sm">
+                  <thead class="text-left muted2">
+                    <tr>
+                      <th class="py-2 pr-3">GroupID</th>
+                      <th class="py-2 pr-3">Type</th>
+                      <th class="py-2 pr-3">Participants</th>
+                      <th class="py-2 pr-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rtGroupCallsTable" class="divide-y divide-white/10"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <h3 class="text-lg font-extrabold"><i class="fa-solid fa-tower-broadcast mr-2"></i>Channel live</h3>
+              <div class="mt-3 overflow-auto">
+                <table class="w-full text-sm">
+                  <thead class="text-left muted2">
+                    <tr>
+                      <th class="py-2 pr-3">ChannelID</th>
+                      <th class="py-2 pr-3">Host</th>
+                      <th class="py-2 pr-3">Viewers</th>
+                      <th class="py-2 pr-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rtChannelLivesTable" class="divide-y divide-white/10"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 glass rounded-3xl p-5 g-border">
+          <h3 class="text-lg font-extrabold"><i class="fa-solid fa-terminal mr-2"></i>Admin log</h3>
+          <div id="rtLog" class="mt-3 text-xs muted2 whitespace-pre-wrap"></div>
+        </div>
+      `;
+    }
+
+    async function loadRealtime(){
+      pagerShow(false, page);
+      document.getElementById('content').innerHTML = realtimeHTML();
+      bindRealtime();
+      await rtRefresh();
+    }
+
+    function bindRealtime(){
+      if(realtimeBound) return;
+      realtimeBound = true;
+
+      const refreshBtn = document.getElementById('rtRefreshBtn');
+      if(refreshBtn) refreshBtn.onclick = ()=> rtRefresh();
+
+      startAdminSocket();
+      // polling fallback
+      setInterval(() => {
+        const activeTab = document.querySelector('.tab.active')?.getAttribute('data-tab');
+        if (activeTab === 'realtime') rtRefresh();
+      }, 3000);
+    }
+
+    function rtLog(line){
+      const log = document.getElementById('rtLog');
+      if(!log) return;
+      const t = new Date().toLocaleTimeString();
+      log.textContent = `[${t}] ${line}
+  ` + (log.textContent || '');
+    }
+
+    function escapeHtml(s){
+      return String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m]));
+    }
+
+    function fmtTS(ts){
+      try { return new Date(ts).toLocaleString(); } catch(e){ return String(ts||''); }
+    }
+
+    async function rtRefresh(){
+      const activeTab = document.querySelector('.tab.active')?.getAttribute('data-tab');
+      if(activeTab !== 'realtime') return;
+
+      const {res, j} = await api('/api/admin/realtime');
+      if(!res.ok){
+        rtLog(`❌ realtime yuklanmadi: ${j?.error || res.status}`);
+        return;
+      }
+
+      document.getElementById('rtOnlineCount').textContent = j?.counts?.onlineUsers ?? '—';
+      document.getElementById('rtUpdatedAt').textContent = fmtTS(j?.timestamp || Date.now());
+      document.getElementById('rtPrivateCallsCount').textContent = j?.counts?.activePrivateCalls ?? '—';
+      document.getElementById('rtGroupCallsCount').textContent = j?.counts?.activeGroupCalls ?? '—';
+      document.getElementById('rtChannelLivesCount').textContent = j?.counts?.activeChannelLives ?? '—';
+
+      // Online users
+      const onlineBody = document.getElementById('rtOnlineTable');
+      if(onlineBody){
+        const rows = (j.onlineUsers || []).map(u=>{
+          const uid = escapeHtml(u.userId);
+          const sockets = escapeHtml(u.socketsCount);
+          const last = fmtTS(u.lastActive);
+          return `
+            <tr class="border-t border-white/10">
+              <td class="py-2 pr-3 font-mono text-xs">${uid}</td>
+              <td class="py-2 pr-3">${sockets}</td>
+              <td class="py-2 pr-3 text-xs muted2">${escapeHtml(last)}</td>
+              <td class="py-2 pr-3">
+                <button class="pill px-3 py-1 text-xs font-extrabold glow-ring" onclick="adminKickUser('${uid}')">Kick</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        onlineBody.innerHTML = rows || `<tr><td class="py-3 text-xs muted2" colspan="4">Hozircha online yo‘q.</td></tr>`;
+      }
+
+      // Private calls
+      const pcBody = document.getElementById('rtPrivateCallsTable');
+      if(pcBody){
+        const rows = (j.activePrivateCalls || []).map(c=>{
+          return `
+            <tr class="border-t border-white/10">
+              <td class="py-2 pr-3 font-mono text-xs">${escapeHtml(c.callId)}</td>
+              <td class="py-2 pr-3">${escapeHtml(c.type)}</td>
+              <td class="py-2 pr-3">${escapeHtml(c.status)}</td>
+              <td class="py-2 pr-3 font-mono text-xs">${escapeHtml(c.callerId)} → ${escapeHtml(c.receiverId)}</td>
+            </tr>
+          `;
+        }).join('');
+        pcBody.innerHTML = rows || `<tr><td class="py-3 text-xs muted2" colspan="4">Aktiv 1v1 call yo‘q.</td></tr>`;
+      }
+
+      // Group calls
+      const gcBody = document.getElementById('rtGroupCallsTable');
+      if(gcBody){
+        const rows = (j.activeGroupCalls || []).map(g=>{
+          const gid = escapeHtml(g.groupId);
+          const parts = escapeHtml((g.participants||[]).length);
+          return `
+            <tr class="border-t border-white/10">
+              <td class="py-2 pr-3 font-mono text-xs">${gid}</td>
+              <td class="py-2 pr-3">${escapeHtml(g.callType)}</td>
+              <td class="py-2 pr-3">${parts}</td>
+              <td class="py-2 pr-3">
+                <button class="pill px-3 py-1 text-xs font-extrabold glow-ring" onclick="adminEndGroupCall('${gid}')">End</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        gcBody.innerHTML = rows || `<tr><td class="py-3 text-xs muted2" colspan="4">Aktiv group call yo‘q.</td></tr>`;
+      }
+
+      // Channel lives
+      const clBody = document.getElementById('rtChannelLivesTable');
+      if(clBody){
+        const rows = (j.activeChannelLives || []).map(live=>{
+          const cid = escapeHtml(live.channelId);
+          const host = escapeHtml(live.hostId);
+          const viewers = escapeHtml(live.viewersCount || (live.viewers||[]).length);
+          return `
+            <tr class="border-t border-white/10">
+              <td class="py-2 pr-3 font-mono text-xs">${cid}</td>
+              <td class="py-2 pr-3 font-mono text-xs">${host}</td>
+              <td class="py-2 pr-3">${viewers}</td>
+              <td class="py-2 pr-3">
+                <button class="pill px-3 py-1 text-xs font-extrabold glow-ring" onclick="adminStopChannelLive('${cid}')">Stop</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        clBody.innerHTML = rows || `<tr><td class="py-3 text-xs muted2" colspan="4">Aktiv live yo‘q.</td></tr>`;
+      }
+    }
+
+    async function adminKickUser(userId){
+      const {res, j} = await api(`/api/admin/users/${encodeURIComponent(userId)}/kick`, { method:'POST' });
+      if(!res.ok) return toast(j?.error || 'Kick bo‘lmadi', 'error');
+      toast('User kicked', 'success');
+      rtRefresh();
+    }
+
+    async function adminEndGroupCall(groupId){
+      const {res, j} = await api(`/api/admin/group-calls/${encodeURIComponent(groupId)}/end`, { method:'POST' });
+      if(!res.ok) return toast(j?.error || 'End bo‘lmadi', 'error');
+      toast('Group call ended', 'success');
+      rtRefresh();
+    }
+
+    async function adminStopChannelLive(channelId){
+      const {res, j} = await api(`/api/admin/channel-lives/${encodeURIComponent(channelId)}/stop`, { method:'POST' });
+      if(!res.ok) return toast(j?.error || 'Stop bo‘lmadi', 'error');
+      toast('Live stopped', 'success');
+      rtRefresh();
+    }
+
+    function startAdminSocket(){
+      if(adminSocket || typeof io === 'undefined') return;
+      adminSocket = io({ auth: { token: token() } });
+
+      adminSocket.on('connect', () => rtLog('✅ socket connected'));
+      adminSocket.on('disconnect', () => rtLog('🔌 socket disconnected'));
+
+      adminSocket.on('admin:ready', () => {
+        rtLog('🛡️ admin room joined');
+        rtRefresh();
+      });
+
+      adminSocket.on('admin:userOnline', (p) => { rtLog(`🟢 online: ${escapeHtml(p.userId)}`); rtRefresh(); });
+      adminSocket.on('admin:userOffline', (p) => { rtLog(`⚪ offline: ${escapeHtml(p.userId)}`); rtRefresh(); });
+      adminSocket.on('admin:privateCallUpdate', (p) => { rtLog(`📞 privateCall ${escapeHtml(p.action)}: ${escapeHtml(p.callId)}`); rtRefresh(); });
+      adminSocket.on('admin:groupCallUpdate', (p) => { rtLog(`👥 groupCall ${escapeHtml(p.action)}: ${escapeHtml(p.groupId)}`); rtRefresh(); });
+      adminSocket.on('admin:channelLiveUpdate', (p) => { rtLog(`📡 live ${escapeHtml(p.action)}: ${escapeHtml(p.channelId)}`); rtRefresh(); });
+      adminSocket.on('admin:action', (p) => { rtLog(`⚙️ action: ${escapeHtml(JSON.stringify(p))}`); rtRefresh(); });
+    }
+</script>
+</body>
+</html>

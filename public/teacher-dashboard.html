@@ -1,664 +1,965 @@
-<!doctype html>
-<html lang="uz" class="scroll-smooth">
+<!DOCTYPE html>
+<html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Teacher Panel — QDTU LMS</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Teacher Dashboard — QDTU LMS</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
+      --primary:#2563eb; --primary2:#7c3aed; --danger:#ef4444; --ok:#10b981; --warn:#f59e0b;
+      --shadow: 0 18px 50px rgba(2,6,23,.10);
+      --ring: 0 0 0 4px rgba(37,99,235,.18);
+      --grid: rgba(15,23,42,.06);
+    }
+    .dark{
+      --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --border:#223047;
+      --shadow: 0 20px 70px rgba(0,0,0,.45);
+      --grid: rgba(148,163,184,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text)}
+    a{color:inherit}
+    .bg{
+      position:fixed; inset:0; z-index:-2;
+      background:
+        radial-gradient(1100px 500px at 10% 10%, rgba(37,99,235,.22), transparent 60%),
+        radial-gradient(900px 500px at 92% 18%, rgba(124,58,237,.18), transparent 60%),
+        radial-gradient(900px 600px at 50% 92%, rgba(16,185,129,.14), transparent 60%),
+        linear-gradient(180deg, var(--bg), var(--bg));
+    }
+    .gridbg{
+      position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 72%);
+      opacity:.85;
+    }
+
+    header{
+      position:sticky; top:0; z-index:50;
+      padding:14px 16px;
+      backdrop-filter: blur(10px);
+      background: color-mix(in oklab, var(--bg) 72%, transparent);
+      border-bottom:1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    }
+    .nav{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    }
+    .brand{display:flex; align-items:center; gap:10px}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      box-shadow: var(--shadow);
+    }
+    .pills{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .pill{font-size:12px; padding:7px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 80%, transparent); background: color-mix(in oklab, var(--card) 85%, transparent)}
+    .badge{font-weight:900; letter-spacing:.6px}
+    .badge.teacher{color:color-mix(in oklab, var(--primary) 88%, white)}
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      color:var(--text);
+      padding:10px 12px; border-radius:12px; text-decoration:none; cursor:pointer;
+      box-shadow: 0 1px 0 rgba(0,0,0,.03);
+      transition: transform .08s ease, filter .12s ease, background .12s ease;
+      user-select:none;
+      font-weight:650;
+    }
+    .btn:hover{filter:brightness(1.02)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background: linear-gradient(135deg, var(--primary), var(--primary2)); color:#fff; border-color:transparent}
+    .btn.danger{background: linear-gradient(135deg, #ef4444, #fb7185); color:#fff; border-color:transparent}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:8px 10px; border-radius:11px; font-size:13px; font-weight:800}
+
+    .container{max-width:1200px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:16px; padding:16px;
+      box-shadow: 0 8px 28px rgba(2,6,23,.06);
+    }
+    .col-12{grid-column:span 12}
+    .col-8{grid-column:span 8}
+    .col-4{grid-column:span 4}
+    @media (max-width:980px){ .col-8,.col-4{grid-column:span 12} }
+
+    .muted{color:var(--muted);font-size:13px;line-height:1.55}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .divider{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:12px 0}
+    .tiny{font-size:12px;color:var(--muted)}
+    footer{padding:18px 16px;color:var(--muted);text-align:center}
+
+    .err,.ok{
+      border-radius:14px; padding:12px 14px; margin:14px 0; display:none;
+      border:1px solid transparent;
+    }
+    .err{background: color-mix(in oklab, #ffedd5 65%, var(--card)); border-color:#fed7aa; color:#9a3412}
+    .ok{background: color-mix(in oklab, #dcfce7 50%, var(--card)); border-color:#86efac; color:#065f46}
+
+    .input, select, textarea{
+      width:100%; padding:11px 12px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:12px; font-size:14px;
+      background: color-mix(in oklab, var(--card) 95%, transparent);
+      color:var(--text);
+      outline:none;
+    }
+    .input:focus, select:focus, textarea:focus{box-shadow: var(--ring); border-color:transparent}
+
+    .kpi{display:flex; gap:10px; flex-wrap:wrap}
+    .kpi .box{flex:1; min-width:190px; padding:12px; border-radius:16px; border:1px dashed color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent)}
+    .kpi .val{font-size:20px; font-weight:950; margin-top:4px}
+    .kpi .label{font-size:12px;color:var(--muted)}
+
+    .list{display:grid; grid-template-columns:repeat(12,1fr); gap:12px; margin-top:12px}
+    .item{
+      grid-column:span 6;
+      border-radius:16px; overflow:hidden;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      padding:12px;
+      transition: transform .08s ease, filter .12s ease;
+    }
+    .item:hover{filter:brightness(1.01)}
+    .item:active{transform:translateY(1px)}
+    @media (max-width:980px){ .item{grid-column:span 12} }
+
+    .title{font-weight:950}
+    .meta{margin-top:6px; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+    .tag{display:inline-flex; gap:8px; align-items:center; font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent); font-weight:900}
+    .tag.free{border-color:#86efac; background: color-mix(in oklab, #dcfce7 35%, var(--card))}
+    .tag.paid{border-color:#93c5fd; background: color-mix(in oklab, #dbeafe 35%, var(--card))}
+    .tag.pub{border-color:#86efac; background: color-mix(in oklab, #dcfce7 35%, var(--card))}
+    .tag.draft{border-color:#fecaca; background: color-mix(in oklab, #fee2e2 35%, var(--card))}
+    code{background:color-mix(in oklab, var(--card) 92%, transparent);border:1px solid color-mix(in oklab, var(--border) 85%, transparent);border-radius:10px;padding:2px 7px}
+
+    /* modal */
+    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:70}
+    .modal{max-width:980px;width:100%;border-radius:18px;overflow:hidden;background:var(--card);
+      border:1px solid color-mix(in oklab, var(--border) 70%, transparent); box-shadow: var(--shadow);}
+    .modal header{
+      background: linear-gradient(135deg, rgba(37,99,235,.95), rgba(124,58,237,.92));
+      color:#fff; padding:14px 16px; border-bottom:none;
+    }
+    .modal .body{padding:16px}
+  </style>
   <script>
-  tailwind = { config: { darkMode:'class', theme:{ extend:{
-    fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
-    boxShadow:{ glass:'0 20px 60px rgba(0,0,0,.18)' }
-  }}}};
-</script>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<style>
-:root{
- --glass-bg: rgba(255,255,255,.58);
- --glass-brd: rgba(255,255,255,.36);
- --muted: rgba(15,23,42,.72);
- --muted2: rgba(15,23,42,.55);
- --grid: rgba(15,23,42,.06);
- --ring: rgba(99,102,241,.45);
- --ok: rgba(34,197,94,.18);
- --bad: rgba(239,68,68,.18);
-}
-.dark{
- --glass-bg: rgba(2,6,23,.58);
- --glass-brd: rgba(148,163,184,.16);
- --muted: rgba(226,232,240,.78);
- --muted2: rgba(226,232,240,.55);
- --grid: rgba(148,163,184,.08);
- --ring: rgba(236,72,153,.35);
- --ok: rgba(34,197,94,.14);
- --bad: rgba(239,68,68,.14);
-}
-body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-.muted{ color: var(--muted); }
-.muted2{ color: var(--muted2); }
-.glass{
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-brd);
-  box-shadow: 0 20px 60px rgba(0,0,0,.18);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-.btn-primary{ background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)); }
-.btn-primary:hover{ filter: brightness(1.05); }
-.btn-ghost:hover{ background: rgba(148,163,184,.12); }
-.glow-ring:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
-.bg-orbs{
-  position: fixed; inset: 0; z-index: -2; overflow: hidden;
-  background:
-    radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.38), transparent 60%),
-    radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.28), transparent 60%),
-    radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.22), transparent 60%),
-    linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
-}
-.dark .bg-orbs{
-  background:
-    radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.24), transparent 60%),
-    radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.19), transparent 60%),
-    radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.14), transparent 60%),
-    linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));
-}
-.bg-grid{
-  position: fixed; inset: 0; z-index: -1; pointer-events:none;
-  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
-                    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-  background-size: 70px 70px;
-  mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
-  opacity: .85;
-}
-.field{
-  background: rgba(255,255,255,.38);
-  border: 1px solid rgba(255,255,255,.28);
-}
-.dark .field{ background: rgba(2,6,23,.35); border: 1px solid rgba(148,163,184,.18); }
-.field:focus{ outline:none; box-shadow:0 0 0 5px var(--ring); border-color:transparent; }
-</style>
-<script>
-(function(){
-  const key='theme';
-  const saved=localStorage.getItem(key);
-  const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const mode=saved || (prefersDark?'dark':'light');
-  if(mode==='dark') document.documentElement.classList.add('dark');
-})();
-</script>
+    (function(){
+      const key="theme";
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark ? "dark" : "light");
+      if(mode==="dark") document.documentElement.classList.add("dark");
+    })();
+  </script>
 </head>
-<body class="min-h-screen text-slate-900 dark:text-slate-100">
-  <div class="bg-orbs"></div><div class="bg-grid"></div>
+<body>
+  <div class="bg"></div><div class="gridbg"></div>
 
-  <header class="sticky top-0 z-50">
-    <div class="mx-auto max-w-6xl px-4 py-4">
-      <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white shadow-glass">
-            <i class="fa-solid fa-chalkboard-user"></i>
-          </div>
-          <div class="leading-tight">
-            <div class="font-extrabold tracking-tight">Teacher Panel</div>
-            <div class="text-xs muted" id="metaLine">—</div>
-          </div>
-          <span class="ml-2 text-xs font-extrabold px-3 py-1 rounded-full glass">TEACHER</span>
+  <header>
+    <div class="nav">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="pills">
+          <span class="pill badge teacher"><a href="/index.html" class="flex items-center gap-3">TEACHER</a></span>
+          <span id="mePill" class="pill" style="display:none"></span>
         </div>
+      </div>
 
-        <div class="flex items-center gap-2">
-          <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring">
-            <i id="themeIcon" class="fa-solid fa-moon"></i>
-            <span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
-          </button>
-          <a href="/messages.html" class="glass rounded-xl px-4 py-2 text-sm font-bold btn-ghost glow-ring">
-            <i class="fa-solid fa-message"></i><span class="ml-2 hidden sm:inline">Messages</span>
-          </a>
-          <a href="/profile.html" class="glass rounded-xl px-4 py-2 text-sm font-bold btn-ghost glow-ring">
-            <i class="fa-solid fa-id-badge"></i><span class="ml-2 hidden sm:inline">Profil</span>
-          </a>
-          <button id="logoutBtn" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
-            <i class="fa-solid fa-right-from-bracket"></i><span class="ml-2 hidden sm:inline">Chiqish</span>
-          </button>
-        </div>
+      <div class="row">
+        <button class="btn ghost small" id="themeBtn">🌓 Tema</button>
+        <a class="btn ghost small" href="/courses.html">Kurslar</a>
+        <a class="btn ghost small" href="/tests.html">Testlar</a>
+        <a class="btn ghost small" href="/certificate.html">Sertifikat</a>
+        <button class="btn danger small" id="logoutBtn">Chiqish</button>
       </div>
     </div>
   </header>
 
-  <main class="mx-auto max-w-6xl px-4 py-8">
-    <div id="toast" class="fixed top-24 right-4 z-50"></div>
+  <div class="container">
+    <div id="errBox" class="err"></div>
+    <div id="okBox" class="ok"></div>
 
-    <section class="glass rounded-3xl p-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div class="text-sm font-extrabold muted">Hisob</div>
-          <div class="mt-1 text-2xl font-black tracking-tight" id="nameVal">—</div>
-          <div class="mt-1 text-sm muted2" id="subtitleVal">—</div>
+    <div class="grid">
+      <div class="card col-8">
+        <h2 style="margin:0 0 6px 0;font-size:20px">Teacher Dashboard</h2>
+        <div class="muted">
+          Kurslar, testlar, live sessionlar — barchasi bitta panelda. API bo‘lmasa demo localStorage ishlaydi.
         </div>
-        <div class="grid grid-cols-3 gap-3 w-full md:w-auto">
-          <div class="glass rounded-2xl px-5 py-4">
-            <div class="text-xs font-extrabold muted">Coin (user)</div>
-            <div class="mt-1 text-2xl font-black" id="coinsVal">0</div>
+
+        <div class="divider"></div>
+
+        <div class="kpi">
+          <div class="box">
+            <div class="label">Teacher</div>
+            <div class="val" id="nameVal">—</div>
           </div>
-          <div class="glass rounded-2xl px-5 py-4">
-            <div class="text-xs font-extrabold muted">Teacher balans</div>
-            <div class="mt-1 text-2xl font-black" id="tBalVal">0</div>
+          <div class="box">
+            <div class="label">Kurslar</div>
+            <div class="val" id="courseCount">0</div>
           </div>
-          <div class="glass rounded-2xl px-5 py-4">
-            <div class="text-xs font-extrabold muted">Kurslar</div>
-            <div class="mt-1 text-2xl font-black" id="courseCount">0</div>
+          <div class="box">
+            <div class="label">Testlar</div>
+            <div class="val" id="testCount">0</div>
           </div>
-        </div>
-      </div>
-
-      <div class="mt-5 flex flex-wrap gap-3">
-        <button id="openCreateCourse" class="btn-primary text-white rounded-2xl px-5 py-3 font-extrabold glow-ring">
-          <i class="fa-solid fa-plus mr-2"></i>Yangi kurs
-        </button>
-        <button id="openCreateTest" class="glass rounded-2xl px-5 py-3 font-extrabold btn-ghost glow-ring">
-          <i class="fa-solid fa-plus mr-2"></i>Yangi test
-        </button>
-        <a class="glass rounded-2xl px-5 py-3 font-extrabold btn-ghost glow-ring" href="/certificate.html">
-          <i class="fa-solid fa-award mr-2"></i>Sertifikatlar
-        </a>
-      </div>
-    </section>
-
-    <section class="mt-6 grid lg:grid-cols-2 gap-6">
-      <div class="glass rounded-3xl p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-black">Kurslarim</h2>
-          <button id="refreshCourses" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring"><i class="fa-solid fa-rotate mr-2"></i>Yangilash</button>
-        </div>
-        <div class="mt-4 space-y-3" id="myCourses">
-          <div class="muted2 text-sm">Yuklanmoqda...</div>
-        </div>
-      </div>
-
-      <div class="glass rounded-3xl p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-black">Testlarim</h2>
-          <button id="refreshTests" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring"><i class="fa-solid fa-rotate mr-2"></i>Yangilash</button>
-        </div>
-        <div class="mt-4 space-y-3" id="myTests">
-          <div class="muted2 text-sm">Yuklanmoqda...</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="mt-6 glass rounded-3xl p-6">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-black">Kurs kontenti</h2>
-        <div class="text-xs muted2">YouTube • Matn • PDF</div>
-      </div>
-
-      <div class="mt-4 grid md:grid-cols-3 gap-3">
-        <div class="md:col-span-1">
-          <label class="text-xs font-extrabold muted">Kurs tanlang</label>
-          <select id="contentCourseSel" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2"></select>
-          <button id="loadContentsBtn" class="mt-3 w-full glass rounded-2xl px-4 py-3 text-sm font-extrabold btn-ghost glow-ring">
-            <i class="fa-solid fa-download mr-2"></i>Kontentni yuklash
-          </button>
-
-          <div class="mt-4 glass rounded-2xl p-4">
-            <div class="text-sm font-black">Yangi kontent</div>
-            <div class="mt-3 space-y-3">
-              <select id="contentType" class="field w-full rounded-2xl px-4 py-3 text-sm">
-                <option value="youtube">YouTube</option>
-                <option value="text">Matn</option>
-                <option value="pdf">PDF</option>
-              </select>
-              <input id="contentTitle" class="field w-full rounded-2xl px-4 py-3 text-sm" placeholder="Sarlavha (masalan: 1-dars)"/>
-              <input id="contentUrl" class="field w-full rounded-2xl px-4 py-3 text-sm" placeholder="URL (YouTube/PDF)" />
-              <textarea id="contentBody" class="field w-full rounded-2xl px-4 py-3 text-sm min-h-[90px]" placeholder="Matn kontent (type=text)"></textarea>
-              <button id="addContentBtn" class="w-full btn-primary text-white rounded-2xl px-4 py-3 text-sm font-extrabold glow-ring">
-                <i class="fa-solid fa-plus mr-2"></i>Qo‘shish
-              </button>
-              <div class="text-xs muted2">PDF uchun URL (masalan: /uploads/file.pdf yoki https://...)</div>
-            </div>
+          <div class="box">
+            <div class="label">Live session</div>
+            <div class="val" id="liveCount">0</div>
+          </div>
+          <div class="box">
+            <div class="label">Teacher balans (demo)</div>
+            <div class="val" id="balVal">0</div>
           </div>
         </div>
 
-        <div class="md:col-span-2">
-          <div id="contentList" class="space-y-3">
-            <div class="muted2 text-sm">Kurs tanlang va “Kontentni yuklash” bosing.</div>
-          </div>
+        <div class="divider"></div>
+
+        <div class="row">
+          <button class="btn primary" id="newCourseBtn">+ Yangi kurs</button>
+          <button class="btn primary" id="newLiveBtn">+ Live yaratish</button>
+          <a class="btn" href="/tests.html">Testlarni boshqarish</a>
+          <button class="btn" id="refreshBtn">Yangilash</button>
+        </div>
+
+        <div class="tiny" style="margin-top:10px">
+          Kurs CRUD: <code>GET/POST/PUT/DELETE /api/courses</code>, Live CRUD: <code>/api/lives</code> (fallback: localStorage).
         </div>
       </div>
-    </section>
 
-    <div id="modal" class="fixed inset-0 z-50 hidden">
-      <div class="absolute inset-0 bg-black/40"></div>
-      <div class="relative mx-auto max-w-2xl px-4 py-10">
-        <div class="glass rounded-3xl p-6">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="text-sm font-extrabold muted" id="modalTag">—</div>
-              <div class="text-xl font-black" id="modalTitle">—</div>
-            </div>
-            <button id="closeModal" class="glass rounded-xl px-3 py-2 btn-ghost glow-ring"><i class="fa-solid fa-xmark"></i></button>
+      <div class="card col-4">
+        <h3 style="margin:0 0 10px 0">Quick Settings</h3>
+        <div class="muted">
+          Bu yerda teacher o‘z kurslarini “published/draft”, bepul/pullik, guruh cheklovi bilan tez boshqaradi.
+        </div>
+        <div class="divider"></div>
+
+        <div class="row">
+          <input id="q" class="input" placeholder="Qidirish: kurs nomi, fakultet..." />
+        </div>
+        <div class="row" style="margin-top:10px">
+          <select id="statusFilter" class="input">
+            <option value="">Status (barchasi)</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <select id="sortSel" class="input">
+            <option value="new">Saralash: yangi</option>
+            <option value="old">Saralash: eski</option>
+            <option value="title">Saralash: nom</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card col-12">
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div>
+            <h3 style="margin:0">Mening kurslarim</h3>
+            <div class="muted" id="modeTxt">—</div>
           </div>
-          <div class="mt-4" id="modalBody"></div>
+        </div>
+        <div id="courseList" class="list">
+          <div class="muted" style="grid-column:span 12">Yuklanmoqda...</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div>
+            <h3 style="margin:0">Live sessionlar</h3>
+            <div class="muted">Nom, preview image, tavsif, narx (bepul/pullik) + start/stop.</div>
+          </div>
+        </div>
+        <div id="liveList" class="list">
+          <div class="muted" style="grid-column:span 12">Yuklanmoqda...</div>
         </div>
       </div>
     </div>
+  </div>
 
-  </main>
-
-<script>
-const API_BASE = "";
-function token(){ return localStorage.getItem('token') || ''; }
-function authHeaders(json=true){
-  const h = { 'Authorization': 'Bearer ' + token() };
-  if(json) h['Content-Type']='application/json';
-  return h;
-}
-function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-async function apiJson(url, opt={}){
-  const res = await fetch(API_BASE + url, opt);
-  const j = await res.json().catch(()=>null);
-  if(!res.ok) throw new Error(j?.error || j?.message || `HTTP ${res.status}`);
-  return j;
-}
-function normalizeMe(me){
-  if(!me) return { user:null, role:'student' };
-  const u = me.user || me.data?.user || me;
-  const role = String(u?.role || (u?.isAdmin ? 'admin' : 'student') || 'student').toLowerCase();
-  return { user: u, role };
-}
-function showToast(text, type='info'){
-  const wrap = document.getElementById('toast');
-  if(!wrap) return alert(text);
-  const bg = type==='error' ? 'var(--bad)' : type==='success' ? 'var(--ok)' : 'rgba(99,102,241,.14)';
-  wrap.innerHTML = `<div class="glass rounded-2xl px-4 py-3 text-sm font-extrabold" style="background:${bg}; border:1px solid rgba(148,163,184,.22)">${esc(text)}</div>`;
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(()=> wrap.innerHTML='', 3400);
-}
-async function requireRole(allowed){
-  const t = token();
-  if(!t){ location.href='/login.html'; return null; }
-  const me = await apiJson('/api/me', { headers: authHeaders(false) });
-  const { user, role } = normalizeMe(me);
-  if(!allowed.includes(role)){
-    const target = role==='teacher' ? '/teacher-dashboard.html' : (role==='admin' ? '/admin-dashboard.html' : '/student-dashboard.html');
-    showToast(role==='student' ? "Siz student ekansiz. Student paneliga yo'naltirilmoqda..." : "Role mos emas. Yo'naltirilmoqda...", 'error');
-    setTimeout(()=> location.href = target, 650);
-    return null;
-  }
-  return user;
-}
-</script>
-
-<script>
-(function(){
-  const key='theme';
-  const html=document.documentElement;
-  const btn=document.getElementById('themeToggle');
-  const icon=document.getElementById('themeIcon');
-  const label=document.getElementById('themeLabel');
-  function apply(mode){
-    if(mode==='dark') html.classList.add('dark'); else html.classList.remove('dark');
-    localStorage.setItem(key, mode);
-    icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-    label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
-  }
-  const saved=localStorage.getItem(key);
-  if(saved) apply(saved);
-  btn.addEventListener('click', ()=> apply(html.classList.contains('dark') ? 'light' : 'dark'));
-})();
-</script>
-
-<script>
-(async function init(){
-  const me = await requireRole(['teacher']).catch(e=>{ showToast(e.message,'error'); return null; });
-  if(!me) return;
-
-  const displayName = me.fullName || me.fullname || me.name || me.username || 'Teacher';
-  document.getElementById('nameVal').textContent = displayName;
-  const fac = me.faculty || '';
-  const grp = me.group || me.studyGroup || '';
-  document.getElementById('subtitleVal').textContent = [fac, grp].filter(Boolean).join(' • ') || '—';
-  document.getElementById('metaLine').textContent = [fac, grp].filter(Boolean).join(' • ') || 'QDTU LMS';
-
-  document.getElementById('coinsVal').textContent = String(me.coins ?? me.coin ?? 0);
-  document.getElementById('tBalVal').textContent = String(me.teacherBalance ?? 0);
-
-  document.getElementById('logoutBtn').addEventListener('click', ()=>{
-    localStorage.removeItem('token');
-    location.href='/login.html';
-  });
-
-  const modal = document.getElementById('modal');
-  const closeModal = ()=> modal.classList.add('hidden');
-  document.getElementById('closeModal').addEventListener('click', closeModal);
-  function openModal(tag,title,bodyHtml){
-    document.getElementById('modalTag').textContent = tag;
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalBody').innerHTML = bodyHtml;
-    modal.classList.remove('hidden');
-  }
-
-  async function loadCourses(){
-    const j = await apiJson('/api/courses', { headers: authHeaders(false) });
-    let courses = j.courses || [];
-    courses = courses.filter(c => String(c.teacherId||c.teacher?._id||'') === String(me._id||'') || c.ownerId===me._id || c.isMine===true);
-    document.getElementById('courseCount').textContent = String(courses.length);
-
-    const sel = document.getElementById('contentCourseSel');
-    sel.innerHTML = courses.map(c=>`<option value="${esc(c._id)}">${esc(c.title||'Kurs')}</option>`).join('') || `<option value="">Kurs topilmadi</option>`;
-
-    const list = document.getElementById('myCourses');
-    if(!courses.length){
-      list.innerHTML = `<div class="muted2 text-sm">Hozircha kurs yo‘q. “Yangi kurs” tugmasini bosing.</div>`;
-      return;
-    }
-    list.innerHTML = courses.slice(0,20).map(c=>{
-      const isPaid = String(c.type||'free').toLowerCase()==='paid';
-      const status = c.status || 'draft';
-      return `
-        <div class="glass rounded-2xl p-4">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="font-extrabold">${esc(c.title||'Kurs')}</div>
-              <div class="text-xs muted2 mt-1">${isPaid ? `${Number(c.price||0)} coin` : 'Bepul'} • Status: <span class="font-extrabold">${esc(status)}</span></div>
-              <div class="text-xs muted2 mt-1">Guruhlar: ${esc((c.groups||[]).join(', ')) || '—'}</div>
-            </div>
-            <div class="flex flex-wrap gap-2 justify-end">
-              <button class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring" data-edit="${esc(c._id)}"><i class="fa-solid fa-pen mr-2"></i>Tahrir</button>
-              <a class="btn-primary text-white rounded-xl px-3 py-2 text-sm font-extrabold glow-ring" href="/course.html?id=${encodeURIComponent(c._id)}"><i class="fa-solid fa-eye mr-2"></i>Ko‘rish</a>
-            </div>
-          </div>
+  <!-- COURSE MODAL -->
+  <div id="courseModalBack" class="modalBackdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <header>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div style="font-weight:950" id="courseModalTitle">Yangi kurs</div>
+          <button class="btn ghost small" id="courseCloseBtn" style="border-color:rgba(255,255,255,.35);color:#fff">Yopish</button>
         </div>
-      `;
-    }).join('');
-    list.querySelectorAll('[data-edit]').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const id = btn.getAttribute('data-edit');
-        const c = courses.find(x=>String(x._id)===String(id));
-        openEditCourseModal(c);
-      });
-    });
-  }
-
-  async function loadTests(){
-    const j = await apiJson('/api/tests', { headers: authHeaders(false) });
-    let tests = j.tests || [];
-    tests = tests.filter(t => String(t.teacherId||t.teacher?._id||'') === String(me._id||'') || t.isMine===true);
-    const list = document.getElementById('myTests');
-    if(!tests.length){
-      list.innerHTML = `<div class="muted2 text-sm">Hozircha test yo‘q. “Yangi test” tugmasini bosing.</div>`;
-      return;
-    }
-    list.innerHTML = tests.slice(0,20).map(t=>{
-      return `
-        <div class="glass rounded-2xl p-4 flex items-start justify-between gap-3">
-          <div>
-            <div class="font-extrabold">${esc(t.title||'Test')}</div>
-            <div class="text-xs muted2 mt-1">Guruhlar: ${esc((t.groups||[]).join(', ')) || '—'}</div>
+        <div class="tiny" style="color:rgba(255,255,255,.9);margin-top:6px">Kurs metadata + content + pricing + group restriction</div>
+      </header>
+      <div class="body">
+        <div class="grid">
+          <div class="col-8">
+            <div class="tiny">Kurs nomi</div>
+            <input id="c_title" class="input" placeholder="Masalan: Energetika muhandisligi — 1-modul" />
           </div>
-          <a class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring" href="/test.html?id=${encodeURIComponent(t._id)}"><i class="fa-solid fa-play mr-2"></i>Ochish</a>
-        </div>
-      `;
-    }).join('');
-  }
-
-  document.getElementById('refreshCourses').addEventListener('click', ()=> loadCourses().catch(e=>showToast(e.message,'error')));
-  document.getElementById('refreshTests').addEventListener('click', ()=> loadTests().catch(e=>showToast(e.message,'error')));
-
-  function openCreateCourseModal(){
-    openModal('COURSE','Yangi kurs yaratish', `
-      <form id="createCourseForm" class="space-y-3">
-        <div class="grid md:grid-cols-2 gap-3">
-          <div>
-            <div class="text-xs font-extrabold muted">Sarlavha</div>
-            <input class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="title" placeholder="Masalan: Matematika 1" required />
+          <div class="col-4">
+            <div class="tiny">Status</div>
+            <select id="c_status" class="input">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
           </div>
-          <div>
-            <div class="text-xs font-extrabold muted">Turi</div>
-            <select class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="type">
-              <option value="free" selected>Bepul</option>
+
+          <div class="col-6">
+            <div class="tiny">Fakultet</div>
+            <select id="c_faculty" class="input">
+              <option value="Neft-gaz va geologiya fakulteti">Neft-gaz va geologiya fakulteti</option>
+              <option value="Iqtisodiyot va boshqaruv fakulteti">Iqtisodiyot va boshqaruv fakulteti</option>
+              <option value="Energetika muhandisligi fakulteti">Energetika muhandisligi fakulteti</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <div class="tiny">Guruhlar (vergul bilan)</div>
+            <input id="c_groups" class="input" placeholder="Masalan: MMT-520-25, EEM-101-26" />
+          </div>
+
+          <div class="col-12">
+            <div class="tiny">Tavsif</div>
+            <textarea id="c_desc" class="input" rows="3" placeholder="Kurs haqida qisqacha..."></textarea>
+          </div>
+
+          <div class="col-4">
+            <div class="tiny">Narx turi</div>
+            <select id="c_type" class="input">
+              <option value="free">Bepul</option>
               <option value="paid">Pullik</option>
             </select>
           </div>
-        </div>
-
-        <div>
-          <div class="text-xs font-extrabold muted">Narx (coin) — faqat pullik</div>
-          <input class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="price" type="number" min="0" value="0" />
-        </div>
-
-        <div>
-          <div class="text-xs font-extrabold muted">Guruhlar (vergul bilan, misol: MMT-520-25, ABC-101-01)</div>
-          <input class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="groups" placeholder="MMT-520-25, ..." />
-        </div>
-
-        <div>
-          <div class="text-xs font-extrabold muted">Tavsif</div>
-          <textarea class="field w-full rounded-2xl px-4 py-3 text-sm mt-2 min-h-[90px]" name="description" placeholder="Kurs haqida qisqacha..."></textarea>
-        </div>
-
-        <div class="flex flex-wrap gap-2 justify-end pt-2">
-          <button type="button" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring" id="cancelCourse">Bekor qilish</button>
-          <button class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring" type="submit">
-            <i class="fa-solid fa-check mr-2"></i>Saqlash
-          </button>
-        </div>
-      </form>
-    `);
-
-    document.getElementById('cancelCourse').onclick = closeModal;
-
-    document.getElementById('createCourseForm').addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const data = Object.fromEntries(fd.entries());
-      const payload = {
-        title: data.title,
-        description: data.description || '',
-        type: String(data.type||'free').toLowerCase(),
-        price: Number(data.price||0),
-        groups: String(data.groups||'').split(',').map(s=>s.trim()).filter(Boolean),
-        status: 'published'
-      };
-      try{
-        await apiJson('/api/courses', { method:'POST', headers: authHeaders(true), body: JSON.stringify(payload) });
-        showToast('Kurs yaratildi', 'success');
-        closeModal();
-        await loadCourses();
-      }catch(e){ showToast(e.message,'error'); }
-    });
-  }
-
-  function openEditCourseModal(c){
-    if(!c) return;
-    const groups = (c.groups||[]).join(', ');
-    openModal('COURSE','Kursni tahrirlash', `
-      <form id="editCourseForm" class="space-y-3">
-        <div class="grid md:grid-cols-2 gap-3">
-          <div>
-            <div class="text-xs font-extrabold muted">Sarlavha</div>
-            <input class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="title" value="${esc(c.title||'')}" required />
+          <div class="col-4">
+            <div class="tiny">Narx (coin)</div>
+            <input id="c_price" class="input" type="number" min="0" value="0" />
           </div>
-          <div>
-            <div class="text-xs font-extrabold muted">Status</div>
-            <select class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="status">
-              <option value="draft" ${(String(c.status||'draft')==='draft')?'selected':''}>draft</option>
-              <option value="published" ${(String(c.status||'draft')==='published')?'selected':''}>published</option>
-            </select>
+          <div class="col-4">
+            <div class="tiny">Preview image URL</div>
+            <input id="c_preview" class="input" placeholder="https://..." />
           </div>
-        </div>
 
-        <div class="grid md:grid-cols-2 gap-3">
-          <div>
-            <div class="text-xs font-extrabold muted">Turi</div>
-            <select class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="type">
-              <option value="free" ${(String(c.type||'free')==='free')?'selected':''}>Bepul</option>
-              <option value="paid" ${(String(c.type||'free')==='paid')?'selected':''}>Pullik</option>
-            </select>
+          <div class="col-12">
+            <div class="tiny" style="font-weight:900">Darslar (oddiy format)</div>
+            <div class="tiny">Har qator: <code>type|title|url_or_text</code> (type: video/pdf/text). Video uchun YouTube URL.</div>
+            <textarea id="c_lessons" class="input" rows="6" placeholder="video|Kirish|https://youtube.com/watch?v=...\npdf|1-mavzu pdf|/uploads/a.pdf\ntext|Topshiriq|1) ..."></textarea>
           </div>
-          <div>
-            <div class="text-xs font-extrabold muted">Narx (coin)</div>
-            <input class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="price" type="number" min="0" value="${Number(c.price||0)}" />
-          </div>
-        </div>
 
-        <div>
-          <div class="text-xs font-extrabold muted">Guruhlar</div>
-          <input class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="groups" value="${esc(groups)}" />
-        </div>
-
-        <div>
-          <div class="text-xs font-extrabold muted">Tavsif</div>
-          <textarea class="field w-full rounded-2xl px-4 py-3 text-sm mt-2 min-h-[90px]" name="description">${esc(c.description||'')}</textarea>
-        </div>
-
-        <div class="flex flex-wrap gap-2 justify-end pt-2">
-          <button type="button" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring" id="cancelEdit">Bekor qilish</button>
-          <button class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring" type="submit">
-            <i class="fa-solid fa-check mr-2"></i>Saqlash
-          </button>
-        </div>
-      </form>
-    `);
-    document.getElementById('cancelEdit').onclick = closeModal;
-
-    document.getElementById('editCourseForm').addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const data = Object.fromEntries(fd.entries());
-      const payload = {
-        title: data.title,
-        description: data.description || '',
-        type: String(data.type||'free').toLowerCase(),
-        price: Number(data.price||0),
-        groups: String(data.groups||'').split(',').map(s=>s.trim()).filter(Boolean),
-        status: data.status || 'draft'
-      };
-      try{
-        await apiJson('/api/courses/' + encodeURIComponent(c._id), { method:'PUT', headers: authHeaders(true), body: JSON.stringify(payload) });
-        showToast('Kurs saqlandi', 'success');
-        closeModal();
-        await loadCourses();
-      }catch(e){ showToast(e.message,'error'); }
-    });
-  }
-
-  function openCreateTestModal(){
-    openModal('TEST','Yangi test yaratish', `
-      <form id="createTestForm" class="space-y-3">
-        <div>
-          <div class="text-xs font-extrabold muted">Sarlavha</div>
-          <input class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="title" placeholder="Masalan: 1-mavzu testi" required />
-        </div>
-        <div>
-          <div class="text-xs font-extrabold muted">Guruhlar (vergul bilan)</div>
-          <input class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="groups" placeholder="MMT-520-25, ..." />
-        </div>
-        <div>
-          <div class="text-xs font-extrabold muted">Savollar (oddiy format)</div>
-          <div class="text-xs muted2 mt-1">Har savol: <b>Savol?</b> | A;B;C;D | to‘g‘ri_javob_index(0-3). Har satr — 1 savol.</div>
-          <textarea class="field w-full rounded-2xl px-4 py-3 text-sm mt-2 min-h-[160px]" name="questionsText" placeholder="1) 2+2=? | 3;4;5;6 | 1"></textarea>
-        </div>
-        <div class="flex flex-wrap gap-2 justify-end pt-2">
-          <button type="button" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring" id="cancelTest">Bekor qilish</button>
-          <button class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring" type="submit">
-            <i class="fa-solid fa-check mr-2"></i>Saqlash
-          </button>
-        </div>
-      </form>
-    `);
-
-    document.getElementById('cancelTest').onclick = closeModal;
-
-    document.getElementById('createTestForm').addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const data = Object.fromEntries(fd.entries());
-      const payload = {
-        title: data.title,
-        groups: String(data.groups||'').split(',').map(s=>s.trim()).filter(Boolean),
-        questionsText: data.questionsText || ''
-      };
-      try{
-        await apiJson('/api/tests', { method:'POST', headers: authHeaders(true), body: JSON.stringify(payload) });
-        showToast('Test yaratildi', 'success');
-        closeModal();
-        await loadTests();
-      }catch(e){ showToast(e.message,'error'); }
-    });
-  }
-
-  document.getElementById('openCreateCourse').addEventListener('click', openCreateCourseModal);
-  document.getElementById('openCreateTest').addEventListener('click', openCreateTestModal);
-
-  async function loadContents(){
-    const courseId = document.getElementById('contentCourseSel').value;
-    if(!courseId) return showToast('Kurs tanlang','error');
-    const j = await apiJson('/api/courses/' + encodeURIComponent(courseId) + '/content', { headers: authHeaders(false) });
-    const items = j.content || [];
-    const list = document.getElementById('contentList');
-    if(!items.length){
-      list.innerHTML = `<div class="muted2 text-sm">Hozircha kontent yo‘q.</div>`;
-      return;
-    }
-    list.innerHTML = items.map(it=>{
-      const kind = it.kind || it.type || 'text';
-      const preview = kind==='text' ? esc(String(it.body||'').slice(0,120)) : esc(it.url||'');
-      return `
-        <div class="glass rounded-2xl p-4">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="font-extrabold">${esc(it.title||'Kontent')}</div>
-              <div class="text-xs muted2 mt-1">Type: <span class="font-extrabold">${esc(kind)}</span></div>
-              <div class="text-xs muted2 mt-2 break-all">${preview}</div>
+          <div class="col-12 row" style="justify-content:space-between; margin-top:10px">
+            <div class="row">
+              <button class="btn primary" id="c_saveBtn">Saqlash</button>
+              <button class="btn" id="c_saveDraftBtn">Draft saqlash</button>
             </div>
-            <button class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring" data-del="${esc(it._id)}"><i class="fa-solid fa-trash mr-2"></i>O‘chirish</button>
+            <button class="btn danger" id="c_deleteBtn" style="display:none">O‘chirish</button>
           </div>
         </div>
-      `;
-    }).join('');
+      </div>
+    </div>
+  </div>
 
-    list.querySelectorAll('[data-del]').forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
-        const id = btn.getAttribute('data-del');
-        if(!confirm('Kontent o‘chirilsinmi?')) return;
-        try{
-          await apiJson('/api/courses/' + encodeURIComponent(courseId) + '/content/' + encodeURIComponent(id), { method:'DELETE', headers: authHeaders(false) });
-          showToast('O‘chirildi','success');
-          await loadContents();
-        }catch(e){ showToast(e.message,'error'); }
-      });
-    });
+  <!-- LIVE MODAL -->
+  <div id="liveModalBack" class="modalBackdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <header>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div style="font-weight:950" id="liveModalTitle">Yangi live</div>
+          <button class="btn ghost small" id="liveCloseBtn" style="border-color:rgba(255,255,255,.35);color:#fff">Yopish</button>
+        </div>
+        <div class="tiny" style="color:rgba(255,255,255,.9);margin-top:6px">Live: name + preview + description + pricing + start/stop</div>
+      </header>
+      <div class="body">
+        <div class="grid">
+          <div class="col-8">
+            <div class="tiny">Live nomi</div>
+            <input id="l_name" class="input" placeholder="Masalan: Real vaqt dars — 1" />
+          </div>
+          <div class="col-4">
+            <div class="tiny">Status</div>
+            <select id="l_status" class="input">
+              <option value="offline">Offline</option>
+              <option value="live">Live</option>
+              <option value="ended">Ended</option>
+            </select>
+          </div>
+
+          <div class="col-12">
+            <div class="tiny">Tavsif</div>
+            <textarea id="l_desc" class="input" rows="3" placeholder="Nima bo'ladi bu live'da..."></textarea>
+          </div>
+
+          <div class="col-4">
+            <div class="tiny">Narx turi</div>
+            <select id="l_type" class="input">
+              <option value="free">Bepul</option>
+              <option value="paid">Pullik</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <div class="tiny">Narx (coin)</div>
+            <input id="l_price" class="input" type="number" min="0" value="0" />
+          </div>
+          <div class="col-4">
+            <div class="tiny">Preview image URL</div>
+            <input id="l_preview" class="input" placeholder="https://..." />
+          </div>
+
+          <div class="col-12">
+            <div class="tiny">Join URL (ixtiyoriy)</div>
+            <input id="l_joinUrl" class="input" placeholder="Masalan: /live-room.html?id=..." />
+          </div>
+
+          <div class="col-12 row" style="justify-content:space-between; margin-top:10px">
+            <div class="row">
+              <button class="btn primary" id="l_saveBtn">Saqlash</button>
+            </div>
+            <button class="btn danger" id="l_deleteBtn" style="display:none">O‘chirish</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>QDTU LMS — Teacher Dashboard</footer>
+
+<script>
+  const API_BASE = "";
+  const $ = (id)=> document.getElementById(id);
+  function getToken(){ return localStorage.getItem("token") || ""; }
+
+  function setErr(msg){ $("errBox").textContent=msg; $("errBox").style.display="block"; $("okBox").style.display="none"; }
+  function setOk(msg){ $("okBox").textContent=msg; $("okBox").style.display="block"; $("errBox").style.display="none"; }
+  function clearMsg(){ $("errBox").style.display="none"; $("okBox").style.display="none"; }
+
+  async function apiFetch(url, opts={}){
+    const token = getToken();
+    const headers = Object.assign({}, opts.headers || {});
+    if(token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + url, Object.assign({}, opts, { headers }));
+    let data = null;
+    const ct = res.headers.get("content-type") || "";
+    if(ct.includes("application/json")){
+      try{ data = await res.json(); }catch{ data = null; }
+    }else{
+      try{ data = await res.text(); }catch{ data = null; }
+    }
+    if(!res.ok){
+      const msg = (data && data.error) ? data.error : ("So'rov xatosi: " + res.status);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
   }
 
-  document.getElementById('loadContentsBtn').addEventListener('click', ()=> loadContents().catch(e=>showToast(e.message,'error')));
-
-  document.getElementById('addContentBtn').addEventListener('click', async ()=>{
-    const courseId = document.getElementById('contentCourseSel').value;
-    if(!courseId) return showToast('Kurs tanlang','error');
-    const type = document.getElementById('contentType').value;
-    const title = document.getElementById('contentTitle').value.trim();
-    const url = document.getElementById('contentUrl').value.trim();
-    const body = document.getElementById('contentBody').value.trim();
-
-    if(!title) return showToast('Sarlavha kiriting','error');
-    if(type==='text' && !body) return showToast('Matn kiriting','error');
-    if((type==='youtube' || type==='pdf') && !url) return showToast('URL kiriting','error');
-
-    const payload = { kind: type, title, url: (type==='text' ? '' : url), body: (type==='text' ? body : ''), order: Date.now() };
-    try{
-      await apiJson('/api/courses/' + encodeURIComponent(courseId) + '/content', { method:'POST', headers: authHeaders(true), body: JSON.stringify(payload) });
-      showToast('Kontent qo‘shildi','success');
-      document.getElementById('contentTitle').value='';
-      document.getElementById('contentUrl').value='';
-      document.getElementById('contentBody').value='';
-      await loadContents();
-    }catch(e){ showToast(e.message,'error'); }
+  // theme/logout
+  $("themeBtn").addEventListener("click", ()=>{
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+  });
+  $("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token"); location.href="/login.html";
   });
 
-  await loadCourses();
-  await loadTests();
-})().catch(e=> showToast(e.message,'error'));
+  async function apiMe(){
+    const token = getToken();
+    if(!token){ location.href="/login.html"; return null; }
+    try{ return await apiFetch("/api/me"); }
+    catch(e){ localStorage.removeItem("token"); location.href="/login.html"; return null; }
+  }
+
+  // demo storage
+  function demoCourseKey(){ return "demoCourses_v2"; }
+  function readDemoCourses(){ try{ return JSON.parse(localStorage.getItem(demoCourseKey()) || "[]"); }catch{ return []; } }
+  function writeDemoCourses(list){ localStorage.setItem(demoCourseKey(), JSON.stringify(list)); }
+
+  function demoLiveKey(){ return "demoLives_v1"; }
+  function readDemoLives(){ try{ return JSON.parse(localStorage.getItem(demoLiveKey()) || "[]"); }catch{ return []; } }
+  function writeDemoLives(list){ localStorage.setItem(demoLiveKey(), JSON.stringify(list)); }
+
+  function seedDemoLives(){
+    const cur = readDemoLives();
+    if(cur.length) return;
+    const seed = [
+      { id:"live1", name:"Live demo — 1", description:"Real vaqt darsi", status:"offline", type:"free", price:0, preview:"", joinUrl:"/live-room.html?id=live1", createdAt: Date.now()-86400000 }
+    ];
+    writeDemoLives(seed);
+  }
+
+  function normalizeCourse(raw){
+    return {
+      id: raw._id || raw.id || raw.courseId,
+      title: raw.title || raw.name || "Nomsiz kurs",
+      description: raw.description || raw.desc || "",
+      status: raw.status || (raw.published ? "published" : "draft"),
+      type: (raw.type || (raw.isPaid ? "paid" : "free") || "free"),
+      price: Number(raw.price ?? raw.cost ?? 0),
+      faculty: raw.faculty || raw.facultyName || "",
+      groups: Array.isArray(raw.groups) ? raw.groups : (raw.allowedGroups || []),
+      preview: raw.previewImage || raw.preview || raw.image || "",
+      lessons: Array.isArray(raw.lessons) ? raw.lessons : (raw.modules || raw.content || []),
+      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
+      createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : (raw.createdAtMs || Date.now())
+    };
+  }
+
+  function normalizeLive(raw){
+    return {
+      id: raw._id || raw.id || raw.liveId,
+      name: raw.name || raw.title || "Live",
+      description: raw.description || raw.desc || "",
+      status: raw.status || "offline", // offline/live/ended
+      type: raw.type || "free",
+      price: Number(raw.price || 0),
+      preview: raw.previewImage || raw.preview || "",
+      joinUrl: raw.joinUrl || raw.url || "",
+      createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : (raw.createdAtMs || Date.now())
+    };
+  }
+
+  let state = { me:null, courses:[], lives:[], mode:"", isDemo:false };
+
+  async function fetchCourses(){
+    try{
+      const data = await apiFetch("/api/courses?mine=1");
+      const list = Array.isArray(data) ? data : (data.courses || []);
+      state.isDemo = false; state.mode = "API";
+      return list.map(normalizeCourse);
+    }catch(e){
+      state.isDemo = true; state.mode = "DEMO(localStorage)";
+      return readDemoCourses().map(normalizeCourse);
+    }
+  }
+
+  async function fetchLives(){
+    try{
+      const data = await apiFetch("/api/lives?mine=1");
+      const list = Array.isArray(data) ? data : (data.lives || []);
+      return list.map(normalizeLive);
+    }catch(e){
+      seedDemoLives();
+      return readDemoLives().map(normalizeLive);
+    }
+  }
+
+  function matchCourseFilters(c){
+    const q = ($("q").value || "").trim().toLowerCase();
+    const st = $("statusFilter").value || "";
+    if(st && String(c.status) !== st) return false;
+    if(q){
+      const hay = `${c.title} ${c.description} ${c.faculty}`.toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }
+
+  function applySort(list){
+    const key = $("sortSel").value;
+    const out = [...list];
+    if(key==="new") out.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+    else if(key==="old") out.sort((a,b)=> (a.createdAt||0)-(b.createdAt||0));
+    else if(key==="title") out.sort((a,b)=> String(a.title||"").localeCompare(String(b.title||""), "uz"));
+    return out;
+  }
+
+  function courseLessonsToText(lessons){
+    // best effort: accept objects with type/title/youtubeUrl/pdfUrl/text
+    if(!Array.isArray(lessons)) return "";
+    return lessons.map(l=>{
+      const type = (l.type || l.kind || "").toLowerCase() || (l.youtubeUrl ? "video" : l.pdfUrl ? "pdf" : "text");
+      const title = l.title || l.name || "Dars";
+      const body = l.youtubeUrl || l.pdfUrl || l.text || "";
+      return `${type}|${title}|${body}`;
+    }).join("\n");
+  }
+
+  function parseLessons(text){
+    const lines = String(text||"").split("\n").map(x=>x.trim()).filter(Boolean);
+    const out = [];
+    for(const line of lines){
+      const parts = line.split("|");
+      const type = (parts[0] || "text").trim().toLowerCase();
+      const title = (parts[1] || "Dars").trim();
+      const body = parts.slice(2).join("|").trim();
+      if(type==="video") out.push({ type:"video", title, youtubeUrl: body });
+      else if(type==="pdf") out.push({ type:"pdf", title, pdfUrl: body });
+      else out.push({ type:"text", title, text: body });
+    }
+    return out;
+  }
+
+  function render(){
+    $("modeTxt").textContent = "Rejim: " + state.mode;
+
+    // KPI
+    $("courseCount").textContent = String(state.courses.length);
+    $("liveCount").textContent = String(state.lives.length);
+
+    // tests count (from demo tests store)
+    let tcount = 0;
+    try{
+      const dt = JSON.parse(localStorage.getItem("demoTests_v2") || "[]");
+      tcount = Array.isArray(dt) ? dt.length : 0;
+    }catch{ tcount = 0; }
+    $("testCount").textContent = String(tcount);
+
+    // teacher balance (demo)
+    const bal = Number(state.me?.teacherBalance ?? state.me?.balance ?? 0);
+    $("balVal").textContent = String(bal);
+
+    // courses list
+    const wrap = $("courseList");
+    wrap.innerHTML = "";
+    const list = applySort(state.courses.filter(matchCourseFilters));
+    if(!list.length){
+      wrap.innerHTML = `<div class="muted" style="grid-column:span 12">Kurs topilmadi.</div>`;
+    }else{
+      list.forEach(c=>{
+        const el = document.createElement("div");
+        el.className = "item";
+        el.innerHTML = `
+          <div class="title">${c.title}</div>
+          <div class="muted" style="margin-top:6px">${(c.description||"").slice(0,140)}${(c.description||"").length>140?"…":""}</div>
+          <div class="meta">
+            <span class="tag">${c.faculty || "—"}</span>
+            <span class="tag ${c.type==="paid" ? "paid" : "free"}">${c.type==="paid" ? ("Pullik • "+Number(c.price||0)+" coin") : "Bepul"}</span>
+            <span class="tag ${c.status==="published" ? "pub" : "draft"}">${c.status}</span>
+            <span class="tag">Guruh: ${(c.groups||[]).length ? c.groups.join(", ") : "ochiq"}</span>
+            <span class="tag">Dars: ${(c.lessons||[]).length}</span>
+          </div>
+          <div class="row" style="margin-top:10px; justify-content:flex-end">
+            <a class="btn small" href="/course.html?id=${encodeURIComponent(c.id)}">Kurs sahifasi</a>
+            <a class="btn small" href="/joinedcourse.html?id=${encodeURIComponent(c.id)}">Lessons</a>
+            <a class="btn small" href="/tests.html?courseId=${encodeURIComponent(c.id)}">Testlar</a>
+            <button class="btn small primary" data-act="edit" data-id="${c.id}">Tahrirlash</button>
+          </div>
+        `;
+        el.querySelector('[data-act="edit"]').addEventListener("click", ()=> openCourseEdit(c.id));
+        wrap.appendChild(el);
+      });
+    }
+
+    // lives list
+    const lwrap = $("liveList");
+    lwrap.innerHTML = "";
+    if(!state.lives.length){
+      lwrap.innerHTML = `<div class="muted" style="grid-column:span 12">Live session yo‘q.</div>`;
+    }else{
+      state.lives.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0)).forEach(l=>{
+        const el = document.createElement("div");
+        el.className = "item";
+        const statusTag = l.status==="live" ? `<span class="tag pub">LIVE</span>` : l.status==="ended" ? `<span class="tag draft">ENDED</span>` : `<span class="tag">OFFLINE</span>`;
+        el.innerHTML = `
+          <div class="title">${l.name}</div>
+          <div class="muted" style="margin-top:6px">${(l.description||"").slice(0,140)}${(l.description||"").length>140?"…":""}</div>
+          <div class="meta">
+            ${statusTag}
+            <span class="tag ${l.type==="paid" ? "paid" : "free"}">${l.type==="paid" ? ("Pullik • "+Number(l.price||0)+" coin") : "Bepul"}</span>
+            <span class="tag">Join: ${l.joinUrl || "-"}</span>
+          </div>
+          <div class="row" style="margin-top:10px; justify-content:flex-end">
+            <button class="btn small" data-act="start" data-id="${l.id}">Start</button>
+            <button class="btn small" data-act="stop" data-id="${l.id}">Stop</button>
+            <button class="btn small primary" data-act="edit" data-id="${l.id}">Tahrirlash</button>
+          </div>
+        `;
+        el.querySelector('[data-act="edit"]').addEventListener("click", ()=> openLiveEdit(l.id));
+        el.querySelector('[data-act="start"]').addEventListener("click", ()=> setLiveStatus(l.id, "live"));
+        el.querySelector('[data-act="stop"]').addEventListener("click", ()=> setLiveStatus(l.id, "offline"));
+        lwrap.appendChild(el);
+      });
+    }
+  }
+
+  async function reload(){
+    clearMsg();
+    state.courses = await fetchCourses();
+    state.lives = await fetchLives();
+    render();
+  }
+
+  // ---------- COURSE MODAL ----------
+  function openCourseModal(){ $("courseModalBack").style.display="flex"; document.body.style.overflow="hidden"; }
+  function closeCourseModal(){
+    $("courseModalBack").style.display="none"; document.body.style.overflow="";
+    delete $("c_saveBtn").dataset.editing;
+    $("c_deleteBtn").style.display="none";
+  }
+  $("courseCloseBtn").addEventListener("click", closeCourseModal);
+  $("courseModalBack").addEventListener("click", (e)=>{ if(e.target===$("courseModalBack")) closeCourseModal(); });
+  document.addEventListener("keydown", (e)=>{ if(e.key==="Escape"){ closeCourseModal(); closeLiveModal(); } });
+
+  function fillCourseModal(c){
+    $("c_title").value = c?.title || "";
+    $("c_desc").value = c?.description || "";
+    $("c_status").value = c?.status || "draft";
+    $("c_faculty").value = c?.faculty || "Energetika muhandisligi fakulteti";
+    $("c_groups").value = (c?.groups || []).join(", ");
+    $("c_type").value = c?.type || "free";
+    $("c_price").value = Number(c?.price || 0);
+    $("c_preview").value = c?.preview || "";
+    $("c_lessons").value = c ? courseLessonsToText(c.lessons) : "";
+  }
+
+  function collectCoursePayload(publish){
+    const title = ($("c_title").value || "").trim();
+    const description = ($("c_desc").value || "").trim();
+    const status = publish ? "published" : ($("c_status").value || "draft");
+    const faculty = ($("c_faculty").value || "").trim();
+    const groups = ($("c_groups").value || "").split(",").map(x=>x.trim()).filter(Boolean);
+    const type = ($("c_type").value || "free");
+    const price = Number($("c_price").value || 0);
+    const previewImage = ($("c_preview").value || "").trim();
+    const lessonsText = ($("c_lessons").value || "");
+    const lessons = parseLessons(lessonsText);
+
+    if(!title) throw new Error("Kurs nomi majburiy.");
+    if(type==="paid" && (!Number.isFinite(price) || price<1)) throw new Error("Pullik kurs uchun narx (coin) 1+ bo‘lsin.");
+
+    return { title, description, status, faculty, groups, type, price, previewImage, lessons };
+  }
+
+  async function saveCourse(publish){
+    clearMsg();
+    const editingId = $("c_saveBtn").dataset.editing || "";
+    let payload;
+    try{ payload = collectCoursePayload(publish); }catch(e){ return setErr(e.message || "Kurs xato."); }
+
+    // API attempt
+    try{
+      let url="/api/courses", method="POST";
+      if(editingId){ url="/api/courses/" + encodeURIComponent(editingId); method="PUT"; }
+      await apiFetch(url, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
+      setOk("Kurs saqlandi (API).");
+      closeCourseModal();
+      await reload();
+      return;
+    }catch(e){
+      // demo
+      const list = readDemoCourses();
+      if(editingId){
+        const idx = list.findIndex(x=>String(x.id)===String(editingId));
+        if(idx>=0){
+          list[idx] = { ...list[idx], ...payload, id: list[idx].id, teacherName: state.me?.fullname || state.me?.name || state.me?.username || "Teacher", createdAtMs: list[idx].createdAtMs || Date.now() };
+        }
+      }else{
+        const id = "c_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+        list.push({ id, ...payload, teacherName: state.me?.fullname || state.me?.name || state.me?.username || "Teacher", createdAtMs: Date.now() });
+      }
+      writeDemoCourses(list);
+      setOk("Kurs saqlandi (demo/localStorage).");
+      closeCourseModal();
+      await reload();
+    }
+  }
+
+  async function deleteCourse(id){
+    if(!id) return;
+    clearMsg();
+    // API attempt
+    try{
+      await apiFetch("/api/courses/" + encodeURIComponent(id), { method:"DELETE" });
+      setOk("Kurs o‘chirildi (API).");
+      closeCourseModal();
+      await reload();
+      return;
+    }catch(e){
+      const list = readDemoCourses().filter(x=>String(x.id)!==String(id));
+      writeDemoCourses(list);
+      setOk("Kurs o‘chirildi (demo/localStorage).");
+      closeCourseModal();
+      await reload();
+    }
+  }
+
+  function openCourseEdit(id){
+    const c = state.courses.find(x=>String(x.id)===String(id));
+    if(!c) return setErr("Kurs topilmadi.");
+    $("courseModalTitle").textContent = "Kursni tahrirlash";
+    fillCourseModal(c);
+    $("c_saveBtn").dataset.editing = id;
+    $("c_deleteBtn").style.display="inline-flex";
+    $("c_deleteBtn").onclick = ()=> deleteCourse(id);
+    openCourseModal();
+  }
+
+  $("newCourseBtn").addEventListener("click", ()=>{
+    $("courseModalTitle").textContent = "Yangi kurs";
+    fillCourseModal(null);
+    delete $("c_saveBtn").dataset.editing;
+    $("c_deleteBtn").style.display="none";
+    openCourseModal();
+  });
+  $("c_saveBtn").addEventListener("click", ()=> saveCourse(true));
+  $("c_saveDraftBtn").addEventListener("click", ()=> saveCourse(false));
+
+  // ---------- LIVE MODAL ----------
+  function openLiveModal(){ $("liveModalBack").style.display="flex"; document.body.style.overflow="hidden"; }
+  function closeLiveModal(){
+    $("liveModalBack").style.display="none"; document.body.style.overflow="";
+    delete $("l_saveBtn").dataset.editing;
+    $("l_deleteBtn").style.display="none";
+  }
+  $("liveCloseBtn").addEventListener("click", closeLiveModal);
+  $("liveModalBack").addEventListener("click", (e)=>{ if(e.target===$("liveModalBack")) closeLiveModal(); });
+
+  function fillLiveModal(l){
+    $("l_name").value = l?.name || "";
+    $("l_desc").value = l?.description || "";
+    $("l_status").value = l?.status || "offline";
+    $("l_type").value = l?.type || "free";
+    $("l_price").value = Number(l?.price || 0);
+    $("l_preview").value = l?.preview || "";
+    $("l_joinUrl").value = l?.joinUrl || "";
+  }
+
+  function collectLivePayload(){
+    const name = ($("l_name").value || "").trim();
+    const description = ($("l_desc").value || "").trim();
+    const status = ($("l_status").value || "offline");
+    const type = ($("l_type").value || "free");
+    const price = Number($("l_price").value || 0);
+    const previewImage = ($("l_preview").value || "").trim();
+    const joinUrl = ($("l_joinUrl").value || "").trim();
+    if(!name) throw new Error("Live nomi majburiy.");
+    if(type==="paid" && (!Number.isFinite(price) || price<1)) throw new Error("Pullik live uchun narx 1+ bo‘lsin.");
+    return { name, description, status, type, price, previewImage, joinUrl };
+  }
+
+  async function saveLive(){
+    clearMsg();
+    const editingId = $("l_saveBtn").dataset.editing || "";
+    let payload;
+    try{ payload = collectLivePayload(); }catch(e){ return setErr(e.message || "Live xato."); }
+
+    // API attempt
+    try{
+      let url="/api/lives", method="POST";
+      if(editingId){ url="/api/lives/" + encodeURIComponent(editingId); method="PUT"; }
+      await apiFetch(url, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
+      setOk("Live saqlandi (API).");
+      closeLiveModal();
+      await reload();
+      return;
+    }catch(e){
+      // demo
+      seedDemoLives();
+      const list = readDemoLives();
+      if(editingId){
+        const idx = list.findIndex(x=>String(x.id)===String(editingId));
+        if(idx>=0){
+          list[idx] = { ...list[idx], ...payload, id: list[idx].id, createdAtMs: list[idx].createdAtMs || Date.now() };
+        }
+      }else{
+        const id = "live_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+        list.push({ id, ...payload, createdAtMs: Date.now() });
+      }
+      writeDemoLives(list);
+      setOk("Live saqlandi (demo/localStorage).");
+      closeLiveModal();
+      await reload();
+    }
+  }
+
+  async function deleteLive(id){
+    if(!id) return;
+    clearMsg();
+    // API attempt
+    try{
+      await apiFetch("/api/lives/" + encodeURIComponent(id), { method:"DELETE" });
+      setOk("Live o‘chirildi (API).");
+      closeLiveModal();
+      await reload();
+      return;
+    }catch(e){
+      seedDemoLives();
+      const list = readDemoLives().filter(x=>String(x.id)!==String(id));
+      writeDemoLives(list);
+      setOk("Live o‘chirildi (demo/localStorage).");
+      closeLiveModal();
+      await reload();
+    }
+  }
+
+  async function setLiveStatus(id, status){
+    if(!id) return;
+    clearMsg();
+    // API attempt
+    try{
+      await apiFetch("/api/lives/" + encodeURIComponent(id) + "/status", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ status })
+      });
+      setOk("Live status yangilandi (API).");
+      await reload();
+      return;
+    }catch(e){
+      // demo: update in store
+      seedDemoLives();
+      const list = readDemoLives();
+      const idx = list.findIndex(x=>String(x.id)===String(id));
+      if(idx>=0){
+        list[idx].status = status;
+        writeDemoLives(list);
+        setOk("Live status yangilandi (demo/localStorage).");
+        await reload();
+      }else{
+        setErr("Live topilmadi.");
+      }
+    }
+  }
+
+  function openLiveEdit(id){
+    const l = state.lives.find(x=>String(x.id)===String(id));
+    if(!l) return setErr("Live topilmadi.");
+    $("liveModalTitle").textContent = "Live tahrirlash";
+    fillLiveModal(l);
+    $("l_saveBtn").dataset.editing = id;
+    $("l_deleteBtn").style.display="inline-flex";
+    $("l_deleteBtn").onclick = ()=> deleteLive(id);
+    openLiveModal();
+  }
+
+  $("newLiveBtn").addEventListener("click", ()=>{
+    $("liveModalTitle").textContent = "Yangi live";
+    fillLiveModal(null);
+    delete $("l_saveBtn").dataset.editing;
+    $("l_deleteBtn").style.display="none";
+    openLiveModal();
+  });
+  $("l_saveBtn").addEventListener("click", saveLive);
+
+  // events
+  $("refreshBtn").addEventListener("click", reload);
+  ["q","statusFilter","sortSel"].forEach(id=>{
+    $(id).addEventListener("input", ()=> render());
+    $(id).addEventListener("change", ()=> render());
+  });
+
+  async function init(){
+    const me = await apiMe();
+    if(!me) return;
+    state.me = me;
+
+    const role = String(me.role || "").toLowerCase();
+    if(role !== "teacher"){
+      location.href = role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html";
+      return;
+    }
+    const name = me.fullname || me.name || me.username || "—";
+    $("mePill").textContent = name;
+    $("mePill").style.display="inline-flex";
+    $("nameVal").textContent = name;
+
+    await reload();
+  }
+
+  init().catch(e=> setErr(e?.message || "Xatolik yuz berdi."));
 </script>
-</body></html>
+</body>
+</html>

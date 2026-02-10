@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kurslar</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f6f7fb;color:#111}
+    header{background:#111827;color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    header .left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    header .badge{background:#2563eb;padding:6px 10px;border-radius:999px;font-size:12px}
+    header .badge.student{background:#10b981}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px;background:rgba(255,255,255,.08)}
+    .container{max-width:1200px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+    .card h3{margin:0 0 10px 0;font-size:16px}
+    .muted{color:#6b7280;font-size:13px;line-height:1.45}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .btn{display:inline-block;border:1px solid #d1d5db;background:#fff;color:#111827;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:14px;cursor:pointer}
+    .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
+    .btn.danger{background:#ef4444;border-color:#ef4444;color:#fff}
+    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
+    .input, select, textarea{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;box-sizing:border-box;background:#fff}
+    label{font-size:13px;color:#374151}
+    .col-12{grid-column:span 12}
+    .col-8{grid-column:span 8}
+    .col-4{grid-column:span 4}
+    .col-6{grid-column:span 6}
+    .col-3{grid-column:span 3}
+    @media (max-width:980px){
+      .col-8,.col-4,.col-6,.col-3{grid-column:span 12}
+      header{align-items:flex-start}
+    }
+    .err{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
+    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 14px;border-radius:12px;margin:14px 0;display:none}
+    .table{width:100%;border-collapse:separate;border-spacing:0 10px}
+    .tr{background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
+    .trow{display:grid;grid-template-columns: 2.4fr 1fr 1fr 1fr 1fr;gap:10px;padding:12px 14px;align-items:center}
+    .trow .title{font-weight:700}
+    .tag{display:inline-block;font-size:12px;padding:5px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f9fafb;color:#111827}
+    .tag.paid{border-color:#bfdbfe;background:#eff6ff}
+    .tag.free{border-color:#a7f3d0;background:#ecfdf5}
+    .tag.lock{border-color:#fecaca;background:#fef2f2}
+    .tag.open{border-color:#fde68a;background:#fffbeb}
+    .split{display:flex;gap:10px;flex-wrap:wrap}
+    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
+    .modal{max-width:880px;width:100%;background:#fff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden}
+    .modal header{background:#111827;color:#fff;padding:14px 16px}
+    .modal .body{padding:16px}
+    footer{padding:20px 16px;color:#6b7280;text-align:center}
+    .tiny{font-size:12px;color:#6b7280}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <div style="font-weight:700">QDTU LMS</div>
+      <div id="roleBadge" class="badge student">Student</div>
+      <div id="mePill" class="pill" style="display:none"></div>
+    </div>
+    <div class="row">
+      <a class="btn ghost" id="dashLink" href="/student-dashboard.html">Dashboard</a>
+      <a class="btn ghost" href="/profile.html">Profil</a>
+      <button class="btn danger" id="logoutBtn">Chiqish</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="errBox" class="err"></div>
+    <div id="okBox" class="ok"></div>
+
+    <div class="grid">
+      <div class="card col-8">
+        <h3>Kurslar</h3>
+        <div class="muted">
+          Kurslar ro‘yxati. Student — kurslarga qo‘shiladi. Teacher — kurs yaratadi va boshqaradi.
+        </div>
+        <div class="row" style="margin-top:12px">
+          <input id="q" class="input" placeholder="Qidirish: kurs nomi, o‘qituvchi, fakultet..." style="flex:1;min-width:220px" />
+          <select id="facultyFilter" style="max-width:360px">
+            <option value="">Fakultet (barchasi)</option>
+          </select>
+          <select id="priceFilter" style="max-width:220px">
+            <option value="">Narx (barchasi)</option>
+            <option value="free">Bepul</option>
+            <option value="paid">Pullik</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input id="groupFilter" class="input" placeholder="Guruh filtri (misol: MMT-520-25)" style="flex:1;min-width:220px" />
+          <button class="btn" id="refreshBtn">Yangilash</button>
+          <button class="btn primary" id="createBtn" style="display:none">+ Yangi kurs</button>
+        </div>
+      </div>
+
+      <div class="card col-4">
+        <h3>Izoh</h3>
+        <div class="muted">
+          Kurs cheklovlari:
+          <ul>
+            <li>Fakultet bo‘yicha</li>
+            <li>Guruh (MMT-520-25) bo‘yicha</li>
+          </ul>
+          Student faqat o‘z fakultet/guruhiga mos kursga qo‘shila oladi.
+        </div>
+        <div class="muted">
+          Keyingi bosqich: backend’da kurslar CRUD, join, coin yechish, teacher/admin ulushi, materiallar ketma-ketligi.
+        </div>
+      </div>
+
+      <div class="card col-12">
+        <div class="row" style="justify-content:space-between">
+          <div class="muted" id="countTxt">Yuklanmoqda...</div>
+          <div class="tiny">API yo‘q bo‘lsa, demo ma’lumotlar ishlaydi (localStorage).</div>
+        </div>
+
+        <div id="list" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE MODAL -->
+  <div id="modalBackdrop" class="modalBackdrop">
+    <div class="modal">
+      <header>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div style="font-weight:700">Yangi kurs yaratish</div>
+          <button class="btn ghost" id="closeModalBtn" style="border-color:rgba(255,255,255,.25);color:#fff">Yopish</button>
+        </div>
+      </header>
+      <div class="body">
+        <div class="grid">
+          <div class="col-6">
+            <label>Kurs nomi</label>
+            <input id="c_title" class="input" placeholder="Masalan: Neft-gaz geologiyasi 1" />
+          </div>
+          <div class="col-6">
+            <label>Kurs turi</label>
+            <select id="c_type">
+              <option value="free">Bepul</option>
+              <option value="paid">Pullik</option>
+            </select>
+          </div>
+
+          <div class="col-3">
+            <label>Narx (coin)</label>
+            <input id="c_price" class="input" type="number" min="0" value="0" />
+          </div>
+          <div class="col-3">
+            <label>Status</label>
+            <select id="c_status">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label>Fakultet</label>
+            <select id="c_faculty"></select>
+          </div>
+
+          <div class="col-12">
+            <label>Guruhlar (vergul bilan, misol: MMT-520-25, EKT-110-26)</label>
+            <input id="c_groups" class="input" placeholder="MMT-520-25, ..." />
+            <div class="tiny" style="margin-top:6px">Bo‘sh qoldirilsa, fakultet ichidagi barcha guruhlar uchun ochiq.</div>
+          </div>
+
+          <div class="col-12">
+            <label>Qisqa tavsif</label>
+            <textarea id="c_desc" class="input" rows="3" placeholder="Kurs maqsadi, qisqacha reja..."></textarea>
+          </div>
+
+          <div class="col-6">
+            <label>YouTube Preview URL (ixtiyoriy)</label>
+            <input id="c_youtube" class="input" placeholder="https://www.youtube.com/watch?v=..." />
+          </div>
+          <div class="col-6">
+            <label>Cover Image URL (ixtiyoriy)</label>
+            <input id="c_cover" class="input" placeholder="https://..." />
+          </div>
+
+          <div class="col-12">
+            <button class="btn primary" id="saveCourseBtn">Saqlash</button>
+            <button class="btn" id="saveDraftBtn">Draft saqlash</button>
+          </div>
+        </div>
+
+        <div class="tiny" style="margin-top:10px">
+          Agar backend endpointlar mavjud bo‘lsa: <code>/api/courses</code> ga POST yuboriladi.
+          Aks holda demo sifatida localStorage saqlanadi.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const API_BASE = "";
+  const FACULTIES = [
+    "Neft-gaz va geologiya fakulteti",
+    "Iqtisodiyot va boshqaruv fakulteti",
+    "Energetika muhandisligi fakulteti",
+    "Transport va qurilish muhandisligi fakulteti",
+    "Raqamli texnologiyalar va sun'iy intellekt fakulteti",
+    "Shahrisabz oziq-ovqat muhandisligi fakulteti",
+    "Irrigatsiya muhandisligi fakulteti"
+  ];
+
+  function getToken(){ return localStorage.getItem("token") || ""; }
+  function setErr(msg){
+    const box = document.getElementById("errBox");
+    box.textContent = msg; box.style.display = "block";
+    document.getElementById("okBox").style.display = "none";
+  }
+  function setOk(msg){
+    const box = document.getElementById("okBox");
+    box.textContent = msg; box.style.display = "block";
+    document.getElementById("errBox").style.display = "none";
+  }
+  function qs(name){ return new URLSearchParams(location.search).get(name); }
+
+  function demoKey(){ return "demoCourses_v1"; }
+  function readDemoCourses(){
+    try { return JSON.parse(localStorage.getItem(demoKey()) || "[]"); } catch { return []; }
+  }
+  function writeDemoCourses(list){
+    localStorage.setItem(demoKey(), JSON.stringify(list));
+  }
+  function seedDemoIfEmpty(){
+    const cur = readDemoCourses();
+    if(cur.length) return;
+    const seed = [
+      {
+        id: "c1",
+        title: "Energetika asoslari",
+        description: "Energetika muhandisligi kirish kursi.",
+        type: "free",
+        price: 0,
+        status: "published",
+        faculty: "Energetika muhandisligi fakulteti",
+        groups: ["EKT-110-26"],
+        teacherName: "Teacher Demo",
+        teacherId: "t_demo",
+        createdAt: Date.now() - 86400000
+      },
+      {
+        id: "c2",
+        title: "Raqamli texnologiyalar va SI",
+        description: "Sun'iy intellektga kirish, amaliy mashg'ulotlar.",
+        type: "paid",
+        price: 50,
+        status: "published",
+        faculty: "Raqamli texnologiyalar va sun'iy intellekt fakulteti",
+        groups: [],
+        teacherName: "Teacher Demo",
+        teacherId: "t_demo",
+        createdAt: Date.now() - 43200000
+      }
+    ];
+    writeDemoCourses(seed);
+  }
+
+  async function apiMe(){
+    const token = getToken();
+    if(!token){ location.href = "/login.html"; return null; }
+    const res = await fetch(API_BASE + "/api/me", { headers: { "Authorization": "Bearer " + token } });
+    if(!res.ok){
+      localStorage.removeItem("token");
+      location.href = "/login.html";
+      return null;
+    }
+    return await res.json();
+  }
+
+  function fillFacultySelects(){
+    const f1 = document.getElementById("facultyFilter");
+    const f2 = document.getElementById("c_faculty");
+    f2.innerHTML = "";
+    FACULTIES.forEach(x=>{
+      const o1 = document.createElement("option"); o1.value = x; o1.textContent = x;
+      f1.appendChild(o1);
+      const o2 = document.createElement("option"); o2.value = x; o2.textContent = x;
+      f2.appendChild(o2);
+    });
+  }
+
+  function courseTagHTML(c){
+    const t = c.type === "paid" ? `<span class="tag paid">Pullik: ${c.price||0} coin</span>` : `<span class="tag free">Bepul</span>`;
+    const st = (c.status||"published") === "published" ? `<span class="tag open">Published</span>` : `<span class="tag lock">Draft</span>`;
+    return t + " " + st;
+  }
+
+  function normalizeCourse(raw){
+    // unify fields from API or demo
+    return {
+      id: raw._id || raw.id || raw.courseId,
+      title: raw.title || raw.name || "Nomsiz kurs",
+      description: raw.description || raw.desc || "",
+      type: (raw.type || (raw.isPaid ? "paid" : "free") || "free"),
+      price: Number(raw.price ?? raw.cost ?? 0),
+      status: raw.status || (raw.published ? "published" : "published"),
+      faculty: raw.faculty || raw.facultyName || "",
+      groups: Array.isArray(raw.groups) ? raw.groups : (raw.allowedGroups || []),
+      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
+      teacherId: raw.teacherId || raw.teacher?._id || raw.ownerId || "",
+      createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : (raw.createdAtMs || Date.now()),
+      youtubeUrl: raw.youtubeUrl || raw.youtube || "",
+      coverUrl: raw.coverUrl || raw.cover || ""
+    };
+  }
+
+  async function fetchCoursesFromAPI(){
+    const token = getToken();
+    const res = await fetch(API_BASE + "/api/courses", { headers: { "Authorization":"Bearer " + token } });
+    if(!res.ok) throw new Error("API not available");
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.courses || []);
+    return list.map(normalizeCourse);
+  }
+
+  function fetchCoursesFromDemo(){
+    seedDemoIfEmpty();
+    return readDemoCourses().map(normalizeCourse);
+  }
+
+  function matchFilters(c){
+    const q = (document.getElementById("q").value || "").trim().toLowerCase();
+    const f = document.getElementById("facultyFilter").value || "";
+    const p = document.getElementById("priceFilter").value || "";
+    const g = (document.getElementById("groupFilter").value || "").trim().toLowerCase();
+
+    if(f && (c.faculty || "") !== f) return false;
+    if(p && ((p==="paid" && c.type!=="paid") || (p==="free" && c.type!=="free"))) return false;
+
+    if(q){
+      const hay = `${c.title} ${c.description} ${c.teacherName} ${c.faculty}`.toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+
+    if(g){
+      const groups = (c.groups || []).map(x=>String(x).toLowerCase());
+      if(groups.length && !groups.some(x=>x.includes(g))) return false;
+      // agar groups bo‘sh bo‘lsa, ochiq — group filter kiritilganda ham ko‘rsatamiz
+    }
+    return true;
+  }
+
+  function render(list, me, mode){
+    const container = document.getElementById("list");
+    container.innerHTML = "";
+    const filtered = list.filter(matchFilters)
+      .sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+
+    document.getElementById("countTxt").textContent = `Topildi: ${filtered.length} ta kurs`;
+
+    if(!filtered.length){
+      container.innerHTML = `<div class="muted">Hech narsa topilmadi.</div>`;
+      return;
+    }
+
+    filtered.forEach(c=>{
+      const canSee = true; // listing always visible; join check is in course.html
+      if(!canSee) return;
+
+      const row = document.createElement("div");
+      row.className = "tr";
+      row.innerHTML = `
+        <div class="trow">
+          <div>
+            <div class="title">${escapeHtml(c.title)}</div>
+            <div class="muted" style="margin-top:6px">${escapeHtml(c.description || "")}</div>
+            <div style="margin-top:8px">${courseTagHTML(c)}</div>
+          </div>
+          <div>
+            <div class="muted">O‘qituvchi</div>
+            <div style="font-weight:600">${escapeHtml(c.teacherName || "-")}</div>
+          </div>
+          <div>
+            <div class="muted">Fakultet</div>
+            <div style="font-weight:600">${escapeHtml(c.faculty || "-")}</div>
+          </div>
+          <div>
+            <div class="muted">Guruh</div>
+            <div style="font-weight:600">${(c.groups && c.groups.length) ? escapeHtml(c.groups.join(", ")) : "<span class='tag'>Ochiq</span>"}</div>
+          </div>
+          <div class="row" style="justify-content:flex-end">
+            <a class="btn primary" href="/course.html?id=${encodeURIComponent(c.id)}">Ko‘rish</a>
+            ${mode==="teacher" ? `<button class="btn" data-edit="${escapeAttr(c.id)}">Edit</button>` : ``}
+          </div>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+
+    // teacher demo edit: open modal with prefill (API update later)
+    if(mode==="teacher"){
+      container.querySelectorAll("button[data-edit]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const id = btn.getAttribute("data-edit");
+          const c = list.find(x=>String(x.id)===String(id));
+          if(!c) return;
+          openModal();
+          document.getElementById("c_title").value = c.title || "";
+          document.getElementById("c_desc").value = c.description || "";
+          document.getElementById("c_type").value = c.type || "free";
+          document.getElementById("c_price").value = c.price || 0;
+          document.getElementById("c_status").value = c.status || "published";
+          document.getElementById("c_faculty").value = c.faculty || FACULTIES[0];
+          document.getElementById("c_groups").value = (c.groups||[]).join(", ");
+          document.getElementById("c_youtube").value = c.youtubeUrl || "";
+          document.getElementById("c_cover").value = c.coverUrl || "";
+          // mark editing id
+          document.getElementById("saveCourseBtn").dataset.editing = id;
+          document.getElementById("saveDraftBtn").dataset.editing = id;
+        });
+      });
+    }
+  }
+
+  function escapeHtml(str){
+    return String(str||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+  function escapeAttr(str){
+    return String(str||"").replaceAll('"',"&quot;");
+  }
+
+  function openModal(){
+    document.getElementById("modalBackdrop").style.display = "flex";
+  }
+  function closeModal(){
+    document.getElementById("modalBackdrop").style.display = "none";
+    // clear editing state
+    delete document.getElementById("saveCourseBtn").dataset.editing;
+    delete document.getElementById("saveDraftBtn").dataset.editing;
+  }
+
+  async function saveCourse(mode, me, publish){
+    const title = (document.getElementById("c_title").value||"").trim();
+    const desc = (document.getElementById("c_desc").value||"").trim();
+    const type = document.getElementById("c_type").value;
+    const price = Number(document.getElementById("c_price").value||0);
+    const status = publish ? "published" : "draft";
+    const faculty = document.getElementById("c_faculty").value;
+    const groupsRaw = (document.getElementById("c_groups").value||"").trim();
+    const groups = groupsRaw ? groupsRaw.split(",").map(x=>x.trim()).filter(Boolean) : [];
+    const youtubeUrl = (document.getElementById("c_youtube").value||"").trim();
+    const coverUrl = (document.getElementById("c_cover").value||"").trim();
+
+    if(!title) { setErr("Kurs nomi majburiy."); return; }
+    if(type==="paid" && (isNaN(price) || price<1)){ setErr("Pullik kurs uchun narx (coin) 1 dan katta bo‘lsin."); return; }
+
+    const editingId = document.getElementById("saveCourseBtn").dataset.editing || document.getElementById("saveDraftBtn").dataset.editing || "";
+
+    // Try API
+    try{
+      const token = getToken();
+      const payload = { title, description: desc, type, price, status, faculty, groups, youtubeUrl, coverUrl };
+      let url = API_BASE + "/api/courses";
+      let method = "POST";
+      if(editingId){
+        url = API_BASE + "/api/courses/" + encodeURIComponent(editingId);
+        method = "PUT";
+      }
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type":"application/json", "Authorization":"Bearer " + token },
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok) throw new Error("API save failed");
+      setOk("Kurs saqlandi (API).");
+      closeModal();
+      await loadAndRender(); // refresh
+      return;
+    }catch(e){
+      // Demo fallback
+      seedDemoIfEmpty();
+      const list = readDemoCourses();
+      if(editingId){
+        const idx = list.findIndex(x=>String(x.id)===String(editingId));
+        if(idx>=0){
+          list[idx] = {
+            ...list[idx],
+            title, description: desc, type, price, status,
+            faculty, groups,
+            youtubeUrl, coverUrl,
+            updatedAt: Date.now()
+          };
+        }
+      }else{
+        const id = "c_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+        list.push({
+          id,
+          title,
+          description: desc,
+          type,
+          price,
+          status,
+          faculty,
+          groups,
+          youtubeUrl,
+          coverUrl,
+          teacherName: me?.fullname || me?.name || me?.username || "Teacher",
+          teacherId: me?._id || me?.id || "t_local",
+          createdAt: Date.now()
+        });
+      }
+      writeDemoCourses(list);
+      setOk("Kurs saqlandi (demo/localStorage). Backend endpointlar qo‘shilganda avtomatik API ishlaydi.");
+      closeModal();
+      await loadAndRender();
+    }
+  }
+
+  let ME = null;
+  let MODE = "student";
+  let COURSES = [];
+
+  async function loadAndRender(){
+    document.getElementById("errBox").style.display = "none";
+    document.getElementById("okBox").style.display = "none";
+
+    // courses from API, else demo
+    try{
+      COURSES = await fetchCoursesFromAPI();
+    }catch(e){
+      COURSES = fetchCoursesFromDemo();
+    }
+    render(COURSES, ME, MODE);
+  }
+
+  async function init(){
+    fillFacultySelects();
+
+    ME = await apiMe();
+    if(!ME) return;
+
+    MODE = (qs("mode") || (ME.role||"student")).toLowerCase();
+    const role = (ME.role || "student").toLowerCase();
+
+    // If teacher uses student mode intentionally, allow, but UI adapts:
+    const isTeacher = role === "teacher";
+    const isStudent = role === "student";
+    const isAdmin = role === "admin";
+
+    const badge = document.getElementById("roleBadge");
+    badge.textContent = (isTeacher ? "Teacher" : isAdmin ? "Admin" : "Student");
+    badge.classList.toggle("student", !isTeacher);
+    badge.style.background = isTeacher ? "#2563eb" : (isAdmin ? "#f59e0b" : "#10b981");
+
+    const mePill = document.getElementById("mePill");
+    mePill.textContent = (ME.fullname || ME.name || ME.username || "") + " • " + (ME.group || "Guruh yo‘q");
+    mePill.style.display = "inline-block";
+
+    const dashLink = document.getElementById("dashLink");
+    dashLink.href = isTeacher ? "/teacher-dashboard.html" : isAdmin ? "/admin-dashboard.html" : "/student-dashboard.html";
+
+    // Permission: create course only for teacher
+    const createBtn = document.getElementById("createBtn");
+    if(isTeacher){
+      createBtn.style.display = "inline-block";
+    }
+
+    // If admin, still list as teacher-like, but no create in this version
+    if(isAdmin){
+      createBtn.style.display = "none";
+    }
+
+    await loadAndRender();
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token");
+    location.href = "/login.html";
+  });
+
+  document.getElementById("refreshBtn").addEventListener("click", loadAndRender);
+
+  ["q","facultyFilter","priceFilter","groupFilter"].forEach(id=>{
+    document.getElementById(id).addEventListener("input", ()=> render(COURSES, ME, MODE));
+    document.getElementById(id).addEventListener("change", ()=> render(COURSES, ME, MODE));
+  });
+
+  document.getElementById("createBtn").addEventListener("click", ()=>{
+    // reset fields
+    openModal();
+    document.getElementById("c_title").value = "";
+    document.getElementById("c_desc").value = "";
+    document.getElementById("c_type").value = "free";
+    document.getElementById("c_price").value = 0;
+    document.getElementById("c_status").value = "draft";
+    document.getElementById("c_faculty").value = FACULTIES[0];
+    document.getElementById("c_groups").value = "";
+    document.getElementById("c_youtube").value = "";
+    document.getElementById("c_cover").value = "";
+  });
+
+  document.getElementById("closeModalBtn").addEventListener("click", closeModal);
+  document.getElementById("modalBackdrop").addEventListener("click", (e)=>{
+    if(e.target.id==="modalBackdrop") closeModal();
+  });
+
+  document.getElementById("saveCourseBtn").addEventListener("click", ()=> saveCourse(MODE, ME, true));
+  document.getElementById("saveDraftBtn").addEventListener("click", ()=> saveCourse(MODE, ME, false));
+
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+</script>
+</body>
+</html>
