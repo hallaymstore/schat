@@ -298,16 +298,8 @@
             <label class="text-xs font-extrabold muted">Universitet</label>
             <div class="mt-2 relative">
               <i class="fa-solid fa-building-columns absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
-              <select id="universitySelect" class="field w-full rounded-2xl px-11 py-3 text-sm glow-ring" name="university" required>
-  <option value="" selected disabled>Universitetni tanlang</option>
-\1
-<div class="relative mt-3">
-  <i class="fa-solid fa-building-columns absolute left-4 top-1/2 -translate-y-1/2 muted"></i>
-  <select id="facultySelect" class="field w-full rounded-2xl px-11 py-3 text-sm glow-ring" name="faculty" required>
-    <option value="" selected disabled>Fakultetni tanlang</option>
-  </select>
-</div>
-</div>
+              <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="university" placeholder="Masalan: TATU" required />
+            </div>
           </div>
 
           <div>
@@ -654,39 +646,5 @@
       document.addEventListener('DOMContentLoaded', checkAuth);
     })();
   </script>
-<script>
-async function loadUniversities(){
-  try{
-    const r = await fetch('/api/catalog/universities');
-    const j = await r.json();
-    const sel = document.getElementById('universitySelect');
-    (j.universities||[]).forEach(u=>{
-      const opt=document.createElement('option');
-      opt.value=u.name; opt.textContent=u.name;
-      sel.appendChild(opt);
-    });
-  }catch(e){}
-}
-async function loadFaculties(uni){
-  const sel = document.getElementById('facultySelect');
-  sel.innerHTML = '<option value="" selected disabled>Fakultetni tanlang</option>';
-  if(!uni) return;
-  try{
-    const r=await fetch('/api/catalog/faculties?university='+encodeURIComponent(uni));
-    const j=await r.json();
-    (j.faculties||[]).forEach(f=>{
-      const opt=document.createElement('option');
-      opt.value=f; opt.textContent=f;
-      sel.appendChild(opt);
-    });
-  }catch(e){}
-}
-document.addEventListener('DOMContentLoaded', ()=>{
-  loadUniversities();
-  const uniSel=document.getElementById('universitySelect');
-  uniSel.addEventListener('change', ()=>loadFaculties(uniSel.value));
-});
-</script>
-
 </body>
 </html>

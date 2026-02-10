@@ -192,6 +192,8 @@
         <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="channels"><i class="fa-solid fa-hashtag mr-2"></i>Kanallar</button>
         <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="groups"><i class="fa-solid fa-people-group mr-2"></i>Guruhlar</button>
         <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="realtime"><i class="fa-solid fa-satellite-dish mr-2"></i>Real-time</button>
+          <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="catalog"><i class="fa-solid fa-university mr-2"></i>Katalog</button>
+          <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="broadcast"><i class="fa-solid fa-bullhorn mr-2"></i>Broadcast</button>
         <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="services"><i class="fa-solid fa-store mr-2"></i>Xizmatlar</button>
         <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="pms"><i class="fa-solid fa-envelope mr-2"></i>Shaxsiy xabarlar</button>
       </div>
@@ -269,7 +271,7 @@
       btn.addEventListener('click', ()=> apply(html.classList.contains('dark') ? 'light' : 'dark'));
     })();
 
-    const token = () => localStorage.getItem('adminToken') || localStorage.getItem('token') || '';
+    const token = () => localStorage.getItem('token') || '';
     const toast = (text, type='info') => {
       const el = document.getElementById('toast');
       el.textContent = text;
@@ -321,6 +323,8 @@
       services: { title:'Xizmatlar', sub:'Services ro‘yxati va o‘chirish. (Order/Review bilan.)' },
       pms: { title:'Shaxsiy xabarlar', sub:'Private message’larni ko‘rish va o‘chirish (moderatsiya).' },
       realtime: { title:'Real-time', sub:'Online foydalanuvchilar va aktiv call/live ro‘yxati (real vaqt).' },
+      catalog: { title:'Universitet katalogi', sub:'Universitet/fakultet/yo‘nalish (program) ro‘yxatini boshqaring.' },
+      broadcast: { title:'Admin xabarnoma', sub:'Universitet/fakultet/guruh bo‘yicha xabar yuboring (push + notification).' },
     };
 
     function setTab(newTab){
@@ -349,20 +353,27 @@
     async function ensureAdmin(){
       if(!token()){ window.location.href='/login.html'; return; }
 
-      // Authoritative admin check: server-side requireAdmin
-      const who = await api('/api/admin/whoami');
-      if(!who.res.ok){
-        // token mavjud, lekin admin emas (yoki eskirgan)
-        localStorage.removeItem('adminToken');
-        toast(who.j?.error || "Admin huquqi yo‘q yoki token eskirgan. Admin hisob bilan qayta kiring.", 'error');
-        setTimeout(()=> window.location.href='/login.html', 900);
+      // ✅ Correct auth endpoint (was /api/pet/me -> caused 404 and forced logout)
+      const {res, j} = await api('/api/me');
+      if(!res.ok){
+        localStorage.removeItem('token');
+        window.location.href='/login.html';
         return;
       }
 
-      const u = who.j?.admin || {};
-      document.getElementById('meAdmin').textContent = `Admin OK (@${u.username || 'admin'})`;
+      // server usually returns {success:true, user:{...}}
+      const u = (j && (j.user || j.data?.user || j)) || {};
+      const role = String(u.role || '').toLowerCase();
+      const isAdmin = !!u.isAdmin || role === 'admin';
 
-      // Optional: keep normal user session token too
+      if(!isAdmin){
+        toast("Admin huquqi yo‘q.", 'error');
+        document.getElementById('meAdmin').textContent = 'Admin EMAS';
+        setTimeout(()=> window.location.href='/profile.html', 1500);
+        return;
+      }
+
+      document.getElementById('meAdmin').textContent = 'Admin OK';
       await loadOverview();
       setTab('topups');
     }
@@ -405,6 +416,8 @@
       if(tab === 'services') return loadServices(q);
       if(tab === 'pms') return loadPMs(q);
       if(tab === 'realtime') return loadRealtime();
+      if(tab === 'catalog') return loadCatalog(q);
+      if(tab === 'broadcast') return loadBroadcast();
     }
 
     // TOPUPS
@@ -1072,6 +1085,269 @@
       if(!res.ok) return toast(j?.error || 'Stop bo‘lmadi', 'error');
       toast('Live stopped', 'success');
       rtRefresh();
+    }
+
+    // ==================== CATALOG (Universities/Faculties/Programs) ====================
+    let catState = { uni: '', faculty: '' };
+
+    async function loadCatalog(q){
+      // q: free-text university filter
+      const {res, j} = await api(`/api/admin/catalog/universities?q=${encodeURIComponent(q||'')}`);
+      if(!res.ok) return toast(j?.error || 'Katalog yuklanmadi', 'error');
+      const unis = j.universities || [];
+
+      const uniOptions = unis.map(u => `<option value="${escapeHtml(u.name)}" ${u.name===catState.uni?'selected':''}>${escapeHtml(u.name)}</option>`).join('');
+      const body = `
+        <div class="grid lg:grid-cols-3 gap-4">
+          <div class="glass rounded-2xl p-4">
+            <div class="font-black">Universitetlar</div>
+            <div class="text-xs muted2 mt-1">Qo‘shish / o‘chirish / nomini almashtirish</div>
+            <div class="mt-3 flex gap-2">
+              <input id="newUni" class="field rounded-xl px-3 py-2 text-sm flex-1" placeholder="Masalan: Qarshi Davlat Texnika Universiteti"/>
+              <button id="addUniBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Qo‘shish</button>
+            </div>
+            <div class="mt-3">
+              <select id="uniSel" class="field w-full rounded-xl px-3 py-2 text-sm">${uniOptions || '<option value="">—</option>'}</select>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <button id="renameUniBtn" class="glass btn-ghost rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Rename</button>
+              <button id="delUniBtn" class="glass btn-ghost rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">O‘chirish</button>
+            </div>
+          </div>
+
+          <div class="glass rounded-2xl p-4">
+            <div class="font-black">Fakultetlar</div>
+            <div class="text-xs muted2 mt-1">Tanlangan universitet bo‘yicha</div>
+            <div class="mt-3 flex gap-2">
+              <input id="newFac" class="field rounded-xl px-3 py-2 text-sm flex-1" placeholder="Masalan: Axborot texnologiyalari"/>
+              <button id="addFacBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Qo‘shish</button>
+            </div>
+            <div id="facList" class="mt-3 text-sm"></div>
+          </div>
+
+          <div class="glass rounded-2xl p-4">
+            <div class="font-black">Yo‘nalishlar (Programs)</div>
+            <div class="text-xs muted2 mt-1">Universitet + fakultet bo‘yicha</div>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <input id="progCode" class="field rounded-xl px-3 py-2 text-sm" placeholder="Kod (ixtiyoriy)"/>
+              <input id="progName" class="field rounded-xl px-3 py-2 text-sm" placeholder="Yo‘nalish nomi"/>
+              <button id="addProgBtn" class="col-span-2 btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Yo‘nalish qo‘shish</button>
+            </div>
+            <div class="mt-3">
+              <input id="progQ" class="field w-full rounded-xl px-3 py-2 text-sm" placeholder="Qidirish (yo‘nalish/kod)"/>
+            </div>
+            <div id="progList" class="mt-3 text-sm"></div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('content').innerHTML = body;
+      pagerShow(false, page);
+
+      // init selection
+      const uniSel = document.getElementById('uniSel');
+      if(!catState.uni) catState.uni = uniSel.value || '';
+      uniSel.onchange = () => { catState.uni = uniSel.value; catState.faculty=''; loadCatalog(document.getElementById('q').value.trim()); };
+
+      document.getElementById('addUniBtn').onclick = async () => {
+        const name = document.getElementById('newUni').value.trim();
+        if(!name) return toast('Universitet nomini kiriting', 'error');
+        const {res, j} = await api('/api/admin/catalog/universities', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+        if(!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        toast('Universitet qo‘shildi', 'success');
+        catState.uni = name;
+        loadCatalog(document.getElementById('q').value.trim());
+      };
+
+      document.getElementById('renameUniBtn').onclick = async () => {
+        const oldName = catState.uni;
+        if(!oldName) return toast('Universitet tanlang', 'error');
+        modal.show({
+          title: 'Universitet nomini almashtirish',
+          sub: oldName,
+          okText: 'Saqlash',
+          bodyHTML: `<label class="text-xs font-extrabold muted">Yangi nom</label><input id="newName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(oldName)}"/>`,
+          onOk: async ()=>{
+            const name = document.getElementById('newName').value.trim();
+            const {res, j} = await api(`/api/admin/catalog/universities/${encodeURIComponent(oldName)}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+            if(!res.ok) return toast(j?.error || 'Rename bo‘lmadi', 'error');
+            toast('Yangilandi', 'success');
+            catState.uni = name;
+            loadCatalog(document.getElementById('q').value.trim());
+          }
+        });
+      };
+
+      document.getElementById('delUniBtn').onclick = async () => {
+        const name = catState.uni;
+        if(!name) return toast('Universitet tanlang', 'error');
+        modal.show({
+          title: 'Universitetni o‘chirish',
+          sub: 'Katalogdan o‘chadi (userlar o‘chirilmaydi).',
+          okText: 'O‘chirish',
+          bodyHTML: `<div class="text-sm muted2">Universitet: <span class="font-extrabold">${escapeHtml(name)}</span></div>`,
+          onOk: async ()=>{
+            const {res, j} = await api(`/api/admin/catalog/universities/${encodeURIComponent(name)}`, { method:'DELETE' });
+            if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            toast('O‘chirildi', 'success');
+            catState.uni = '';
+            catState.faculty='';
+            loadCatalog(document.getElementById('q').value.trim());
+          }
+        });
+      };
+
+      // Faculties list
+      await renderFaculties();
+      // Programs list
+      await renderPrograms();
+
+      document.getElementById('addFacBtn').onclick = async ()=>{
+        if(!catState.uni) return toast('Avval universitet tanlang', 'error');
+        const faculty = document.getElementById('newFac').value.trim();
+        if(!faculty) return toast('Fakultet nomini kiriting', 'error');
+        const {res, j} = await api('/api/admin/catalog/faculties', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ university: catState.uni, faculty }) });
+        if(!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        toast('Fakultet qo‘shildi', 'success');
+        document.getElementById('newFac').value='';
+        await renderFaculties();
+      };
+
+      document.getElementById('addProgBtn').onclick = async ()=>{
+        if(!catState.uni) return toast('Universitet tanlang', 'error');
+        if(!catState.faculty) return toast('Fakultet tanlang (pastda)', 'error');
+        const code = document.getElementById('progCode').value.trim();
+        const name = document.getElementById('progName').value.trim();
+        if(!name) return toast('Yo‘nalish nomini kiriting', 'error');
+        const {res, j} = await api('/api/admin/catalog/programs', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ university: catState.uni, faculty: catState.faculty, code, name }) });
+        if(!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        toast('Yo‘nalish qo‘shildi', 'success');
+        document.getElementById('progCode').value='';
+        document.getElementById('progName').value='';
+        await renderPrograms();
+      };
+
+      document.getElementById('progQ').oninput = ()=>{ clearTimeout(loadCatalog._t); loadCatalog._t = setTimeout(()=> renderPrograms(), 250); };
+
+      async function renderFaculties(){
+        const facListEl = document.getElementById('facList');
+        if(!catState.uni){ facListEl.innerHTML = '<div class="text-xs muted2">Universitet tanlanmagan.</div>'; return; }
+        const {res, j} = await api(`/api/admin/catalog/faculties?university=${encodeURIComponent(catState.uni)}`);
+        if(!res.ok) { facListEl.innerHTML = '<div class="text-xs text-red-500">Xatolik</div>'; return; }
+        const facs = j.faculties || [];
+        if(!facs.length){ facListEl.innerHTML = '<div class="text-xs muted2">Fakultet yo‘q.</div>'; return; }
+        facListEl.innerHTML = facs.map(f=>{
+          const active = f===catState.faculty;
+          return `
+            <div class="flex items-center justify-between gap-2 p-2 rounded-xl ${active?'bg-indigo-500/15 border border-indigo-400/30':'border border-white/10'}">
+              <button class="text-left flex-1 font-extrabold" data-fac="${escapeHtml(f)}">${escapeHtml(f)}</button>
+              <button class="delFac glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-fac="${escapeHtml(f)}"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        }).join('');
+        facListEl.querySelectorAll('button[data-fac]').forEach(b=> b.onclick = ()=>{ catState.faculty=b.dataset.fac; renderFaculties(); renderPrograms(); });
+        facListEl.querySelectorAll('.delFac').forEach(b=> b.onclick = async ()=>{
+          const faculty = b.dataset.fac;
+          modal.show({
+            title:'Fakultetni o‘chirish',
+            sub: `${catState.uni} / ${faculty}`,
+            okText:'O‘chirish',
+            bodyHTML:`<div class="text-sm muted2">Fakultet o‘chiriladi va shu fakultetdagi yo‘nalishlar ham tozalanadi.</div>`,
+            onOk: async ()=>{
+              const {res, j} = await api('/api/admin/catalog/faculties', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ university: catState.uni, faculty }) });
+              if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+              toast('O‘chirildi', 'success');
+              if(catState.faculty===faculty) catState.faculty='';
+              await renderFaculties();
+              await renderPrograms();
+            }
+          });
+        });
+      }
+
+      async function renderPrograms(){
+        const el = document.getElementById('progList');
+        if(!catState.uni || !catState.faculty){ el.innerHTML = '<div class="text-xs muted2">Universitet va fakultet tanlang.</div>'; return; }
+        const qq = (document.getElementById('progQ')?.value || '').trim();
+        const {res, j} = await api(`/api/admin/catalog/programs?university=${encodeURIComponent(catState.uni)}&faculty=${encodeURIComponent(catState.faculty)}&q=${encodeURIComponent(qq)}`);
+        if(!res.ok) { el.innerHTML = '<div class="text-xs text-red-500">Xatolik</div>'; return; }
+        const list = j.programs || [];
+        if(!list.length){ el.innerHTML = '<div class="text-xs muted2">Yo‘nalish topilmadi.</div>'; return; }
+        el.innerHTML = list.map(p=>`
+          <div class="flex items-center justify-between gap-2 p-2 rounded-xl border border-white/10">
+            <div class="min-w-0">
+              <div class="font-extrabold truncate">${escapeHtml(p.name)}</div>
+              <div class="text-xs muted2">${escapeHtml(p.code||'—')} • <span class="font-mono">${escapeHtml(p._id)}</span></div>
+            </div>
+            <button class="delProg glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-id="${escapeHtml(p._id)}"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `).join('');
+        el.querySelectorAll('.delProg').forEach(b=> b.onclick = async ()=>{
+          const id = b.dataset.id;
+          modal.show({
+            title:'Yo‘nalishni o‘chirish',
+            sub: 'Bu faqat katalogdan o‘chadi.',
+            okText:'O‘chirish',
+            bodyHTML:`<div class="text-sm muted2">ID: <span class="font-mono font-extrabold">${escapeHtml(id)}</span></div>`,
+            onOk: async ()=>{
+              const {res, j} = await api(`/api/admin/catalog/programs/${encodeURIComponent(id)}`, { method:'DELETE' });
+              if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+              toast('O‘chirildi', 'success');
+              await renderPrograms();
+            }
+          });
+        });
+      }
+    }
+
+    // ==================== BROADCAST (Notifications) ====================
+    async function loadBroadcast(){
+      document.getElementById('content').innerHTML = `
+        <div class="glass rounded-2xl p-5 max-w-3xl">
+          <div class="font-black text-lg">Xabarnoma yuborish</div>
+          <div class="text-xs muted2 mt-1">In-app notification sifatida boradi. Target bo‘sh bo‘lsa — hamma userlarga.</div>
+          <div class="mt-4 grid sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Sarlavha</label>
+              <input id="bTitle" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: Dars 1 soatdan keyin boshlanadi"/>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Matn</label>
+              <textarea id="bBody" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="4" placeholder="Xabar matni..."></textarea>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Universitet (ixtiyoriy)</label>
+              <input id="bUni" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: Qarshi DTU"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Fakultet (ixtiyoriy)</label>
+              <input id="bFac" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: Moliya"/>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Guruh (studyGroup) (ixtiyoriy)</label>
+              <input id="bGroup" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: MMT-520-25"/>
+            </div>
+            <div class="sm:col-span-2 flex items-center gap-2">
+              <button id="bSend" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow-ring">Yuborish</button>
+              <div class="text-xs muted2" id="bResult"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      pagerShow(false, page);
+      document.getElementById('bSend').onclick = async ()=>{
+        const payload = {
+          title: document.getElementById('bTitle').value.trim(),
+          body: document.getElementById('bBody').value.trim(),
+          university: document.getElementById('bUni').value.trim(),
+          faculty: document.getElementById('bFac').value.trim(),
+          studyGroup: document.getElementById('bGroup').value.trim(),
+        };
+        const {res, j} = await api('/api/admin/broadcast', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        if(!res.ok) return toast(j?.error || 'Yuborilmadi', 'error');
+        const n = j.created ?? 0;
+        document.getElementById('bResult').textContent = `Yuborildi: ${n} user`;
+        toast(`Yuborildi: ${n} user`, 'success');
+      };
     }
 
     function startAdminSocket(){
