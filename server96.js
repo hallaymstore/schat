@@ -46,17 +46,51 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
+
+// Static fallbacks (avoid noisy 404s)
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/default-avatar.png', (req, res) => res.redirect('https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png'));
+app.get('/default-group.png', (req, res) => res.redirect('https://res.cloudinary.com/demo/image/upload/v1692290000/default-group.png'));
+app.get('/default-channel.png', (req, res) => res.redirect('https://res.cloudinary.com/demo/image/upload/v1692290000/default-channel.png'));
+
+
+
+// Ensure uploads directory exists (Windows/Render safe)
+try { require('fs').mkdirSync(path.join(__dirname, 'uploads'), { recursive: true }); } catch(e) { console.warn('uploads dir create failed', e); }
+
+// Serve the first existing file from a list (so your local filenames work)
+function sendFirstExisting(res, candidates) {
+  const fs = require('fs');
+  for (const f of candidates) {
+    const fp = path.join(__dirname, f);
+    if (fs.existsSync(fp)) return res.sendFile(fp);
+  }
+  return res.status(404).send('File not found: ' + candidates.join(', '));
+}
+
+
 // Serve live pages (keep files next to server file, or move into /public)
 app.get('/lives.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'lives_final.html'));
+  return sendFirstExisting(res, ['lives.html','lives_final.html']);
 });
 app.get('/live.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'live_final.html'));
+  return sendFirstExisting(res, ['live.html','live_final.html']);
 });
 // Teacher dashboard patched with Lives button
 app.get('/teacher-dashboard.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'teacher-dashboard_final.html'));
+  return sendFirstExisting(res, ['teacher-dashboard.html','teacher-dashboard5.html','teacher-dashboard_final.html']);
 });
+
+// Student schedule page (upcoming lessons / planned lives)
+app.get('/schedule.html', (req, res) => {
+  return sendFirstExisting(res, ['schedule.html','schedule_final.html']);
+});
+
+// Group lessons (recordings list)
+app.get('/group-lessons.html', (req, res) => {
+  return sendFirstExisting(res, ['group-lessons.html']);
+});
+
 // Minimal topup placeholder (replace with your real payments/topup page)
 app.get('/topup.html', (req, res) => {
   res.send(`<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -102,6 +136,14 @@ const upload = multer({
   }
 });
 
+
+// Separate multer for lesson recordings (avoid disk ENOENT on Windows/Render)
+const recordingUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 300 * 1024 * 1024 }, // 300MB per recording upload (tune as needed)
+  fileFilter: (req, file, cb) => cb(null, true)
+});
+
 // Helper function to determine media type
 function getMediaType(mimeType) {
   if (mimeType.startsWith('image/')) return 'image';
@@ -119,6 +161,8 @@ mongoose.connect(process.env.MONGODB_URI, {
 }).then(async () => {
   console.log('✅ MongoDB Connected');
   await ensureDefaultAdmin();
+  await ensureDefaultCatalog();
+  await ensureDefaultPrograms();
 })
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
@@ -206,6 +250,163 @@ equipped: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 const User = mongoose.model('User', UserSchema);
+
+// ==================== UNIVERSITY / FACULTY CATALOG ====================
+const UniversityCatalogSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true, trim: true },
+  faculties: { type: [String], default: [] },
+  createdAt: { type: Date, default: Date.now }
+});
+const UniversityCatalog = mongoose.models.UniversityCatalog || mongoose.model('UniversityCatalog', UniversityCatalogSchema);
+
+// Program Catalog (university/faculty/program list)
+const ProgramCatalogSchema = new mongoose.Schema({
+  university: { type: String, required: true, index: true, trim: true },
+  faculty: { type: String, default: '', index: true, trim: true },
+  code: { type: String, default: '', index: true, trim: true },
+  name: { type: String, required: true, trim: true }
+}, { timestamps: true });
+
+ProgramCatalogSchema.index({ university: 1, faculty: 1, code: 1, name: 1 }, { unique: true });
+
+const ProgramCatalog = mongoose.models.ProgramCatalog || mongoose.model('ProgramCatalog', ProgramCatalogSchema);
+
+
+async function ensureDefaultCatalog() {
+  // Seed universities + faculties from official sources (see README notes / citations in chat).
+  const defaults = [
+    {
+      name: "Qarshi Davlat Texnika Universiteti",
+      faculties: [
+        "Transport va qurilish muhandisligi fakulteti",
+        "Energetika muhandisligi fakulteti",
+        "Neft-gaz va geologiya fakulteti",
+        "Raqamli texnologiyalar va sun'iy intellekt fakulteti",
+        "Shahrisabz oziq-ovqat muhandisligi fakulteti",
+        "Iqtisodiyot va boshqaruv fakulteti",
+        "Irrigatsiya muhandisligi fakulteti"
+      ]
+    },
+    {
+      name: "Muhammad al-Xorazmiy nomidagi Toshkent Axborot Texnologiyalari Universiteti (TATU)",
+      faculties: [
+        "Kompyuter injiniringi",
+        "Dasturiy injiniring",
+        "Kiberxavfsizlik fakulteti",
+        "Telekommunikatsiya texnologiyalari fakulteti",
+        "Televizion texnologiyalar fakulteti",
+        "Radio va mobil aloqa fakulteti",
+        "AKT sohasida iqtisodiyot va menejment fakulteti",
+        "AKT sohasida kasb ta’limi fakulteti",
+        "TATU-BGUIR qo‘shma axborot texnologiyalari fakulteti",
+        "Zarafshon fakulteti"
+      ]
+    },
+    {
+      name: "Qarshi Davlat Universiteti",
+      faculties: [
+        "Fizika fakulteti",
+        "Matematika va kompyuter ilmlari fakulteti",
+        "Kimyo-biologiya fakulteti",
+        "Geografiya va agronomiya fakulteti",
+        "Tarix fakulteti",
+        "Iqtisodiyot fakulteti",
+        "Xorijiy tillar fakulteti",
+        "Filologiya fakulteti",
+        "Pedagogika fakulteti",
+        "San’atshunoslik fakulteti",
+        "Sport fakulteti",
+        "Tibbiyot fakulteti"
+      ]
+    },
+    {
+      name: "Sharof Rashidov nomidagi Samarqand Davlat Universiteti (SamDU)",
+      faculties: [
+        "Geografiya va ekologiya fakulteti",
+        "Tarix fakulteti",
+        "Psixologiya va ijtimoiy-siyosiy fanlar fakulteti",
+        "Intellektual tizimlar va kompyuter texnologiyalari fakulteti",
+        "Yuridik fakulteti",
+        "Filologiya fakulteti",
+        "Matematika fakulteti",
+        "Sun’iy intellekt va raqamli texnologiyalar fakulteti"
+      ]
+    }
+  ];
+
+  for (const u of defaults) {
+    await UniversityCatalog.updateOne(
+      { name: u.name },
+      { $setOnInsert: { name: u.name, faculties: u.faculties } },
+      { upsert: true }
+    );
+  }
+}
+
+async function ensureDefaultPrograms() {
+  // A lightweight seed. Full lists should be maintained via Admin UI/API as they change year to year.
+  const upserts = [];
+
+  // Qarshi DU (sample + many): pulled from their "Ta'lim yo'nalishlari" page.
+  const qarshiDU = "Qarshi Davlat Universiteti";
+  const qarshiPrograms = [
+    { code: "60540200", name: "Amaliy matematika" },
+    { code: "60540100", name: "Matematika" },
+    { code: "60610100", name: "Kompyuter ilmlari va dasturlash texnologiyalari (yo‘nalishlar bo‘yicha)" },
+    { code: "60110600", name: "Matematika va informatika" },
+    { code: "60530100", name: "Kimyo (turlari bo‘yicha)" },
+    { code: "60510100", name: "Biologiya (turlari bo‘yicha)" },
+    { code: "60710200", name: "Biotexnologiya (tarmoqlar bo‘yicha)" },
+    { code: "60230100", name: "Filologiya va tillarni o‘qitish (ingliz tili)" },
+    { code: "60230100", name: "Filologiya va tillarni o‘qitish (nemis tili)" },
+    { code: "60230100", name: "Filologiya va tillarni o‘qitish (fransuz tili)" },
+    { code: "60220300", name: "Tarix (mamlakatlar va yo‘nalishlar bo‘yicha)" },
+    { code: "60310900", name: "Psixologiya (amaliy psixologiya)" },
+    { code: "61020200", name: "Mehnat muhofazasi va texnika xavfsizligi (tarmoqlar bo‘yicha)" },
+    { code: "60310100", name: "Iqtisodiyot (tarmoqlar va sohalar bo‘yicha)" },
+    { code: "60410400", name: "Moliya va moliyaviy texnologiyalar" },
+    { code: "60610400", name: "Dasturiy injiniring" },
+    { code: "60610100", name: "Axborot tizimlari va texnologiyalari" },
+    { code: "60710400", name: "Energetika muhandisligi" }
+  ];
+  for (const p of qarshiPrograms) upserts.push({ university: qarshiDU, faculty: "", ...p });
+
+  // SamDU: names list from their booklet PDF.
+  const samdu = "Sharof Rashidov nomidagi Samarqand Davlat Universiteti (SamDU)";
+  const samduPrograms = [
+    "Dizayn","Tarix","Arxeologiya","Filologiya va tillarni o‘qitish: o‘zbek tili","Filologiya va tillarni o‘qitish: turk tili",
+    "Filologiya va tillarni o‘qitish rus tili","Filologiya va tillarni o‘qitish: tojik tili","Siyosatshunoslik","Psixologiya",
+    "Sotsiologiya","Iqtisodiyot","Bank ishi va auditi","Inson resurslarini boshqarish","Yurisprudensiya","Davlat va jamiyat boshqaruvi",
+    "Biologiya","Ekologiya va atrof-muhit muhofazasi","Kimyo","Geografiya","Geologiya","Gidrologiya","Fizika","Astronomiya","Matematika",
+    "Amaliy matematika","Axborot tizimlari va texnologiyalari","Axborot xavfsizligi","Dasturiy injiniring","Sun’iy intellekt",
+    "Kimyoviy muhandisligi","Biotexnologiya","Elektronika va asbobsozlik","Texnologik jarayonlar va ishlab chiqarishni avtomatlashtirish",
+    "Mexanika muhandisligi","Geodeziya va geoinformatika","Agrokimyo va agrotuproqshunoslik","Agronomiya","O‘simliklarni himoyasi va karantini",
+    "Qishloq xo‘jalik mahsulotlarini saqlash va qayta ishlash texnologiyasi","Agromuhandislik","Fundamental tibbiyot","Farmatsiya (turlari bo‘yicha)",
+    "Ijtimoiy ish","Sport faoliyati (Gandbol)","Sport faoliyati (Kurash)"
+  ];
+  for (const name of samduPrograms) upserts.push({ university: samdu, faculty: "", code: "", name });
+
+  for (const p of upserts) {
+    await ProgramCatalog.updateOne(
+      { university: p.university, code: p.code || "__NO_CODE__", name: p.name },
+      { $setOnInsert: { university: p.university, faculty: p.faculty || "", code: p.code || "", name: p.name } },
+      { upsert: true }
+    );
+  }
+}
+
+// ==================== NOTIFICATIONS ====================
+
+const NotificationSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  title: { type: String, default: '' },
+  body: { type: String, default: '' },
+  link: { type: String, default: '' },
+  read: { type: Boolean, default: false, index: true },
+  createdAt: { type: Date, default: Date.now, index: true }
+});
+NotificationSchema.index({ userId: 1, createdAt: -1 });
+const Notification = mongoose.models.Notification || mongoose.model('Notification', NotificationSchema);
 
 
 async function ensureDefaultAdmin() {
@@ -337,6 +538,61 @@ const GroupMessageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const GroupMessage = mongoose.model('GroupMessage', GroupMessageSchema);
+
+
+// ==================== GROUP LESSONS (Class Live) ====================
+// GroupLesson: one live lesson session inside a Group (teacher live inside a group)
+const GroupLessonSchema = new mongoose.Schema({
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true, index: true },
+  callId: { type: String, required: true, index: true }, // maps to group callId
+  hostId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true }, // teacher
+  title: { type: String, default: '' },
+  mode: { type: String, enum: ['camera','screen'], default: 'camera' },
+  status: { type: String, enum: ['live','ended'], default: 'live', index: true },
+  startedAt: { type: Date, default: Date.now, index: true },
+  endedAt: { type: Date, default: null },
+  // recording in Cloudinary (uploaded via server endpoint)
+  recordingUrl: { type: String, default: '' },
+  recordingPublicId: { type: String, default: '' },
+  recordingBytes: { type: Number, default: 0 },
+  recordingDurationSec: { type: Number, default: 0 }
+}, { timestamps: true });
+
+GroupLessonSchema.index({ groupId: 1, startedAt: -1 });
+
+const GroupLesson = mongoose.models.GroupLesson || mongoose.model('GroupLesson', GroupLessonSchema);
+
+// GroupAttendance: join/leave tracking per lesson
+const GroupAttendanceSchema = new mongoose.Schema({
+  lessonId: { type: mongoose.Schema.Types.ObjectId, ref: 'GroupLesson', required: true, index: true },
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  joinedAt: { type: Date, default: Date.now },
+  leftAt: { type: Date, default: null },
+  durationSec: { type: Number, default: 0 }
+}, { timestamps: true });
+
+GroupAttendanceSchema.index({ lessonId: 1, userId: 1 }, { unique: true });
+
+const GroupAttendance = mongoose.models.GroupAttendance || mongoose.model('GroupAttendance', GroupAttendanceSchema);
+
+async function getUsersBrief(userIds) {
+  const ids = (userIds || []).map(String).filter(Boolean);
+  if (!ids.length) return [];
+  const users = await User.find({ _id: { $in: ids } }).select('fullName username role').lean();
+  const map = new Map(users.map(u => [String(u._id), u]));
+  return ids.map(id => {
+    const u = map.get(id);
+    return u ? { userId: String(u._id), fullName: u.fullName, username: u.username, role: u.role } : { userId: id, fullName: 'Unknown', username: '', role: 'student' };
+  });
+}
+
+async function isGroupMember(groupId, userId) {
+  const g = await Group.findById(groupId).select('isPublic members').lean();
+  if (!g) return false;
+  if (g.isPublic) return true;
+  return (g.members || []).some(m => String(m) === String(userId));
+}
 
 // Channel Model
 const ChannelSchema = new mongoose.Schema({
@@ -636,6 +892,164 @@ function requireRole(roles = []) {
 }
 
 
+
+// ==================== GROUP LESSONS API ====================
+// List group lessons (recordings) - accessible to group members
+app.get('/api/group-lessons', authenticateToken, async (req, res) => {
+  try {
+    const groupId = String(req.query.groupId || '');
+    if (!groupId) return res.status(400).json({ error: 'groupId required' });
+
+    const ok = await isGroupMember(groupId, req.userId);
+    if (!ok) return res.status(403).json({ error: 'Access denied' });
+
+    const lessons = await GroupLesson.find({ groupId }).sort({ startedAt: -1 }).limit(200).lean();
+    const hostIds = Array.from(new Set(lessons.map(x => String(x.hostId)).filter(Boolean)));
+    const hosts = await User.find({ _id: { $in: hostIds } }).select('fullName username role').lean();
+    const hmap = new Map(hosts.map(u => [String(u._id), u]));
+
+    return res.json({
+      lessons: lessons.map(l => ({
+        _id: String(l._id),
+        groupId: String(l.groupId),
+        callId: l.callId,
+        title: l.title || 'Live dars',
+        mode: l.mode,
+        status: l.status,
+        startedAt: l.startedAt,
+        endedAt: l.endedAt,
+        recordingUrl: l.recordingUrl || '',
+        recordingDurationSec: l.recordingDurationSec || 0,
+        host: (() => {
+          const h = hmap.get(String(l.hostId));
+          return h ? { userId: String(h._id), fullName: h.fullName, username: h.username, role: h.role } : { userId: String(l.hostId), fullName: 'Teacher', username: '', role: 'teacher' };
+        })()
+      }))
+    });
+  } catch (e) {
+    console.error('GET /api/group-lessons error:', e);
+    return res.status(500).json({ error: 'Failed to load lessons' });
+  }
+});
+
+// Attendance report (teacher only: host or admin). Returns joined + absent lists.
+app.get('/api/group-lessons/:lessonId/attendance', authenticateToken, attachUserRole, async (req, res) => {
+  try {
+    const lessonId = String(req.params.lessonId || '');
+    const lesson = await GroupLesson.findById(lessonId).lean();
+    if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
+
+    const ok = await isGroupMember(String(lesson.groupId), req.userId);
+    if (!ok) return res.status(403).json({ error: 'Access denied' });
+
+    const role = String(req.userRole || '').toLowerCase();
+    const isHost = String(lesson.hostId) === String(req.userId);
+    if (!(role === 'admin' || isHost)) return res.status(403).json({ error: 'Teacher only' });
+
+    const group = await Group.findById(String(lesson.groupId)).select('members').lean();
+    const memberIds = (group?.members || []).map(String);
+
+    const atts = await GroupAttendance.find({ lessonId }).lean();
+    const attMap = new Map(atts.map(a => [String(a.userId), a]));
+
+    const members = await User.find({ _id: { $in: memberIds } }).select('fullName username role').lean();
+    const joined = [];
+    const absent = [];
+
+    for (const u of members) {
+      const a = attMap.get(String(u._id));
+      if (a) {
+        joined.push({
+          userId: String(u._id),
+          fullName: u.fullName,
+          username: u.username,
+          role: u.role,
+          joinedAt: a.joinedAt,
+          leftAt: a.leftAt,
+          durationSec: a.durationSec || 0
+        });
+      } else {
+        // Only count students as absent (teachers/admins not)
+        if (String(u.role || '').toLowerCase() === 'student') {
+          absent.push({ userId: String(u._id), fullName: u.fullName, username: u.username });
+        }
+      }
+    }
+
+    // Sort joined by joinedAt
+    joined.sort((a,b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+
+    return res.json({ lessonId, groupId: String(lesson.groupId), joined, absent });
+  } catch (e) {
+    console.error('GET /api/group-lessons/:lessonId/attendance error:', e);
+    return res.status(500).json({ error: 'Failed to load attendance' });
+  }
+});
+
+// Upload recording (teacher host only). Client sends multipart form-data with field "recording".
+app.post('/api/group-lessons/:lessonId/recording', authenticateToken, attachUserRole, requireRole(['teacher','admin']), recordingUpload.single('recording'), async (req, res) => {
+  try {
+    const lessonId = String(req.params.lessonId || '');
+    const lesson = await GroupLesson.findById(lessonId).lean();
+    if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
+
+    const role = String(req.userRole || '').toLowerCase();
+    const isHost = String(lesson.hostId) === String(req.userId);
+    if (!(role === 'admin' || isHost)) return res.status(403).json({ error: 'Only host teacher can upload recording' });
+
+    if (!req.file) return res.status(400).json({ error: 'No recording file uploaded' });
+
+if (!req.file) return res.status(400).json({ error: 'No recording file uploaded' });
+
+// NOTE: Using memory upload to avoid disk path issues (ENOENT) and to prevent server crash.
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  return res.status(500).json({ error: 'Cloudinary env is missing' });
+}
+
+const folder = `schat_lessons/group_${String(lesson.groupId)}`;
+
+const uploadResult = await new Promise((resolve, reject) => {
+  const stream = cloudinary.uploader.upload_stream({
+    resource_type: 'video',
+    folder,
+    overwrite: true,
+    eager: [
+      { width: 1280, height: 720, crop: 'limit', quality: 'auto', fetch_format: 'mp4' }
+    ],
+    eager_async: false
+  }, (err, result) => {
+    if (err) return reject(err);
+    return resolve(result);
+  });
+
+  stream.on('error', reject);
+  stream.end(req.file.buffer);
+});
+
+await GroupLesson.updateOne({ _id: lesson._id }, {
+  $set: {
+    recordingUrl: uploadResult.secure_url || uploadResult.url || '',
+    recordingPublicId: uploadResult.public_id || '',
+    recordingBytes: uploadResult.bytes || 0,
+    recordingDurationSec: Math.round(Number(uploadResult.duration || 0))
+  }
+});
+
+return res.json({
+  ok: true,
+  recordingUrl: uploadResult.secure_url || uploadResult.url || '',
+  publicId: uploadResult.public_id || '',
+  bytes: uploadResult.bytes || 0,
+  duration: uploadResult.duration || 0
+});
+
+  } catch (e) {
+    console.error('POST /api/group-lessons/:lessonId/recording error:', e);
+    return res.status(500).json({ error: 'Failed to upload recording' });
+  }
+});
+
+
 // ==================== ADMIN MIDDLEWARE ====================
 // Admin check uses DB (authoritative). We keep it simple + secure.
 async function requireAdmin(req, res, next) {
@@ -722,6 +1136,14 @@ const LiveSessionSchema = new mongoose.Schema({
   price: { type: Number, default: 0 },
   startedAt: { type: Date, default: null },
   endedAt: { type: Date, default: null },
+
+
+// Targeting (university/faculty/groups). Empty targetGroups => open for all groups in faculty/university
+university: { type: String, default: '', index: true },
+faculty: { type: String, default: '', index: true },
+targetGroups: { type: [String], default: [], index: true },
+lessonKind: { type: String, enum: ['lecture','practice','other'], default: 'other', index: true },
+notifySentAt: { type: Date, default: null },
 }, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } });
 
 LiveSessionSchema.index({ title: 'text', description: 'text' });
@@ -801,18 +1223,10 @@ io.on('connection', (socket) => {
       }
       
 
-      // Update active private call state for admin realtime
-      if (data.callId) {
-        const id = String(data.callId);
-        if (data.answer) {
-          const prev = activePrivateCalls.get(id) || {};
-          activePrivateCalls.set(id, { ...prev, callId: id, status: 'accepted' });
-          adminEmit('admin:privateCallUpdate', { action: 'accepted', callId: id, from: String(socket.userId), to: String(data.to), timestamp: Date.now() });
-        } else {
-          activePrivateCalls.delete(id);
-          adminEmit('admin:privateCallUpdate', { action: 'rejected', callId: id, from: String(socket.userId), to: String(data.to), timestamp: Date.now() });
-        }
-      }
+
+      // NOTE: do not reference `data` here; auth event only receives the token.
+      // Call state updates are handled inside callOffer/callAnswer/callEnded/callRejected/callTimeout.
+
 
       console.log('✅ User authenticated:', userId);
       
@@ -956,21 +1370,50 @@ io.on('connection', (socket) => {
         activeGroupCalls.set(groupId, call);
       }
 
+      // Build participant infos (roles/names) for UI layout/attendance
+      const participantInfos = await getUsersBrief(Array.from(call.participants || []));
+      let lessonId = null;
+
+      // If starter is a teacher, create/attach a GroupLesson (used for attendance + recording)
+      try {
+        const starter = await User.findById(socket.userId).select('role fullName').lean();
+        if (starter && String(starter.role || '').toLowerCase() === 'teacher') {
+          const existingLesson = await GroupLesson.findOne({ groupId, callId: call.callId }).select('_id').lean();
+          const lesson = existingLesson ? existingLesson : await GroupLesson.create({
+            groupId,
+            callId: call.callId,
+            hostId: socket.userId,
+            title: (data?.title || '').toString().trim() || 'Live dars',
+            mode: (data?.mode === 'screen') ? 'screen' : 'camera',
+            status: 'live',
+            startedAt: new Date()
+          });
+          lessonId = String(lesson._id);
+          // Upsert attendance for starter
+          await GroupAttendance.updateOne({ lessonId: lesson._id, groupId, userId: socket.userId }, { $setOnInsert: { joinedAt: new Date() } }, { upsert: true }).catch(()=>{});
+        }
+      } catch(e) {
+        console.warn('GroupLesson create skipped:', e?.message || e);
+      }
+
       socket.emit('groupCallStarted', {
         groupId,
         callId: call.callId,
         callType: call.callType,
-        participants: Array.from(call.participants)
+        participants: Array.from(call.participants),
+        participantInfos,
+        lessonId
       });
 
-      // Notify others that this user joined
+// Notify others that this user joined
       io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
         groupId,
         callId: call.callId,
         userId: socket.userId,
-        participants: Array.from(call.participants)
+        participants: Array.from(call.participants),
+        participantInfos
       });
-      adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId), callId: String(call.callId), userId: String(socket.userId), participants: Array.from(call.participants).map(String), timestamp: Date.now() });
+adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId), callId: String(call.callId), userId: String(socket.userId), participants: Array.from(call.participants).map(String), timestamp: Date.now() });
 
     } catch (e) {
       console.error('groupCallStart error:', e);
@@ -993,21 +1436,30 @@ io.on('connection', (socket) => {
       call.participants.add(socket.userId);
       activeGroupCalls.set(groupId, call);
 
+      const participantInfos = await getUsersBrief(Array.from(call.participants || []));
+      const lesson = await GroupLesson.findOne({ groupId, callId }).select('_id hostId status').lean().catch(() => null);
+      const lessonId = lesson? String(lesson._id) : null;
+      if (lesson && lesson._id) {
+        await GroupAttendance.updateOne({ lessonId: lesson._id, groupId, userId: socket.userId }, { $setOnInsert: { joinedAt: new Date() } }, { upsert: true }).catch(()=>{});
+      }
+
       socket.emit('groupCallJoined', {
         groupId,
         callId,
         callType: call.callType,
-        participants: Array.from(call.participants)
+        participants: Array.from(call.participants),
+        participantInfos,
+        lessonId
       });
 
-      io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
+io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
         groupId,
         callId,
         userId: socket.userId,
-        participants: Array.from(call.participants)
+        participants: Array.from(call.participants),
+        participantInfos
       });
-
-    } catch (e) {
+} catch (e) {
       console.error('groupCallJoin error:', e);
       socket.emit('groupCallError', { error: 'Failed to join call' });
     }
@@ -1043,9 +1495,24 @@ io.on('connection', (socket) => {
     }
   });
 
-  function leaveGroupCallInternal(groupId, userId, reason) {
+  async function leaveGroupCallInternal(groupId, userId, reason) {
     try {
       const call = activeGroupCalls.get(groupId);
+      // Attendance: mark user left (if this call is linked to a GroupLesson)
+      try {
+        const lesson = await GroupLesson.findOne({ groupId, callId: call?.callId }).select('_id').lean().catch(()=>null);
+        if (lesson && lesson._id) {
+          const att = await GroupAttendance.findOne({ lessonId: lesson._id, userId }).select('_id joinedAt').lean().catch(()=>null);
+          if (att && att._id) {
+            const leftAt = new Date();
+            const durationSec = att.joinedAt ? Math.max(0, Math.round((leftAt.getTime() - new Date(att.joinedAt).getTime())/1000)) : 0;
+            await GroupAttendance.updateOne({ _id: att._id }, { $set: { leftAt, durationSec } }).catch(()=>{});
+          }
+        }
+      } catch(e) {
+        // ignore attendance errors
+      }
+
       if (!call) return;
       if (call.participants) call.participants.delete(userId);
 
@@ -1062,6 +1529,13 @@ io.on('connection', (socket) => {
       // End call if nobody left
       if (participantsArr.length === 0) {
         activeGroupCalls.delete(groupId);
+        // Mark GroupLesson ended (if exists)
+        try {
+          const lesson = await GroupLesson.findOne({ groupId, callId: call.callId }).select('_id').lean().catch(()=>null);
+          if (lesson && lesson._id) {
+            await GroupLesson.updateOne({ _id: lesson._id }, { $set: { status: 'ended', endedAt: new Date() } }).catch(()=>{});
+          }
+        } catch(e) {}
         io.to(getGroupRoomName(groupId)).emit('groupCallEnded', {
           groupId,
           callId: call.callId,
@@ -1077,7 +1551,7 @@ io.on('connection', (socket) => {
     }
   }
 
-  socket.on('groupCallLeave', (data) => {
+  socket.on('groupCallLeave', async (data) => {
     try {
       if (!socket.userId) return;
       const groupId = String(data?.groupId || '');
@@ -1087,7 +1561,7 @@ io.on('connection', (socket) => {
       const call = activeGroupCalls.get(groupId);
       if (!call || String(call.callId) !== callId) return;
 
-      leaveGroupCallInternal(groupId, socket.userId, 'left');
+      await leaveGroupCallInternal(groupId, socket.userId, 'left');
     } catch (e) {
       console.error('groupCallLeave error:', e);
     }
@@ -2014,7 +2488,7 @@ socket.on('chat:live', ({ liveId, text }) => {
         } catch (_) {}
         for (const [gid, call] of activeGroupCalls.entries()) {
           if (call && call.participants && call.participants.has(socket.userId)) {
-            leaveGroupCallInternal(String(gid), String(socket.userId), 'disconnect');
+            await leaveGroupCallInternal(String(gid), String(socket.userId), 'disconnect');
           }
         }
       }
@@ -2237,10 +2711,21 @@ const SignalModeration = mongoose.model('SignalModeration', SignalModerationSche
 // Register User
 app.post('/api/register', async (req, res) => {
   try {
-    const { fullName, nickname, username, bio, university, studyGroup, phone, email, password, role } = req.body;
+    const { fullName, nickname, username, bio, university, faculty, studyGroup, phone, email, password, role } = req.body;
     const safeRole = (String(role || 'student')).toLowerCase();
     const finalRole = ['student','teacher'].includes(safeRole) ? safeRole : 'student';
     
+
+    if (!String(university||'').trim()) return res.status(400).json({ error: 'University required' });
+    if (!String(studyGroup||'').trim()) return res.status(400).json({ error: 'studyGroup required' });
+
+    const uniDoc = await UniversityCatalog.findOne({ name: String(university).trim() }).lean();
+    if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
+    const fac = String(faculty||'').trim();
+    if (fac) {
+      const okFaculty = (uniDoc.faculties||[]).some(x => String(x).toLowerCase() === fac.toLowerCase());
+      if (!okFaculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+    }
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ error: 'Username already exists' });
@@ -2394,37 +2879,88 @@ app.get('/api/me', authenticateToken, async (req, res) => {
     safeUser.activeRobot = activeRobot;
     safeUser.activeCompanion = activeCompanion;
 
-    res.json({ success: true, user: safeUser });
+    // Front-end compatibility: return user fields at top-level AND under {user}
+    safeUser.fullname = safeUser.fullname || safeUser.fullName || safeUser.name || '';
+    // coins normalization
+    if (safeUser.coins === undefined || safeUser.coins === null) {
+      safeUser.coins = (safeUser.coin !== undefined && safeUser.coin !== null) ? safeUser.coin : (safeUser.coinBalance ?? 0);
+    }
+    res.json({ ...safeUser, success: true, user: safeUser });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to get user' });
   }
 });
 
-// Update Profile
+// Update Profile (safe whitelist)
 app.put('/api/profile', authenticateToken, async (req, res) => {
   try {
-    const updates = req.body;
     const user = await User.findById(req.userId);
-    
-    if (updates.username && updates.username !== user.username) {
-      const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
-      if (user.lastUsernameChange && user.lastUsernameChange > fifteenDaysAgo) {
-        return res.status(400).json({ 
-          error: 'Username can only be changed once every 15 days',
-          nextChange: new Date(user.lastUsernameChange.getTime() + 15 * 24 * 60 * 60 * 1000)
-        });
-      }
-      updates.lastUsernameChange = Date.now();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const body = (req.body && typeof req.body === 'object') ? req.body : {};
+    const pickStr = (v, max=200) => {
+      const s = String(v ?? '').trim();
+      if (!s) return '';
+      return s.length > max ? s.slice(0, max) : s;
+    };
+
+    // Whitelist fields users can edit
+    const updates = {};
+    if (body.nickname !== undefined) updates.nickname = pickStr(body.nickname, 40);
+    if (body.fullName !== undefined) updates.fullName = pickStr(body.fullName, 80);
+    if (body.bio !== undefined) updates.bio = pickStr(body.bio, 500);
+    if (body.phone !== undefined) updates.phone = pickStr(body.phone, 30);
+    if (body.email !== undefined) updates.email = pickStr(body.email, 120);
+
+    // Academic identity (used by schedule / groups)
+    if (body.university !== undefined) updates.university = pickStr(body.university, 120);
+    if (body.faculty !== undefined) updates.faculty = pickStr(body.faculty, 120);
+    if (body.studyGroup !== undefined || body.group !== undefined) {
+      // accept both keys for compatibility
+      updates.studyGroup = pickStr(body.studyGroup ?? body.group, 60);
     }
-    
-    const updatedUser = await User.findByIdAndUpdate(
-      req.userId,
-      updates,
-      { new: true, select: '-password' }
-    );
-    
-    res.json({ success: true, user: updatedUser });
+
+    // Username change: enforce cooldown + uniqueness
+    if (body.username !== undefined) {
+      const newUsername = pickStr(body.username, 32).toLowerCase().replace(/\s+/g,'');
+      if (newUsername && newUsername !== String(user.username || '').toLowerCase()) {
+        const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+        if (user.lastUsernameChange && user.lastUsernameChange > fifteenDaysAgo) {
+          return res.status(400).json({
+            error: 'Username can only be changed once every 15 days',
+            nextChange: new Date(user.lastUsernameChange.getTime() + 15 * 24 * 60 * 60 * 1000)
+          });
+        }
+        const exists = await User.findOne({ username: newUsername, _id: { $ne: user._id } }).select('_id').lean();
+        if (exists) return res.status(400).json({ error: 'Username already taken' });
+        updates.username = newUsername;
+        updates.lastUsernameChange = new Date();
+      }
+    }
+
+    // Prevent privilege escalation / dangerous edits
+    const forbidden = ['password','isAdmin','role','coins','verified','isOnline','lastSeen','robots','inventory','companions','activeRobotId','activeCompanionId'];
+    for (const k of forbidden) {
+      if (k in updates) delete updates[k];
+    }
+
+    // Apply
+    Object.assign(user, updates);
+
+    // Minimal validation: if university exists, faculty/group can be blank, but keep strings trimmed
+    user.university = pickStr(user.university, 120);
+    user.faculty = pickStr(user.faculty, 120);
+    user.studyGroup = pickStr(user.studyGroup, 60);
+
+    await user.save();
+
+    const safe = await User.findById(req.userId).select('-password').lean();
+    if (safe) {
+      safe.role = safe.isAdmin ? 'admin' : (safe.role || 'student');
+      safe.group = safe.studyGroup || safe.group || '';
+    }
+    res.json({ success: true, user: safe });
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: 'Profile update failed' });
@@ -2432,6 +2968,7 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
 });
 
 // Upload Avatar
+
 app.post('/api/upload-avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
     if (!req.file) {
@@ -2456,6 +2993,35 @@ app.post('/api/upload-avatar', authenticateToken, upload.single('avatar'), async
     console.error('Upload avatar error:', error);
     res.status(500).json({ error: 'Upload failed' });
   }
+
+
+// Upload Cover Banner
+app.post('/api/upload-cover', authenticateToken, upload.single('cover'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'covers',
+      width: 1600,
+      height: 600,
+      crop: 'fill',
+      quality: 'auto',
+      fetch_format: 'auto'
+    });
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { coverBanner: result.secure_url },
+      { new: true, select: '-password' }
+    );
+
+    res.json({ success: true, coverBanner: user.coverBanner });
+  } catch (error) {
+    console.error('Upload cover error:', error);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
 });
 
 // Search Users
@@ -4570,6 +5136,41 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+
+// WebRTC ICE config endpoint (STUN + optional TURN via env)
+// Set these env vars (Render > Environment):
+//   TURN_URL=turn:free.expressturn.com:3478?transport=udp,turn:free.expressturn.com:3478?transport=tcp
+//   TURN_USERNAME=...
+//   TURN_PASSWORD=...
+app.get('/api/rtc-config', (req, res) => {
+  try {
+    const stun = [
+      'stun:stun.l.google.com:19302',
+      'stun:stun1.l.google.com:19302'
+    ];
+    const iceServers = [{ urls: stun }];
+
+    const turnUrlRaw = (process.env.TURN_URL || '').trim();
+    const turnUser = (process.env.TURN_USERNAME || '').trim();
+    const turnPass = (process.env.TURN_PASSWORD || '').trim();
+
+    if (turnUrlRaw && turnUser && turnPass) {
+      const urls = turnUrlRaw.split(',').map(s => s.trim()).filter(Boolean);
+      iceServers.push({
+        urls,
+        username: turnUser,
+        credential: turnPass
+      });
+    }
+
+    res.json({ iceServers });
+  } catch (e) {
+    res.json({
+      iceServers: [{ urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302'] }]
+    });
+  }
+});
+
 // Get server stats
 app.get('/api/server/stats', authenticateToken, async (req, res) => {
   try {
@@ -4593,12 +5194,285 @@ app.get('/api/server/stats', authenticateToken, async (req, res) => {
 
 
 
+
+
+// ==================== UNIVERSITY CATALOG ROUTES ====================
+// Public: universities list + faculties list (used by register page)
+app.get('/api/catalog/universities', async (req, res) => {
+  try {
+    const list = await UniversityCatalog.find({}).sort({ name: 1 }).lean();
+    res.json({ success: true, universities: list.map(u => ({ name: u.name })) });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load universities' });
+  }
+});
+app.get('/api/catalog/faculties', async (req, res) => {
+  try {
+    const uni = String(req.query.university || '').trim();
+    if (!uni) return res.json({ success: true, faculties: [] });
+    const doc = await UniversityCatalog.findOne({ name: uni }).lean();
+    res.json({ success: true, faculties: doc?.faculties || [] });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load faculties' });
+  }
+});
+app.get('/api/catalog/programs', async (req, res) => {
+  try {
+    const university = String(req.query.university || '').trim();
+    const faculty = String(req.query.faculty || '').trim();
+    const q = String(req.query.q || '').trim();
+    const filter = {};
+    if (university) filter.university = university;
+    if (faculty) filter.faculty = faculty;
+    if (q) filter.name = { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+
+    const list = await ProgramCatalog.find(filter).sort({ name: 1 }).limit(500).lean();
+    res.json({ success: true, programs: list.map(p => ({ code: p.code, name: p.name, faculty: p.faculty })) });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load programs' });
+  }
+});
+
+
+
+// Admin: manage catalog
+app.post('/api/admin/catalog/universities', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const name = String(req.body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'name required' });
+    await UniversityCatalog.updateOne({ name }, { $setOnInsert: { name, faculties: [] } }, { upsert: true });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to add university' });
+  }
+});
+app.post('/api/admin/catalog/faculties', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const uni = String(req.body.university || '').trim();
+    const faculty = String(req.body.faculty || '').trim();
+    if (!uni || !faculty) return res.status(400).json({ error: 'university and faculty required' });
+    await UniversityCatalog.updateOne({ name: uni }, { $addToSet: { faculties: faculty } }, { upsert: true });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to add faculty' });
+  }
+});
+
+// Admin: full catalog CRUD (universities/faculties/programs)
+app.get('/api/admin/catalog/universities', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    const filter = q
+      ? { name: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } }
+      : {};
+    const list = await UniversityCatalog.find(filter).sort({ name: 1 }).limit(1000).lean();
+    res.json({ success: true, universities: list });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load universities' });
+  }
+});
+
+app.patch('/api/admin/catalog/universities/:name', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const oldName = decodeURIComponent(String(req.params.name || '')).trim();
+    const newName = String(req.body.name || '').trim();
+    if (!oldName || !newName) return res.status(400).json({ error: 'name required' });
+    if (oldName === newName) return res.json({ success: true });
+
+    const exists = await UniversityCatalog.findOne({ name: newName }).lean();
+    if (exists) return res.status(409).json({ error: 'University already exists' });
+
+    const uni = await UniversityCatalog.findOne({ name: oldName });
+    if (!uni) return res.status(404).json({ error: 'University not found' });
+    uni.name = newName;
+    await uni.save();
+
+    // best-effort: update users + live sessions + program catalog
+    await Promise.all([
+      User.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {}),
+      LiveSession.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {}),
+      ProgramCatalog.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {})
+    ]);
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('PATCH /api/admin/catalog/universities/:name error:', e);
+    res.status(500).json({ error: 'Failed to update university' });
+  }
+});
+
+app.delete('/api/admin/catalog/universities/:name', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const name = decodeURIComponent(String(req.params.name || '')).trim();
+    if (!name) return res.status(400).json({ error: 'name required' });
+    await UniversityCatalog.deleteOne({ name });
+    // Do NOT auto-delete users; keep their profile value as-is.
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete university' });
+  }
+});
+
+app.get('/api/admin/catalog/faculties', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const uni = String(req.query.university || '').trim();
+    if (!uni) return res.json({ success: true, faculties: [] });
+    const doc = await UniversityCatalog.findOne({ name: uni }).lean();
+    res.json({ success: true, faculties: doc?.faculties || [] });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load faculties' });
+  }
+});
+
+app.delete('/api/admin/catalog/faculties', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const uni = String(req.body.university || '').trim();
+    const faculty = String(req.body.faculty || '').trim();
+    if (!uni || !faculty) return res.status(400).json({ error: 'university and faculty required' });
+    await UniversityCatalog.updateOne({ name: uni }, { $pull: { faculties: faculty } });
+    // best-effort: remove programs under this faculty
+    await ProgramCatalog.deleteMany({ university: uni, faculty }).catch(() => {});
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete faculty' });
+  }
+});
+
+// Admin programs CRUD
+app.get('/api/admin/catalog/programs', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const university = String(req.query.university || '').trim();
+    const faculty = String(req.query.faculty || '').trim();
+    const q = String(req.query.q || '').trim();
+    const filter = {};
+    if (university) filter.university = university;
+    if (faculty) filter.faculty = faculty;
+    if (q) {
+      const re = { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+      filter.$or = [{ name: re }, { code: re }];
+    }
+    const list = await ProgramCatalog.find(filter).sort({ university: 1, faculty: 1, name: 1 }).limit(2000).lean();
+    res.json({ success: true, programs: list });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load programs' });
+  }
+});
+
+app.post('/api/admin/catalog/programs', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const university = String(req.body.university || '').trim();
+    const faculty = String(req.body.faculty || '').trim();
+    const code = String(req.body.code || '').trim();
+    const name = String(req.body.name || '').trim();
+    if (!university || !faculty || !name) return res.status(400).json({ error: 'university, faculty, name required' });
+    const doc = await ProgramCatalog.create({ university, faculty, code, name });
+    res.status(201).json({ success: true, program: doc });
+  } catch (e) {
+    console.error('POST /api/admin/catalog/programs error:', e);
+    res.status(500).json({ error: 'Failed to add program' });
+  }
+});
+
+app.patch('/api/admin/catalog/programs/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    const patch = {};
+    ['university', 'faculty', 'code', 'name'].forEach((k) => {
+      if (req.body[k] !== undefined) patch[k] = String(req.body[k] || '').trim();
+    });
+    const doc = await ProgramCatalog.findByIdAndUpdate(id, { $set: patch }, { new: true });
+    if (!doc) return res.status(404).json({ error: 'Program not found' });
+    res.json({ success: true, program: doc });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update program' });
+  }
+});
+
+app.delete('/api/admin/catalog/programs/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    await ProgramCatalog.deleteOne({ _id: id });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete program' });
+  }
+});
+
+// Admin broadcast notification (in-app). Payload can target university/faculty/group or all.
+app.post('/api/admin/broadcast', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const title = String(req.body.title || '').trim();
+    const body = String(req.body.body || '').trim();
+    const university = String(req.body.university || '').trim();
+    const faculty = String(req.body.faculty || '').trim();
+    const studyGroup = String(req.body.studyGroup || '').trim();
+    if (!title || !body) return res.status(400).json({ error: 'title and body required' });
+
+    const filter = {};
+    if (university) filter.university = university;
+    if (faculty) filter.faculty = faculty;
+    if (studyGroup) filter.studyGroup = studyGroup;
+
+    const users = await User.find(filter).select('_id').lean();
+    if (!users.length) return res.json({ success: true, created: 0 });
+
+    const docs = users.map(u => ({
+      userId: String(u._id),
+      title,
+      message: body,
+      type: 'admin_broadcast',
+      read: false,
+      createdAt: new Date()
+    }));
+    await Notification.insertMany(docs, { ordered: false });
+
+    // realtime push (best-effort)
+    users.forEach(u => {
+      const ids = getUserSocketIds(String(u._id));
+      ids.forEach(sid => {
+        try { io.to(sid).emit('notification', { title, message: body, type: 'admin_broadcast', timestamp: Date.now() }); } catch {}
+      });
+    });
+
+    res.json({ success: true, created: users.length });
+  } catch (e) {
+    console.error('POST /api/admin/broadcast error:', e);
+    res.status(500).json({ error: 'Failed to broadcast' });
+  }
+});
+
+// ==================== NOTIFICATIONS ROUTES ====================
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const items = await Notification.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(200).lean();
+    res.json({ success: true, notifications: items });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load notifications' });
+  }
+});
+app.post('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    await Notification.updateOne({ _id: req.params.id, userId: req.userId }, { $set: { read: true } });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to mark read' });
+  }
+});
+app.post('/api/notifications/read-all', authenticateToken, async (req, res) => {
+  try {
+    await Notification.updateMany({ userId: req.userId, read: false }, { $set: { read: true } });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to mark all read' });
+  }
+});
+
 // ==================== LIVE SESSIONS ROUTES ====================
 // List lives. Query: status=scheduled|live|ended|cancelled, mine=1 (teacher), q=search, courseId=...
 app.get('/api/lives', authenticateToken, async (req, res) => {
   try {
     const { status, mine, q, courseId } = req.query;
-    const user = await User.findById(req.userId).select('role university').lean();
+    const user = await User.findById(req.userId).select('role university faculty studyGroup').lean();
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const query = {};
@@ -4606,6 +5480,13 @@ app.get('/api/lives', authenticateToken, async (req, res) => {
     if (courseId) query.courseId = courseId;
     if (mine === '1') query.hostId = req.userId;
 
+    // Students should only see lives targeted to their university/faculty/group
+    if (user.role === 'student') {
+      if (user.university) query.university = user.university;
+      if (user.faculty) query.faculty = user.faculty;
+      // group match: either empty targetGroups (open) or includes student's studyGroup
+      query.$or = [ { targetGroups: { $size: 0 } }, { targetGroups: user.studyGroup } ];
+    }
     let lives;
     if (q && q.trim()) {
       lives = await LiveSession.find({ ...query, $text: { $search: q.trim() } })
@@ -4651,8 +5532,17 @@ app.post('/api/lives', authenticateToken, async (req, res) => {
     const { title, description, previewImage, startAt, courseId, type, price } = req.body || {};
     if (!title || !String(title).trim()) return res.status(400).json({ error: 'Title required' });
 
+    const host = await User.findById(req.userId).select('university faculty').lean();
+    const uni = String(university || host?.university || '').trim();
+    const fac = String(faculty || host?.faculty || '').trim();
+    const tg = Array.isArray(targetGroups) ? targetGroups.map(s=>String(s).trim()).filter(Boolean) : (String(targetGroups||'').split(',').map(s=>s.trim()).filter(Boolean));
+
     const live = await LiveSession.create({
       hostId: req.userId,
+      university: uni,
+      faculty: fac,
+      targetGroups: tg,
+      lessonKind: ['lecture','practice','other'].includes(String(lessonKind||'other')) ? String(lessonKind||'other') : 'other',
       courseId: courseId || null,
       title: String(title).trim(),
       description: String(description || ''),
@@ -5257,7 +6147,7 @@ async function signalRateLimit(req, res, next) {
 }
 
 // Admin gate for moderation
-async function requireAdmin(req, res, next) {
+async function requireSignalAdmin(req, res, next) {
   try {
     const user = await User.findById(req.userId).select('username');
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -5266,7 +6156,7 @@ async function requireAdmin(req, res, next) {
     if (!admins.includes(user.username)) return res.status(403).json({ error: 'Forbidden' });
     next();
   } catch (e) {
-    console.error('❌ requireAdmin error:', e);
+    console.error('❌ requireSignalAdmin error:', e);
     res.status(500).json({ error: 'Auth failed' });
   }
 }
@@ -5430,7 +6320,7 @@ app.post('/api/signals/:id/report', authenticateToken, async (req, res) => {
 });
 
 // Moderation queue
-app.get('/api/mod/signals', authenticateToken, requireAdmin, async (req, res) => {
+app.get('/api/mod/signals', authenticateToken, requireSignalAdmin, async (req, res) => {
   try {
     const { visibility, status } = req.query;
     const query = {};
@@ -5446,7 +6336,7 @@ app.get('/api/mod/signals', authenticateToken, requireAdmin, async (req, res) =>
 });
 
 // Approve / Reject / Set status
-app.post('/api/mod/signals/:id/action', authenticateToken, requireAdmin, async (req, res) => {
+app.post('/api/mod/signals/:id/action', authenticateToken, requireSignalAdmin, async (req, res) => {
   try {
     const { action, note, status } = req.body;
     const signal = await Signal.findById(req.params.id);
@@ -5478,18 +6368,7 @@ app.post('/api/mod/signals/:id/action', authenticateToken, requireAdmin, async (
 });
 
 // ==================== PET + COINS API ====================
-const requireAdminRole = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.userId).select('isAdmin role');
-    if (!user) return res.status(401).json({ error: 'Authentication required' });
-    const role = user.role || (user.isAdmin ? 'admin' : 'student');
-    if (!(user.isAdmin || role === 'admin')) return res.status(403).json({ error: 'Admin only' });
-    req.userRole = role;
-    next();
-  } catch (e) {
-    return res.status(500).json({ error: 'Role check failed' });
-  }
-};
+// NOTE: requireAdmin middleware is defined earlier (Admin check uses DB). Removed duplicate declaration.
 
 
 // Get my pet + coins + inventory + shop catalog
@@ -5918,7 +6797,7 @@ app.get('/api/wallet/topup-requests', authenticateToken, async (req, res) => {
 });
 
 // ==================== ADMIN (Topup Approvals) ====================
-app.get('/api/admin/topup-requests', authenticateToken, requireAdminRole, async (req, res) => {
+app.get('/api/admin/topup-requests', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const status = req.query.status || 'pending';
     const q = status ? { status } : {};
@@ -5930,7 +6809,7 @@ app.get('/api/admin/topup-requests', authenticateToken, requireAdminRole, async 
   }
 });
 
-app.post('/api/admin/topup-requests/:id/approve', authenticateToken, requireAdminRole, async (req, res) => {
+app.post('/api/admin/topup-requests/:id/approve', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const r = await TopUpRequest.findById(req.params.id);
     if (!r) return res.status(404).json({ error: 'Request not found' });
@@ -5951,7 +6830,7 @@ app.post('/api/admin/topup-requests/:id/approve', authenticateToken, requireAdmi
   }
 });
 
-app.post('/api/admin/topup-requests/:id/reject', authenticateToken, requireAdminRole, async (req, res) => {
+app.post('/api/admin/topup-requests/:id/reject', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const r = await TopUpRequest.findById(req.params.id);
     if (!r) return res.status(404).json({ error: 'Request not found' });
@@ -5969,7 +6848,7 @@ app.post('/api/admin/topup-requests/:id/reject', authenticateToken, requireAdmin
 });
 
 // Admin: update user coins directly
-app.patch('/api/admin/users/:id/coins', authenticateToken, requireAdminRole, async (req, res) => {
+app.patch('/api/admin/users/:id/coins', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const delta = Number(req.body.delta || 0);
     const setTo = req.body.setTo;
@@ -6001,7 +6880,7 @@ app.post('/api/admin/bootstrap', async (req, res) => {
 // Or curl:
 //   curl -H "Authorization: Bearer <TOKEN>" http://localhost:3000/api/admin/ping
 
-app.get('/api/admin/ping', authenticateToken, requireAdminRole, async (req, res) => {
+app.get('/api/admin/ping', authenticateToken, requireAdmin, async (req, res) => {
   res.json({ success: true, message: 'admin pong', time: new Date().toISOString(), userId: req.user?.userId || req.user?.id || null });
 });
 
@@ -6022,7 +6901,7 @@ app.get('/api/admin/whoami', authenticateToken, requireAdmin, async (req, res) =
 
 // Create a dummy pending topup request for your own user (for testing admin approval flow)
 // Body: { "coins": 50 }  => creates pending request with placeholder screenshot URL
-app.post('/api/admin/test/create-topup', authenticateToken, requireAdminRole, async (req, res) => {
+app.post('/api/admin/test/create-topup', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const uid = req.user?.userId || req.user?.id;
     const coins = Math.max(1, parseInt(req.body?.coins || '50', 10));
@@ -6044,7 +6923,7 @@ app.post('/api/admin/test/create-topup', authenticateToken, requireAdminRole, as
 
 // Seed/Reset your own pet stats quickly (for demo)
 // Body: { "hunger": 40, "xp": 0, "level": 1 }
-app.post('/api/admin/test/reset-pet', authenticateToken, requireAdminRole, async (req, res) => {
+app.post('/api/admin/test/reset-pet', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const uid = req.user?.userId || req.user?.id;
     const hunger = Math.max(0, Math.min(100, parseInt(req.body?.hunger ?? 50, 10)));
@@ -7578,6 +8457,48 @@ app.get('/api/certificates/eligible2', authenticateToken, attachUserRole, requir
     res.status(500).json({ error: 'Failed' });
   }
 });
+
+
+
+// ==================== SCHEDULE NOTIFIER (1 hour before) ====================
+function startLiveNotificationScheduler() {
+  const tickMs = 60 * 1000;
+  setInterval(async () => {
+    try {
+      const now = Date.now();
+      const from = new Date(now + 59*60*1000);
+      const to   = new Date(now + 61*60*1000);
+      const due = await LiveSession.find({
+        status: 'scheduled',
+        startAt: { $gte: from, $lte: to },
+        notifySentAt: null
+      }).lean();
+
+      for (const live of due) {
+        // find matching students
+        const q = { role: 'student' };
+        if (live.university) q.university = live.university;
+        if (live.faculty) q.faculty = live.faculty;
+        if (Array.isArray(live.targetGroups) && live.targetGroups.length) q.studyGroup = { $in: live.targetGroups };
+        const students = await User.find(q).select('_id socketId').lean();
+
+        const title = 'Dars 1 soatdan keyin boshlanadi';
+        const body = `${live.title || 'Dars'} — ${new Date(live.startAt).toLocaleString()}`;
+        const link = `/live.html?id=${live._id}`;
+
+        for (const s of students) {
+          const n = await Notification.create({ userId: s._id, title, body, link });
+          if (s.socketId && io.sockets.sockets.get(s.socketId)) {
+            io.to(s.socketId).emit('notification:new', { notification: n });
+          }
+        }
+        await LiveSession.updateOne({ _id: live._id }, { $set: { notifySentAt: new Date() } });
+      }
+    } catch (e) {
+      // keep silent to avoid log spam
+    }
+  }, tickMs);
+}
 
 server.listen(PORT, async () => {
   await initializeStats();

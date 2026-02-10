@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ro‘yxatdan o‘tish — SChat</title>
+  <meta name="description" content="SChat’da ro‘yxatdan o‘ting: kanallar, guruhlar va real-time chat — barchasi bitta platformada." />
+
+  <script>
+    tailwind = {
+      config: {
+        darkMode: 'class',
+        theme: { extend: {
+          fontFamily: { inter: ['Inter','ui-sans-serif','system-ui'] },
+          boxShadow: { glass: '0 20px 60px rgba(0,0,0,.18)' },
+          keyframes: {
+            floaty: { '0%,100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-10px)' } },
+            shimmer: { '0%': { backgroundPosition: '0% 50%' }, '100%': { backgroundPosition: '100% 50%' } },
+            pop: { '0%': { transform: 'scale(.98)', opacity: .0 }, '100%': { transform: 'scale(1)', opacity: 1 } }
+          },
+          animation: {
+            floaty: 'floaty 7s ease-in-out infinite',
+            shimmer: 'shimmer 6s ease-in-out infinite',
+            pop: 'pop .45s ease-out both'
+          }
+        }}
+      }
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,.58);
+      --glass-brd: rgba(255,255,255,.36);
+      --muted: rgba(15,23,42,.72);
+      --muted2: rgba(15,23,42,.55);
+      --grid: rgba(15,23,42,.06);
+      --ring: rgba(99,102,241,.45);
+      --ok: rgba(34,197,94,.18);
+      --bad: rgba(239,68,68,.18);
+    }
+    .dark{
+      --glass-bg: rgba(2,6,23,.58);
+      --glass-brd: rgba(148,163,184,.16);
+      --muted: rgba(226,232,240,.78);
+      --muted2: rgba(226,232,240,.55);
+      --grid: rgba(148,163,184,.08);
+      --ring: rgba(236,72,153,.35);
+      --ok: rgba(34,197,94,.14);
+      --bad: rgba(239,68,68,.14);
+    }
+    body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .muted{ color: var(--muted); }
+    .muted2{ color: var(--muted2); }
+    .glass{
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .btn-primary{ background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)); }
+    .btn-primary:hover{ filter: brightness(1.05); }
+    .btn-ghost:hover{ background: rgba(148,163,184,.12); }
+    .glow-ring:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
+
+    .bg-orbs{
+      position: fixed; inset: 0; z-index: -2; overflow: hidden;
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.38), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.28), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.22), transparent 60%),
+        linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
+    }
+    .dark .bg-orbs{
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.24), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.19), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.14), transparent 60%),
+        linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));
+    }
+    .bg-grid{
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 70px 70px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+      opacity: .85;
+    }
+    .u-anim{
+      background: linear-gradient(90deg, rgba(99,102,241,1), rgba(236,72,153,1));
+      background-size: 200% 200%;
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      animation: shimmer 6s ease-in-out infinite;
+    }
+
+    .field{
+      background: rgba(255,255,255,.38);
+      border: 1px solid rgba(255,255,255,.28);
+    }
+    .dark .field{
+      background: rgba(2,6,23,.35);
+      border: 1px solid rgba(148,163,184,.18);
+    }
+    .field:focus{
+      outline: none;
+      box-shadow: 0 0 0 5px var(--ring);
+      border-color: transparent;
+    }
+
+    .g-border{ position: relative; }
+    .g-border:before{
+      content:"";
+      position:absolute; inset:-1px; border-radius: 1.5rem;
+      background: linear-gradient(135deg, rgba(99,102,241,.55), rgba(236,72,153,.45), rgba(34,197,94,.35));
+      z-index:-1;
+    }
+    .panel-pop{ animation: pop .45s ease-out both; }
+
+    .dark .robot-head{ fill: rgba(2,6,23,.55); }
+    .dark .robot-visor{ fill: rgba(226,232,240,.08); }
+    .dark .eye-fill{ fill: rgba(226,232,240,.80); }
+  </style>
+
+  <script>
+    (function(){
+      const key='theme';
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark?'dark':'light');
+      if(mode==='dark') document.documentElement.classList.add('dark');
+    })();
+  </script>
+</head>
+
+<body class="min-h-screen text-slate-900 dark:text-slate-100">
+  <div class="bg-orbs"></div>
+  <div class="bg-grid"></div>
+
+  <header class="sticky top-0 z-50">
+    <div class="mx-auto max-w-6xl px-4 py-4">
+      <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
+        <a href="/index.html" class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white shadow-glass">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-extrabold tracking-tight">SChat</div>
+            <div class="text-xs muted">Talabalar uchun platforma</div>
+          </div>
+        </a>
+
+        <div class="flex items-center gap-2">
+          <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring" title="Tungi/Kunduzgi">
+            <i id="themeIcon" class="fa-solid fa-moon"></i>
+            <span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
+          </button>
+          <a href="/login.html" class="glass rounded-xl px-4 py-2 text-sm font-bold btn-ghost glow-ring">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span class="ml-2 hidden sm:inline">Kirish</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-10">
+    <div class="grid lg:grid-cols-2 gap-6 items-start">
+
+      <!-- Robot panel -->
+      <section class="glass rounded-3xl p-6 sm:p-7 g-border panel-pop">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+              <i class="fa-solid fa-sparkles"></i>
+              <span>Ro‘yxatdan o‘tish</span>
+              <span class="mx-2 w-1 h-1 rounded-full bg-slate-400/40"></span>
+              <span class="muted2">yoqimli onboarding</span>
+            </div>
+
+            <h2 class="mt-4 text-2xl sm:text-3xl font-black tracking-tight">
+              Parolni tekshirish ham <span class="u-anim">qiziqarli</span> bo‘lsin
+            </h2>
+            <p class="mt-2 text-sm sm:text-base muted2">
+              Parol yashirilsa robotcha ko‘zini yumadi, ko‘rsatilsa bitta ko‘zi bilan “tekshiradi”.
+              Parollar mos kelmasa — “xafa”.
+            </p>
+          </div>
+
+          <div class="w-28 sm:w-32 shrink-0 select-none">
+            <svg id="robot" viewBox="0 0 220 220" class="w-full h-auto">
+              <defs>
+                <linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="rgba(99,102,241,1)"/>
+                  <stop offset="1" stop-color="rgba(236,72,153,1)"/>
+                </linearGradient>
+              </defs>
+
+              <g>
+                <path d="M110 18 C95 18 92 40 110 40 C128 40 125 18 110 18Z" fill="url(#rg)" opacity="0.9"/>
+                <path d="M110 40 L110 62" stroke="rgba(148,163,184,.8)" stroke-width="8" stroke-linecap="round"/>
+                <circle cx="110" cy="14" r="10" fill="url(#rg)"/>
+              </g>
+
+              <g>
+                <rect x="40" y="56" width="140" height="120" rx="36" fill="rgba(255,255,255,.70)" class="robot-head"/>
+                <rect x="60" y="86" width="100" height="54" rx="22" fill="rgba(15,23,42,.08)" class="robot-visor"/>
+              </g>
+
+              <g id="eyes" transform="translate(0,0)">
+                <g id="eyeL" transform="translate(92 112)">
+                  <circle r="14" fill="rgba(2,6,23,.75)" class="eye-fill"/>
+                  <circle r="4" cx="4" cy="-2" fill="rgba(255,255,255,.9)"/>
+                  <path id="blinkL" d="M-14 0 Q0 10 14 0" stroke="rgba(2,6,23,.55)" stroke-width="4" stroke-linecap="round" fill="none" opacity="0"/>
+                </g>
+                <g id="eyeR" transform="translate(128 112)">
+                  <circle r="14" fill="rgba(2,6,23,.75)" class="eye-fill"/>
+                  <circle r="4" cx="4" cy="-2" fill="rgba(255,255,255,.9)"/>
+                  <path id="blinkR" d="M-14 0 Q0 10 14 0" stroke="rgba(2,6,23,.55)" stroke-width="4" stroke-linecap="round" fill="none" opacity="0"/>
+                </g>
+              </g>
+
+              <g id="mouthHappy" opacity="1">
+                <path d="M88 152 Q110 166 132 152" stroke="rgba(2,6,23,.55)" stroke-width="6" stroke-linecap="round" fill="none"/>
+              </g>
+              <g id="mouthSad" opacity="0">
+                <path d="M88 164 Q110 150 132 164" stroke="rgba(2,6,23,.55)" stroke-width="6" stroke-linecap="round" fill="none"/>
+              </g>
+
+              <circle cx="74" cy="154" r="6" fill="url(#rg)" opacity=".65"/>
+              <circle cx="146" cy="154" r="6" fill="url(#rg)" opacity=".65"/>
+            </svg>
+
+            <div class="mt-2 text-center text-xs muted2">
+              <span id="robotHint">Parol: bekitilgan</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 grid sm:grid-cols-3 gap-3">
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted">Maslahat</div>
+            <div class="mt-1 text-sm muted2">Kamida 6 belgi, harf+raqam aralash bo‘lsa zo‘r.</div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted">Tezlik</div>
+            <div class="mt-1 text-sm muted2">Maydonlar avtomatik validatsiya bilan ishlaydi.</div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted">Xavfsizlik</div>
+            <div class="mt-1 text-sm muted2">Parolni ko‘rsatish faqat sizga ko‘rinadi.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Form panel -->
+      <section class="glass rounded-3xl p-8 panel-pop">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div class="text-sm font-extrabold">Hisob yaratish</div>
+            <div class="text-xs muted2 mt-1">Maydonlarni to‘ldiring — keyin platformani aylab chiqasiz</div>
+          </div>
+          <div id="message" class="hidden text-sm font-bold px-3 py-2 rounded-xl glass"></div>
+        </div>
+
+        <form id="registerForm" class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="text-xs font-extrabold muted">To‘liq ism</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-id-card absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="fullName" placeholder="Masalan: Ali Valiyev" required />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-extrabold muted">Laqab (nickname)</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-face-smile absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="nickname" placeholder="Masalan: Ali" />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-extrabold muted">Foydalanuvchi nomi (username)</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-at absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="username" placeholder="Masalan: ali_uz" required />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-extrabold muted">Universitet</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-building-columns absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <select id="universitySelect" class="field w-full rounded-2xl px-11 py-3 text-sm glow-ring" name="university" required>
+  <option value="" selected disabled>Universitetni tanlang</option>
+\1
+<div class="relative mt-3">
+  <i class="fa-solid fa-building-columns absolute left-4 top-1/2 -translate-y-1/2 muted"></i>
+  <select id="facultySelect" class="field w-full rounded-2xl px-11 py-3 text-sm glow-ring" name="faculty" required>
+    <option value="" selected disabled>Fakultetni tanlang</option>
+  </select>
+</div>
+</div>
+          </div>
+
+          <div>
+            <label class="text-xs font-extrabold muted">O‘quv guruhi</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-users-rectangle absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="studyGroup" placeholder="Masalan: 21-01" />
+            </div>
+          
+          <div>
+            <label class="text-xs font-extrabold muted">Role</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-user-tag absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <select class="field w-full rounded-2xl px-11 py-3 text-sm" name="role" required>
+                <option value="student" selected>Student</option>
+                <option value="teacher">Teacher</option>
+              </select>
+            </div>
+          </div>
+
+</div>
+
+          <div>
+            <label class="text-xs font-extrabold muted">Telefon</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-phone absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="phone" placeholder="+998 90 123 45 67" />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-extrabold muted">Email</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-envelope absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="email" placeholder="ali@example.com" required />
+            </div>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="text-xs font-extrabold muted">Bio</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-pen absolute left-4 top-4 muted2"></i>
+              <textarea class="field w-full rounded-2xl px-11 py-3 text-sm min-h-[92px]" name="bio" placeholder="Qisqacha: yo‘nalish, qiziqishlar, maqsad..."></textarea>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-extrabold muted">Parol</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <input id="password" class="field w-full rounded-2xl px-11 pr-12 py-3 text-sm" type="password" name="password" placeholder="Kamida 6 ta belgi" required />
+              <button type="button" id="togglePassword"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 glass rounded-xl px-3 py-2 btn-ghost glow-ring"
+                      aria-label="Parolni ko‘rsatish/bekitish" title="Ko‘rsatish/Bekitish">
+                <i id="toggleIcon" class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-extrabold muted">Parolni tasdiqlang</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-lock-open absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <input id="confirmPassword" class="field w-full rounded-2xl px-11 py-3 text-sm" type="password" name="confirmPassword" placeholder="Parolni qayta kiriting" required />
+            </div>
+            <div id="pwMatchHint" class="mt-2 text-xs muted2 hidden"></div>
+          </div>
+
+          <div class="sm:col-span-2 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center mt-2">
+            <button type="submit" id="submitBtn" class="btn-primary text-white rounded-2xl px-6 py-3 font-extrabold glow-ring">
+              Hisob yaratish <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+
+            <a href="/login.html" class="glass rounded-2xl px-6 py-3 font-extrabold btn-ghost text-center glow-ring">
+              Kirish
+            </a>
+          </div>
+
+          <div class="sm:col-span-2 text-xs muted2 mt-2">
+            Ro‘yxatdan o‘tish orqali siz platforma qoidalariga rozilik bildirasiz.
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function(){
+      const key='theme';
+      const html=document.documentElement;
+      const btn=document.getElementById('themeToggle');
+      const icon=document.getElementById('themeIcon');
+      const label=document.getElementById('themeLabel');
+
+      function apply(mode){
+        if(mode==='dark') html.classList.add('dark'); else html.classList.remove('dark');
+        localStorage.setItem(key, mode);
+        if(icon) icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        if(label) label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+      }
+
+      const saved = localStorage.getItem(key);
+      if(saved) apply(saved);
+      else {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        apply(prefersDark ? 'dark' : 'light');
+      }
+
+      if(btn) btn.addEventListener('click', ()=> apply(html.classList.contains('dark') ? 'light' : 'dark'));
+    })();
+  </script>
+
+  <script>
+    // Register submit: robust for different API response formats
+    (function(){
+      const form = document.getElementById('registerForm');
+      const msg = document.getElementById('message');
+      const submitBtn = document.getElementById('submitBtn');
+
+      function showMessage(text, type){
+        msg.textContent = text;
+        msg.classList.remove('hidden');
+        msg.style.background = type === 'error' ? 'var(--bad)' : 'var(--ok)';
+        msg.style.border = '1px solid rgba(148,163,184,.20)';
+        msg.style.color = type === 'error' ? 'rgba(220,38,38,.95)' : 'rgba(16,185,129,.95)';
+        msg.style.backdropFilter = 'blur(16px)';
+        clearTimeout(showMessage._t);
+        showMessage._t = setTimeout(()=> msg.classList.add('hidden'), 5500);
+      }
+
+      async function safeJson(res){
+        try { return await res.json(); } catch { return null; }
+      }
+
+      function normalizeError(result){
+        if(!result) return null;
+        if(typeof result.error === 'string') return result.error;
+        if(typeof result.message === 'string') return result.message;
+        if(typeof result.msg === 'string') return result.msg;
+        if(Array.isArray(result.errors) && result.errors.length){
+          const e = result.errors[0];
+          if(typeof e === 'string') return e;
+          if(e && typeof e.message === 'string') return e.message;
+        }
+        return null;
+      }
+
+      function extractToken(result){
+        if(!result) return null;
+        return result.token || result.accessToken || (result.data && (result.data.token || result.data.accessToken)) || null;
+      }
+
+      function isSuccess(res, result){
+        if(result && typeof result.success === 'boolean') return result.success;
+        // fallback: treat 2xx with any meaningful payload as success
+        if(res && res.ok){
+          if(extractToken(result)) return true;
+          if(result && (result.user || (result.data && result.data.user))) return true;
+          // some APIs return created user directly
+          if(result && (result._id || result.id)) return true;
+        }
+        return false;
+      }
+
+      form.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const fd = new FormData(form);
+        const data = Object.fromEntries(fd.entries());
+
+        // basic validation
+        if((data.password || '').length < 6){
+          showMessage("Parol kamida 6 ta belgidan iborat bo‘lsin.", 'error');
+          return;
+        }
+        if(data.password !== data.confirmPassword){
+          showMessage("Parollar mos kelmadi!", 'error');
+          return;
+        }
+
+        // payload: keep original keys + add compatibility aliases
+        const payload = {
+          ...data,
+          name: data.fullName,            // some APIs use "name"
+          full_name: data.fullName,       // just in case
+          phoneNumber: data.phone,        // some APIs use phoneNumber
+        };
+        delete payload.confirmPassword;
+
+        const original = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Yuborilmoqda...';
+
+        try{
+          const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const result = await safeJson(res);
+
+          if(isSuccess(res, result)){
+            const token = extractToken(result);
+            if(token) localStorage.setItem('token', token);
+            showMessage("Ro‘yxatdan o‘tish muvaffaqiyatli! Yo‘naltirilmoqda...", 'success');
+            setTimeout(async ()=>{
+              try{
+                const t = localStorage.getItem('token');
+                const meRes = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${t}` } });
+                const me = await meRes.json().catch(()=>null);
+                const role = (me && me.user && me.user.role) ? String(me.user.role) : 'student';
+                window.location.href = (role==='teacher') ? '/teacher-dashboard.html' : (role==='admin' ? '/admin-dashboard.html' : '/student-dashboard.html');
+              }catch(_){
+                window.location.href = '/student-dashboard.html';
+              }
+            }, 900);
+            return;
+          }
+
+          const err = normalizeError(result) || `Ro‘yxatdan o‘tish muvaffaqiyatsiz (HTTP ${res.status}).`;
+          showMessage(err, 'error');
+          console.error('Register failed:', { status: res.status, result });
+
+        } catch (err){
+          showMessage("Tarmoq xatosi. Server ishlayaptimi? Qayta urinib ko‘ring.", 'error');
+          console.error('Register network/error:', err);
+        } finally {
+          submitBtn.innerHTML = original;
+          submitBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    // Robot + password interactions
+    (function(){
+      const pw = document.getElementById('password');
+      const cpw = document.getElementById('confirmPassword');
+      const toggle = document.getElementById('togglePassword');
+      const toggleIcon = document.getElementById('toggleIcon');
+
+      const hint = document.getElementById('robotHint');
+      const eyeGroup = document.getElementById('eyes');
+      const eyeL = document.getElementById('eyeL');
+      const eyeR = document.getElementById('eyeR');
+      const blinkL = document.getElementById('blinkL');
+      const blinkR = document.getElementById('blinkR');
+      const mouthHappy = document.getElementById('mouthHappy');
+      const mouthSad = document.getElementById('mouthSad');
+      const pwMatchHint = document.getElementById('pwMatchHint');
+
+      function setClosed(closed){
+        blinkL.style.opacity = closed ? '1' : '0';
+        blinkR.style.opacity = closed ? '1' : '0';
+        eyeL.querySelector('circle').style.opacity = closed ? '0' : '1';
+        eyeR.querySelector('circle').style.opacity = closed ? '0' : '1';
+      }
+
+      function setPeek(peek){
+        if(peek){
+          eyeR.setAttribute('transform','translate(128 112) scale(1,0.45)');
+          eyeL.setAttribute('transform','translate(92 112) scale(1,1)');
+          setClosed(false);
+          if(hint) hint.textContent = "Parol: ko‘rsatilgan (robot tekshiryapti)";
+        } else {
+          eyeR.setAttribute('transform','translate(128 112) scale(1,1)');
+          if(hint) hint.textContent = "Parol: bekitilgan";
+        }
+      }
+
+      function setMood(ok){
+        mouthHappy.style.opacity = ok ? '1' : '0';
+        mouthSad.style.opacity = ok ? '0' : '1';
+      }
+
+      function matchCheck(){
+        const a = pw.value || '';
+        const b = cpw.value || '';
+        if(!a && !b){ setMood(true); pwMatchHint.classList.add('hidden'); return; }
+        if(b.length === 0){ setMood(true); pwMatchHint.classList.add('hidden'); return; }
+        const ok = a === b;
+        setMood(ok);
+        pwMatchHint.classList.remove('hidden');
+        pwMatchHint.textContent = ok ? "Parollar mos keldi." : "Parollar mos kelmadi.";
+        pwMatchHint.style.color = ok ? 'rgba(16,185,129,.95)' : 'rgba(220,38,38,.95)';
+      }
+
+      function lookAt(x, y){
+        const r = eyeGroup.getBoundingClientRect();
+        const cx = r.left + r.width/2;
+        const cy = r.top + r.height/2;
+        const dx = Math.max(-10, Math.min(10, (x - cx)/20));
+        const dy = Math.max(-6, Math.min(6, (y - cy)/25));
+        eyeGroup.setAttribute('transform', 'translate(' + dx + ',' + dy + ')');
+      }
+
+      document.addEventListener('mousemove', (e)=>{
+        if(pw.type==='text' || document.activeElement===pw || document.activeElement===cpw) lookAt(e.clientX, e.clientY);
+      });
+      document.addEventListener('mouseleave', ()=> eyeGroup.setAttribute('transform','translate(0,0)'));
+
+      toggle.addEventListener('click', ()=>{
+        pw.type = (pw.type === 'password') ? 'text' : 'password';
+        toggleIcon.className = (pw.type === 'password') ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+        if(pw.type === 'text'){ setPeek(true); }
+        else { setPeek(false); setClosed(true); setTimeout(()=> setClosed(false), 240); }
+        pw.focus();
+      });
+
+      pw.addEventListener('input', matchCheck);
+      cpw.addEventListener('input', matchCheck);
+
+      // initial
+      setMood(true);
+
+      // occasional blink
+      setInterval(()=>{
+        if(document.hidden) return;
+        if(pw.type==='text') return;
+        setClosed(true);
+        setTimeout(()=> setClosed(false), 160);
+      }, 4400);
+    })();
+  </script>
+
+  <script>
+    // Check if already logged in
+    (function(){
+      async function checkAuth(){
+        try{
+          const token = localStorage.getItem('token');
+          if(!token) return;
+          const res = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${token}` } });
+          if(!res.ok) return localStorage.removeItem('token');
+          const data = await res.json().catch(()=>null);
+          if(data && data.success){
+              const role = (data.user && data.user.role) ? String(data.user.role) : 'student';
+              window.location.href = (role==='teacher') ? '/teacher-dashboard.html' : (role==='admin' ? '/admin-dashboard.html' : '/student-dashboard.html');
+            }
+          else localStorage.removeItem('token');
+        }catch(_){}
+      }
+      document.addEventListener('DOMContentLoaded', checkAuth);
+    })();
+  </script>
+<script>
+async function loadUniversities(){
+  try{
+    const r = await fetch('/api/catalog/universities');
+    const j = await r.json();
+    const sel = document.getElementById('universitySelect');
+    (j.universities||[]).forEach(u=>{
+      const opt=document.createElement('option');
+      opt.value=u.name; opt.textContent=u.name;
+      sel.appendChild(opt);
+    });
+  }catch(e){}
+}
+async function loadFaculties(uni){
+  const sel = document.getElementById('facultySelect');
+  sel.innerHTML = '<option value="" selected disabled>Fakultetni tanlang</option>';
+  if(!uni) return;
+  try{
+    const r=await fetch('/api/catalog/faculties?university='+encodeURIComponent(uni));
+    const j=await r.json();
+    (j.faculties||[]).forEach(f=>{
+      const opt=document.createElement('option');
+      opt.value=f; opt.textContent=f;
+      sel.appendChild(opt);
+    });
+  }catch(e){}
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  loadUniversities();
+  const uniSel=document.getElementById('universitySelect');
+  uniSel.addEventListener('change', ()=>loadFaculties(uniSel.value));
+});
+</script>
+
+</body>
+</html>

@@ -68,6 +68,17 @@ app.get('/live.html', (req, res) => {
 app.get('/teacher-dashboard.html', (req, res) => {
   return sendFirstExisting(res, ['teacher-dashboard.html','teacher-dashboard5.html','teacher-dashboard_final.html']);
 });
+
+// Student schedule page (upcoming lessons / planned lives)
+app.get('/schedule.html', (req, res) => {
+  return sendFirstExisting(res, ['schedule.html','schedule_final.html']);
+});
+
+// Group lessons (recordings list)
+app.get('/group-lessons.html', (req, res) => {
+  return sendFirstExisting(res, ['group-lessons.html']);
+});
+
 // Minimal topup placeholder (replace with your real payments/topup page)
 app.get('/topup.html', (req, res) => {
   res.send(`<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -348,6 +359,61 @@ const GroupMessageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const GroupMessage = mongoose.model('GroupMessage', GroupMessageSchema);
+
+
+// ==================== GROUP LESSONS (Class Live) ====================
+// GroupLesson: one live lesson session inside a Group (teacher live inside a group)
+const GroupLessonSchema = new mongoose.Schema({
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true, index: true },
+  callId: { type: String, required: true, index: true }, // maps to group callId
+  hostId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true }, // teacher
+  title: { type: String, default: '' },
+  mode: { type: String, enum: ['camera','screen'], default: 'camera' },
+  status: { type: String, enum: ['live','ended'], default: 'live', index: true },
+  startedAt: { type: Date, default: Date.now, index: true },
+  endedAt: { type: Date, default: null },
+  // recording in Cloudinary (uploaded via server endpoint)
+  recordingUrl: { type: String, default: '' },
+  recordingPublicId: { type: String, default: '' },
+  recordingBytes: { type: Number, default: 0 },
+  recordingDurationSec: { type: Number, default: 0 }
+}, { timestamps: true });
+
+GroupLessonSchema.index({ groupId: 1, startedAt: -1 });
+
+const GroupLesson = mongoose.models.GroupLesson || mongoose.model('GroupLesson', GroupLessonSchema);
+
+// GroupAttendance: join/leave tracking per lesson
+const GroupAttendanceSchema = new mongoose.Schema({
+  lessonId: { type: mongoose.Schema.Types.ObjectId, ref: 'GroupLesson', required: true, index: true },
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  joinedAt: { type: Date, default: Date.now },
+  leftAt: { type: Date, default: null },
+  durationSec: { type: Number, default: 0 }
+}, { timestamps: true });
+
+GroupAttendanceSchema.index({ lessonId: 1, userId: 1 }, { unique: true });
+
+const GroupAttendance = mongoose.models.GroupAttendance || mongoose.model('GroupAttendance', GroupAttendanceSchema);
+
+async function getUsersBrief(userIds) {
+  const ids = (userIds || []).map(String).filter(Boolean);
+  if (!ids.length) return [];
+  const users = await User.find({ _id: { $in: ids } }).select('fullName username role').lean();
+  const map = new Map(users.map(u => [String(u._id), u]));
+  return ids.map(id => {
+    const u = map.get(id);
+    return u ? { userId: String(u._id), fullName: u.fullName, username: u.username, role: u.role } : { userId: id, fullName: 'Unknown', username: '', role: 'student' };
+  });
+}
+
+async function isGroupMember(groupId, userId) {
+  const g = await Group.findById(groupId).select('isPublic members').lean();
+  if (!g) return false;
+  if (g.isPublic) return true;
+  return (g.members || []).some(m => String(m) === String(userId));
+}
 
 // Channel Model
 const ChannelSchema = new mongoose.Schema({
@@ -647,6 +713,153 @@ function requireRole(roles = []) {
 }
 
 
+
+// ==================== GROUP LESSONS API ====================
+// List group lessons (recordings) - accessible to group members
+app.get('/api/group-lessons', authenticateToken, async (req, res) => {
+  try {
+    const groupId = String(req.query.groupId || '');
+    if (!groupId) return res.status(400).json({ error: 'groupId required' });
+
+    const ok = await isGroupMember(groupId, req.userId);
+    if (!ok) return res.status(403).json({ error: 'Access denied' });
+
+    const lessons = await GroupLesson.find({ groupId }).sort({ startedAt: -1 }).limit(200).lean();
+    const hostIds = Array.from(new Set(lessons.map(x => String(x.hostId)).filter(Boolean)));
+    const hosts = await User.find({ _id: { $in: hostIds } }).select('fullName username role').lean();
+    const hmap = new Map(hosts.map(u => [String(u._id), u]));
+
+    return res.json({
+      lessons: lessons.map(l => ({
+        _id: String(l._id),
+        groupId: String(l.groupId),
+        callId: l.callId,
+        title: l.title || 'Live dars',
+        mode: l.mode,
+        status: l.status,
+        startedAt: l.startedAt,
+        endedAt: l.endedAt,
+        recordingUrl: l.recordingUrl || '',
+        recordingDurationSec: l.recordingDurationSec || 0,
+        host: (() => {
+          const h = hmap.get(String(l.hostId));
+          return h ? { userId: String(h._id), fullName: h.fullName, username: h.username, role: h.role } : { userId: String(l.hostId), fullName: 'Teacher', username: '', role: 'teacher' };
+        })()
+      }))
+    });
+  } catch (e) {
+    console.error('GET /api/group-lessons error:', e);
+    return res.status(500).json({ error: 'Failed to load lessons' });
+  }
+});
+
+// Attendance report (teacher only: host or admin). Returns joined + absent lists.
+app.get('/api/group-lessons/:lessonId/attendance', authenticateToken, attachUserRole, async (req, res) => {
+  try {
+    const lessonId = String(req.params.lessonId || '');
+    const lesson = await GroupLesson.findById(lessonId).lean();
+    if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
+
+    const ok = await isGroupMember(String(lesson.groupId), req.userId);
+    if (!ok) return res.status(403).json({ error: 'Access denied' });
+
+    const role = String(req.userRole || '').toLowerCase();
+    const isHost = String(lesson.hostId) === String(req.userId);
+    if (!(role === 'admin' || isHost)) return res.status(403).json({ error: 'Teacher only' });
+
+    const group = await Group.findById(String(lesson.groupId)).select('members').lean();
+    const memberIds = (group?.members || []).map(String);
+
+    const atts = await GroupAttendance.find({ lessonId }).lean();
+    const attMap = new Map(atts.map(a => [String(a.userId), a]));
+
+    const members = await User.find({ _id: { $in: memberIds } }).select('fullName username role').lean();
+    const joined = [];
+    const absent = [];
+
+    for (const u of members) {
+      const a = attMap.get(String(u._id));
+      if (a) {
+        joined.push({
+          userId: String(u._id),
+          fullName: u.fullName,
+          username: u.username,
+          role: u.role,
+          joinedAt: a.joinedAt,
+          leftAt: a.leftAt,
+          durationSec: a.durationSec || 0
+        });
+      } else {
+        // Only count students as absent (teachers/admins not)
+        if (String(u.role || '').toLowerCase() === 'student') {
+          absent.push({ userId: String(u._id), fullName: u.fullName, username: u.username });
+        }
+      }
+    }
+
+    // Sort joined by joinedAt
+    joined.sort((a,b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+
+    return res.json({ lessonId, groupId: String(lesson.groupId), joined, absent });
+  } catch (e) {
+    console.error('GET /api/group-lessons/:lessonId/attendance error:', e);
+    return res.status(500).json({ error: 'Failed to load attendance' });
+  }
+});
+
+// Upload recording (teacher host only). Client sends multipart form-data with field "recording".
+app.post('/api/group-lessons/:lessonId/recording', authenticateToken, attachUserRole, requireRole(['teacher','admin']), upload.single('recording'), async (req, res) => {
+  try {
+    const lessonId = String(req.params.lessonId || '');
+    const lesson = await GroupLesson.findById(lessonId).lean();
+    if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
+
+    const role = String(req.userRole || '').toLowerCase();
+    const isHost = String(lesson.hostId) === String(req.userId);
+    if (!(role === 'admin' || isHost)) return res.status(403).json({ error: 'Only host teacher can upload recording' });
+
+    if (!req.file) return res.status(400).json({ error: 'No recording file uploaded' });
+
+    const localPath = req.file.path;
+    const folder = `schat_lessons/group_${String(lesson.groupId)}`;
+
+    const result = await cloudinary.uploader.upload_large(localPath, {
+      resource_type: 'video',
+      folder,
+      overwrite: true,
+      chunk_size: 6_000_000,
+      eager: [
+        { width: 1280, height: 720, crop: 'limit', quality: 'auto', fetch_format: 'mp4' }
+      ],
+      eager_async: false
+    });
+
+    // Cleanup local file
+    try { require('fs').unlinkSync(localPath); } catch(e) {}
+
+    await GroupLesson.updateOne({ _id: lesson._id }, {
+      $set: {
+        recordingUrl: result.secure_url || result.url || '',
+        recordingPublicId: result.public_id || '',
+        recordingBytes: result.bytes || 0,
+        recordingDurationSec: Math.round(Number(result.duration || 0))
+      }
+    });
+
+    return res.json({
+      ok: true,
+      recordingUrl: result.secure_url || result.url || '',
+      publicId: result.public_id || '',
+      bytes: result.bytes || 0,
+      duration: result.duration || 0
+    });
+  } catch (e) {
+    console.error('POST /api/group-lessons/:lessonId/recording error:', e);
+    return res.status(500).json({ error: 'Failed to upload recording' });
+  }
+});
+
+
 // ==================== ADMIN MIDDLEWARE ====================
 // Admin check uses DB (authoritative). We keep it simple + secure.
 async function requireAdmin(req, res, next) {
@@ -812,18 +1025,10 @@ io.on('connection', (socket) => {
       }
       
 
-      // Update active private call state for admin realtime
-      if (data.callId) {
-        const id = String(data.callId);
-        if (data.answer) {
-          const prev = activePrivateCalls.get(id) || {};
-          activePrivateCalls.set(id, { ...prev, callId: id, status: 'accepted' });
-          adminEmit('admin:privateCallUpdate', { action: 'accepted', callId: id, from: String(socket.userId), to: String(data.to), timestamp: Date.now() });
-        } else {
-          activePrivateCalls.delete(id);
-          adminEmit('admin:privateCallUpdate', { action: 'rejected', callId: id, from: String(socket.userId), to: String(data.to), timestamp: Date.now() });
-        }
-      }
+
+      // NOTE: do not reference `data` here; auth event only receives the token.
+      // Call state updates are handled inside callOffer/callAnswer/callEnded/callRejected/callTimeout.
+
 
       console.log('✅ User authenticated:', userId);
       
@@ -967,21 +1172,50 @@ io.on('connection', (socket) => {
         activeGroupCalls.set(groupId, call);
       }
 
+      // Build participant infos (roles/names) for UI layout/attendance
+      const participantInfos = await getUsersBrief(Array.from(call.participants || []));
+      let lessonId = null;
+
+      // If starter is a teacher, create/attach a GroupLesson (used for attendance + recording)
+      try {
+        const starter = await User.findById(socket.userId).select('role fullName').lean();
+        if (starter && String(starter.role || '').toLowerCase() === 'teacher') {
+          const existingLesson = await GroupLesson.findOne({ groupId, callId: call.callId }).select('_id').lean();
+          const lesson = existingLesson ? existingLesson : await GroupLesson.create({
+            groupId,
+            callId: call.callId,
+            hostId: socket.userId,
+            title: (data?.title || '').toString().trim() || 'Live dars',
+            mode: (data?.mode === 'screen') ? 'screen' : 'camera',
+            status: 'live',
+            startedAt: new Date()
+          });
+          lessonId = String(lesson._id);
+          // Upsert attendance for starter
+          await GroupAttendance.updateOne({ lessonId: lesson._id, groupId, userId: socket.userId }, { $setOnInsert: { joinedAt: new Date() } }, { upsert: true }).catch(()=>{});
+        }
+      } catch(e) {
+        console.warn('GroupLesson create skipped:', e?.message || e);
+      }
+
       socket.emit('groupCallStarted', {
         groupId,
         callId: call.callId,
         callType: call.callType,
-        participants: Array.from(call.participants)
+        participants: Array.from(call.participants),
+        participantInfos,
+        lessonId
       });
 
-      // Notify others that this user joined
+// Notify others that this user joined
       io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
         groupId,
         callId: call.callId,
         userId: socket.userId,
-        participants: Array.from(call.participants)
+        participants: Array.from(call.participants),
+        participantInfos
       });
-      adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId), callId: String(call.callId), userId: String(socket.userId), participants: Array.from(call.participants).map(String), timestamp: Date.now() });
+adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId), callId: String(call.callId), userId: String(socket.userId), participants: Array.from(call.participants).map(String), timestamp: Date.now() });
 
     } catch (e) {
       console.error('groupCallStart error:', e);
@@ -1004,21 +1238,30 @@ io.on('connection', (socket) => {
       call.participants.add(socket.userId);
       activeGroupCalls.set(groupId, call);
 
+      const participantInfos = await getUsersBrief(Array.from(call.participants || []));
+      const lesson = await GroupLesson.findOne({ groupId, callId }).select('_id hostId status').lean().catch(() => null);
+      const lessonId = lesson? String(lesson._id) : null;
+      if (lesson && lesson._id) {
+        await GroupAttendance.updateOne({ lessonId: lesson._id, groupId, userId: socket.userId }, { $setOnInsert: { joinedAt: new Date() } }, { upsert: true }).catch(()=>{});
+      }
+
       socket.emit('groupCallJoined', {
         groupId,
         callId,
         callType: call.callType,
-        participants: Array.from(call.participants)
+        participants: Array.from(call.participants),
+        participantInfos,
+        lessonId
       });
 
-      io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
+io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
         groupId,
         callId,
         userId: socket.userId,
-        participants: Array.from(call.participants)
+        participants: Array.from(call.participants),
+        participantInfos
       });
-
-    } catch (e) {
+} catch (e) {
       console.error('groupCallJoin error:', e);
       socket.emit('groupCallError', { error: 'Failed to join call' });
     }
@@ -1054,9 +1297,24 @@ io.on('connection', (socket) => {
     }
   });
 
-  function leaveGroupCallInternal(groupId, userId, reason) {
+  async function leaveGroupCallInternal(groupId, userId, reason) {
     try {
       const call = activeGroupCalls.get(groupId);
+      // Attendance: mark user left (if this call is linked to a GroupLesson)
+      try {
+        const lesson = await GroupLesson.findOne({ groupId, callId: call?.callId }).select('_id').lean().catch(()=>null);
+        if (lesson && lesson._id) {
+          const att = await GroupAttendance.findOne({ lessonId: lesson._id, userId }).select('_id joinedAt').lean().catch(()=>null);
+          if (att && att._id) {
+            const leftAt = new Date();
+            const durationSec = att.joinedAt ? Math.max(0, Math.round((leftAt.getTime() - new Date(att.joinedAt).getTime())/1000)) : 0;
+            await GroupAttendance.updateOne({ _id: att._id }, { $set: { leftAt, durationSec } }).catch(()=>{});
+          }
+        }
+      } catch(e) {
+        // ignore attendance errors
+      }
+
       if (!call) return;
       if (call.participants) call.participants.delete(userId);
 
@@ -1073,6 +1331,13 @@ io.on('connection', (socket) => {
       // End call if nobody left
       if (participantsArr.length === 0) {
         activeGroupCalls.delete(groupId);
+        // Mark GroupLesson ended (if exists)
+        try {
+          const lesson = await GroupLesson.findOne({ groupId, callId: call.callId }).select('_id').lean().catch(()=>null);
+          if (lesson && lesson._id) {
+            await GroupLesson.updateOne({ _id: lesson._id }, { $set: { status: 'ended', endedAt: new Date() } }).catch(()=>{});
+          }
+        } catch(e) {}
         io.to(getGroupRoomName(groupId)).emit('groupCallEnded', {
           groupId,
           callId: call.callId,
@@ -1088,7 +1353,7 @@ io.on('connection', (socket) => {
     }
   }
 
-  socket.on('groupCallLeave', (data) => {
+  socket.on('groupCallLeave', async (data) => {
     try {
       if (!socket.userId) return;
       const groupId = String(data?.groupId || '');
@@ -1098,7 +1363,7 @@ io.on('connection', (socket) => {
       const call = activeGroupCalls.get(groupId);
       if (!call || String(call.callId) !== callId) return;
 
-      leaveGroupCallInternal(groupId, socket.userId, 'left');
+      await leaveGroupCallInternal(groupId, socket.userId, 'left');
     } catch (e) {
       console.error('groupCallLeave error:', e);
     }
@@ -2025,7 +2290,7 @@ socket.on('chat:live', ({ liveId, text }) => {
         } catch (_) {}
         for (const [gid, call] of activeGroupCalls.entries()) {
           if (call && call.participants && call.participants.has(socket.userId)) {
-            leaveGroupCallInternal(String(gid), String(socket.userId), 'disconnect');
+            await leaveGroupCallInternal(String(gid), String(socket.userId), 'disconnect');
           }
         }
       }
@@ -2405,7 +2670,13 @@ app.get('/api/me', authenticateToken, async (req, res) => {
     safeUser.activeRobot = activeRobot;
     safeUser.activeCompanion = activeCompanion;
 
-    res.json({ success: true, user: safeUser });
+    // Front-end compatibility: return user fields at top-level AND under {user}
+    safeUser.fullname = safeUser.fullname || safeUser.fullName || safeUser.name || '';
+    // coins normalization
+    if (safeUser.coins === undefined || safeUser.coins === null) {
+      safeUser.coins = (safeUser.coin !== undefined && safeUser.coin !== null) ? safeUser.coin : (safeUser.coinBalance ?? 0);
+    }
+    res.json({ ...safeUser, success: true, user: safeUser });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to get user' });
@@ -4579,6 +4850,41 @@ app.get('/api/health', (req, res) => {
     onlineUsers: onlineUsers.size,
     connectedSockets: io.engine.clientsCount
   });
+});
+
+
+// WebRTC ICE config endpoint (STUN + optional TURN via env)
+// Set these env vars (Render > Environment):
+//   TURN_URL=turn:free.expressturn.com:3478?transport=udp,turn:free.expressturn.com:3478?transport=tcp
+//   TURN_USERNAME=...
+//   TURN_PASSWORD=...
+app.get('/api/rtc-config', (req, res) => {
+  try {
+    const stun = [
+      'stun:stun.l.google.com:19302',
+      'stun:stun1.l.google.com:19302'
+    ];
+    const iceServers = [{ urls: stun }];
+
+    const turnUrlRaw = (process.env.TURN_URL || '').trim();
+    const turnUser = (process.env.TURN_USERNAME || '').trim();
+    const turnPass = (process.env.TURN_PASSWORD || '').trim();
+
+    if (turnUrlRaw && turnUser && turnPass) {
+      const urls = turnUrlRaw.split(',').map(s => s.trim()).filter(Boolean);
+      iceServers.push({
+        urls,
+        username: turnUser,
+        credential: turnPass
+      });
+    }
+
+    res.json({ iceServers });
+  } catch (e) {
+    res.json({
+      iceServers: [{ urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302'] }]
+    });
+  }
 });
 
 // Get server stats

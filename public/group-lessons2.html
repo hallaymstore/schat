@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Guruh dars yozuvlari</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body{background:#0b1220;color:#e5e7eb}
+    .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:18px}
+    a{color:#93c5fd}
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="max-w-5xl mx-auto p-4">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div>
+        <h1 class="text-2xl font-extrabold">📚 Guruh dars yozuvlari</h1>
+        <div class="text-sm text-white/70">Faqat shu guruh a’zolari ko‘ra oladi.</div>
+      </div>
+      <div class="flex gap-2">
+        <a href="/groups.html" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10">← Guruhlar</a>
+        <button id="refreshBtn" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10">Yangilash</button>
+      </div>
+    </div>
+
+    <div class="mt-4 card p-4">
+      <div class="text-sm text-white/70">Group ID:</div>
+      <div class="font-mono text-xs break-all" id="gid">—</div>
+      <div class="mt-2 text-xs text-white/60">Agar URL’da <code>?groupId=...</code> bo‘lmasa, bu sahifa ishlamaydi.</div>
+    </div>
+
+    <div id="msg" class="mt-4 text-sm text-white/70"></div>
+    <div id="list" class="mt-4 grid gap-3"></div>
+    <div id="attModal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4">
+      <div class="card max-w-3xl w-full p-4">
+        <div class="flex items-center justify-between">
+          <div class="font-bold text-lg">📋 Davomat</div>
+          <button id="attClose" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10">Yopish</button>
+        </div>
+        <div id="attBody" class="mt-3 text-sm text-white/80"></div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+function getToken(){ return localStorage.getItem('token') || ''; }
+function q(name){ return new URLSearchParams(location.search).get(name); }
+function fmt(d){
+  if(!d) return '—';
+  const x=new Date(d);
+  return x.toLocaleString([], {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function fmtDur(sec){
+  sec = Number(sec||0);
+  const m=Math.floor(sec/60), s=sec%60;
+  return `${m}m ${String(s).padStart(2,'0')}s`;
+}
+
+async function showAttendance(lessonId){
+  try{
+    const modal=document.getElementById('attModal');
+    const body=document.getElementById('attBody');
+    body.innerHTML='Yuklanmoqda...';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    const res = await fetch(`/api/group-lessons/${lessonId}/attendance`, {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    if(!res.ok){
+      const t = await res.text().catch(()=> '');
+      body.innerHTML = `<div class="text-red-200">Davomatni ko‘rsatib bo‘lmadi (HTTP ${res.status}). Bu funksiya faqat o‘qituvchi (host) uchun.</div>`;
+      return;
+    }
+    const data = await res.json();
+    const joined = data.joined||[];
+    const absent = data.absent||[];
+    const jRows = joined.map(x => `<tr class="border-b border-white/10">
+      <td class="py-1 pr-2">${x.fullName||x.username||x.userId}</td>
+      <td class="py-1 pr-2 text-xs text-white/70">${fmt(x.joinedAt)}</td>
+      <td class="py-1 pr-2 text-xs text-white/70">${fmt(x.leftAt)}</td>
+      <td class="py-1 text-xs">${fmtDur(x.durationSec||0)}</td>
+    </tr>`).join('');
+    const aRows = absent.map(x => `<li class="py-0.5">${x.fullName||x.username||x.userId}</li>`).join('');
+    body.innerHTML = `
+      <div class="text-xs text-white/70 mb-2">Kirdi: <b>${joined.length}</b> • Kirmadi: <b>${absent.length}</b></div>
+      <div class="overflow-auto card p-3">
+        <table class="w-full text-sm">
+          <thead class="text-white/70">
+            <tr>
+              <th class="text-left py-1 pr-2">Ism</th>
+              <th class="text-left py-1 pr-2">Kirdi</th>
+              <th class="text-left py-1 pr-2">Chiqdi</th>
+              <th class="text-left py-1">Davomiylik</th>
+            </tr>
+          </thead>
+          <tbody>${jRows || `<tr><td class="py-2 text-white/60" colspan="4">Hech kim kirmagan</td></tr>`}</tbody>
+        </table>
+      </div>
+      <div class="mt-3">
+        <div class="font-semibold mb-1">Kirmagan talabalar</div>
+        <ul class="text-sm text-white/80">${aRows || '<li class="text-white/60">Yo‘q</li>'}</ul>
+      </div>
+    `;
+  }catch(e){
+    console.error(e);
+    const body=document.getElementById('attBody');
+    body.innerHTML = `<div class="text-red-200">Xatolik: ${e?.message||e}</div>`;
+  }
+}
+document.getElementById('attClose').addEventListener('click', ()=>{
+  const modal=document.getElementById('attModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+});
+
+async function load(){
+  const groupId = q('groupId');
+  document.getElementById('gid').textContent = groupId || '—';
+  if(!groupId){ document.getElementById('msg').textContent = 'URLga groupId qo‘shing.'; return; }
+
+  document.getElementById('msg').textContent = 'Yuklanmoqda...';
+  const res = await fetch(`/api/group-lessons?groupId=${encodeURIComponent(groupId)}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  });
+  if(!res.ok){
+    document.getElementById('msg').textContent = 'Xatolik: ' + res.status;
+    return;
+  }
+  const data = await res.json();
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const lessons = data.lessons || [];
+  document.getElementById('msg').textContent = lessons.length ? `${lessons.length} ta dars topildi` : 'Hali dars yozuvlari yo‘q';
+
+  lessons.forEach(l => {
+    const div = document.createElement('div');
+    div.className = 'card p-4';
+    const rec = l.recordingUrl ? `<a class="underline" href="${l.recordingUrl}" target="_blank" rel="noreferrer">Ko‘rish/Yuklab olish</a>` : `<span class="text-white/50">Yozuv yo‘q</span>`;
+    div.innerHTML = `
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div class="text-lg font-bold">${(l.title||'Live dars')}</div>
+          <div class="text-xs text-white/70 mt-1">
+            Teacher: <span class="font-semibold">${l.host?.fullName || 'Teacher'}</span> • Boshlanish: ${fmt(l.startedAt)} • Tugash: ${fmt(l.endedAt)}
+          </div>
+          <div class="text-xs text-white/60 mt-1">Davomiylik: ${fmtDur(l.recordingDurationSec || 0)} • Rejim: ${l.mode || 'camera'} • Status: ${l.status}</div>
+        </div>
+        <div class="text-sm flex gap-2 items-center">
+          ${rec}
+          <button class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10" onclick="showAttendance('${'${l._id}'}')">Davomat</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+document.getElementById('refreshBtn').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>

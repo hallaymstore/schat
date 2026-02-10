@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { v4: uuidv4 } = require('uuid');
-const { AccessToken } = require('livekit-server-sdk');
+// const { AccessToken } = require('livekit-server-sdk'); // (disabled) using pure WebRTC signaling now
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
@@ -37,42 +37,72 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// LiveKit token endpoint (server-side JWT). Do NOT expose API SECRET to client.
-// GET /api/livekit/token?room=<room>&identity=<identity>&name=<displayName?>
-app.get('/api/livekit/token', (req, res) => {
-  try {
-    const room = String(req.query.room || '');
-    const identity = String(req.query.identity || '');
-    const name = String(req.query.name || identity || '');
-    if (!room || !identity) return res.status(400).json({ error: 'room and identity are required' });
-
-    const livekitUrlRaw = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || process.env.LIVEKIT_WSS_URL;
-    const livekitUrl = String(livekitUrlRaw || '').trim().replace(/^https?:\/\//,'wss://');
-    const apiKey = process.env.LIVEKIT_API_KEY;
-    const apiSecret = process.env.LIVEKIT_API_SECRET;
-
-    if (!livekitUrl || !apiKey || !apiSecret) {
-      return res.status(500).json({ error: 'LIVEKIT_URL/LIVEKIT_API_KEY/LIVEKIT_API_SECRET missing in .env' });
-    }
-
-    const at = new AccessToken(apiKey, apiSecret, { identity, name });
-    at.addGrant({
-      room,
-      roomJoin: true,
-      canPublish: true,
-      canSubscribe: true,
-      canPublishData: true,
-    });
-
-    const token = at.toJwt();
-    return res.json({ token, url: livekitUrl });
-  } catch (e) {
-    return res.status(500).json({ error: 'Token generation failed', details: String(e && e.message ? e.message : e) });
-  }
-});
+/* LiveKit token endpoint disabled.
+   To enable: uncomment the AccessToken import at the top:
+     const { AccessToken } = require('livekit-server-sdk');
+   and restore the endpoint body (ensure LIVEKIT_* env vars are set).
+*/
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
+
+
+// Static fallbacks (avoid noisy 404s)
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/default-avatar.png', (req, res) => res.redirect('https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png'));
+app.get('/default-group.png', (req, res) => res.redirect('https://res.cloudinary.com/demo/image/upload/v1692290000/default-group.png'));
+app.get('/default-channel.png', (req, res) => res.redirect('https://res.cloudinary.com/demo/image/upload/v1692290000/default-channel.png'));
+
+
+
+// Ensure uploads directory exists (Windows/Render safe)
+try { require('fs').mkdirSync(path.join(__dirname, 'uploads'), { recursive: true }); } catch(e) { console.warn('uploads dir create failed', e); }
+
+// Serve the first existing file from a list (so your local filenames work)
+function sendFirstExisting(res, candidates) {
+  const fs = require('fs');
+  for (const f of candidates) {
+    const fp = path.join(__dirname, f);
+    if (fs.existsSync(fp)) return res.sendFile(fp);
+  }
+  return res.status(404).send('File not found: ' + candidates.join(', '));
+}
+
+
+// Serve live pages (keep files next to server file, or move into /public)
+app.get('/lives.html', (req, res) => {
+  return sendFirstExisting(res, ['lives.html','lives_final.html']);
+});
+app.get('/live.html', (req, res) => {
+  return sendFirstExisting(res, ['live.html','live_final.html']);
+});
+// Teacher dashboard patched with Lives button
+app.get('/teacher-dashboard.html', (req, res) => {
+  return sendFirstExisting(res, ['teacher-dashboard.html','teacher-dashboard5.html','teacher-dashboard_final.html']);
+});
+
+// Student schedule page (upcoming lessons / planned lives)
+app.get('/schedule.html', (req, res) => {
+  return sendFirstExisting(res, ['schedule.html','schedule_final.html']);
+});
+
+// Group lessons (recordings list)
+app.get('/group-lessons.html', (req, res) => {
+  return sendFirstExisting(res, ['group-lessons.html']);
+});
+
+// Minimal topup placeholder (replace with your real payments/topup page)
+app.get('/topup.html', (req, res) => {
+  res.send(`<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Balansni to'ldirish</title>
+  <style>body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1020;color:#eaf0ff}
+  .card{max-width:560px;padding:18px;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05)}
+  a{color:#93c5fd}</style></head><body><div class="card">
+  <h2 style="margin:0 0 8px 0">Balansingiz yetarli emas</h2>
+  <div>Coin balansingizni to'ldiring, keyin qayta urining.</div>
+  <div style="margin-top:12px"><a href="/lives.html">← Lives ro'yxatiga qaytish</a></div>
+  </div></body></html>`);
+});
 // Serve uploaded files (screenshots, media)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -106,6 +136,14 @@ const upload = multer({
   }
 });
 
+
+// Separate multer for lesson recordings (avoid disk ENOENT on Windows/Render)
+const recordingUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 300 * 1024 * 1024 }, // 300MB per recording upload (tune as needed)
+  fileFilter: (req, file, cb) => cb(null, true)
+});
+
 // Helper function to determine media type
 function getMediaType(mimeType) {
   if (mimeType.startsWith('image/')) return 'image';
@@ -123,6 +161,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 }).then(async () => {
   console.log('✅ MongoDB Connected');
   await ensureDefaultAdmin();
+  await ensureDefaultCatalog();
 })
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
@@ -210,6 +249,42 @@ equipped: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 const User = mongoose.model('User', UserSchema);
+
+// ==================== UNIVERSITY / FACULTY CATALOG ====================
+const UniversityCatalogSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true, trim: true },
+  faculties: { type: [String], default: [] },
+  createdAt: { type: Date, default: Date.now }
+});
+const UniversityCatalog = mongoose.models.UniversityCatalog || mongoose.model('UniversityCatalog', UniversityCatalogSchema);
+
+async function ensureDefaultCatalog() {
+  const defaults = [
+    { name: "Qarshi Davlat Texnika Universiteti", faculties: ["Moliya", "Iqtisod", "Axborot texnologiyalari", "Energetika"] },
+    { name: "Toshkent Axborot Texnologiyalari Universiteti (TATU)", faculties: ["Dasturiy injiniring", "Kompyuter injiniringi", "Telekommunikatsiya"] },
+    { name: "Qarshi Davlat Universiteti", faculties: ["Iqtisodiyot", "Matematika", "Filologiya"] },
+    { name: "Samarqand Davlat Universiteti (SamDU)", faculties: ["Moliya", "Iqtisod", "Matematika"] }
+  ];
+  for (const u of defaults) {
+    await UniversityCatalog.updateOne(
+      { name: u.name },
+      { $setOnInsert: { name: u.name, faculties: u.faculties } },
+      { upsert: true }
+    );
+  }
+}
+
+// ==================== NOTIFICATIONS ====================
+const NotificationSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  title: { type: String, default: '' },
+  body: { type: String, default: '' },
+  link: { type: String, default: '' },
+  read: { type: Boolean, default: false, index: true },
+  createdAt: { type: Date, default: Date.now, index: true }
+});
+NotificationSchema.index({ userId: 1, createdAt: -1 });
+const Notification = mongoose.models.Notification || mongoose.model('Notification', NotificationSchema);
 
 
 async function ensureDefaultAdmin() {
@@ -322,6 +397,7 @@ const GroupSchema = new mongoose.Schema({
   name: { type: String, required: true },
   username: { type: String, required: true, unique: true },
   description: { type: String, default: '' },
+  previewImage: { type: String, default: '' },
   creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   avatar: { type: String, default: 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-group.png' },
@@ -340,6 +416,61 @@ const GroupMessageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const GroupMessage = mongoose.model('GroupMessage', GroupMessageSchema);
+
+
+// ==================== GROUP LESSONS (Class Live) ====================
+// GroupLesson: one live lesson session inside a Group (teacher live inside a group)
+const GroupLessonSchema = new mongoose.Schema({
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true, index: true },
+  callId: { type: String, required: true, index: true }, // maps to group callId
+  hostId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true }, // teacher
+  title: { type: String, default: '' },
+  mode: { type: String, enum: ['camera','screen'], default: 'camera' },
+  status: { type: String, enum: ['live','ended'], default: 'live', index: true },
+  startedAt: { type: Date, default: Date.now, index: true },
+  endedAt: { type: Date, default: null },
+  // recording in Cloudinary (uploaded via server endpoint)
+  recordingUrl: { type: String, default: '' },
+  recordingPublicId: { type: String, default: '' },
+  recordingBytes: { type: Number, default: 0 },
+  recordingDurationSec: { type: Number, default: 0 }
+}, { timestamps: true });
+
+GroupLessonSchema.index({ groupId: 1, startedAt: -1 });
+
+const GroupLesson = mongoose.models.GroupLesson || mongoose.model('GroupLesson', GroupLessonSchema);
+
+// GroupAttendance: join/leave tracking per lesson
+const GroupAttendanceSchema = new mongoose.Schema({
+  lessonId: { type: mongoose.Schema.Types.ObjectId, ref: 'GroupLesson', required: true, index: true },
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  joinedAt: { type: Date, default: Date.now },
+  leftAt: { type: Date, default: null },
+  durationSec: { type: Number, default: 0 }
+}, { timestamps: true });
+
+GroupAttendanceSchema.index({ lessonId: 1, userId: 1 }, { unique: true });
+
+const GroupAttendance = mongoose.models.GroupAttendance || mongoose.model('GroupAttendance', GroupAttendanceSchema);
+
+async function getUsersBrief(userIds) {
+  const ids = (userIds || []).map(String).filter(Boolean);
+  if (!ids.length) return [];
+  const users = await User.find({ _id: { $in: ids } }).select('fullName username role').lean();
+  const map = new Map(users.map(u => [String(u._id), u]));
+  return ids.map(id => {
+    const u = map.get(id);
+    return u ? { userId: String(u._id), fullName: u.fullName, username: u.username, role: u.role } : { userId: id, fullName: 'Unknown', username: '', role: 'student' };
+  });
+}
+
+async function isGroupMember(groupId, userId) {
+  const g = await Group.findById(groupId).select('isPublic members').lean();
+  if (!g) return false;
+  if (g.isPublic) return true;
+  return (g.members || []).some(m => String(m) === String(userId));
+}
 
 // Channel Model
 const ChannelSchema = new mongoose.Schema({
@@ -611,6 +742,213 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
+
+// ==================== ROLE MIDDLEWARE (LMS) ====================
+// attachUserRole: loads user's role from DB and sets req.userRole
+async function attachUserRole(req, res, next) {
+  try {
+    const u = await User.findById(req.userId).select('role isAdmin');
+    req.userRole = (u?.role || (u?.isAdmin ? 'admin' : 'student') || 'student').toLowerCase();
+  } catch (e) {
+    req.userRole = 'student';
+  }
+  next();
+}
+
+// requireRole: checks req.userRole (must be set by attachUserRole)
+function requireRole(roles = []) {
+  return function (req, res, next) {
+    try {
+      const role = (req.userRole || '').toLowerCase();
+      if (!roles.length) return next();
+      if (roles.includes(role)) return next();
+      return res.status(403).json({ error: 'Forbidden' });
+    } catch (e) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+  };
+}
+
+
+
+// ==================== GROUP LESSONS API ====================
+// List group lessons (recordings) - accessible to group members
+app.get('/api/group-lessons', authenticateToken, async (req, res) => {
+  try {
+    const groupId = String(req.query.groupId || '');
+    if (!groupId) return res.status(400).json({ error: 'groupId required' });
+
+    const ok = await isGroupMember(groupId, req.userId);
+    if (!ok) return res.status(403).json({ error: 'Access denied' });
+
+    const lessons = await GroupLesson.find({ groupId }).sort({ startedAt: -1 }).limit(200).lean();
+    const hostIds = Array.from(new Set(lessons.map(x => String(x.hostId)).filter(Boolean)));
+    const hosts = await User.find({ _id: { $in: hostIds } }).select('fullName username role').lean();
+    const hmap = new Map(hosts.map(u => [String(u._id), u]));
+
+    return res.json({
+      lessons: lessons.map(l => ({
+        _id: String(l._id),
+        groupId: String(l.groupId),
+        callId: l.callId,
+        title: l.title || 'Live dars',
+        mode: l.mode,
+        status: l.status,
+        startedAt: l.startedAt,
+        endedAt: l.endedAt,
+        recordingUrl: l.recordingUrl || '',
+        recordingDurationSec: l.recordingDurationSec || 0,
+        host: (() => {
+          const h = hmap.get(String(l.hostId));
+          return h ? { userId: String(h._id), fullName: h.fullName, username: h.username, role: h.role } : { userId: String(l.hostId), fullName: 'Teacher', username: '', role: 'teacher' };
+        })()
+      }))
+    });
+  } catch (e) {
+    console.error('GET /api/group-lessons error:', e);
+    return res.status(500).json({ error: 'Failed to load lessons' });
+  }
+});
+
+// Attendance report (teacher only: host or admin). Returns joined + absent lists.
+app.get('/api/group-lessons/:lessonId/attendance', authenticateToken, attachUserRole, async (req, res) => {
+  try {
+    const lessonId = String(req.params.lessonId || '');
+    const lesson = await GroupLesson.findById(lessonId).lean();
+    if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
+
+    const ok = await isGroupMember(String(lesson.groupId), req.userId);
+    if (!ok) return res.status(403).json({ error: 'Access denied' });
+
+    const role = String(req.userRole || '').toLowerCase();
+    const isHost = String(lesson.hostId) === String(req.userId);
+    if (!(role === 'admin' || isHost)) return res.status(403).json({ error: 'Teacher only' });
+
+    const group = await Group.findById(String(lesson.groupId)).select('members').lean();
+    const memberIds = (group?.members || []).map(String);
+
+    const atts = await GroupAttendance.find({ lessonId }).lean();
+    const attMap = new Map(atts.map(a => [String(a.userId), a]));
+
+    const members = await User.find({ _id: { $in: memberIds } }).select('fullName username role').lean();
+    const joined = [];
+    const absent = [];
+
+    for (const u of members) {
+      const a = attMap.get(String(u._id));
+      if (a) {
+        joined.push({
+          userId: String(u._id),
+          fullName: u.fullName,
+          username: u.username,
+          role: u.role,
+          joinedAt: a.joinedAt,
+          leftAt: a.leftAt,
+          durationSec: a.durationSec || 0
+        });
+      } else {
+        // Only count students as absent (teachers/admins not)
+        if (String(u.role || '').toLowerCase() === 'student') {
+          absent.push({ userId: String(u._id), fullName: u.fullName, username: u.username });
+        }
+      }
+    }
+
+    // Sort joined by joinedAt
+    joined.sort((a,b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+
+    return res.json({ lessonId, groupId: String(lesson.groupId), joined, absent });
+  } catch (e) {
+    console.error('GET /api/group-lessons/:lessonId/attendance error:', e);
+    return res.status(500).json({ error: 'Failed to load attendance' });
+  }
+});
+
+// Upload recording (teacher host only). Client sends multipart form-data with field "recording".
+app.post('/api/group-lessons/:lessonId/recording', authenticateToken, attachUserRole, requireRole(['teacher','admin']), recordingUpload.single('recording'), async (req, res) => {
+  try {
+    const lessonId = String(req.params.lessonId || '');
+    const lesson = await GroupLesson.findById(lessonId).lean();
+    if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
+
+    const role = String(req.userRole || '').toLowerCase();
+    const isHost = String(lesson.hostId) === String(req.userId);
+    if (!(role === 'admin' || isHost)) return res.status(403).json({ error: 'Only host teacher can upload recording' });
+
+    if (!req.file) return res.status(400).json({ error: 'No recording file uploaded' });
+
+if (!req.file) return res.status(400).json({ error: 'No recording file uploaded' });
+
+// NOTE: Using memory upload to avoid disk path issues (ENOENT) and to prevent server crash.
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  return res.status(500).json({ error: 'Cloudinary env is missing' });
+}
+
+const folder = `schat_lessons/group_${String(lesson.groupId)}`;
+
+const uploadResult = await new Promise((resolve, reject) => {
+  const stream = cloudinary.uploader.upload_stream({
+    resource_type: 'video',
+    folder,
+    overwrite: true,
+    eager: [
+      { width: 1280, height: 720, crop: 'limit', quality: 'auto', fetch_format: 'mp4' }
+    ],
+    eager_async: false
+  }, (err, result) => {
+    if (err) return reject(err);
+    return resolve(result);
+  });
+
+  stream.on('error', reject);
+  stream.end(req.file.buffer);
+});
+
+await GroupLesson.updateOne({ _id: lesson._id }, {
+  $set: {
+    recordingUrl: uploadResult.secure_url || uploadResult.url || '',
+    recordingPublicId: uploadResult.public_id || '',
+    recordingBytes: uploadResult.bytes || 0,
+    recordingDurationSec: Math.round(Number(uploadResult.duration || 0))
+  }
+});
+
+return res.json({
+  ok: true,
+  recordingUrl: uploadResult.secure_url || uploadResult.url || '',
+  publicId: uploadResult.public_id || '',
+  bytes: uploadResult.bytes || 0,
+  duration: uploadResult.duration || 0
+});
+
+  } catch (e) {
+    console.error('POST /api/group-lessons/:lessonId/recording error:', e);
+    return res.status(500).json({ error: 'Failed to upload recording' });
+  }
+});
+
+
+// ==================== ADMIN MIDDLEWARE ====================
+// Admin check uses DB (authoritative). We keep it simple + secure.
+async function requireAdmin(req, res, next) {
+  try {
+    const u = await User.findById(req.userId).select('isAdmin role username').lean();
+    if (!u || (!u.isAdmin && u.role !== 'admin')) {
+      return res.status(403).json({ error: 'Admin required' });
+    }
+    req.adminUser = u;
+    next();
+  } catch (e) {
+    return res.status(500).json({ error: 'Admin check failed' });
+  }
+}
+
+// Admin realtime room helpers
+function adminEmit(event, payload) {
+  io.to('admin').emit(event, payload);
+}
+
+
 // ==================== HELPER FUNCTIONS ====================
 // A user can have multiple active sockets (multiple tabs/devices).
 function getUserSocketIds(userId) {
@@ -646,6 +984,68 @@ function getChatRoomName(userId1, userId2) {
 // userSockets: socketId -> userId
 const onlineUsers = new Map();
 const userSockets = new Map();
+
+// Group call state (in-memory): groupId -> { callId, startedBy, startedAt, participants: Set<userId> }
+const activeGroupCalls = new Map();
+// Private call state (in-memory): callId -> { callId, callerId, receiverId, type, status, startedAt }
+const activePrivateCalls = new Map();
+
+
+
+// Channel live stream state (in-memory): channelId -> { hostId, startedAt, mode, viewers: Set<userId> }
+// NOTE: This is a SIMPLE one-to-many WebRTC mesh from host -> each viewer (host uplink scales with viewers).
+// Good for MVP/demo. For production-scale, move to SFU (LiveKit/Janus/mediasoup).
+const activeChannelLives = new Map();
+
+// Course live sessions state (in-memory): liveId -> { hostId, startedAt, mode, viewers: Set<userId> }
+const activeCourseLives = new Map();
+
+// ==================== LIVE SESSIONS MODELS ====================
+// LiveSession: teacher scheduled/live events (free/paid)
+const LiveSessionSchema = new mongoose.Schema({
+  hostId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null, index: true },
+  title: { type: String, required: true, trim: true },
+  description: { type: String, default: '' },
+  previewImage: { type: String, default: '' },
+  startAt: { type: Date, default: null, index: true },
+  status: { type: String, enum: ['scheduled','live','ended','cancelled'], default: 'scheduled', index: true },
+  type: { type: String, enum: ['free','paid'], default: 'free', index: true },
+  price: { type: Number, default: 0 },
+  startedAt: { type: Date, default: null },
+  endedAt: { type: Date, default: null },
+
+
+// Targeting (university/faculty/groups). Empty targetGroups => open for all groups in faculty/university
+university: { type: String, default: '', index: true },
+faculty: { type: String, default: '', index: true },
+targetGroups: { type: [String], default: [], index: true },
+lessonKind: { type: String, enum: ['lecture','practice','other'], default: 'other', index: true },
+notifySentAt: { type: Date, default: null },
+}, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } });
+
+LiveSessionSchema.index({ title: 'text', description: 'text' });
+
+const LiveSession = mongoose.models.LiveSession || mongoose.model('LiveSession', LiveSessionSchema);
+
+// LiveAccess: remembers if a student paid/entered (prevents double charge)
+const LiveAccessSchema = new mongoose.Schema({
+  liveId: { type: mongoose.Schema.Types.ObjectId, ref: 'LiveSession', required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  paid: { type: Boolean, default: false },
+  amount: { type: Number, default: 0 },
+}, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } });
+
+LiveAccessSchema.index({ liveId: 1, userId: 1 }, { unique: true });
+
+const LiveAccess = mongoose.models.LiveAccess || mongoose.model('LiveAccess', LiveAccessSchema);
+
+
+function getLiveRoomName(liveId){ return `live_${liveId}`; }
+
+
+function getChannelLiveRoomName(channelId){ return `channel_live_${channelId}`; }
+function getGroupRoomName(groupId){ return `group_${groupId}`; }
 
 function addUserSocket(userId, socketId) {
   const existing = onlineUsers.get(userId) || { sockets: new Set(), lastActive: Date.now() };
@@ -700,10 +1100,16 @@ io.on('connection', (socket) => {
         });
       }
       
+
+
+      // NOTE: do not reference `data` here; auth event only receives the token.
+      // Call state updates are handled inside callOffer/callAnswer/callEnded/callRejected/callTimeout.
+
+
       console.log('✅ User authenticated:', userId);
       
       // Join university room (for services/signals broadcasts)
-      const u = await User.findById(userId).select('university');
+      const u = await User.findById(userId).select('university isAdmin role username').lean();
       if (u && u.university) {
         socket.university = u.university;
         socket.join('uni:' + u.university);
@@ -712,10 +1118,23 @@ io.on('connection', (socket) => {
       // Join user's personal room
       socket.join(userId);
       socket.join(`user_${userId}`);
+
+      // Admin sockets join a protected room for realtime monitoring
+      if (u && (u.isAdmin || u.role === 'admin')) {
+        socket.isAdmin = true;
+        socket.join('admin');
+        socket.emit('admin:ready', { success: true, username: u.username || 'admin' });
+        // Push an initial snapshot (lightweight) after auth
+        try {
+          adminEmit('admin:presence', { onlineUsersCount: onlineUsers.size, timestamp: Date.now() });
+        } catch (e) {}
+      }
+
       
       // Presence broadcast: show ONLINE to everyone (requirement)
       if (!wasOnline) {
         io.emit('userOnline', { userId, timestamp: Date.now() });
+        adminEmit('admin:userOnline', { userId, timestamp: Date.now() });
       }
       
       // Send confirmation to client
@@ -732,6 +1151,653 @@ io.on('connection', (socket) => {
     }
   });
   
+
+  // Join/leave group room (for real-time group events)
+  socket.on('joinGroup', async (groupId) => {
+    try {
+      if (!socket.userId) return socket.emit('groupError', { error: 'Not authenticated' });
+      if (!groupId) return;
+
+      // Security: only members (or public group) can join the socket room
+      const group = await Group.findById(groupId).select('isPublic members').lean();
+      if (!group) return socket.emit('groupError', { error: 'Group not found' });
+
+      const isMember = (group.members || []).some(m => String(m) === String(socket.userId));
+      if (!isMember && !group.isPublic) return socket.emit('groupError', { error: 'Access denied' });
+
+      const room = getGroupRoomName(groupId);
+      socket.join(room);
+      socket._joinedGroups = socket._joinedGroups || new Set();
+      socket._joinedGroups.add(String(groupId));
+
+      socket.emit('groupJoined', { groupId });
+
+      // If a group call is active, inform the joiner
+      const call = activeGroupCalls.get(String(groupId));
+      if (call) {
+        socket.emit('groupCallActive', {
+          groupId: String(groupId),
+          callId: call.callId,
+          startedBy: call.startedBy,
+          startedAt: call.startedAt,
+          participants: Array.from(call.participants || [])
+        });
+      }
+
+      console.log(`👥 Socket ${socket.id} joined group room ${room}`);
+    } catch (e) {
+      console.error('joinGroup error:', e);
+      socket.emit('groupError', { error: 'Failed to join group' });
+    }
+  });
+
+  socket.on('leaveGroup', (groupId) => {
+    try {
+      if (!groupId) return;
+      const room = getGroupRoomName(groupId);
+      socket.leave(room);
+      if (socket._joinedGroups) socket._joinedGroups.delete(String(groupId));
+      socket.emit('groupLeft', { groupId });
+    } catch (e) {
+      console.error('leaveGroup error:', e);
+    }
+  });
+
+  // ==================== GROUP CALL (WebRTC Mesh Signaling) ====================
+  // Notes:
+  // - This is signaling only (offers/answers/ICE); media flows peer-to-peer (mesh).
+  // - One active call per groupId (simple + reliable for demo).
+  socket.on('groupCallStart', async (data) => {
+    try {
+      if (!socket.userId) return socket.emit('groupCallError', { error: 'Not authenticated' });
+      const groupId = String(data?.groupId || '');
+      const callType = (data?.callType === 'audio') ? 'audio' : 'video';
+      if (!groupId) return;
+
+      // Ensure access
+      const group = await Group.findById(groupId).select('isPublic members').lean();
+      if (!group) return socket.emit('groupCallError', { error: 'Group not found' });
+      const isMember = (group.members || []).some(m => String(m) === String(socket.userId));
+      if (!isMember && !group.isPublic) return socket.emit('groupCallError', { error: 'Access denied' });
+
+      // If already active, just join
+      let call = activeGroupCalls.get(groupId);
+      if (!call) {
+        const callId = uuidv4();
+        call = {
+          callId,
+          startedBy: socket.userId,
+          startedAt: Date.now(),
+          callType,
+          participants: new Set([socket.userId])
+        };
+        activeGroupCalls.set(groupId, call);
+
+        // Broadcast "incoming group call" to group room
+        io.to(getGroupRoomName(groupId)).emit('groupCallIncoming', {
+          groupId,
+          callId,
+          callType,
+          from: socket.userId,
+          startedAt: call.startedAt
+        });
+
+        console.log('📞 Group call started:', { groupId, callId, by: socket.userId, callType });
+      } else {
+        call.participants.add(socket.userId);
+        activeGroupCalls.set(groupId, call);
+      }
+
+      // Build participant infos (roles/names) for UI layout/attendance
+      const participantInfos = await getUsersBrief(Array.from(call.participants || []));
+      let lessonId = null;
+
+      // If starter is a teacher, create/attach a GroupLesson (used for attendance + recording)
+      try {
+        const starter = await User.findById(socket.userId).select('role fullName').lean();
+        if (starter && String(starter.role || '').toLowerCase() === 'teacher') {
+          const existingLesson = await GroupLesson.findOne({ groupId, callId: call.callId }).select('_id').lean();
+          const lesson = existingLesson ? existingLesson : await GroupLesson.create({
+            groupId,
+            callId: call.callId,
+            hostId: socket.userId,
+            title: (data?.title || '').toString().trim() || 'Live dars',
+            mode: (data?.mode === 'screen') ? 'screen' : 'camera',
+            status: 'live',
+            startedAt: new Date()
+          });
+          lessonId = String(lesson._id);
+          // Upsert attendance for starter
+          await GroupAttendance.updateOne({ lessonId: lesson._id, groupId, userId: socket.userId }, { $setOnInsert: { joinedAt: new Date() } }, { upsert: true }).catch(()=>{});
+        }
+      } catch(e) {
+        console.warn('GroupLesson create skipped:', e?.message || e);
+      }
+
+      socket.emit('groupCallStarted', {
+        groupId,
+        callId: call.callId,
+        callType: call.callType,
+        participants: Array.from(call.participants),
+        participantInfos,
+        lessonId
+      });
+
+// Notify others that this user joined
+      io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
+        groupId,
+        callId: call.callId,
+        userId: socket.userId,
+        participants: Array.from(call.participants),
+        participantInfos
+      });
+adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId), callId: String(call.callId), userId: String(socket.userId), participants: Array.from(call.participants).map(String), timestamp: Date.now() });
+
+    } catch (e) {
+      console.error('groupCallStart error:', e);
+      socket.emit('groupCallError', { error: 'Failed to start call' });
+    }
+  });
+
+  socket.on('groupCallJoin', async (data) => {
+    try {
+      if (!socket.userId) return socket.emit('groupCallError', { error: 'Not authenticated' });
+      const groupId = String(data?.groupId || '');
+      const callId = String(data?.callId || '');
+      if (!groupId || !callId) return;
+
+      const call = activeGroupCalls.get(groupId);
+      if (!call || String(call.callId) !== callId) {
+        return socket.emit('groupCallError', { error: 'Call not active' });
+      }
+
+      call.participants.add(socket.userId);
+      activeGroupCalls.set(groupId, call);
+
+      const participantInfos = await getUsersBrief(Array.from(call.participants || []));
+      const lesson = await GroupLesson.findOne({ groupId, callId }).select('_id hostId status').lean().catch(() => null);
+      const lessonId = lesson? String(lesson._id) : null;
+      if (lesson && lesson._id) {
+        await GroupAttendance.updateOne({ lessonId: lesson._id, groupId, userId: socket.userId }, { $setOnInsert: { joinedAt: new Date() } }, { upsert: true }).catch(()=>{});
+      }
+
+      socket.emit('groupCallJoined', {
+        groupId,
+        callId,
+        callType: call.callType,
+        participants: Array.from(call.participants),
+        participantInfos,
+        lessonId
+      });
+
+io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
+        groupId,
+        callId,
+        userId: socket.userId,
+        participants: Array.from(call.participants),
+        participantInfos
+      });
+} catch (e) {
+      console.error('groupCallJoin error:', e);
+      socket.emit('groupCallError', { error: 'Failed to join call' });
+    }
+  });
+
+  // Generic signaling relay: offer/answer/ice
+  socket.on('groupCallSignal', (payload) => {
+    try {
+      if (!socket.userId) return;
+      const groupId = String(payload?.groupId || '');
+      const callId = String(payload?.callId || '');
+      const to = String(payload?.to || '');
+      const type = String(payload?.type || '');
+      const data = payload?.data;
+
+      if (!groupId || !callId || !to || !type) return;
+
+      const call = activeGroupCalls.get(groupId);
+      if (!call || String(call.callId) !== callId) return;
+
+      // Relay to target user
+      emitToUser(to, 'groupCallSignal', {
+        groupId,
+        callId,
+        from: socket.userId,
+        type,
+        data,
+        timestamp: Date.now()
+      });
+
+    } catch (e) {
+      console.error('groupCallSignal error:', e);
+    }
+  });
+
+  async function leaveGroupCallInternal(groupId, userId, reason) {
+    try {
+      const call = activeGroupCalls.get(groupId);
+      // Attendance: mark user left (if this call is linked to a GroupLesson)
+      try {
+        const lesson = await GroupLesson.findOne({ groupId, callId: call?.callId }).select('_id').lean().catch(()=>null);
+        if (lesson && lesson._id) {
+          const att = await GroupAttendance.findOne({ lessonId: lesson._id, userId }).select('_id joinedAt').lean().catch(()=>null);
+          if (att && att._id) {
+            const leftAt = new Date();
+            const durationSec = att.joinedAt ? Math.max(0, Math.round((leftAt.getTime() - new Date(att.joinedAt).getTime())/1000)) : 0;
+            await GroupAttendance.updateOne({ _id: att._id }, { $set: { leftAt, durationSec } }).catch(()=>{});
+          }
+        }
+      } catch(e) {
+        // ignore attendance errors
+      }
+
+      if (!call) return;
+      if (call.participants) call.participants.delete(userId);
+
+      const participantsArr = Array.from(call.participants || []);
+      io.to(getGroupRoomName(groupId)).emit('groupCallUserLeft', {
+        groupId,
+        callId: call.callId,
+        userId,
+        reason: reason || 'left',
+        participants: participantsArr
+      })
+      adminEmit('admin:groupCallUpdate', { action: 'left', groupId: String(groupId), callId: String(call.callId), userId: String(userId), reason: reason || 'left', participants: participantsArr.map(String), timestamp: Date.now() });;
+
+      // End call if nobody left
+      if (participantsArr.length === 0) {
+        activeGroupCalls.delete(groupId);
+        // Mark GroupLesson ended (if exists)
+        try {
+          const lesson = await GroupLesson.findOne({ groupId, callId: call.callId }).select('_id').lean().catch(()=>null);
+          if (lesson && lesson._id) {
+            await GroupLesson.updateOne({ _id: lesson._id }, { $set: { status: 'ended', endedAt: new Date() } }).catch(()=>{});
+          }
+        } catch(e) {}
+        io.to(getGroupRoomName(groupId)).emit('groupCallEnded', {
+          groupId,
+          callId: call.callId,
+          reason: 'empty',
+          timestamp: Date.now()
+        });
+        adminEmit('admin:groupCallUpdate', { action: 'ended', groupId: String(groupId), callId: String(call.callId), reason: 'empty', timestamp: Date.now() });
+      } else {
+        activeGroupCalls.set(groupId, call);
+      }
+    } catch (e) {
+      console.error('leaveGroupCallInternal error:', e);
+    }
+  }
+
+  socket.on('groupCallLeave', async (data) => {
+    try {
+      if (!socket.userId) return;
+      const groupId = String(data?.groupId || '');
+      const callId = String(data?.callId || '');
+      if (!groupId || !callId) return;
+
+      const call = activeGroupCalls.get(groupId);
+      if (!call || String(call.callId) !== callId) return;
+
+      await leaveGroupCallInternal(groupId, socket.userId, 'left');
+    } catch (e) {
+      console.error('groupCallLeave error:', e);
+    }
+  });
+
+  socket.on('groupCallEnd', (data) => {
+    try {
+      if (!socket.userId) return;
+      const groupId = String(data?.groupId || '');
+      const callId = String(data?.callId || '');
+      if (!groupId || !callId) return;
+
+      const call = activeGroupCalls.get(groupId);
+      if (!call || String(call.callId) !== callId) return;
+
+      // Only starter can end (simple rule)
+      if (String(call.startedBy) !== String(socket.userId)) {
+        return socket.emit('groupCallError', { error: 'Only starter can end the call' });
+      }
+
+      activeGroupCalls.delete(groupId);
+      io.to(getGroupRoomName(groupId)).emit('groupCallEnded', {
+        groupId,
+        callId,
+        reason: 'ended_by_starter',
+        timestamp: Date.now()
+      });
+
+    } catch (e) {
+      console.error('groupCallEnd error:', e);
+      socket.emit('groupCallError', { error: 'Failed to end call' });
+    }
+  });
+  // ==================== CHANNEL LIVE (WebRTC one-to-many) ====================
+  // Host (channel creator) can start a live stream (camera or screen share).
+  // Viewers can join to watch (receive-only).
+  //
+  // Signaling flow (per viewer):
+  // - Viewer clicks Join -> server notifies host: channelLive:viewerJoin
+  // - Host creates RTCPeerConnection, adds tracks, creates OFFER -> server relays to viewer
+  // - Viewer sets remote offer, creates ANSWER -> server relays to host
+  // - ICE candidates exchanged both ways.
+  //
+  // Security:
+  // - Only channel.creatorId can start/stop.
+  // - Viewers must be subscribed OR channel is public OR viewer is creator/moderator.
+  socket.on('channelLive:ping', async (data) => {
+    try {
+      const channelId = String(data?.channelId || '');
+      if (!channelId) return;
+
+      const live = activeChannelLives.get(channelId);
+      socket.emit('channelLive:status', {
+        channelId,
+        isLive: !!live,
+        hostId: live?.hostId || null,
+        startedAt: live?.startedAt || null,
+        mode: live?.mode || null,
+        viewersCount: live?.viewers ? live.viewers.size : 0
+      });
+    } catch (e) {
+      console.error('channelLive:ping error:', e);
+    }
+  });
+
+  socket.on('channelLive:start', async (data) => {
+    try {
+      if (!socket.userId) return socket.emit('channelLive:error', { error: 'Not authenticated' });
+
+      const channelId = String(data?.channelId || '');
+      const mode = String(data?.mode || 'camera'); // camera | screen
+      if (!channelId) return;
+
+      const ch = await Channel.findById(channelId).select('creatorId moderators isPublic subscribers').lean();
+      if (!ch) return socket.emit('channelLive:error', { error: 'Channel not found' });
+
+      const isCreator = String(ch.creatorId) === String(socket.userId);
+      if (!isCreator) return socket.emit('channelLive:error', { error: 'Only channel owner can start live' });
+
+      const live = {
+        hostId: String(socket.userId),
+        startedAt: Date.now(),
+        mode: (mode === 'screen' ? 'screen' : 'camera'),
+        viewers: new Set()
+      };
+
+      activeChannelLives.set(channelId, live);
+      adminEmit('admin:channelLiveUpdate', { action: 'viewer_joined', channelId: String(channelId), userId: String(socket.userId), viewersCount: (live.viewers && live.viewers.size) ? live.viewers.size : 0, timestamp: Date.now() });
+
+      // Put host into live room
+      socket.join(getChannelLiveRoomName(channelId));
+
+      // Notify everyone in channel room that live started
+      io.to(`channel_${channelId}`).emit('channelLive:status', {
+        channelId,
+        isLive: true,
+        hostId: live.hostId,
+        startedAt: live.startedAt,
+        mode: live.mode,
+        viewersCount: 0
+      });
+
+      socket.emit('channelLive:started', {
+        channelId,
+        startedAt: live.startedAt,
+        mode: live.mode
+      });
+      adminEmit('admin:channelLiveUpdate', { action: 'started', channelId: String(channelId), hostId: String(live.hostId), mode: String(live.mode), startedAt: live.startedAt, timestamp: Date.now() });
+
+      console.log(`🔴 Live started: channel=${channelId} host=${live.hostId} mode=${live.mode}`);
+    } catch (e) {
+      console.error('channelLive:start error:', e);
+      socket.emit('channelLive:error', { error: 'Failed to start live' });
+    }
+  });
+
+  socket.on('channelLive:stop', async (data) => {
+    try {
+      if (!socket.userId) return;
+      const channelId = String(data?.channelId || '');
+      if (!channelId) return;
+
+      const live = activeChannelLives.get(channelId);
+      if (!live) return;
+
+      if (String(live.hostId) !== String(socket.userId)) {
+        return socket.emit('channelLive:error', { error: 'Only host can stop live' });
+      }
+
+      activeChannelLives.delete(channelId);
+
+      // Notify viewers + channel room
+      io.to(getChannelLiveRoomName(channelId)).emit('channelLive:ended', {
+        channelId,
+        hostId: live.hostId,
+        reason: 'stopped',
+        timestamp: Date.now()
+      });
+      adminEmit('admin:channelLiveUpdate', { action: 'stopped', channelId: String(channelId), hostId: String(live.hostId), reason: 'stopped', timestamp: Date.now() });
+
+      io.to(`channel_${channelId}`).emit('channelLive:status', {
+        channelId,
+        isLive: false,
+        hostId: live.hostId,
+        startedAt: null,
+        mode: null,
+        viewersCount: 0
+      });
+
+      // Leave room
+      socket.leave(getChannelLiveRoomName(channelId));
+
+      console.log(`⏹️ Live stopped: channel=${channelId} host=${live.hostId}`);
+    } catch (e) {
+      console.error('channelLive:stop error:', e);
+      socket.emit('channelLive:error', { error: 'Failed to stop live' });
+    }
+  });
+
+  socket.on('channelLive:join', async (data) => {
+    try {
+      if (!socket.userId) return socket.emit('channelLive:error', { error: 'Not authenticated' });
+
+      const channelId = String(data?.channelId || '');
+      if (!channelId) return;
+
+      const live = activeChannelLives.get(channelId);
+      if (!live) {
+        socket.emit('channelLive:status', { channelId, isLive: false, hostId: null });
+        return;
+      }
+
+      // Access control (simple)
+      const ch = await Channel.findById(channelId).select('creatorId moderators isPublic subscribers').lean();
+      if (!ch) return socket.emit('channelLive:error', { error: 'Channel not found' });
+
+      const isCreator = String(ch.creatorId) === String(socket.userId);
+      const isModerator = Array.isArray(ch.moderators) && ch.moderators.some(id => String(id) === String(socket.userId));
+      const isSubscriber = Array.isArray(ch.subscribers) && ch.subscribers.some(id => String(id) === String(socket.userId));
+      const canView = !!ch.isPublic || isSubscriber || isCreator || isModerator;
+
+      if (!canView) return socket.emit('channelLive:error', { error: 'You must subscribe to watch this live' });
+
+      // Join viewer to live room
+      socket.join(getChannelLiveRoomName(channelId));
+      live.viewers.add(String(socket.userId));
+      activeChannelLives.set(channelId, live);
+
+      socket.emit('channelLive:joined', {
+        channelId,
+        hostId: live.hostId,
+        startedAt: live.startedAt,
+        mode: live.mode
+      });
+
+      // Inform host to create offer for this viewer
+      emitToUser(live.hostId, 'channelLive:viewerJoin', {
+        channelId,
+        viewerId: String(socket.userId)
+      });
+
+      // Broadcast status update to channel room
+      io.to(`channel_${channelId}`).emit('channelLive:status', {
+        channelId,
+        isLive: true,
+        hostId: live.hostId,
+        startedAt: live.startedAt,
+        mode: live.mode,
+        viewersCount: live.viewers.size
+      });
+
+      console.log(`👀 Viewer joined live: channel=${channelId} viewer=${socket.userId} host=${live.hostId}`);
+    } catch (e) {
+      console.error('channelLive:join error:', e);
+      socket.emit('channelLive:error', { error: 'Failed to join live' });
+    }
+  });
+
+  socket.on('channelLive:leave', (data) => {
+    try {
+      if (!socket.userId) return;
+      const channelId = String(data?.channelId || '');
+      if (!channelId) return;
+
+      const live = activeChannelLives.get(channelId);
+      if (!live) return;
+
+      // Host leaving => stop
+      if (String(live.hostId) === String(socket.userId)) {
+        activeChannelLives.delete(channelId);
+
+        io.to(getChannelLiveRoomName(channelId)).emit('channelLive:ended', {
+          channelId,
+          hostId: live.hostId,
+          reason: 'host_left',
+          timestamp: Date.now()
+        });
+
+        io.to(`channel_${channelId}`).emit('channelLive:status', {
+          channelId,
+          isLive: false,
+          hostId: live.hostId,
+          startedAt: null,
+          mode: null,
+          viewersCount: 0
+        });
+
+        socket.leave(getChannelLiveRoomName(channelId));
+        return;
+      }
+
+      // Viewer leaving
+      live.viewers.delete(String(socket.userId));
+      activeChannelLives.set(channelId, live);
+      adminEmit('admin:channelLiveUpdate', { action: 'viewer_left', channelId: String(channelId), userId: String(socket.userId), viewersCount: (live.viewers && live.viewers.size) ? live.viewers.size : 0, timestamp: Date.now() });
+      socket.leave(getChannelLiveRoomName(channelId));
+
+      emitToUser(live.hostId, 'channelLive:viewerLeft', {
+        channelId,
+        viewerId: String(socket.userId)
+      });
+
+      io.to(`channel_${channelId}`).emit('channelLive:status', {
+        channelId,
+        isLive: true,
+        hostId: live.hostId,
+        startedAt: live.startedAt,
+        mode: live.mode,
+        viewersCount: live.viewers.size
+      });
+
+      console.log(`🚪 Viewer left live: channel=${channelId} viewer=${socket.userId}`);
+    } catch (e) {
+      console.error('channelLive:leave error:', e);
+    }
+  });
+
+  // Relay signaling: host -> viewer
+  socket.on('channelLive:offer', (data) => {
+    try {
+      if (!socket.userId) return;
+      const channelId = String(data?.channelId || '');
+      const to = String(data?.to || '');
+      const sdp = data?.sdp;
+      if (!channelId || !to || !sdp) return;
+
+      const live = activeChannelLives.get(channelId);
+      if (!live) return;
+      if (String(live.hostId) !== String(socket.userId)) return; // only host can send offers
+
+      emitToUser(to, 'channelLive:offer', {
+        channelId,
+        from: String(socket.userId),
+        sdp
+      });
+    } catch (e) {
+      console.error('channelLive:offer error:', e);
+    }
+  });
+
+  // Relay signaling: viewer -> host
+  socket.on('channelLive:answer', (data) => {
+    try {
+      if (!socket.userId) return;
+      const channelId = String(data?.channelId || '');
+      const sdp = data?.sdp;
+      if (!channelId || !sdp) return;
+
+      const live = activeChannelLives.get(channelId);
+      if (!live) return;
+
+      emitToUser(live.hostId, 'channelLive:answer', {
+        channelId,
+        from: String(socket.userId),
+        sdp
+      });
+    } catch (e) {
+      console.error('channelLive:answer error:', e);
+    }
+  });
+
+  // ICE relay both directions (viewer -> host via no "to"; host -> viewer includes "to")
+  socket.on('channelLive:ice', (data) => {
+    try {
+      if (!socket.userId) return;
+      const channelId = String(data?.channelId || '');
+      const candidate = data?.candidate;
+      if (!channelId || !candidate) return;
+
+      const live = activeChannelLives.get(channelId);
+      if (!live) return;
+
+      // host sending to a viewer
+      if (String(live.hostId) === String(socket.userId)) {
+        const to = String(data?.to || '');
+        if (!to) return;
+        emitToUser(to, 'channelLive:ice', {
+          channelId,
+          from: String(socket.userId),
+          candidate
+        });
+        return;
+      }
+
+      // viewer sending to host
+      emitToUser(live.hostId, 'channelLive:ice', {
+        channelId,
+        from: String(socket.userId),
+        candidate
+      });
+    } catch (e) {
+      console.error('channelLive:ice error:', e);
+    }
+  });
+
+
+
+
   // Join chat room
 
   // Join/leave channel room (for real-time channel posts/updates)
@@ -934,6 +2000,18 @@ io.on('connection', (socket) => {
           duration: 0
         });
         await callHistory.save();
+
+      // Track active private call for admin realtime
+      activePrivateCalls.set(String(callHistory._id), {
+        callId: String(callHistory._id),
+        callerId: String(socket.userId),
+        receiverId: String(data.to),
+        type: data.type,
+        status: 'initiated',
+        startedAt: Date.now()
+      });
+      adminEmit('admin:privateCallUpdate', { action: 'initiated', callId: String(callHistory._id), callerId: String(socket.userId), receiverId: String(data.to), type: data.type, timestamp: Date.now() });
+
         
         socket.emit('callError', { error: 'User is offline' });
         return;
@@ -1021,7 +2099,14 @@ io.on('connection', (socket) => {
           endedAt: Date.now()
         });
       }
-      
+
+      // Remove from active private calls (admin realtime)
+      if (data.callId) {
+        const id = String(data.callId);
+        activePrivateCalls.delete(id);
+        adminEmit('admin:privateCallUpdate', { action: 'ended', callId: id, from: String(socket.userId), to: String(data.to), duration: data.duration || 0, timestamp: Date.now() });
+      }
+
       const endData = {
         ...data,
         from: socket.userId,
@@ -1050,7 +2135,14 @@ io.on('connection', (socket) => {
           endedAt: Date.now()
         });
       }
-      
+
+      // Remove from active private calls (admin realtime)
+      if (data.callId) {
+        const id = String(data.callId);
+        activePrivateCalls.delete(id);
+        adminEmit('admin:privateCallUpdate', { action: 'rejected', callId: id, from: String(socket.userId), to: String(data.to), timestamp: Date.now() });
+      }
+
       const rejectData = {
         ...data,
         from: socket.userId,
@@ -1074,6 +2166,13 @@ io.on('connection', (socket) => {
           endedAt: Date.now()
         });
       }
+
+      // Remove from active private calls (admin realtime)
+      if (data.callId) {
+        const id = String(data.callId);
+        activePrivateCalls.delete(id);
+        adminEmit('admin:privateCallUpdate', { action: 'missed', callId: id, from: String(socket.userId), to: String(data.to), timestamp: Date.now() });
+      }
     } catch (error) {
       console.error('Call missed error:', error);
     }
@@ -1089,6 +2188,13 @@ io.on('connection', (socket) => {
           status: 'missed',
           endedAt: Date.now()
         });
+      }
+
+      // Remove from active private calls (admin realtime)
+      if (data.callId) {
+        const id = String(data.callId);
+        activePrivateCalls.delete(id);
+        adminEmit('admin:privateCallUpdate', { action: 'timeout', callId: id, from: String(socket.userId), to: String(data.to), timestamp: Date.now() });
       }
       
       emitToUser(data.to, 'callTimeout', {
@@ -1144,11 +2250,186 @@ io.on('connection', (socket) => {
     }
   });
   
-  // Disconnect handler
+  
+
+// ==================== COURSE LIVE (WebRTC one-to-many) ====================
+// Flow:
+// 1) Teacher schedules via /api/lives, then calls /api/lives/:id/start
+// 2) Host opens /live.html?id=LIVE_ID&host=1 and socket emits live:hostJoin
+// 3) Students call /api/lives/:id/enter (coin gate), then open /live.html?id=LIVE_ID and socket emits live:viewerJoin
+// 4) Signaling is relayed via socket events below (simple mesh: host -> each viewer)
+
+socket.on('live:hostJoin', async ({ liveId }) => {
+  try {
+    if (!socket.userId) return socket.emit('live:error', { error: 'Not authenticated' });
+    if (!liveId) return socket.emit('live:error', { error: 'liveId required' });
+
+    const live = await LiveSession.findById(liveId).lean();
+    if (!live) return socket.emit('live:error', { error: 'Live not found' });
+    if (String(live.hostId) !== String(socket.userId)) return socket.emit('live:error', { error: 'Only host' });
+    if (live.status !== 'live' && live.status !== 'scheduled') return socket.emit('live:error', { error: 'Live is ended' });
+
+    const room = getLiveRoomName(String(liveId));
+    socket.join(room);
+
+    const st = activeCourseLives.get(String(liveId)) || { hostId: socket.userId, startedAt: Date.now(), mode: 'mesh', viewers: new Set() };
+    st.hostId = socket.userId;
+    activeCourseLives.set(String(liveId), st);
+
+    io.to(room).emit('live:status', { liveId: String(liveId), status: 'live', hostId: socket.userId, viewers: st.viewers.size });
+    socket.emit('live:hostReady', { liveId: String(liveId) });
+  } catch (e) {
+    console.error('❌ live:hostJoin error:', e);
+    socket.emit('live:error', { error: 'Host join failed' });
+  }
+});
+
+socket.on('live:viewerJoin', async ({ liveId }) => {
+  try {
+    if (!socket.userId) return socket.emit('live:error', { error: 'Not authenticated' });
+    if (!liveId) return socket.emit('live:error', { error: 'liveId required' });
+
+    const live = await LiveSession.findById(liveId).lean();
+    if (!live) return socket.emit('live:error', { error: 'Live not found' });
+    if (live.status !== 'live' && live.status !== 'scheduled') return socket.emit('live:error', { error: 'Live ended' });
+
+    // Access check (paid gate must be done via /api/lives/:id/enter)
+    if (String(live.hostId) !== String(socket.userId) && live.type === 'paid' && (live.price || 0) > 0) {
+      const access = await LiveAccess.findOne({ liveId: live._id, userId: socket.userId }).lean();
+      if (!access || !access.paid) {
+        return socket.emit('live:error', { error: 'Paid access required', redirect: '/topup.html' });
+      }
+    }
+
+    const room = getLiveRoomName(String(liveId));
+    socket.join(room);
+
+    const st = activeCourseLives.get(String(liveId)) || { hostId: String(live.hostId), startedAt: Date.now(), mode: 'mesh', viewers: new Set() };
+    st.viewers.add(String(socket.userId));
+    activeCourseLives.set(String(liveId), st);
+
+    // Notify host & room
+    io.to(room).emit('live:viewers', { liveId: String(liveId), viewers: st.viewers.size });
+    io.to(`user_${st.hostId}`).emit('live:viewerJoined', { liveId: String(liveId), viewerId: String(socket.userId) });
+    socket.emit('live:viewerReady', { liveId: String(liveId), hostId: st.hostId });
+  } catch (e) {
+    console.error('❌ live:viewerJoin error:', e);
+    socket.emit('live:error', { error: 'Viewer join failed' });
+  }
+});
+
+// Signaling relay: host -> viewer (offer, ice), viewer -> host (answer, ice)
+socket.on('live:offer', ({ liveId, toUserId, offer }) => {
+  if (!socket.userId) return;
+  io.to(`user_${toUserId}`).emit('live:offer', { liveId, fromUserId: socket.userId, offer });
+});
+socket.on('live:answer', ({ liveId, toUserId, answer }) => {
+  if (!socket.userId) return;
+  io.to(`user_${toUserId}`).emit('live:answer', { liveId, fromUserId: socket.userId, answer });
+});
+socket.on('live:ice', ({ liveId, toUserId, candidate }) => {
+  if (!socket.userId) return;
+  io.to(`user_${toUserId}`).emit('live:ice', { liveId, fromUserId: socket.userId, candidate });
+});
+
+// MVP live chat (no DB): broadcast to live room
+socket.on('chat:live', ({ liveId, text }) => {
+  try{
+    if (!socket.userId) return;
+    const clean = String(text || '').slice(0, 500);
+    const room = getLiveRoomName(String(liveId));
+    io.to(room).emit('chat:live', { liveId: String(liveId), userId: socket.userId, name: socket.username || 'User', text: clean, ts: Date.now() });
+  }catch(_){}
+});
+
+// Disconnect handler
   socket.on('disconnect', async () => {
     console.log('🔌 Client disconnected:', socket.id);
     
-    const userId = userSockets.get(socket.id);
+    
+
+    // Auto-leave active group calls (mesh signaling cleanup)
+    try {
+      if (socket.userId) {
+        // COURSE LIVE cleanup
+        try {
+          for (const [liveId, st] of activeCourseLives.entries()) {
+            if (String(st.hostId) === String(socket.userId)) {
+              // host disconnected: mark ended for viewers (best-effort)
+              activeCourseLives.delete(liveId);
+              io.to(getLiveRoomName(liveId)).emit('live:status', { liveId, status: 'ended' });
+            } else if (st.viewers && st.viewers.has(String(socket.userId))) {
+              st.viewers.delete(String(socket.userId));
+              io.to(getLiveRoomName(liveId)).emit('live:viewers', { liveId, viewers: st.viewers.size });
+            }
+          }
+        } catch (_) {}
+        for (const [gid, call] of activeGroupCalls.entries()) {
+          if (call && call.participants && call.participants.has(socket.userId)) {
+            await leaveGroupCallInternal(String(gid), String(socket.userId), 'disconnect');
+          }
+        }
+      }
+    } catch (e) {
+      console.error('disconnect groupcall cleanup error:', e);
+    }
+
+
+    // Auto-cleanup channel live streams
+    try {
+      if (socket.userId) {
+        for (const [cid, live] of activeChannelLives.entries()) {
+          if (!live) continue;
+
+          // Host disconnected => end live
+          if (String(live.hostId) === String(socket.userId)) {
+            activeChannelLives.delete(String(cid));
+
+            io.to(getChannelLiveRoomName(String(cid))).emit('channelLive:ended', {
+              channelId: String(cid),
+              hostId: String(live.hostId),
+              reason: 'host_disconnected',
+              timestamp: Date.now()
+            });
+
+            io.to(`channel_${String(cid)}`).emit('channelLive:status', {
+              channelId: String(cid),
+              isLive: false,
+              hostId: String(live.hostId),
+              startedAt: null,
+              mode: null,
+              viewersCount: 0
+            });
+
+            continue;
+          }
+
+          // Viewer disconnected
+          if (live.viewers && live.viewers.has(String(socket.userId))) {
+            live.viewers.delete(String(socket.userId));
+            activeChannelLives.set(String(cid), live);
+
+            emitToUser(String(live.hostId), 'channelLive:viewerLeft', {
+              channelId: String(cid),
+              viewerId: String(socket.userId)
+            });
+
+            io.to(`channel_${String(cid)}`).emit('channelLive:status', {
+              channelId: String(cid),
+              isLive: true,
+              hostId: String(live.hostId),
+              startedAt: live.startedAt,
+              mode: live.mode,
+              viewersCount: live.viewers.size
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('disconnect channelLive cleanup error:', e);
+    }
+
+const userId = userSockets.get(socket.id);
     if (!userId) return;
 
     const { becameOffline } = removeUserSocket(userId, socket.id);
@@ -1164,6 +2445,7 @@ io.on('connection', (socket) => {
 
       // Presence broadcast: show OFFLINE to everyone (requirement)
       io.emit('userOffline', { userId, timestamp: Date.now() });
+      adminEmit('admin:userOffline', { userId, timestamp: Date.now() });
     }
   });
   
@@ -1307,10 +2589,21 @@ const SignalModeration = mongoose.model('SignalModeration', SignalModerationSche
 // Register User
 app.post('/api/register', async (req, res) => {
   try {
-    const { fullName, nickname, username, bio, university, studyGroup, phone, email, password, role } = req.body;
+    const { fullName, nickname, username, bio, university, faculty, studyGroup, phone, email, password, role } = req.body;
     const safeRole = (String(role || 'student')).toLowerCase();
     const finalRole = ['student','teacher'].includes(safeRole) ? safeRole : 'student';
     
+
+    if (!String(university||'').trim()) return res.status(400).json({ error: 'University required' });
+    if (!String(studyGroup||'').trim()) return res.status(400).json({ error: 'studyGroup required' });
+
+    const uniDoc = await UniversityCatalog.findOne({ name: String(university).trim() }).lean();
+    if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
+    const fac = String(faculty||'').trim();
+    if (fac) {
+      const okFaculty = (uniDoc.faculties||[]).some(x => String(x).toLowerCase() === fac.toLowerCase());
+      if (!okFaculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+    }
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ error: 'Username already exists' });
@@ -1464,7 +2757,13 @@ app.get('/api/me', authenticateToken, async (req, res) => {
     safeUser.activeRobot = activeRobot;
     safeUser.activeCompanion = activeCompanion;
 
-    res.json({ success: true, user: safeUser });
+    // Front-end compatibility: return user fields at top-level AND under {user}
+    safeUser.fullname = safeUser.fullname || safeUser.fullName || safeUser.name || '';
+    // coins normalization
+    if (safeUser.coins === undefined || safeUser.coins === null) {
+      safeUser.coins = (safeUser.coin !== undefined && safeUser.coin !== null) ? safeUser.coin : (safeUser.coinBalance ?? 0);
+    }
+    res.json({ ...safeUser, success: true, user: safeUser });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to get user' });
@@ -3020,6 +4319,45 @@ app.get('/api/profile/activity', authenticateToken, async (req, res) => {
   }
 });
 
+
+
+// Get channel by username (for share links like /channel.html?username=xxx)
+app.get('/api/channels/by-username/:username', authenticateToken, async (req, res) => {
+  try {
+    const uname = String(req.params.username || '').trim();
+    if (!uname) return res.status(400).json({ error: 'Username is required' });
+
+    const channel = await Channel.findOne({ username: new RegExp('^' + uname + '$', 'i') })
+      .populate('creatorId', 'username nickname avatar')
+      .populate('moderators', 'username nickname avatar')
+      .populate('subscribers', 'username nickname avatar');
+
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const isSubscribed = channel.subscribers.some(sub => sub._id.equals(req.userId));
+
+    const postCount = await ChannelPost.countDocuments({ channelId: channel._id });
+
+    const totalViews = await ChannelPost.aggregate([
+      { $match: { channelId: channel._id } },
+      { $group: { _id: null, total: { $sum: "$viewsCount" } } }
+    ]);
+
+    res.json({
+      success: true,
+      channel: {
+        ...channel.toObject(),
+        isSubscribed,
+        postCount,
+        totalViews: totalViews[0]?.total || 0,
+        subscriberCount: channel.subscribers.length
+      }
+    });
+  } catch (error) {
+    console.error('Get channel by username error:', error);
+    res.status(500).json({ error: 'Failed to get channel' });
+  }
+});
 // Get channel by ID
 app.get('/api/channels/:channelId([0-9a-fA-F]{24})', authenticateToken, async (req, res) => {
   try {
@@ -3601,6 +4939,41 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+
+// WebRTC ICE config endpoint (STUN + optional TURN via env)
+// Set these env vars (Render > Environment):
+//   TURN_URL=turn:free.expressturn.com:3478?transport=udp,turn:free.expressturn.com:3478?transport=tcp
+//   TURN_USERNAME=...
+//   TURN_PASSWORD=...
+app.get('/api/rtc-config', (req, res) => {
+  try {
+    const stun = [
+      'stun:stun.l.google.com:19302',
+      'stun:stun1.l.google.com:19302'
+    ];
+    const iceServers = [{ urls: stun }];
+
+    const turnUrlRaw = (process.env.TURN_URL || '').trim();
+    const turnUser = (process.env.TURN_USERNAME || '').trim();
+    const turnPass = (process.env.TURN_PASSWORD || '').trim();
+
+    if (turnUrlRaw && turnUser && turnPass) {
+      const urls = turnUrlRaw.split(',').map(s => s.trim()).filter(Boolean);
+      iceServers.push({
+        urls,
+        username: turnUser,
+        credential: turnPass
+      });
+    }
+
+    res.json({ iceServers });
+  } catch (e) {
+    res.json({
+      iceServers: [{ urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302'] }]
+    });
+  }
+});
+
 // Get server stats
 app.get('/api/server/stats', authenticateToken, async (req, res) => {
   try {
@@ -3621,6 +4994,357 @@ app.get('/api/server/stats', authenticateToken, async (req, res) => {
   }
 });
 
+
+
+
+
+
+// ==================== UNIVERSITY CATALOG ROUTES ====================
+// Public: universities list + faculties list (used by register page)
+app.get('/api/catalog/universities', async (req, res) => {
+  try {
+    const list = await UniversityCatalog.find({}).sort({ name: 1 }).lean();
+    res.json({ success: true, universities: list.map(u => ({ name: u.name })) });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load universities' });
+  }
+});
+app.get('/api/catalog/faculties', async (req, res) => {
+  try {
+    const uni = String(req.query.university || '').trim();
+    if (!uni) return res.json({ success: true, faculties: [] });
+    const doc = await UniversityCatalog.findOne({ name: uni }).lean();
+    res.json({ success: true, faculties: doc?.faculties || [] });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load faculties' });
+  }
+});
+
+// Admin: manage catalog
+app.post('/api/admin/catalog/universities', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const name = String(req.body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'name required' });
+    await UniversityCatalog.updateOne({ name }, { $setOnInsert: { name, faculties: [] } }, { upsert: true });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to add university' });
+  }
+});
+app.post('/api/admin/catalog/faculties', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const uni = String(req.body.university || '').trim();
+    const faculty = String(req.body.faculty || '').trim();
+    if (!uni || !faculty) return res.status(400).json({ error: 'university and faculty required' });
+    await UniversityCatalog.updateOne({ name: uni }, { $addToSet: { faculties: faculty } }, { upsert: true });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to add faculty' });
+  }
+});
+
+// ==================== NOTIFICATIONS ROUTES ====================
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const items = await Notification.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(200).lean();
+    res.json({ success: true, notifications: items });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load notifications' });
+  }
+});
+app.post('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    await Notification.updateOne({ _id: req.params.id, userId: req.userId }, { $set: { read: true } });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to mark read' });
+  }
+});
+app.post('/api/notifications/read-all', authenticateToken, async (req, res) => {
+  try {
+    await Notification.updateMany({ userId: req.userId, read: false }, { $set: { read: true } });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to mark all read' });
+  }
+});
+
+// ==================== LIVE SESSIONS ROUTES ====================
+// List lives. Query: status=scheduled|live|ended|cancelled, mine=1 (teacher), q=search, courseId=...
+app.get('/api/lives', authenticateToken, async (req, res) => {
+  try {
+    const { status, mine, q, courseId } = req.query;
+    const user = await User.findById(req.userId).select('role university faculty studyGroup').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const query = {};
+    if (status) query.status = status;
+    if (courseId) query.courseId = courseId;
+    if (mine === '1') query.hostId = req.userId;
+
+    // Students should only see lives targeted to their university/faculty/group
+    if (user.role === 'student') {
+      if (user.university) query.university = user.university;
+      if (user.faculty) query.faculty = user.faculty;
+      // group match: either empty targetGroups (open) or includes student's studyGroup
+      query.$or = [ { targetGroups: { $size: 0 } }, { targetGroups: user.studyGroup } ];
+    }
+    let lives;
+    if (q && q.trim()) {
+      lives = await LiveSession.find({ ...query, $text: { $search: q.trim() } })
+        .sort({ status: 1, startAt: 1, createdAt: -1 })
+        .limit(200)
+        .lean();
+    } else {
+      lives = await LiveSession.find(query)
+        .sort({ status: 1, startAt: 1, createdAt: -1 })
+        .limit(200)
+        .lean();
+    }
+    res.json({ success: true, lives });
+  } catch (e) {
+    console.error('❌ List lives error:', e);
+    res.status(500).json({ error: 'Failed to list lives' });
+  }
+});
+
+// Live detail
+app.get('/api/lives/:id', authenticateToken, async (req, res) => {
+  try {
+    const live = await LiveSession.findById(req.params.id).lean();
+    if (!live) return res.status(404).json({ error: 'Live not found' });
+
+    const host = await User.findById(live.hostId).select('fullName username avatar role').lean();
+    const access = await LiveAccess.findOne({ liveId: live._id, userId: req.userId }).lean();
+
+    res.json({ success: true, live, host, access: access || null });
+  } catch (e) {
+    console.error('❌ Live detail error:', e);
+    res.status(500).json({ error: 'Failed to get live' });
+  }
+});
+
+// Create/schedule live (teacher only)
+app.post('/api/lives', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('role').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.role !== 'teacher' && user.role !== 'admin') return res.status(403).json({ error: 'Teacher required' });
+
+    const { title, description, previewImage, startAt, courseId, type, price } = req.body || {};
+    if (!title || !String(title).trim()) return res.status(400).json({ error: 'Title required' });
+
+    const host = await User.findById(req.userId).select('university faculty').lean();
+    const uni = String(university || host?.university || '').trim();
+    const fac = String(faculty || host?.faculty || '').trim();
+    const tg = Array.isArray(targetGroups) ? targetGroups.map(s=>String(s).trim()).filter(Boolean) : (String(targetGroups||'').split(',').map(s=>s.trim()).filter(Boolean));
+
+    const live = await LiveSession.create({
+      hostId: req.userId,
+      university: uni,
+      faculty: fac,
+      targetGroups: tg,
+      lessonKind: ['lecture','practice','other'].includes(String(lessonKind||'other')) ? String(lessonKind||'other') : 'other',
+      courseId: courseId || null,
+      title: String(title).trim(),
+      description: String(description || ''),
+      previewImage: String(previewImage || ''),
+      startAt: startAt ? new Date(startAt) : null,
+      type: type === 'paid' ? 'paid' : 'free',
+      price: type === 'paid' ? Math.max(1, Number(price || 0)) : 0,
+      status: 'scheduled'
+    });
+
+    res.json({ success: true, live });
+  } catch (e) {
+    console.error('❌ Create live error:', e);
+    res.status(500).json({ error: 'Failed to create live' });
+  }
+});
+
+// Update live (teacher only, owner)
+app.put('/api/lives/:id', authenticateToken, async (req, res) => {
+  try {
+    const live = await LiveSession.findById(req.params.id);
+    if (!live) return res.status(404).json({ error: 'Live not found' });
+    if (String(live.hostId) !== String(req.userId)) return res.status(403).json({ error: 'Forbidden' });
+    if (live.status === 'live') return res.status(400).json({ error: 'Cannot edit while live' });
+
+    const { title, description, previewImage, startAt, type, price, status } = req.body || {};
+    if (typeof title === 'string' && title.trim()) live.title = title.trim();
+    if (typeof description === 'string') live.description = description;
+    if (typeof previewImage === 'string') live.previewImage = previewImage;
+    if (typeof startAt !== 'undefined') live.startAt = startAt ? new Date(startAt) : null;
+    if (type === 'paid' || type === 'free') {
+      live.type = type;
+      live.price = type === 'paid' ? Math.max(1, Number(price || live.price || 1)) : 0;
+    }
+    if (status === 'cancelled') live.status = 'cancelled';
+
+    await live.save();
+    res.json({ success: true, live: live.toObject() });
+  } catch (e) {
+    console.error('❌ Update live error:', e);
+    res.status(500).json({ error: 'Failed to update live' });
+  }
+});
+
+// Start live (teacher only, owner)
+app.post('/api/lives/:id/start', authenticateToken, async (req, res) => {
+  try {
+    const live = await LiveSession.findById(req.params.id);
+    if (!live) return res.status(404).json({ error: 'Live not found' });
+    if (String(live.hostId) !== String(req.userId)) return res.status(403).json({ error: 'Forbidden' });
+    if (live.status === 'cancelled') return res.status(400).json({ error: 'Live cancelled' });
+
+    live.status = 'live';
+    live.startedAt = new Date();
+    live.endedAt = null;
+    await live.save();
+
+    if (io) {
+      io.emit('live:status', { liveId: String(live._id), status: 'live', startedAt: live.startedAt });
+      io.to(getLiveRoomName(String(live._id))).emit('live:status', { liveId: String(live._id), status: 'live', startedAt: live.startedAt });
+    }
+    res.json({ success: true, live: live.toObject() });
+  } catch (e) {
+    console.error('❌ Start live error:', e);
+    res.status(500).json({ error: 'Failed to start live' });
+  }
+});
+
+// Stop live (teacher only, owner)
+app.post('/api/lives/:id/stop', authenticateToken, async (req, res) => {
+  try {
+    const live = await LiveSession.findById(req.params.id);
+    if (!live) return res.status(404).json({ error: 'Live not found' });
+    if (String(live.hostId) !== String(req.userId)) return res.status(403).json({ error: 'Forbidden' });
+
+    live.status = 'ended';
+    live.endedAt = new Date();
+    await live.save();
+
+    if (io) {
+      io.emit('live:status', { liveId: String(live._id), status: 'ended', endedAt: live.endedAt });
+      io.to(getLiveRoomName(String(live._id))).emit('live:status', { liveId: String(live._id), status: 'ended', endedAt: live.endedAt });
+    }
+    res.json({ success: true, live: live.toObject() });
+  } catch (e) {
+    console.error('❌ Stop live error:', e);
+    res.status(500).json({ error: 'Failed to stop live' });
+  }
+});
+
+// New front-end alias: set live status (expects {status:"live"/"offline"/"ended"/"scheduled"})
+app.post('/api/lives/:id/status', authenticateToken, attachUserRole, requireRole(['teacher','admin']), async (req, res) => {
+  try {
+    const status = String(req.body.status || '').toLowerCase();
+    if (!status) return res.status(400).json({ error: 'status required' });
+
+    // map offline->scheduled (or keep offline)
+    if (status === 'live') {
+      // reuse start logic by calling same updates
+      const live = await LiveSession.findById(req.params.id);
+      if (!live) return res.status(404).json({ error: 'Live not found' });
+      const role = String(req.userRole || '').toLowerCase();
+      if (role !== 'admin' && String(live.hostId) !== String(req.userId)) return res.status(403).json({ error: 'Only host teacher or admin' });
+
+      live.status = 'live';
+      live.startedAt = live.startedAt || new Date();
+      live.startAt = live.startAt || new Date();
+      await live.save();
+      return res.json({ success: true, live });
+    }
+
+    if (status === 'offline' || status === 'scheduled') {
+      const live = await LiveSession.findById(req.params.id);
+      if (!live) return res.status(404).json({ error: 'Live not found' });
+      const role = String(req.userRole || '').toLowerCase();
+      if (role !== 'admin' && String(live.hostId) !== String(req.userId)) return res.status(403).json({ error: 'Only host teacher or admin' });
+      live.status = 'scheduled';
+      await live.save();
+      return res.json({ success: true, live });
+    }
+
+    if (status === 'ended') {
+      const live = await LiveSession.findById(req.params.id);
+      if (!live) return res.status(404).json({ error: 'Live not found' });
+      const role = String(req.userRole || '').toLowerCase();
+      if (role !== 'admin' && String(live.hostId) !== String(req.userId)) return res.status(403).json({ error: 'Only host teacher or admin' });
+      live.status = 'ended';
+      live.endedAt = live.endedAt || new Date();
+      await live.save();
+      return res.json({ success: true, live });
+    }
+
+    return res.status(400).json({ error: 'Unsupported status' });
+  } catch (e) {
+    console.error('POST /api/lives/:id/status error:', e);
+    res.status(500).json({ error: 'Failed to update live status' });
+  }
+});
+
+// Enter live (students pay here once, then socket join allowed)
+app.post('/api/lives/:id/enter', authenticateToken, async (req, res) => {
+  try {
+    const live = await LiveSession.findById(req.params.id).lean();
+    if (!live) return res.status(404).json({ error: 'Live not found' });
+    if (live.status === 'cancelled') return res.status(400).json({ error: 'Live cancelled' });
+
+    // owner always ok
+    if (String(live.hostId) === String(req.userId)) {
+      await LiveAccess.updateOne(
+        { liveId: live._id, userId: req.userId },
+        { $setOnInsert: { paid: false, amount: 0 } },
+        { upsert: true }
+      );
+      return res.json({ success: true, ok: true, paid: false });
+    }
+
+    // Free live
+    if (live.type === 'free' || !live.price) {
+      await LiveAccess.updateOne(
+        { liveId: live._id, userId: req.userId },
+        { $setOnInsert: { paid: false, amount: 0 } },
+        { upsert: true }
+      );
+      return res.json({ success: true, ok: true, paid: false });
+    }
+
+    // Paid: charge only once
+    const existing = await LiveAccess.findOne({ liveId: live._id, userId: req.userId }).lean();
+    if (existing && existing.paid) {
+      return res.json({ success: true, ok: true, paid: true, amount: existing.amount });
+    }
+
+    const user = await User.findById(req.userId).select('coins').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const price = Math.max(1, Number(live.price || 0));
+    if ((user.coins || 0) < price) {
+      return res.status(402).json({
+        error: 'Insufficient coins',
+        redirect: '/topup.html',
+        needed: price,
+        current: user.coins || 0
+      });
+    }
+
+    await User.updateOne({ _id: req.userId }, { $inc: { coins: -price } });
+    await User.updateOne({ _id: live.hostId }, { $inc: { teacherBalance: price * 0.5 } });
+
+    await LiveAccess.updateOne(
+      { liveId: live._id, userId: req.userId },
+      { $set: { paid: true, amount: price } },
+      { upsert: true }
+    );
+
+    res.json({ success: true, ok: true, paid: true, amount: price });
+  } catch (e) {
+    console.error('❌ Enter live error:', e);
+    res.status(500).json({ error: 'Failed to enter live' });
+  }
+});
 
 // ==================== SERVICES MARKETPLACE ROUTES ====================
 
@@ -4246,7 +5970,7 @@ app.post('/api/mod/signals/:id/action', authenticateToken, requireAdmin, async (
 });
 
 // ==================== PET + COINS API ====================
-const requireAdminRole = async (req, res, next) => {
+const requireAdmin = async (req, res, next) => {
   try {
     const user = await User.findById(req.userId).select('isAdmin role');
     if (!user) return res.status(401).json({ error: 'Authentication required' });
@@ -4686,7 +6410,7 @@ app.get('/api/wallet/topup-requests', authenticateToken, async (req, res) => {
 });
 
 // ==================== ADMIN (Topup Approvals) ====================
-app.get('/api/admin/topup-requests', authenticateToken, requireAdminRole, async (req, res) => {
+app.get('/api/admin/topup-requests', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const status = req.query.status || 'pending';
     const q = status ? { status } : {};
@@ -4698,7 +6422,7 @@ app.get('/api/admin/topup-requests', authenticateToken, requireAdminRole, async 
   }
 });
 
-app.post('/api/admin/topup-requests/:id/approve', authenticateToken, requireAdminRole, async (req, res) => {
+app.post('/api/admin/topup-requests/:id/approve', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const r = await TopUpRequest.findById(req.params.id);
     if (!r) return res.status(404).json({ error: 'Request not found' });
@@ -4719,7 +6443,7 @@ app.post('/api/admin/topup-requests/:id/approve', authenticateToken, requireAdmi
   }
 });
 
-app.post('/api/admin/topup-requests/:id/reject', authenticateToken, requireAdminRole, async (req, res) => {
+app.post('/api/admin/topup-requests/:id/reject', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const r = await TopUpRequest.findById(req.params.id);
     if (!r) return res.status(404).json({ error: 'Request not found' });
@@ -4737,7 +6461,7 @@ app.post('/api/admin/topup-requests/:id/reject', authenticateToken, requireAdmin
 });
 
 // Admin: update user coins directly
-app.patch('/api/admin/users/:id/coins', authenticateToken, requireAdminRole, async (req, res) => {
+app.patch('/api/admin/users/:id/coins', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const delta = Number(req.body.delta || 0);
     const setTo = req.body.setTo;
@@ -4769,25 +6493,28 @@ app.post('/api/admin/bootstrap', async (req, res) => {
 // Or curl:
 //   curl -H "Authorization: Bearer <TOKEN>" http://localhost:3000/api/admin/ping
 
-app.get('/api/admin/ping', authenticateToken, requireAdminRole, async (req, res) => {
+app.get('/api/admin/ping', authenticateToken, requireAdmin, async (req, res) => {
   res.json({ success: true, message: 'admin pong', time: new Date().toISOString(), userId: req.user?.userId || req.user?.id || null });
 });
 
 // Who am I (includes admin flag + coins)
-app.get('/api/admin/whoami', authenticateToken, requireAdminRole, async (req, res) => {
+app.get('/api/admin/whoami', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const uid = req.user?.userId || req.user?.id;
-    const me = await User.findById(uid).select('username nickname fullName coins isAdmin createdAt');
+    // authenticateToken sets: req.userId
+    const me = await User.findById(req.userId).select('username nickname fullName coins isAdmin role createdAt').lean();
     if (!me) return res.status(404).json({ error: 'User not found' });
-    res.json({ success: true, me });
+    // keep response shape stable for frontend
+    res.json({ success: true, admin: { _id: me._id, username: me.username, nickname: me.nickname, fullName: me.fullName, coins: me.coins, isAdmin: !!me.isAdmin, role: me.role, createdAt: me.createdAt } });
   } catch (e) {
-    res.status(500).json({ error: 'Failed to load me' });
+    console.error('GET /api/admin/whoami error', e);
+    res.status(500).json({ error: 'Failed to verify admin' });
   }
 });
 
+
 // Create a dummy pending topup request for your own user (for testing admin approval flow)
 // Body: { "coins": 50 }  => creates pending request with placeholder screenshot URL
-app.post('/api/admin/test/create-topup', authenticateToken, requireAdminRole, async (req, res) => {
+app.post('/api/admin/test/create-topup', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const uid = req.user?.userId || req.user?.id;
     const coins = Math.max(1, parseInt(req.body?.coins || '50', 10));
@@ -4809,7 +6536,7 @@ app.post('/api/admin/test/create-topup', authenticateToken, requireAdminRole, as
 
 // Seed/Reset your own pet stats quickly (for demo)
 // Body: { "hunger": 40, "xp": 0, "level": 1 }
-app.post('/api/admin/test/reset-pet', authenticateToken, requireAdminRole, async (req, res) => {
+app.post('/api/admin/test/reset-pet', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const uid = req.user?.userId || req.user?.id;
     const hunger = Math.max(0, Math.min(100, parseInt(req.body?.hunger ?? 50, 10)));
@@ -4842,27 +6569,6 @@ app.post('/api/admin/test/reset-pet', authenticateToken, requireAdminRole, async
 // Note: These routes are designed to work with the provided front-end pages:
 // courses.html, course.html, joinedcourse.html, tests.html, test.html, certificate.html
 
-// ---------- Helpers ----------
-const requireRole = (roles = []) => (req, res, next) => {
-  try {
-    const role = (req.userRole || '').toLowerCase();
-    if (!roles.length) return next();
-    if (roles.includes(role)) return next();
-    return res.status(403).json({ error: 'Forbidden' });
-  } catch (e) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-};
-
-async function attachUserRole(req, res, next) {
-  try {
-    const u = await User.findById(req.userId).select('role isAdmin');
-    req.userRole = (u?.role || (u?.isAdmin ? 'admin' : 'student') || 'student').toLowerCase();
-  } catch (e) {
-    req.userRole = 'student';
-  }
-  next();
-}
 
 // For compatibility with existing UI fields
 function userGroup(u) { return u?.studyGroup || u?.group || ''; }
@@ -5094,7 +6800,7 @@ app.get('/api/courses/:id', async (req, res) => {
 });
 
 // Create course (teacher/admin)
-app.post('/api/courses', requireRole(['teacher', 'admin']), async (req, res) => {
+app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
   try {
     const teacher = await User.findById(req.userId).select('fullName nickname username role');
     if (!teacher) return res.status(404).json({ error: 'User not found' });
@@ -5119,10 +6825,32 @@ app.post('/api/courses', requireRole(['teacher', 'admin']), async (req, res) => 
       faculty: String(req.body.faculty || '').trim(),
       groups,
       youtubeUrl: String(req.body.youtubeUrl || '').trim(),
-      coverUrl: String(req.body.coverUrl || '').trim(),
+      coverUrl: String(req.body.coverUrl || req.body.cover || req.body.previewImage || req.body.preview || '').trim(),
       teacherId: teacher._id,
       teacherName: teacher.fullName || teacher.nickname || teacher.username || 'Teacher'
     });
+
+
+    // If client sends lessons[] (new UI), mirror them into CourseContent for joinedcourse.html
+    if (Array.isArray(req.body.lessons) && req.body.lessons.length) {
+      const docs = req.body.lessons.map((l, i) => {
+        const t = String(l.type || l.kind || '').toLowerCase();
+        const type = (t === 'pdf') ? 'pdf' : (t === 'text') ? 'text' : 'youtube';
+        const youtubeUrl = String(l.youtubeUrl || l.url || l.link || '').trim();
+        const pdfUrl = String(l.pdfUrl || l.url || l.link || '').trim();
+        const text = String(l.text || l.body || '').trim();
+        return {
+          courseId: course._id,
+          order: Number(l.order || (i + 1)),
+          type,
+          title: String(l.title || l.name || `Bo'lim ${i + 1}`).trim(),
+          text: type === 'text' ? text : '',
+          youtubeUrl: type === 'youtube' ? youtubeUrl : '',
+          pdfUrl: type === 'pdf' ? pdfUrl : ''
+        };
+      }).filter(d => d.title);
+      if (docs.length) await CourseContent.insertMany(docs);
+    }
 
     res.status(201).json({ course });
   } catch (e) {
@@ -5132,7 +6860,7 @@ app.post('/api/courses', requireRole(['teacher', 'admin']), async (req, res) => 
 });
 
 // Update course (owner teacher/admin)
-app.put('/api/courses/:id', requireRole(['teacher', 'admin']), async (req, res) => {
+app.put('/api/courses/:id', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
   try {
     const role = (req.userRole || '').toLowerCase();
     const c = await Course.findById(req.params.id);
@@ -5176,7 +6904,7 @@ app.put('/api/courses/:id', requireRole(['teacher', 'admin']), async (req, res) 
 });
 
 // Join course (student)
-app.post('/api/courses/:id/join', requireRole(['student', 'admin', 'teacher']), async (req, res) => {
+app.post('/api/courses/:id/join', authenticateToken, attachUserRole, requireRole(['student', 'admin', 'teacher']), async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
     if (!course) return res.status(404).json({ error: 'Course not found' });
@@ -5274,7 +7002,7 @@ app.get('/api/courses/:id/content', async (req, res) => {
 });
 
 // Add content (teacher owner/admin)
-app.post('/api/courses/:id/content', requireRole(['teacher', 'admin']), async (req, res) => {
+app.post('/api/courses/:id/content', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
     if (!course) return res.status(404).json({ error: 'Course not found' });
@@ -5309,7 +7037,7 @@ app.post('/api/courses/:id/content', requireRole(['teacher', 'admin']), async (r
 });
 
 // Update content (teacher owner/admin)
-app.put('/api/courses/:id/content/:contentId', requireRole(['teacher', 'admin']), async (req, res) => {
+app.put('/api/courses/:id/content/:contentId', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
   try {
     const course = await Course.findById(req.params.id).lean();
     if (!course) return res.status(404).json({ error: 'Course not found' });
@@ -5342,7 +7070,7 @@ app.put('/api/courses/:id/content/:contentId', requireRole(['teacher', 'admin'])
 });
 
 // Delete content (teacher owner/admin)
-app.delete('/api/courses/:id/content/:contentId', requireRole(['teacher', 'admin']), async (req, res) => {
+app.delete('/api/courses/:id/content/:contentId', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
   try {
     const course = await Course.findById(req.params.id).lean();
     if (!course) return res.status(404).json({ error: 'Course not found' });
@@ -5400,10 +7128,58 @@ app.get('/api/tests', async (req, res) => {
   }
 });
 
+// My submissions — avoid hitting "/api/tests/:id" with "my-submissions"
+// Returns latest submission per test (sorted by latest activity)
+app.get('/api/tests/my-submissions', authenticateToken, attachUserRole, requireRole(['student','teacher','admin']), async (req, res) => {
+  try {
+    const uid = String(req.userId);
+    const submissions = await TestSubmission.find({ userId: uid })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Keep only latest submission per testId
+    const latestByTest = new Map();
+    for (const s of submissions) {
+      const tid = String(s.testId);
+      if (!latestByTest.has(tid)) latestByTest.set(tid, s);
+    }
+
+    const testIds = Array.from(latestByTest.keys());
+    const tests = await Test.find({ _id: { $in: testIds } }).select('title subject status teacherName updatedAt createdAt').lean();
+    const testMap = new Map(tests.map(t => [String(t._id), t]));
+
+    const items = [];
+    for (const [tid, sub] of latestByTest.entries()) {
+      const t = testMap.get(tid);
+      if (!t) continue;
+      items.push({
+        testId: tid,
+        test: t,
+        submission: sub
+      });
+    }
+
+    items.sort((a, b) => {
+      const ta = new Date(a.submission?.createdAt || 0).getTime();
+      const tb = new Date(b.submission?.createdAt || 0).getTime();
+      return tb - ta;
+    });
+
+    res.json({ submissions: items });
+  } catch (e) {
+    console.error('GET /api/tests/my-submissions error:', e);
+    res.status(500).json({ error: 'Failed to load submissions' });
+  }
+});
+
 // Get one test
 app.get('/api/tests/:id', async (req, res) => {
   try {
     const role = (req.userRole || 'student').toLowerCase();
+    // Prevent ObjectId CastError for non-id paths
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ error: 'Test not found' });
+    }
     const t = await Test.findById(req.params.id).lean();
     if (!t) return res.status(404).json({ error: 'Test not found' });
     if (role === 'student' && t.status !== 'published') return res.status(403).json({ error: 'Test is not published' });
@@ -5415,7 +7191,7 @@ app.get('/api/tests/:id', async (req, res) => {
 });
 
 // Create test (teacher/admin)
-app.post('/api/tests', requireRole(['teacher', 'admin']), async (req, res) => {
+app.post('/api/tests', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
   try {
     const teacher = await User.findById(req.userId).select('fullName nickname username role');
     if (!teacher) return res.status(404).json({ error: 'User not found' });
@@ -5472,7 +7248,7 @@ app.post('/api/tests', requireRole(['teacher', 'admin']), async (req, res) => {
 });
 
 // Update test (owner teacher/admin)
-app.put('/api/tests/:id', requireRole(['teacher', 'admin']), async (req, res) => {
+app.put('/api/tests/:id', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
   try {
     const role = (req.userRole || '').toLowerCase();
     const t = await Test.findById(req.params.id);
@@ -5516,6 +7292,27 @@ app.put('/api/tests/:id', requireRole(['teacher', 'admin']), async (req, res) =>
   } catch (e) {
     console.error('PUT /api/tests/:id error:', e);
     res.status(500).json({ error: 'Failed to update test' });
+  }
+});
+
+// Delete test (teacher/admin)
+app.delete('/api/tests/:id', authenticateToken, attachUserRole, requireRole(['teacher','admin']), async (req, res) => {
+  try {
+    const test = await Test.findById(req.params.id);
+    if (!test) return res.status(404).json({ error: 'Test not found' });
+
+    // Only owner teacher can delete, admin can delete
+    const role = String(req.userRole || '').toLowerCase();
+    if (role !== 'admin' && String(test.teacherId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Only owner teacher or admin can delete' });
+    }
+
+    await TestSubmission.deleteMany({ testId: test._id });
+    await test.deleteOne();
+    res.json({ success: true });
+  } catch (e) {
+    console.error('DELETE /api/tests/:id error:', e);
+    res.status(500).json({ error: 'Failed to delete test' });
   }
 });
 
@@ -5588,6 +7385,48 @@ app.post('/api/submit-test', authenticateToken, attachUserRole, requireRole(['st
     res.json({ success: true, score: score.pct, correct: score.correct, total: score.total, submissionId: submission._id });
   } catch (e) {
     console.error('POST /api/submit-test error:', e);
+    res.status(500).json({ error: 'Failed to submit test' });
+  }
+});
+
+// New front-end alias
+app.post('/api/test/submit', authenticateToken, attachUserRole, requireRole(['student']), async (req, res) => {
+  try {
+    const testId = req.body.testId || req.body.id;
+    if (!testId) return res.status(400).json({ error: 'testId required' });
+    const test = await Test.findById(testId).lean();
+    if (!test) return res.status(404).json({ error: 'Test not found' });
+
+    if ((test.status || 'published') !== 'published') return res.status(403).json({ error: 'Test is not published' });
+
+    const me = await User.findById(req.userId).select('faculty studyGroup');
+    if (!me) return res.status(404).json({ error: 'User not found' });
+
+    const tFaculty = String(test.faculty || '').trim();
+    const uFaculty = String(userFaculty(me) || '').trim();
+    if (tFaculty && uFaculty && tFaculty !== uFaculty) return res.status(403).json({ error: 'Test is for another faculty' });
+
+    const allowedGroups = (test.groups || []).map(x => String(x).trim()).filter(Boolean);
+    if (allowedGroups.length) {
+      const mg = String(userGroup(me) || '').trim();
+      if (!mg) return res.status(403).json({ error: 'User group is missing' });
+      const ok = allowedGroups.some(g => g.toLowerCase() === mg.toLowerCase());
+      if (!ok) return res.status(403).json({ error: 'Test is not open for your group' });
+    }
+
+    const answers = req.body.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
+    const score = computeScore(test.questions || [], answers);
+    const submission = await TestSubmission.create({
+      testId: test._id,
+      userId: req.userId,
+      answers,
+      score: score.pct,
+      correct: score.correct,
+      total: score.total
+    });
+    res.json({ success: true, score: score.pct, correct: score.correct, total: score.total, submissionId: submission._id });
+  } catch (e) {
+    console.error('POST /api/test/submit error:', e);
     res.status(500).json({ error: 'Failed to submit test' });
   }
 });
@@ -5692,6 +7531,586 @@ const PORT = process.env.PORT || 3000;
 const fs = require('fs');
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads', { recursive: true });
+}
+
+
+// ==================== ADMIN REALTIME (SNAPSHOT + ACTIONS) ====================
+
+// Snapshot for admin dashboard (polling fallback + initial load)
+app.get('/api/admin/realtime', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const [usersCount, channelsCount, groupsCount] = await Promise.all([
+      User.countDocuments(),
+      Channel.countDocuments(),
+      Group.countDocuments()
+    ]);
+
+    const onlineList = [];
+    for (const [userId, s] of onlineUsers.entries()) {
+      onlineList.push({
+        userId,
+        socketsCount: (s?.sockets && s.sockets.size) ? s.sockets.size : (s?.socketId ? 1 : 0),
+        lastActive: s?.lastActive || Date.now()
+      });
+    }
+
+    const privateCalls = Array.from(activePrivateCalls.values()).map(c => ({
+      callId: String(c.callId),
+      type: c.type,
+      status: c.status,
+      callerId: String(c.callerId),
+      receiverId: String(c.receiverId),
+      startedAt: c.startedAt
+    }));
+
+    const groupCalls = Array.from(activeGroupCalls.entries()).map(([groupId, call]) => ({
+      groupId: String(groupId),
+      callId: String(call.callId),
+      callType: call.callType,
+      startedBy: String(call.startedBy),
+      startedAt: call.startedAt,
+      participants: Array.from(call.participants || []).map(String)
+    }));
+
+    const channelLives = Array.from(activeChannelLives.entries()).map(([channelId, live]) => ({
+      channelId: String(channelId),
+      hostId: String(live.hostId),
+      startedAt: live.startedAt,
+      mode: live.mode,
+      viewers: Array.from(live.viewers || []).map(String),
+      viewersCount: (live.viewers && live.viewers.size) ? live.viewers.size : 0
+    }));
+
+    res.json({
+      success: true,
+      counts: {
+        users: usersCount,
+        channels: channelsCount,
+        groups: groupsCount,
+        onlineUsers: onlineUsers.size,
+        activePrivateCalls: privateCalls.length,
+        activeGroupCalls: groupCalls.length,
+        activeChannelLives: channelLives.length
+      },
+      onlineUsers: onlineList,
+      activePrivateCalls: privateCalls,
+      activeGroupCalls: groupCalls,
+      activeChannelLives: channelLives,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Admin realtime snapshot error:', error);
+    res.status(500).json({ error: 'Failed to load realtime snapshot' });
+  }
+});
+
+// Kick user (disconnect all sockets)
+app.post('/api/admin/users/:id/kick', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const userId = String(req.params.id || '');
+    if (!userId) return res.status(400).json({ error: 'UserId required' });
+
+    const socketIds = getUserSocketIds(userId);
+    socketIds.forEach((sid) => {
+      try {
+        io.to(sid).emit('forceLogout', { reason: 'kicked_by_admin', timestamp: Date.now() });
+        const s = io.sockets.sockets.get(sid);
+        if (s) s.disconnect(true);
+      } catch (e) {}
+    });
+
+    // Update DB to offline
+    await User.findByIdAndUpdate(userId, { isOnline: false, status: 'offline', lastSeen: Date.now() }).catch(() => {});
+
+    adminEmit('admin:action', { action: 'kick', userId, by: req.userId, timestamp: Date.now() });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Admin kick user error:', error);
+    res.status(500).json({ error: 'Failed to kick user' });
+  }
+});
+
+// End group call
+app.post('/api/admin/group-calls/:groupId/end', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const groupId = String(req.params.groupId || '');
+    if (!groupId) return res.status(400).json({ error: 'GroupId required' });
+
+    const call = activeGroupCalls.get(groupId);
+    if (!call) return res.status(404).json({ error: 'No active call' });
+
+    activeGroupCalls.delete(groupId);
+    io.to(getGroupRoomName(groupId)).emit('groupCallEnded', {
+      groupId,
+      callId: call.callId,
+      reason: 'ended_by_admin',
+      timestamp: Date.now()
+    });
+
+    adminEmit('admin:action', { action: 'end_group_call', groupId, callId: call.callId, by: req.userId, timestamp: Date.now() });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Admin end group call error:', error);
+    res.status(500).json({ error: 'Failed to end group call' });
+  }
+});
+
+// Stop channel live
+app.post('/api/admin/channel-lives/:channelId/stop', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const channelId = String(req.params.channelId || '');
+    if (!channelId) return res.status(400).json({ error: 'ChannelId required' });
+
+    const live = activeChannelLives.get(channelId);
+    if (!live) return res.status(404).json({ error: 'No active live' });
+
+    activeChannelLives.delete(channelId);
+
+    io.to(getChannelLiveRoomName(channelId)).emit('channelLive:ended', {
+      channelId,
+      hostId: live.hostId,
+      reason: 'stopped_by_admin',
+      timestamp: Date.now()
+    });
+
+    io.to(`channel_${channelId}`).emit('channelLive:status', {
+      channelId,
+      isLive: false,
+      hostId: live.hostId,
+      startedAt: null,
+      mode: null,
+      viewersCount: 0
+    });
+
+    adminEmit('admin:action', { action: 'stop_channel_live', channelId, hostId: live.hostId, by: req.userId, timestamp: Date.now() });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Admin stop channel live error:', error);
+    res.status(500).json({ error: 'Failed to stop channel live' });
+  }
+});
+
+
+// ==================== ADMIN DASHBOARD (FULL CONTROL) ====================
+// These endpoints are used by admin-dashboard3.html / admin-dashboard2.html
+// All endpoints are protected by authenticateToken + requireAdmin
+
+function parsePaging(req){
+  const page = Math.max(1, parseInt(req.query.page || '1', 10));
+  const limit = Math.max(1, Math.min(200, parseInt(req.query.limit || '25', 10)));
+  const skip = (page - 1) * limit;
+  return { page, limit, skip };
+}
+
+// Overview cards
+app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const [users, channels, groups, topupsPending, services] = await Promise.all([
+      User.countDocuments(),
+      Channel.countDocuments(),
+      Group.countDocuments(),
+      TopUpRequest.countDocuments({ status: 'pending' }),
+      Service.countDocuments()
+    ]);
+
+    res.json({
+      success: true,
+      users,
+      channels,
+      groups,
+      services,
+      topupsPending,
+      onlineUsers: onlineUsers.size,
+      activePrivateCalls: activePrivateCalls.size,
+      activeGroupCalls: activeGroupCalls.size,
+      activeChannelLives: activeChannelLives.size,
+      timestamp: Date.now()
+    });
+  } catch (e) {
+    console.error('admin overview error', e);
+    res.status(500).json({ error: 'Failed to load overview' });
+  }
+});
+
+// Users list (search + paging)
+app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePaging(req);
+    const q = String(req.query.q || '').trim();
+    const query = {};
+    if (q) {
+      query.$or = [
+        { username: new RegExp(q, 'i') },
+        { fullName: new RegExp(q, 'i') },
+        { nickname: new RegExp(q, 'i') },
+        { email: new RegExp(q, 'i') }
+      ];
+    }
+    const [total, items] = await Promise.all([
+      User.countDocuments(query),
+      User.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select('username fullName nickname email university role isAdmin coins isOnline status lastSeen createdAt')
+        .lean()
+    ]);
+    res.json({ success: true, page, limit, total, items });
+  } catch (e) {
+    console.error('admin users list error', e);
+    res.status(500).json({ error: 'Failed to load users' });
+  }
+});
+
+// Channels list
+app.get('/api/admin/channels', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePaging(req);
+    const q = String(req.query.q || '').trim();
+    const query = {};
+    if (q) {
+      query.$or = [
+        { name: new RegExp(q, 'i') },
+        { title: new RegExp(q, 'i') },
+        { description: new RegExp(q, 'i') }
+      ];
+    }
+    const [total, items] = await Promise.all([
+      Channel.countDocuments(query),
+      Channel.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+    res.json({ success: true, page, limit, total, items });
+  } catch (e) {
+    console.error('admin channels list error', e);
+    res.status(500).json({ error: 'Failed to load channels' });
+  }
+});
+
+// Groups list
+app.get('/api/admin/groups', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePaging(req);
+    const q = String(req.query.q || '').trim();
+    const query = {};
+    if (q) {
+      query.$or = [
+        { name: new RegExp(q, 'i') },
+        { title: new RegExp(q, 'i') },
+        { description: new RegExp(q, 'i') }
+      ];
+    }
+    const [total, items] = await Promise.all([
+      Group.countDocuments(query),
+      Group.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+    res.json({ success: true, page, limit, total, items });
+  } catch (e) {
+    console.error('admin groups list error', e);
+    res.status(500).json({ error: 'Failed to load groups' });
+  }
+});
+
+// Services list
+app.get('/api/admin/services', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePaging(req);
+    const q = String(req.query.q || '').trim();
+    const query = {};
+    if (q) {
+      query.$or = [
+        { title: new RegExp(q, 'i') },
+        { description: new RegExp(q, 'i') },
+        { category: new RegExp(q, 'i') }
+      ];
+    }
+    const [total, items] = await Promise.all([
+      Service.countDocuments(query),
+      Service.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+    res.json({ success: true, page, limit, total, items });
+  } catch (e) {
+    console.error('admin services list error', e);
+    res.status(500).json({ error: 'Failed to load services' });
+  }
+});
+
+// Private messages list (moderation)
+app.get('/api/admin/private-messages', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePaging(req);
+    const q = String(req.query.q || '').trim();
+    const query = {};
+    if (q) {
+      // match message text and optional sender/receiver ids
+      query.$or = [
+        { text: new RegExp(q, 'i') },
+        { message: new RegExp(q, 'i') },
+        { senderId: q },
+        { receiverId: q }
+      ];
+    }
+    const [total, items] = await Promise.all([
+      Message.countDocuments(query),
+      Message.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+    res.json({ success: true, page, limit, total, items });
+  } catch (e) {
+    console.error('admin private-messages list error', e);
+    res.status(500).json({ error: 'Failed to load private messages' });
+  }
+});
+
+
+
+// ==================== LMS V2 COMPATIBILITY (server84) ====================
+
+// Compute course completion percentage based on CourseProgress + CourseContent count
+async function getCourseCompletion(userId, courseId) {
+  const contents = await CourseContent.find({ courseId }).select('_id').lean();
+  const totalLessons = contents.length;
+  const pr = await CourseProgress.findOne({ courseId, userId }).lean();
+  const map = (pr && pr.progress && typeof pr.progress === 'object') ? pr.progress : {};
+  const doneIds = Object.keys(map).filter(k => map[k]);
+  const doneLessonIds = doneIds;
+  const pct = totalLessons ? Math.round((doneLessonIds.length / totalLessons) * 100) : (doneLessonIds.length ? 100 : 0);
+  return { totalLessons, doneLessonIds, pct };
+}
+
+// New: progress endpoints used by improved joinedcourse/certificate
+app.get('/api/progress/:courseId', authenticateToken, attachUserRole, requireRole(['student','admin','teacher']), async (req, res) => {
+  try {
+    const courseId = req.params.courseId;
+    const info = await getCourseCompletion(req.userId, courseId);
+
+    // infer testPassed if course has linked testId (optional)
+    let testPassed = false;
+    try{
+      const course = await Course.findById(courseId).select('_id').lean();
+      // if client stores a separate mapping, ignore; keep false by default
+    }catch(_){}
+
+    res.json({ ok: true, courseId, ...info, testPassed });
+  } catch (e) {
+    console.error('GET /api/progress/:courseId error:', e);
+    res.status(500).json({ error: 'Failed to load progress' });
+  }
+});
+
+// Accept {doneLessonIds:[contentId]} OR {contentId, done:true/false}
+app.post('/api/progress/:courseId', authenticateToken, attachUserRole, requireRole(['student','admin','teacher']), async (req, res) => {
+  try {
+    const courseId = req.params.courseId;
+    const body = req.body || {};
+    const setMap = {};
+
+    if (Array.isArray(body.doneLessonIds)) {
+      for (const id of body.doneLessonIds) setMap[String(id)] = true;
+    } else if (body.contentId) {
+      setMap[String(body.contentId)] = body.done !== false;
+    } else {
+      return res.status(400).json({ error: 'doneLessonIds[] or contentId required' });
+    }
+
+    const cur = await CourseProgress.findOne({ courseId, userId: req.userId });
+    const merged = Object.assign({}, (cur?.progress && typeof cur.progress === 'object') ? cur.progress : {}, setMap);
+
+    const updated = await CourseProgress.findOneAndUpdate(
+      { courseId, userId: req.userId },
+      { $set: { progress: merged } },
+      { upsert: true, new: true }
+    ).lean();
+
+    const info = await getCourseCompletion(req.userId, courseId);
+    res.json({ ok: true, progress: updated?.progress || {}, ...info });
+  } catch (e) {
+    console.error('POST /api/progress/:courseId error:', e);
+    res.status(500).json({ error: 'Failed to save progress' });
+  }
+});
+
+// Eligibility check (new front-end)
+app.get('/api/certificate/check', authenticateToken, attachUserRole, requireRole(['student','admin']), async (req, res) => {
+  try {
+    const courseId = req.query.courseId;
+    if (!courseId) return res.status(400).json({ error: 'courseId required' });
+
+    const course = await Course.findById(courseId).select('title status type price teacherId teacherName').lean();
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+
+    // Must be joined (for student)
+    const role = String(req.userRole || '').toLowerCase();
+    if (role === 'student') {
+      const en = await CourseEnrollment.findOne({ courseId, userId: req.userId }).lean();
+      if (!en) return res.json({ ok: false, eligible: false, reason: 'not_joined' });
+    }
+
+    const info = await getCourseCompletion(req.userId, courseId);
+    const eligible = info.pct >= 100;
+    res.json({ ok: eligible, eligible, courseId, pct: info.pct, totalLessons: info.totalLessons, doneLessonIds: info.doneLessonIds });
+  } catch (e) {
+    console.error('GET /api/certificate/check error:', e);
+    res.status(500).json({ error: 'Failed to check eligibility' });
+  }
+});
+
+// Alias
+app.get('/api/certificates/eligible', authenticateToken, attachUserRole, requireRole(['student','admin']), async (req, res) => {
+  try {
+    const courseId = String(req.query.courseId || req.query.id || '').trim();
+    if (!courseId) return res.status(400).json({ error: 'courseId required' });
+
+    const role = String(req.userRole || '').toLowerCase();
+    if (role === 'student') {
+      const en = await CourseEnrollment.findOne({ courseId, userId: req.userId }).lean();
+      if (!en) return res.json({ ok: false, eligible: false, reason: 'not_joined' });
+    }
+
+    const info = await getCourseCompletion(req.userId, courseId);
+    const eligible = info.pct >= 100;
+    res.json({ ok: eligible, eligible, courseId, pct: info.pct, totalLessons: info.totalLessons, doneLessonIds: info.doneLessonIds });
+  } catch (e) {
+    console.error('GET /api/certificates/eligible error:', e);
+    res.status(500).json({ error: 'Failed to check eligibility' });
+  }
+});
+
+// Create certificate record (new UI)
+app.post('/api/certificates', authenticateToken, attachUserRole, requireRole(['student','admin']), async (req, res) => {
+  try {
+    const body = req.body || {};
+    const certId = String(body.certId || body.serial || '').trim();
+    const courseId = String(body.courseId || body.sourceId || '').trim();
+    if (!certId) return res.status(400).json({ error: 'certId required' });
+    if (!courseId) return res.status(400).json({ error: 'courseId required' });
+
+    // server-side eligibility (student)
+    const role = String(req.userRole || '').toLowerCase();
+    if (role === 'student') {
+      const en = await CourseEnrollment.findOne({ courseId, userId: req.userId }).lean();
+      if (!en) return res.status(403).json({ error: 'Not joined' });
+    }
+    const info = await getCourseCompletion(req.userId, courseId);
+    if (role === 'student' && info.pct < 100) return res.status(403).json({ error: 'Course not completed' });
+
+    const course = await Course.findById(courseId).select('title teacherName').lean();
+
+    const doc = await Certificate.findOneAndUpdate(
+      { userId: req.userId, type: 'course', sourceId: courseId },
+      {
+        $set: {
+          title: String(body.courseTitle || course?.title || '').trim(),
+          serial: String(body.serial || certId).trim(),
+          issuedAt: new Date(),
+          certId,
+          verifyUrl: String(body.verifyUrl || '').trim(),
+          fullName: String(body.fullName || '').trim(),
+          facultyGroup: String(body.facultyGroup || body.fg || '').trim(),
+          courseTitle: String(body.courseTitle || course?.title || '').trim(),
+          teacherName: String(body.teacherName || course?.teacherName || '').trim(),
+          dateISO: String(body.dateISO || '').trim(),
+          signature: String(body.signature || '').trim()
+        }
+      },
+      { upsert: true, new: true }
+    );
+
+    res.status(201).json({ ok: true, certificate: doc });
+  } catch (e) {
+    console.error('POST /api/certificates error:', e);
+    res.status(500).json({ error: 'Failed to create certificate' });
+  }
+});
+
+// Verify certificate (API)
+app.get('/api/certificates/verify', async (req, res) => {
+  try {
+    const id = String(req.query.id || '').trim();
+    if (!id) return res.status(400).json({ error: 'id required' });
+
+    const cert = await Certificate.findOne({ $or: [{ certId: id }, { serial: id }] }).lean();
+    if (!cert) return res.json({ ok: false, valid: false });
+
+    res.json({ ok: true, valid: true, certificate: cert });
+  } catch (e) {
+    console.error('GET /api/certificates/verify error:', e);
+    res.status(500).json({ error: 'Failed to verify certificate' });
+  }
+});
+
+// Safer eligible alias without relying on internal router
+app.get('/api/certificates/eligible2', authenticateToken, attachUserRole, requireRole(['student','admin']), async (req, res) => {
+  req.query.courseId = req.query.courseId || req.query.id;
+  // call same logic
+  try{
+    const courseId = req.query.courseId;
+    if (!courseId) return res.status(400).json({ error: 'courseId required' });
+    const info = await getCourseCompletion(req.userId, courseId);
+    const eligible = info.pct >= 100;
+    res.json({ ok: eligible, eligible, courseId, pct: info.pct, totalLessons: info.totalLessons, doneLessonIds: info.doneLessonIds });
+  }catch(e){
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+
+
+// ==================== SCHEDULE NOTIFIER (1 hour before) ====================
+function startLiveNotificationScheduler() {
+  const tickMs = 60 * 1000;
+  setInterval(async () => {
+    try {
+      const now = Date.now();
+      const from = new Date(now + 59*60*1000);
+      const to   = new Date(now + 61*60*1000);
+      const due = await LiveSession.find({
+        status: 'scheduled',
+        startAt: { $gte: from, $lte: to },
+        notifySentAt: null
+      }).lean();
+
+      for (const live of due) {
+        // find matching students
+        const q = { role: 'student' };
+        if (live.university) q.university = live.university;
+        if (live.faculty) q.faculty = live.faculty;
+        if (Array.isArray(live.targetGroups) && live.targetGroups.length) q.studyGroup = { $in: live.targetGroups };
+        const students = await User.find(q).select('_id socketId').lean();
+
+        const title = 'Dars 1 soatdan keyin boshlanadi';
+        const body = `${live.title || 'Dars'} — ${new Date(live.startAt).toLocaleString()}`;
+        const link = `/live.html?id=${live._id}`;
+
+        for (const s of students) {
+          const n = await Notification.create({ userId: s._id, title, body, link });
+          if (s.socketId && io.sockets.sockets.get(s.socketId)) {
+            io.to(s.socketId).emit('notification:new', { notification: n });
+          }
+        }
+        await LiveSession.updateOne({ _id: live._id }, { $set: { notifySentAt: new Date() } });
+      }
+    } catch (e) {
+      // keep silent to avoid log spam
+    }
+  }, tickMs);
 }
 
 server.listen(PORT, async () => {

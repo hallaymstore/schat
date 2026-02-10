@@ -1486,7 +1486,7 @@ function removeVideoTile(userId) {
                 });
 
                 // Get camera (for overlay only)
-                _camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }).catch(() => null);
+                _camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
 
                 // Get mic audio (more reliable than system audio)
                 const mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }).catch(() => null);
@@ -1497,14 +1497,12 @@ function removeVideoTile(userId) {
                 screenVideo.muted = true;
                 await screenVideo.play();
 
-                let camVideo = null;
-                if (_camStream) {
-                  camVideo = document.createElement('video');
-                  camVideo.srcObject = _camStream;
-                  camVideo.muted = true;
-                  await camVideo.play();
-                }
-_compositeCanvas = document.createElement('canvas');
+                const camVideo = document.createElement('video');
+                camVideo.srcObject = _camStream;
+                camVideo.muted = true;
+                await camVideo.play();
+
+                _compositeCanvas = document.createElement('canvas');
                 const ctx = _compositeCanvas.getContext('2d');
 
                 const W = 1280, H = 720;
@@ -1523,13 +1521,11 @@ _compositeCanvas = document.createElement('canvas');
                         // background
                         ctx.fillStyle = 'rgba(0,0,0,0.35)';
                         ctx.fillRect(x-6, y-6, pipW+12, pipH+12);
-                        if (camVideo) ctx.drawImage(camVideo, x, y, pipW, pipH);
+                        ctx.drawImage(camVideo, x, y, pipW, pipH);
                         // border
-                        if (camVideo) {
-                          ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+                        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
                         ctx.lineWidth = 3;
-                                                  ctx.strokeRect(x, y, pipW, pipH);
-                        }
+                        ctx.strokeRect(x, y, pipW, pipH);
                     } catch(e) {}
                     requestAnimationFrame(draw);
                 };
@@ -1600,18 +1596,10 @@ _compositeCanvas = document.createElement('canvas');
                     return;
                 }
 
-                let stream = groupCall.localStream;
+                const stream = groupCall.localStream;
                 if (!stream) return alert('Stream topilmadi (avval qo‘ng‘iroqni boshlang)');
 
-                // If teacher hasn't enabled Screen+Cam yet, prompt to capture the screen so the recording matches what students saw
-                if (!_compositeStream) {
-                    const ok = confirm('Recording uchun ekran (screen) ham yozib olinishi kerakmi? OK bosilsa: Screen Share avtomatik yoqiladi.');
-                    if (ok) {
-                        await startScreenWithCam();
-                        stream = _compositeStream || groupCall.localStream;
-                    }
-                }
-_recordingChunks = [];
+                _recordingChunks = [];
                 _recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
                 _recorder.ondataavailable = (e) => { if (e.data && e.data.size) _recordingChunks.push(e.data); };
                 _recorder.onstop = async () => {
