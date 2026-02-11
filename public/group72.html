@@ -245,7 +245,6 @@
     document.body.style.overflow = 'hidden';
   }
   window.__drawer = {openPanel, closePanel};
-window.groupCall = groupCall;
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePanel(); });
   document.addEventListener('click', (e)=>{
     const ov = qs('drawerOverlay');
@@ -1516,11 +1515,10 @@ function removeVideoTile(userId) {
             const btnScreen = document.getElementById('btnScreen');
             const btnRec = document.getElementById('btnRecord');
             const btnAtt = document.getElementById('btnAttendance');
-            const isMeController = !groupCall.lessonControllerId || String(groupCall.lessonControllerId) === String(groupCall.userId);
-            if (btnScreen) btnScreen.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson && isMeController));
-if (btnRec) btnRec.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson && isMeController));
-if (btnAtt) btnAtt.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson && isMeController));
-}
+            if (btnScreen) btnScreen.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson));
+            if (btnRec) btnRec.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson));
+            if (btnAtt) btnAtt.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson));
+        }
 
         function toggleAttendancePanel(show) {
             const p = document.getElementById('attendancePanel');
@@ -1867,30 +1865,11 @@ function toggleMute() {
                 showIncomingGroupBox(`ACTIVE ${String(groupCall.incoming.callType).toUpperCase()} call • started by ${data.startedBy}`);
             });
 
-            
-        socket.on('lessonState', (st) => {
-            try {
-                if (!st) return;
-                if (st.lessonId && groupCall.lessonId && String(st.lessonId) !== String(groupCall.lessonId)) return;
-                groupCall.lessonControllerId = String(st.controllerId || '');
-                // small badge
-                const badge = document.getElementById('lessonControllerBadge');
-                if (badge) {
-                    const me = String(groupCall.userId||'');
-                    const isMe = me && groupCall.lessonControllerId && me === groupCall.lessonControllerId;
-                    badge.textContent = groupCall.lessonControllerId ? (isMe ? 'Siz boshqaruvchisiz' : 'Boshqaruvchi: ' + groupCall.lessonControllerId) : '';
-                    badge.classList.toggle('hidden', !groupCall.lessonControllerId);
-                }
-                if (typeof updateTeacherButtons === 'function') updateTeacherButtons();
-            } catch(e){}
-        });
-socket.on('groupCallStarted', async (data) => {
+            socket.on('groupCallStarted', async (data) => {
                 if (String(data.groupId) !== String(groupId)) return;
                 groupCall.active = true;
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
-                if (groupCall.lessonId) { try { socket.emit('lessonEnter', { lessonId: groupCall.lessonId }); } catch(e){} }
-
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
                 updateTeacherControls();
                 renderGroupCallLayout();
@@ -1911,8 +1890,6 @@ socket.on('groupCallStarted', async (data) => {
                 groupCall.active = true;
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
-                if (groupCall.lessonId) { try { socket.emit('lessonEnter', { lessonId: groupCall.lessonId }); } catch(e){} }
-
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
                 updateTeacherControls();
                 renderGroupCallLayout();

@@ -185,8 +185,114 @@
   })();
 </script>
 
+<style id="mobileSafe">
+  *{box-sizing:border-box}
+  html,body{width:100%;overflow-x:hidden}
+  img,video,canvas,svg{max-width:100%;height:auto}
+  a,button,span,p,h1,h2,h3,h4,h5,h6,div{overflow-wrap:anywhere;word-break:break-word}
+  .container{max-width:100% !important}
+  button, a{ -webkit-tap-highlight-color: transparent; }
+  @media (max-width: 640px){
+    .container{padding-left:12px!important;padding-right:12px!important}
+    main.container{padding-top:14px!important;padding-bottom:18px!important}
+    h1{font-size:1.25rem!important;line-height:1.25!important}
+    .text-3xl{font-size:1.65rem!important;line-height:1.2!important}
+    .text-2xl{font-size:1.35rem!important;line-height:1.25!important}
+    .text-xl{font-size:1.15rem!important}
+    .h-16{height:auto!important;min-height:64px}
+    nav .space-x-4, nav .space-x-3{gap:.25rem!important}
+    nav .space-x-4>*, nav .space-x-3>*{margin-left:0!important}
+    #livePlayerWrap video{max-height:45vh!important}
+    .message-bubble{max-width:88%!important}
+    /* Side panels as drawers */
+    #infoPanel, #userInfoSidebar{
+      position:fixed !important;
+      top:64px; right:0; bottom:0;
+      width:min(92vw, 380px) !important;
+      z-index:60;
+      transform:translateX(105%);
+      transition:transform .25s ease;
+      display:block !important;
+    }
+    #infoPanel.open, #userInfoSidebar.open{ transform:translateX(0); }
+    #drawerOverlay{ display:none; }
+    #drawerOverlay.show{
+      display:block;
+      position:fixed;
+      inset:0;
+      z-index:55;
+      background:rgba(0,0,0,.45);
+      backdrop-filter: blur(4px);
+    }
+  }
+</style>
+<script id="mobileDrawerScript">
+(function(){
+  function qs(id){ return document.getElementById(id); }
+  function closePanel(){
+    const panel = qs('infoPanel') || qs('userInfoSidebar');
+    const ov = qs('drawerOverlay');
+    if(panel) panel.classList.remove('open');
+    if(ov) ov.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+  function openPanel(){
+    const panel = qs('infoPanel') || qs('userInfoSidebar');
+    const ov = qs('drawerOverlay');
+    if(panel) panel.classList.add('open');
+    if(ov) ov.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  window.__drawer = {openPanel, closePanel};
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePanel(); });
+  document.addEventListener('click', (e)=>{
+    const ov = qs('drawerOverlay');
+    if(ov && e.target === ov) closePanel();
+  });
+})();
+</script>
 </head>
 <body class="bg-gray-50 min-h-screen">
+<!-- Mobile Drawer -->
+<div id="mobileDrawerWrap" class="fixed inset-0 z-[70] hidden md:hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeMobileMenu()"></div>
+  <aside id="mobileDrawer" class="absolute right-0 top-0 h-full w-[min(92vw,360px)] bg-white/10 border-l border-white/20 backdrop-blur-2xl p-4 overflow-y-auto">
+    <div class="flex items-center justify-between">
+      <div class="font-extrabold tracking-tight text-white">Menu</div>
+      <button class="p-2 rounded-xl hover:bg-white/10" aria-label="Close" onclick="closeMobileMenu()"><i class="fas fa-xmark text-white"></i></button>
+    </div>
+    <div class="mt-4 grid gap-2">
+      <a href="/groups.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-arrow-left w-5 text-center"></i><span>Back to Groups</span></a>
+<button id="mInfo" onclick="toggleInfoPanel(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-circle-info w-5 text-center"></i><span>Group Info</span></button>
+<button id="mInvite" onclick="document.getElementById('inviteSearch')?.scrollIntoView({behavior:'smooth',block:'start'}); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-user-plus w-5 text-center"></i><span>Invite</span></button>
+<button id="mLogout2" onclick="logout(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-right-from-bracket w-5 text-center"></i><span>Logout</span></button>
+    </div>
+  </aside>
+</div>
+
+<script>
+  function toggleMobileMenu(){
+    const w=document.getElementById('mobileDrawerWrap');
+    if(!w) return;
+    if(w.classList.contains('hidden')){
+      w.classList.remove('hidden');
+      document.body.style.overflow='hidden';
+    } else {
+      w.classList.add('hidden');
+      document.body.style.overflow='';
+    }
+  }
+  function closeMobileMenu(){
+    const w=document.getElementById('mobileDrawerWrap');
+    if(!w) return;
+    w.classList.add('hidden');
+    document.body.style.overflow='';
+  }
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMobileMenu(); });
+</script>
+
+<div id="drawerOverlay" aria-hidden="true"></div>
+
     <!-- Navigation -->
     <nav class="gradient-bg text-white h-16">
         <div class="container mx-auto px-4 h-full flex items-center justify-between">
@@ -195,6 +301,7 @@
                 <span class="font-semibold">Back to Groups</span>
             </a>
             <div class="flex items-center space-x-4">
+                <button id="menuBtn" class="p-2 hover:bg-white/10 rounded-full md:hidden" aria-label="Menu" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
                 <button onclick="toggleInfoPanel()" class="p-2 hover:bg-white/10 rounded-full">
                     <i class="fas fa-info-circle"></i>
                 </button>
@@ -514,7 +621,12 @@
                         <i class="fas fa-phone mr-2"></i> Voice Call
                     </button>
 
-                    <button onclick="editGroup()" 
+                    
+                    <a href="/group-lessons.html?groupId=${group._id}" 
+                            class="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition mr-2">
+                        <i class="fas fa-book mr-2"></i> O‘tilgan darslar
+                    </a>
+<button onclick="editGroup()" 
                             class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition mr-2">
                         <i class="fas fa-edit mr-2"></i> Edit
                     </button>
@@ -534,7 +646,12 @@
                         <i class="fas fa-phone mr-2"></i> Voice Call
                     </button>
 
-                    <button onclick="leaveGroup()" 
+                    
+                    <a href="/group-lessons.html?groupId=${group._id}" 
+                            class="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition mr-2">
+                        <i class="fas fa-book mr-2"></i> O‘tilgan darslar
+                    </a>
+<button onclick="leaveGroup()" 
                             class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
                         <i class="fas fa-sign-out-alt mr-2"></i> Leave
                     </button>
@@ -781,12 +898,20 @@
         }
         
         // Toggle info panel
-        function toggleInfoPanel() {
-            const panel = document.getElementById('infoPanel');
-            panel.classList.toggle('hidden');
-        }
-        
-        // Handle enter key
+        function toggleInfoPanel(){
+  const panel=document.getElementById("infoPanel");
+  const ov=document.getElementById("drawerOverlay");
+  if(!panel) return;
+  const isMobile = window.matchMedia("(max-width: 640px)").matches;
+  if(isMobile){
+    const open = panel.classList.toggle("open");
+    if(ov) ov.classList.toggle("show", open);
+    document.body.style.overflow = open ? "hidden" : "";
+  } else {
+    panel.classList.toggle("hidden");
+  }
+}
+// Handle enter key
         function handleEnter(event) {
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
@@ -976,16 +1101,67 @@
             muted: false,
             cameraOff: false,
             starterId: null,
-            incoming: null
+            incoming: null,
+            lessonId: null,
+            participantInfos: new Map() // userId -> {fullName, role, username}
         };
 
-        const ICE_SERVERS = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-                // TURN can be added later (see .env in server for turn creds if you deploy your own)
-            ]
-        };
+        
+// WebRTC ICE config (STUN + optional TURN). Loaded from server so creds are not hardcoded in HTML.
+// Server endpoint: GET /api/rtc-config
+const DEFAULT_RTC_CONFIG = {
+    iceServers: [
+        { urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302'] }
+    ]
+};
+
+let _rtcConfigCache = null;
+async function getRtcConfig() {
+    if (_rtcConfigCache) return _rtcConfigCache;
+    try {
+        const res = await fetch('/api/rtc-config', { cache: 'no-store' });
+        if (!res.ok) throw new Error('rtc-config http ' + res.status);
+        const cfg = await res.json();
+        if (cfg && Array.isArray(cfg.iceServers)) {
+            _rtcConfigCache = cfg;
+            return _rtcConfigCache;
+        }
+    } catch (e) {
+        console.warn('RTC config load failed, falling back to STUN-only:', e);
+    }
+    _rtcConfigCache = DEFAULT_RTC_CONFIG;
+    return _rtcConfigCache;
+}
+
+// Participant info helpers (role/name for layout + attendance UI)
+function setParticipantInfos(arr) {
+    try {
+        groupCall.participantInfos = new Map();
+        (arr || []).forEach(u => {
+            if (!u) return;
+            groupCall.participantInfos.set(String(u.userId || u._id || ''), {
+                fullName: u.fullName || u.nickname || u.username || 'User',
+                username: u.username || '',
+                role: (u.role || 'student').toString().toLowerCase()
+            });
+        });
+        // update meta counters
+        const sCount = Array.from(groupCall.participantInfos.values()).filter(x => x.role !== 'teacher').length;
+        const tCount = Array.from(groupCall.participantInfos.values()).filter(x => x.role === 'teacher').length;
+        const sm = document.getElementById('studentsMeta');
+        if (sm) sm.textContent = sCount ? (sCount + ' ta') : '';
+        const tm = document.getElementById('teacherStageMeta');
+        if (tm) tm.textContent = tCount ? ('teacher: ' + tCount) : '';
+    } catch(e) {}
+}
+function getUserLabel(userId) {
+    const info = groupCall.participantInfos.get(String(userId));
+    return info?.fullName || info?.username || (String(userId).slice(-6));
+}
+function isTeacher(userId) {
+    const info = groupCall.participantInfos.get(String(userId));
+    return (info?.role || '').toLowerCase() === 'teacher';
+}
 
         function toggleGroupCallPanel() {
             // simple helper for demo - if overlay hidden but active, show it
@@ -1033,37 +1209,141 @@
         }
 
         async function ensureLocalStream(callType) {
-            if (groupCall.localStream) return groupCall.localStream;
-            const constraints = (callType === 'audio')
-                ? { audio: true, video: false }
-                : { audio: true, video: { width: 1280, height: 720 } };
 
-            groupCall.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+if (groupCall.localStream) return groupCall.localStream;
+
+// For camera-less / mic-less devices: allow "watch-only" participation.
+// We try video+audio -> audio-only -> no local tracks.
+const videoConstraints = { width: 1280, height: 720 };
+try {
+    const constraints = (callType === 'audio')
+        ? { audio: true, video: false }
+        : { audio: true, video: videoConstraints };
+
+    groupCall.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+    addVideoTile('local', groupCall.localStream, true);
+    return groupCall.localStream;
+} catch (err) {
+    console.warn('ensureLocalStream getUserMedia failed:', err);
+
+    // If video failed, retry audio-only (common on devices with no camera permission/camera)
+    if (callType !== 'audio') {
+        try {
+            groupCall.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             addVideoTile('local', groupCall.localStream, true);
             return groupCall.localStream;
+        } catch (err2) {
+            console.warn('ensureLocalStream audio-only failed:', err2);
+        }
+    }
+
+    // Final fallback: no local tracks (recv-only mode)
+    groupCall.localStream = null;
+    return null;
+}
+        }
+
+        
+        function getTileContainerFor(userId) {
+            const tStage = document.getElementById('teacherStage');
+            const sGrid = document.getElementById('studentsGrid');
+            const uid = String(userId);
+            // Teacher goes to stage; everyone else to grid
+            if (isTeacher(uid)) return tStage || sGrid;
+            return sGrid || tStage;
+        }
+
+        function ensureStagePlaceholder() {
+            const tStage = document.getElementById('teacherStage');
+            if (!tStage) return;
+            if (!tStage.querySelector('.stage-placeholder')) {
+                const ph = document.createElement('div');
+                ph.className = 'stage-placeholder w-full h-full flex items-center justify-center text-white/70';
+                ph.innerHTML = '<div class="text-center"><i class="fas fa-video-slash text-3xl mb-2"></i><div class="text-sm">O‘qituvchi video hali yo‘q</div></div>';
+                tStage.appendChild(ph);
+            }
         }
 
         function addVideoTile(userId, stream, isLocal = false) {
-            const grid = document.getElementById('groupVideosGrid');
             const tileId = `tile_${userId}`;
             let tile = document.getElementById(tileId);
+
             if (!tile) {
                 tile = document.createElement('div');
                 tile.id = tileId;
-                tile.className = "relative rounded-xl overflow-hidden bg-black shadow";
+                tile.className = "relative rounded-2xl overflow-hidden bg-black shadow border border-white/10";
                 tile.innerHTML = `
-                    <div class="relative w-full" style="padding-top:56.25%;">
-                      <video class="absolute inset-0 w-full h-full object-cover" autoplay playsinline ${isLocal ? 'muted' : ''}></video>
-                      <div class="absolute bottom-0 left-0 right-0 px-2 py-1 bg-black/50 text-white text-xs truncate">
-                        ${isLocal ? 'You' : 'User ' + userId}
-                      </div>
+                    <video id="vid_${userId}" autoplay playsinline ${isLocal ? 'muted' : ''} class="w-full h-full object-cover bg-black"></video>
+                    <div class="absolute left-2 bottom-2 px-2 py-1 rounded-lg bg-black/60 text-white text-xs font-semibold">
+                      ${isLocal ? 'Siz' : getUserLabel(userId)}
                     </div>
                 `;
-                grid.appendChild(tile);
-                updateGroupGridLayout();
             }
+
             const video = tile.querySelector('video');
-            video.srcObject = stream;
+            if (video && stream) {
+                video.srcObject = stream;
+            }
+
+            const container = getTileContainerFor(userId);
+            if (container) {
+                // Teacher stage wants single element; replace current stage content
+                if (container.id === 'teacherStage' && isTeacher(String(userId))) {
+                    container.innerHTML = '';
+                    container.appendChild(tile);
+                    tile.style.width = '100%';
+                    tile.style.height = '100%';
+                    tile.querySelector('video').style.width='100%';
+                    tile.querySelector('video').style.height='100%';
+                } else {
+                    if (!tile.parentElement || tile.parentElement.id !== container.id) {
+                        container.appendChild(tile);
+                    }
+                    tile.style.height = '220px';
+                }
+            }
+
+            ensureStagePlaceholder();
+        }
+
+        function removeVideoTile(userId) {
+            const tile = document.getElementById(`tile_${userId}`);
+            if (tile) tile.remove();
+            ensureStagePlaceholder();
+        }
+
+        function renderGroupCallLayout() {
+            // Re-assign tiles between teacher stage and students grid based on latest participantInfos.
+            const tStage = document.getElementById('teacherStage');
+            const sGrid = document.getElementById('studentsGrid');
+            if (!tStage || !sGrid) return;
+
+            // Find teacher id (prefer remote teacher; fallback local if teacher)
+            const entries = Array.from(groupCall.participantInfos.entries());
+            let teacherId = entries.find(([id, info]) => info?.role === 'teacher')?.[0] || null;
+            if (!teacherId && currentUser && (String(currentUser.role || '').toLowerCase() === 'teacher')) teacherId = String(currentUser._id);
+
+            // Move teacher tile to stage if exists
+            if (teacherId) {
+                const tTile = document.getElementById(`tile_${teacherId}`);
+                if (tTile) {
+                    tStage.innerHTML = '';
+                    tStage.appendChild(tTile);
+                    tTile.style.width='100%'; tTile.style.height='100%';
+                } else {
+                    ensureStagePlaceholder();
+                }
+            } else {
+                ensureStagePlaceholder();
+            }
+
+            // Ensure non-teacher tiles are in students grid
+            document.querySelectorAll('[id^="tile_"]').forEach(tile => {
+                const uid = tile.id.replace('tile_','');
+                if (teacherId && String(uid) === String(teacherId)) return;
+                if (!sGrid.contains(tile)) sGrid.appendChild(tile);
+                tile.style.height = '220px';
+            });
         }
 
         
@@ -1093,7 +1373,7 @@ function removeVideoTile(userId) {
         async function createPeer(remoteUserId) {
             if (groupCall.peers.has(remoteUserId)) return groupCall.peers.get(remoteUserId);
 
-            const pc = new RTCPeerConnection(ICE_SERVERS);
+            const pc = new RTCPeerConnection(await getRtcConfig());
 
             // Add local tracks
             if (groupCall.localStream) {
@@ -1216,7 +1496,296 @@ function removeVideoTile(userId) {
             socket.emit('groupCallJoin', { groupId: gid, callId });
         }
 
-        function toggleMute() {
+        
+        // ==================== TEACHER CONTROLS (Attendance + Screen+Cam + Recording) ====================
+        let _attendanceTimer = null;
+        let _recorder = null;
+        let _recordingChunks = [];
+        let _isRecording = false;
+        let _compositeCanvas = null;
+        let _compositeStream = null;
+        let _screenStream = null;
+        let _camStream = null;
+
+        function updateTeacherControls() {
+            const isMeTeacher = String(currentUser?.role || '').toLowerCase() === 'teacher';
+            const hasLesson = !!groupCall.lessonId;
+            const btnScreen = document.getElementById('btnScreen');
+            const btnRec = document.getElementById('btnRecord');
+            const btnAtt = document.getElementById('btnAttendance');
+            if (btnScreen) btnScreen.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson));
+            if (btnRec) btnRec.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson));
+            if (btnAtt) btnAtt.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson));
+        }
+
+        function toggleAttendancePanel(show) {
+            const p = document.getElementById('attendancePanel');
+            if (!p) return;
+            const isMeTeacher = String(currentUser?.role || '').toLowerCase() === 'teacher';
+            if (!isMeTeacher) return;
+            if (show === true) p.classList.remove('hidden');
+            else if (show === false) p.classList.add('hidden');
+            else p.classList.toggle('hidden');
+
+            if (!p.classList.contains('hidden')) startAttendanceLoop();
+            else stopAttendanceLoop();
+        }
+
+        function stopAttendanceLoop() {
+            if (_attendanceTimer) clearInterval(_attendanceTimer);
+            _attendanceTimer = null;
+        }
+
+        async function startAttendanceLoop() {
+            stopAttendanceLoop();
+            await refreshAttendance();
+            _attendanceTimer = setInterval(refreshAttendance, 5000);
+        }
+
+        function fmtTime(dt) {
+            if (!dt) return '—';
+            const d = new Date(dt);
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function fmtDur(sec) {
+            sec = Number(sec||0);
+            const m = Math.floor(sec/60);
+            const s = sec%60;
+            return `${m}m ${String(s).padStart(2,'0')}s`;
+        }
+
+        async function refreshAttendance() {
+            try {
+                const hint = document.getElementById('attendanceHint');
+                if (hint) hint.textContent = 'Yangilanmoqda...';
+                if (!groupCall.lessonId) return;
+
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/group-lessons/${groupCall.lessonId}/attendance`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('attendance http ' + res.status);
+                const data = await res.json();
+
+                const joinedBox = document.getElementById('attendanceJoined');
+                const absentBox = document.getElementById('attendanceAbsent');
+                if (joinedBox) joinedBox.innerHTML = '';
+                if (absentBox) absentBox.innerHTML = '';
+
+                (data.joined || []).forEach(r => {
+                    const div = document.createElement('div');
+                    div.className = 'p-2 rounded-xl bg-white/10 border border-white/10 text-white';
+                    div.innerHTML = `
+                      <div class="font-semibold text-sm">${r.fullName || 'Talaba'}</div>
+                      <div class="text-xs text-white/70">Kirdi: ${fmtTime(r.joinedAt)} • Chiqdi: ${fmtTime(r.leftAt)} • Davomiylik: ${fmtDur(r.durationSec)}</div>
+                    `;
+                    joinedBox && joinedBox.appendChild(div);
+                });
+
+                (data.absent || []).forEach(r => {
+                    const div = document.createElement('div');
+                    div.className = 'p-2 rounded-xl bg-white/5 border border-white/10 text-white/90';
+                    div.innerHTML = `<div class="font-semibold text-sm">${r.fullName || 'Talaba'}</div><div class="text-xs text-white/60">Kirmadi</div>`;
+                    absentBox && absentBox.appendChild(div);
+                });
+
+                if (hint) hint.textContent = `Kirdi: ${(data.joined||[]).length} • Kirmadi: ${(data.absent||[]).length}`;
+            } catch (e) {
+                console.warn('attendance refresh failed', e);
+                const hint = document.getElementById('attendanceHint');
+                if (hint) hint.textContent = 'Davomatni olishda xatolik';
+            }
+        }
+
+        async function startScreenWithCam() {
+            try {
+            try {
+                if (!groupCall.active) return;
+                if (String(currentUser?.role || '').toLowerCase() !== 'teacher') return;
+
+                // Get screen
+                _screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }).catch(async () => {
+                    // some browsers block system audio; fallback without audio
+                    return navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+                });
+
+                // Get camera (for overlay only)
+                _camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }).catch(() => null);
+
+                // Get mic audio (more reliable than system audio)
+                const mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }).catch(() => null);
+
+                // Build composite canvas stream: screen + camera PIP
+                const screenVideo = document.createElement('video');
+                screenVideo.srcObject = _screenStream;
+                screenVideo.muted = true;
+                await screenVideo.play();
+
+                let camVideo = null;
+                if (_camStream) {
+                  camVideo = document.createElement('video');
+                  camVideo.srcObject = _camStream;
+                  camVideo.muted = true;
+                  await camVideo.play();
+                }
+_compositeCanvas = document.createElement('canvas');
+                const ctx = _compositeCanvas.getContext('2d');
+
+                const W = 1280, H = 720;
+                _compositeCanvas.width = W;
+                _compositeCanvas.height = H;
+
+                const draw = () => {
+                    try {
+                        ctx.drawImage(screenVideo, 0, 0, W, H);
+                        // PIP camera (top-right)
+                        const pipW = Math.round(W * 0.26);
+                        const pipH = Math.round(pipW * 0.75);
+                        const pad = 16;
+                        const x = W - pipW - pad;
+                        const y = pad;
+                        // background
+                        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                        ctx.fillRect(x-6, y-6, pipW+12, pipH+12);
+                        if (camVideo) ctx.drawImage(camVideo, x, y, pipW, pipH);
+                        // border
+                        if (camVideo) {
+                          ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+                        ctx.lineWidth = 3;
+                                                  ctx.strokeRect(x, y, pipW, pipH);
+                        }
+                    } catch(e) {}
+                    requestAnimationFrame(draw);
+                };
+                draw();
+
+                const canvasStream = _compositeCanvas.captureStream(25);
+                const out = new MediaStream();
+                const vTrack = canvasStream.getVideoTracks()[0];
+                if (vTrack) out.addTrack(vTrack);
+
+                // audio: prefer mic; optionally merge system audio track if available
+                if (mic && mic.getAudioTracks()[0]) out.addTrack(mic.getAudioTracks()[0]);
+                else if (_screenStream.getAudioTracks()[0]) out.addTrack(_screenStream.getAudioTracks()[0]);
+
+                _compositeStream = out;
+
+                // Replace outgoing video track for each peer
+                groupCall.localStream = out;
+                // local preview on teacher stage
+                addVideoTile(currentUser?._id, out, true);
+                renderGroupCallLayout();
+
+                for (const [uid, pc] of groupCall.peers.entries()) {
+                    const senders = pc.getSenders();
+                    const vs = senders.find(s => s.track && s.track.kind === 'video');
+                    if (vs && vTrack) await vs.replaceTrack(vTrack);
+                    const aTrack = out.getAudioTracks()[0];
+                    const as = senders.find(s => s.track && s.track.kind === 'audio');
+                    if (as && aTrack) await as.replaceTrack(aTrack);
+                }
+
+                // If user stops screen sharing, end it
+                const st = _screenStream.getVideoTracks()[0];
+                if (st) st.onended = () => {
+                    try { stopComposite(); } catch(e) {}
+                };
+
+                setGroupCallStatus('Teacher mode: Screen + Cam');
+            } catch (e) {
+                console.error('startScreenWithCam', e);
+                alert('Ekran ulashishda xatolik: ' + (e?.message || e));
+            }
+            } catch (e) {
+                if (e && e.name === 'NotAllowedError') {
+                    alert('Ekran ulashishga ruxsat berilmadi. Brauzer pop-upida Allow/Share ni bosing.');
+                    return;
+                }
+                console.error('startScreenWithCam error:', e);
+                alert('Screen share ishga tushmadi: ' + (e?.message || e));
+            }
+        }
+
+        function stopComposite() {
+            try {
+                _screenStream && _screenStream.getTracks().forEach(t => t.stop());
+                _camStream && _camStream.getTracks().forEach(t => t.stop());
+            } catch(e) {}
+            _screenStream = null; _camStream = null; _compositeCanvas = null; _compositeStream = null;
+        }
+
+        async function toggleRecording() {
+            try {
+                if (String(currentUser?.role || '').toLowerCase() !== 'teacher') return;
+                if (!groupCall.lessonId) return;
+
+                if (_isRecording) {
+                    _recorder.stop();
+                    return;
+                }
+
+                let stream = groupCall.localStream;
+                if (!stream) return alert('Stream topilmadi (avval qo‘ng‘iroqni boshlang)');
+
+                // If teacher hasn't enabled Screen+Cam yet, prompt to capture the screen so the recording matches what students saw
+                if (!_compositeStream) {
+                    const ok = confirm('Recording uchun ekran (screen) ham yozib olinishi kerakmi? OK bosilsa: Screen Share avtomatik yoqiladi.');
+                    if (ok) {
+                        await startScreenWithCam();
+                        stream = _compositeStream || groupCall.localStream;
+                    }
+                }
+_recordingChunks = [];
+                _recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
+                _recorder.ondataavailable = (e) => { if (e.data && e.data.size) _recordingChunks.push(e.data); };
+                _recorder.onstop = async () => {
+                    _isRecording = false;
+                    updateRecordButton();
+                    const blob = new Blob(_recordingChunks, { type: 'video/webm' });
+                    await uploadRecording(blob);
+                };
+                _recorder.start(2000); // chunk every 2s (safer on memory)
+                _isRecording = true;
+                updateRecordButton();
+            } catch (e) {
+                console.error('recording', e);
+                alert('Recording xatolik: ' + (e?.message || e));
+            }
+        }
+
+        function updateRecordButton() {
+            const btn = document.getElementById('btnRecord');
+            if (!btn) return;
+            if (_isRecording) {
+                btn.classList.remove('bg-white/10');
+                btn.classList.add('bg-red-600');
+            } else {
+                btn.classList.add('bg-white/10');
+                btn.classList.remove('bg-red-600');
+            }
+        }
+
+        async function uploadRecording(blob) {
+            try {
+                const token = localStorage.getItem('token');
+                const fd = new FormData();
+                fd.append('recording', blob, `lesson_${groupCall.lessonId}.webm`);
+                const res = await fetch(`/api/group-lessons/${groupCall.lessonId}/recording`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: fd
+                });
+                if (!res.ok) throw new Error('upload http ' + res.status);
+                const data = await res.json();
+                alert('✅ Dars yozuvi saqlandi');
+                console.log('recording uploaded', data);
+            } catch (e) {
+                console.error('uploadRecording', e);
+                alert('❌ Yozuvni yuklashda xatolik: ' + (e?.message || e));
+            }
+        }
+function toggleMute() {
             if (!groupCall.localStream) return;
             groupCall.muted = !groupCall.muted;
             groupCall.localStream.getAudioTracks().forEach(t => t.enabled = !groupCall.muted);
@@ -1296,6 +1865,10 @@ function removeVideoTile(userId) {
                 if (String(data.groupId) !== String(groupId)) return;
                 groupCall.active = true;
                 groupCall.callId = data.callId;
+                groupCall.lessonId = data.lessonId || null;
+                if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
+                updateTeacherControls();
+                renderGroupCallLayout();
                 groupCall.starterId = currentUser?._id; // we started
                 setGroupCallStatus('Connected (starter)');
 
@@ -1312,6 +1885,10 @@ function removeVideoTile(userId) {
                 if (String(data.groupId) !== String(groupId)) return;
                 groupCall.active = true;
                 groupCall.callId = data.callId;
+                groupCall.lessonId = data.lessonId || null;
+                if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
+                updateTeacherControls();
+                renderGroupCallLayout();
                 groupCall.starterId = null; // unknown in this event
                 setGroupCallStatus('Connected');
 
@@ -1327,6 +1904,8 @@ function removeVideoTile(userId) {
                 if (!groupCall.active) return;
                 if (String(data.groupId) !== String(groupCall.groupId)) return;
                 if (String(data.callId) !== String(groupCall.callId)) return;
+                if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
+                renderGroupCallLayout();
 
                 const uid = String(data.userId);
                 if (String(uid) === String(currentUser?._id)) return;
@@ -1398,15 +1977,57 @@ function removeVideoTile(userId) {
         <button id="btnCam" onclick="toggleCamera()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">
           <i class="fas fa-video"></i>
         </button>
+        <button id="btnScreen" onclick="startScreenWithCam()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Ekran + kamera (o‘qituvchi)">
+          <i class="fas fa-desktop"></i>
+        </button>
+        <button id="btnRecord" onclick="toggleRecording()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Yozib olish (o‘qituvchi)">
+          <i class="fas fa-circle"></i>
+        </button>
+        <button id="btnAttendance" onclick="toggleAttendancePanel(true)" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Davomat (o‘qituvchi)">
+          <i class="fas fa-clipboard-list"></i>
+        </button>
         <button onclick="leaveOrEndGroupCall()" class="px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">
           <i class="fas fa-phone-slash"></i> <span class="hidden sm:inline">End</span>
         </button>
       </div>
     </div>
 
-    <!-- Videos -->
-    <div class="flex-1 overflow-y-auto p-4">
-      <div id="groupVideosGrid" class="grid gap-3" style="grid-template-columns: repeat(1, minmax(0, 1fr));"></div>
+    <!-- Videos (Teacher stage + Students grid) -->
+    <div class="flex-1 overflow-y-auto p-4 relative">
+      <div class="w-full rounded-2xl overflow-hidden border border-white/10 bg-black/30">
+        <div class="p-2 text-white/80 text-xs flex items-center justify-between">
+          <div><i class="fas fa-chalkboard-teacher"></i> O‘qituvchi</div>
+          <div id="teacherStageMeta" class="opacity-70"></div>
+        </div>
+        <div id="teacherStage" class="w-full" style="aspect-ratio: 16/9; position:relative;"></div>
+      </div>
+
+      <div class="mt-3">
+        <div class="p-1 text-white/80 text-xs flex items-center justify-between">
+          <div><i class="fas fa-users"></i> Talabalar</div>
+          <div id="studentsMeta" class="opacity-70"></div>
+        </div>
+        <div id="studentsGrid" class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr));"></div>
+      </div>
+
+      <!-- Attendance (teacher only) -->
+      <div id="attendancePanel" class="hidden absolute top-2 right-2 w-[360px] max-w-[92vw] h-[calc(100%-16px)] bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden">
+        <div class="p-3 flex items-center justify-between border-b border-white/10">
+          <div class="text-white font-semibold text-sm"><i class="fas fa-clipboard-list"></i> Davomat</div>
+          <button onclick="toggleAttendancePanel(false)" class="px-2 py-1 rounded-lg bg-white/10 text-white hover:bg-white/20"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="p-3 text-white/80 text-xs" id="attendanceHint">Yuklanmoqda...</div>
+        <div class="p-3 space-y-2 overflow-y-auto" style="max-height: calc(100% - 92px);">
+          <div>
+            <div class="text-white/90 font-semibold text-xs mb-2">KIRGANLAR</div>
+            <div id="attendanceJoined" class="space-y-2"></div>
+          </div>
+          <div class="pt-2 border-t border-white/10">
+            <div class="text-white/90 font-semibold text-xs mb-2">KIRMAGANLAR</div>
+            <div id="attendanceAbsent" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Incoming call prompt -->
