@@ -149,56 +149,6 @@
       color:#fff; padding:14px 16px; border-bottom:none;
     }
     .modal .body{padding:16px}
-  
-    /* mobile drawer */
-    .mobileOnly{display:none}
-    .desktopOnly{display:flex}
-    .iconBtn{
-      width:44px;height:44px;border-radius:14px;
-      display:inline-flex;align-items:center;justify-content:center;
-      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
-      background: color-mix(in oklab, var(--card) 88%, transparent);
-      backdrop-filter: blur(10px);
-      transition: transform .08s ease, filter .12s ease;
-      box-shadow: 0 6px 18px rgba(2,6,23,.08);
-      user-select:none;
-      font-weight:900;
-    }
-    .iconBtn:hover{filter:brightness(1.03)}
-    .iconBtn:active{transform:translateY(1px)}
-    .drawerBack{
-      position:fixed; inset:0; z-index:80;
-      background: rgba(2,6,23,.55);
-      display:none;
-    }
-    .drawer{
-      position:absolute; right:0; top:0; height:100%; width:min(360px, 92vw);
-      background: color-mix(in oklab, var(--card) 92%, transparent);
-      border-left:1px solid color-mix(in oklab, var(--border) 85%, transparent);
-      backdrop-filter: blur(14px);
-      padding:14px;
-      transform: translateX(12px);
-      opacity:0;
-      transition: transform .18s ease, opacity .18s ease;
-      display:flex; flex-direction:column; gap:10px;
-    }
-    .drawerBack.open{display:block}
-    .drawerBack.open .drawer{transform:translateX(0); opacity:1}
-    .drawerHead{display:flex; align-items:center; justify-content:space-between; gap:10px}
-    .drawerTitle{font-weight:950}
-    .drawerLinks{display:flex; flex-direction:column; gap:10px; margin-top:4px}
-    .drawerLinks .btn{width:100%; justify-content:flex-start}
-    .drawerHr{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:6px 0}
-    @media (max-width:720px){
-      .desktopOnly{display:none}
-      .mobileOnly{display:inline-flex}
-      header{padding:12px 12px}
-      .nav{flex-wrap:nowrap}
-    }
-    @media (prefers-reduced-motion: reduce){
-      *{scroll-behavior:auto !important}
-      .drawer,.btn,.courseItem,.item{transition:none !important}
-    }
   </style>
   <script>
     (function(){
@@ -223,7 +173,7 @@
         </div>
       </div>
 
-      <div class="row desktopOnly">
+      <div class="row">
         <button class="btn ghost small" id="themeBtn">🌓 Tema</button>
         <a class="btn ghost small" href="/courses.html">Kurslar</a>
         <a class="btn ghost small" href="/tests.html">Testlar</a>
@@ -231,32 +181,8 @@
         <a class="btn ghost small" href="/profile.html">Profile</a>
         <button class="btn danger small" id="logoutBtn">Chiqish</button>
       </div>
-      <button class="iconBtn mobileOnly" id="menuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false">☰</button>
     </div>
   </header>
-
-  <div id="drawerBack" class="drawerBack" role="dialog" aria-modal="true" aria-label="Menu">
-    <div class="drawer" role="document">
-      <div class="drawerHead">
-        <div>
-          <div class="drawerTitle">Menyu</div>
-          <div class="tiny" id="drawerMe">—</div>
-        </div>
-        <button class="iconBtn" id="drawerClose" aria-label="Close">✕</button>
-      </div>
-      <div class="drawerHr"></div>
-      <div class="drawerLinks">
-        <button class="btn ghost" id="themeBtn2">🌓 Tema</button>
-        <a class="btn ghost" href="/courses.html">📚 Kurslar</a>
-        <a class="btn ghost" href="/tests.html">🧪 Testlar</a>
-        <a class="btn ghost" href="/certificate.html">🏅 Sertifikat</a>
-        <a class="btn ghost" href="/profile.html">👤 Profil</a>
-        <button class="btn danger" id="logoutBtn2">🚪 Chiqish</button>
-      </div>
-      <div class="drawerHr"></div>
-      <div class="tiny">Tip: menyu tashqarisini bosib yopasiz.</div>
-    </div>
-  </div>
 
   <div class="container">
     <div id="errBox" class="err"></div>

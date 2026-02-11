@@ -54,8 +54,11 @@ function fmt(d){
 }
 function fmtDur(sec){
   sec = Number(sec||0);
-  const m=Math.floor(sec/60), s=sec%60;
-  return `${m}m ${String(s).padStart(2,'0')}s`;
+  const h=Math.floor(sec/3600);
+  const m=Math.floor((sec%3600)/60);
+  const s=Math.floor(sec%60);
+  return (h?`${h}h `:'') + `${m}m ${String(s).padStart(2,'0')}s`;
+}m ${String(s).padStart(2,'0')}s`;
 }
 
 async function showAttendance(lessonId){
@@ -71,7 +74,7 @@ async function showAttendance(lessonId){
     });
     if(!res.ok){
       const t = await res.text().catch(()=> '');
-      body.innerHTML = `<div class="text-red-200">Davomatni ko‘rsatib bo‘lmadi (HTTP ${res.status}). Bu funksiya faqat o‘qituvchi (host) uchun.</div>`;
+      body.innerHTML = `<div class="text-red-200">Davomatni ko‘rsatib bo‘lmadi (HTTP ${res.status}). Agar sizda ruxsat bo‘lmasa, admin/teacher ko‘ra oladi.</div>`;
       return;
     }
     const data = await res.json();
@@ -146,7 +149,7 @@ async function load(){
           <div class="text-xs text-white/70 mt-1">
             Teacher: <span class="font-semibold">${l.host?.fullName || 'Teacher'}</span> • Boshlanish: ${fmt(l.startedAt)} • Tugash: ${fmt(l.endedAt)}
           </div>
-          <div class="text-xs text-white/60 mt-1">Live: ${fmtDur(l.liveDurationSec || 0)} • Video: ${fmtDur(l.recordingDurationSec || 0)} • Rejim: ${l.mode || 'camera'} • Status: ${l.status}</div>
+          <div class="text-xs text-white/60 mt-1">Live davomiyligi: ${fmtDur(l.liveDurationSec || (l.startedAt&&l.endedAt?Math.max(0,Math.floor((new Date(l.endedAt)-new Date(l.startedAt))/1000)):0))} • Yozuv davomiyligi: ${fmtDur(l.recordingDurationSec || 0)} • Rejim: ${l.mode || 'camera'} • Status: ${l.status}</div>
         </div>
         <div class="text-sm flex gap-2 items-center">
           ${rec}

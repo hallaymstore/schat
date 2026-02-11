@@ -138,26 +138,10 @@
 
     /* Magnetic-ish button */
     .magnet{ transition: transform .15s ease; }
-
-    /* Mobile safety */
-    *,*::before,*::after{ box-sizing: border-box; }
-    html, body{ width:100%; max-width:100%; overflow-x:hidden; }
-    img, video, canvas, svg{ max-width:100%; height:auto; }
-    .safe-wrap{ overflow-wrap:anywhere; word-break:break-word; }
-    @media (prefers-reduced-motion: reduce){
-      *, *::before, *::after{
-        animation-duration: 0.001ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.001ms !important;
-        scroll-behavior: auto !important;
-      }
-      .magnet{ transform:none !important; }
-    }
-
   </style>
 </head>
 
-<body id="top" class="h-full text-slate-900 dark:text-slate-100">
+<body class="h-full text-slate-900 dark:text-slate-100">
   <div id="progress"></div>
   <div class="bg-orbs"></div>
   <div class="bg-grid"></div>
@@ -185,10 +169,6 @@
         </nav>
 
         <div class="flex items-center gap-2">
-          <button id="mobileMenuBtn" class="md:hidden glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring" aria-label="Menyu" aria-expanded="false" aria-controls="mobileMenu">
-            <i class="fa-solid fa-bars"></i>
-          </button>
-
           <button id="themeToggle" class="btn-ghost glass rounded-xl px-3 py-2 text-sm font-semibold muted glow-ring">
             <i id="themeIcon" class="fa-solid fa-moon"></i>
             <span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
@@ -206,66 +186,6 @@
       </div>
     </div>
   </header>
-
-  <!-- Mobile menu (drawer) -->
-  <div id="mobileMenuOverlay" class="fixed inset-0 z-[60] hidden">
-    <div class="absolute inset-0 bg-slate-900/35 dark:bg-black/45 backdrop-blur-[2px]"></div>
-  </div>
-
-  <aside id="mobileMenu" class="fixed top-0 right-0 z-[70] h-[100dvh] w-[min(360px,92vw)] translate-x-full transition-transform duration-300 ease-out">
-    <div class="h-full glass border-l border-white/20 dark:border-slate-700/30 p-4">
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white shadow-glass">
-            <i class="fa-solid fa-graduation-cap"></i>
-          </div>
-          <div class="leading-tight">
-            <div class="font-extrabold tracking-tight">SChat</div>
-            <div class="text-xs muted">Menyu</div>
-          </div>
-        </div>
-
-        <button id="mobileMenuClose" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring" aria-label="Yopish">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <div class="mt-4 grid gap-2">
-        <a href="#imkoniyatlar" class="glass rounded-2xl px-4 py-3 btn-ghost font-bold muted safe-wrap"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Imkoniyatlar</a>
-        <a href="#qanday-ishlaydi" class="glass rounded-2xl px-4 py-3 btn-ghost font-bold muted safe-wrap"><i class="fa-solid fa-diagram-project mr-2"></i>Qanday ishlaydi</a>
-        <a href="#xizmatlar" class="glass rounded-2xl px-4 py-3 btn-ghost font-bold muted safe-wrap"><i class="fa-solid fa-store mr-2"></i>Xizmatlar</a>
-        <a href="#signal" class="glass rounded-2xl px-4 py-3 btn-ghost font-bold muted safe-wrap"><i class="fa-solid fa-bell mr-2"></i>Campus Signal</a>
-        <a href="#faq" class="glass rounded-2xl px-4 py-3 btn-ghost font-bold muted safe-wrap"><i class="fa-solid fa-circle-question mr-2"></i>FAQ</a>
-      </div>
-
-      <div class="mt-4 grid gap-2">
-        <a href="/channels.html" class="glass rounded-2xl px-4 py-3 btn-ghost font-extrabold safe-wrap"><i class="fa-solid fa-bullhorn mr-2"></i>Kanallar</a>
-        <a href="/groups.html" class="glass rounded-2xl px-4 py-3 btn-ghost font-extrabold safe-wrap"><i class="fa-solid fa-people-group mr-2"></i>Guruhlar</a>
-        <a href="/messages.html" class="glass rounded-2xl px-4 py-3 btn-ghost font-extrabold safe-wrap"><i class="fa-regular fa-comments mr-2"></i>Xabarlar</a>
-      </div>
-
-      <div class="mt-5 grid gap-2">
-        <button id="themeToggle2" class="btn-ghost glass rounded-2xl px-4 py-3 text-sm font-extrabold muted glow-ring text-left safe-wrap">
-          <i id="themeIcon2" class="fa-solid fa-moon"></i>
-          <span class="ml-2" id="themeLabel2">Tungi</span>
-        </button>
-
-        <a href="/login.html" class="glass rounded-2xl px-4 py-3 text-sm font-extrabold btn-ghost glow-ring safe-wrap">
-          <i class="fa-solid fa-right-to-bracket"></i>
-          <span class="ml-2">Kirish</span>
-        </a>
-
-        <a href="/register.html" class="btn-primary rounded-2xl px-4 py-3 text-sm font-extrabold text-white glow-ring text-center safe-wrap">
-          Ro‘yxatdan o‘tish
-        </a>
-      </div>
-
-      <div class="mt-5 text-xs muted2 safe-wrap">
-        Maslahat: menyu ochiq paytda <span class="font-semibold muted">ESC</span> bosib ham yopishingiz mumkin.
-      </div>
-    </div>
-  </aside>
-
 
   <!-- Hero -->
   <section class="mx-auto max-w-7xl px-4 pt-10 pb-10">
@@ -297,7 +217,7 @@
           </a>
         </div>
 
-        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="mt-8 grid grid-cols-3 gap-3">
           <div class="glass rounded-2xl p-4 g-border">
             <div class="text-xs muted font-semibold">Tezlik</div>
             <div class="mt-1 text-2xl font-black"><span class="count" data-to="1">0</span>x</div>
@@ -854,28 +774,16 @@
     (function(){
       const key='theme';
       const html=document.documentElement;
-
-      const btn1=document.getElementById('themeToggle');
-      const icon1=document.getElementById('themeIcon');
-      const label1=document.getElementById('themeLabel');
-
-      const btn2=document.getElementById('themeToggle2');
-      const icon2=document.getElementById('themeIcon2');
-      const label2=document.getElementById('themeLabel2');
-
-      function syncUI(mode){
-        const isDark = mode==='dark';
-        if(icon1){ icon1.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon'; }
-        if(label1){ label1.textContent = isDark ? 'Kunduzgi' : 'Tungi'; }
-        if(icon2){ icon2.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon'; }
-        if(label2){ label2.textContent = isDark ? 'Kunduzgi' : 'Tungi'; }
-      }
+      const btn=document.getElementById('themeToggle');
+      const icon=document.getElementById('themeIcon');
+      const label=document.getElementById('themeLabel');
 
       function apply(mode){
         if(mode==='dark'){ html.classList.add('dark'); }
         else { html.classList.remove('dark'); }
         localStorage.setItem(key, mode);
-        syncUI(mode);
+        if(icon){ icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon'; }
+        if(label){ label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi'; }
       }
 
       const saved = localStorage.getItem(key);
@@ -885,13 +793,12 @@
         apply(prefersDark ? 'dark' : 'light');
       }
 
-      function toggle(){
-        const isDark = html.classList.contains('dark');
-        apply(isDark ? 'light' : 'dark');
+      if(btn){
+        btn.addEventListener('click', ()=>{
+          const isDark = html.classList.contains('dark');
+          apply(isDark ? 'light' : 'dark');
+        });
       }
-
-      if(btn1){ btn1.addEventListener('click', toggle); }
-      if(btn2){ btn2.addEventListener('click', toggle); }
     })();
 
     // Year
@@ -966,50 +873,6 @@
         btn.addEventListener('mouseleave', ()=> btn.style.transform = 'translate(0,0)');
       });
     })();
-
-
-    // Mobile menu drawer
-    (function(){
-      const btn = document.getElementById('mobileMenuBtn');
-      const panel = document.getElementById('mobileMenu');
-      const overlay = document.getElementById('mobileMenuOverlay');
-      const closeBtn = document.getElementById('mobileMenuClose');
-
-      if(!btn || !panel || !overlay || !closeBtn) return;
-
-      function open(){
-        overlay.classList.remove('hidden');
-        panel.classList.remove('translate-x-full');
-        btn.setAttribute('aria-expanded','true');
-        document.body.style.overflow='hidden';
-      }
-      function close(){
-        panel.classList.add('translate-x-full');
-        btn.setAttribute('aria-expanded','false');
-        document.body.style.overflow='';
-        // wait for transition end
-        window.setTimeout(()=> overlay.classList.add('hidden'), 220);
-      }
-
-      btn.addEventListener('click', ()=>{
-        const expanded = btn.getAttribute('aria-expanded') === 'true';
-        expanded ? close() : open();
-      });
-
-      closeBtn.addEventListener('click', close);
-      overlay.addEventListener('click', close);
-
-      document.addEventListener('keydown', (e)=>{
-        if(e.key === 'Escape' && btn.getAttribute('aria-expanded') === 'true') close();
-      });
-
-      // Close when a link inside menu is clicked (better UX on mobile)
-      panel.addEventListener('click', (e)=>{
-        const a = e.target.closest('a');
-        if(a) close();
-      });
-    })();
-
   </script>
 </body>
 </html>

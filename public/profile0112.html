@@ -166,46 +166,6 @@
       z-index: 60;
       max-width: 420px;
     }
-  
-    /* profile mobile drawer */
-    .pMobileOnly{display:none}
-    .pDesktopOnly{display:flex}
-    .pIconBtn{
-      width:44px;height:44px;border-radius:16px;
-      display:inline-flex;align-items:center;justify-content:center;
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-brd);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      box-shadow: 0 18px 40px var(--shadow);
-      transition: transform .08s ease, filter .12s ease;
-    }
-    .pIconBtn:active{transform:translateY(1px)}
-    .pdrawerBack{position:fixed; inset:0; z-index:80; background:rgba(2,6,23,.55); display:none}
-    .pdrawerBack.open{display:block}
-    .pdrawer{
-      position:absolute; right:12px; top:12px;
-      width:min(380px, 92vw);
-      border-radius:22px;
-      padding:12px;
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-brd);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      box-shadow: 0 22px 70px var(--shadow);
-      transform: translateY(-6px);
-      opacity:0;
-      transition: transform .18s ease, opacity .18s ease;
-    }
-    .pdrawerBack.open .pdrawer{transform: translateY(0); opacity:1}
-    .pdrawer a, .pdrawer button{width:100%}
-    @media (max-width:640px){
-      .pDesktopOnly{display:none}
-      .pMobileOnly{display:inline-flex}
-    }
-    @media (prefers-reduced-motion: reduce){
-      .pdrawer, .pIconBtn { transition:none !important; }
-    }
   </style>
 </head>
 
@@ -236,7 +196,7 @@
         </div>
       </a>
 
-      <div class="flex items-center gap-2 pDesktopOnly">
+      <div class="flex items-center gap-2">
         <button id="themeBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
           <i class="fa-solid fa-moon mr-2"></i>Rejim
         </button>
@@ -250,41 +210,8 @@
           <i class="fa-solid fa-right-from-bracket mr-2"></i>Chiqish
         </button>
       </div>
-
-      <div class="flex items-center gap-2 pMobileOnly">
-        <button id="pMenuBtn" class="pIconBtn glow-ring" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false">
-          <i class="fa-solid fa-bars"></i>
-        </button>
-      </div>
     </div>
   </header>
-
-  <div id="pDrawerBack" class="pdrawerBack" role="dialog" aria-modal="true" aria-label="Menu">
-    <div class="pdrawer">
-      <div class="flex items-center justify-between gap-2">
-        <div class="font-black">Menyu</div>
-        <button id="pDrawerClose" class="pIconBtn glow-ring" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="mt-3 grid gap-2">
-        <button id="pThemeBtn2" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
-          <i class="fa-solid fa-moon mr-2"></i>Tema
-        </button>
-        <a href="/channels.html" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
-          <i class="fa-solid fa-hashtag mr-2"></i>Kanallar
-        </a>
-        <a href="/groups.html" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
-          <i class="fa-solid fa-users mr-2"></i>Guruhlar
-        </a>
-        <a href="/index.html" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
-          <i class="fa-solid fa-house mr-2"></i>Home
-        </a>
-        <button id="pLogoutBtn2" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
-          <i class="fa-solid fa-right-from-bracket mr-2"></i>Chiqish
-        </button>
-      </div>
-      <div class="text-xs muted2 mt-3">ESC yoki tashqarisini bosib yopasiz.</div>
-    </div>
-  </div>
 
   <main class="px-4 md:px-8 pb-16">
     <div class="max-w-6xl mx-auto mt-6 grid lg:grid-cols-12 gap-6">
@@ -349,7 +276,7 @@
               <div class="text-lg font-black">Asosiy robotcha</div>
               <div id="robotSub" class="text-xs muted2 mt-1">Robotcha turi va animatsiyalari profilga bog‘liq bo‘ladi.</div>
             </div>
-            <div class="flex items-center gap-2 pDesktopOnly">
+            <div class="flex items-center gap-2">
               <button id="playBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring hidden">
                 <i class="fa-solid fa-gamepad mr-2"></i>O‘ynash
               </button>
@@ -389,7 +316,7 @@
               <div class="text-lg font-black">Robotlar kolleksiyasi</div>
               <div class="text-xs muted2 mt-1">Asosiy robotchani tanlang yoki yangi robot sotib oling.</div>
             </div>
-            <div class="flex items-center gap-2 pDesktopOnly">
+            <div class="flex items-center gap-2">
               <button id="openShopBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-primary glow-ring text-white hidden">
                 <i class="fa-solid fa-bag-shopping mr-2"></i>Robot do‘koni
               </button>
@@ -432,24 +359,7 @@
     setTheme(root.classList.contains('dark') ? 'light' : 'dark');
   });
 
-  
-  // ===== Mobile drawer (profile) =====
-  const pBack = document.getElementById('pDrawerBack');
-  const pBtn = document.getElementById('pMenuBtn');
-  const pClose = document.getElementById('pDrawerClose');
-  function pOpenDrawer(){ pBack.classList.add('open'); pBtn && pBtn.setAttribute('aria-expanded','true'); }
-  function pCloseDrawer(){ pBack.classList.remove('open'); pBtn && pBtn.setAttribute('aria-expanded','false'); }
-  if(pBtn) pBtn.addEventListener('click', pOpenDrawer);
-  if(pClose) pClose.addEventListener('click', pCloseDrawer);
-  if(pBack) pBack.addEventListener('click', (e)=>{ if(e.target===pBack) pCloseDrawer(); });
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') pCloseDrawer(); });
-
-  const pTheme2 = document.getElementById('pThemeBtn2');
-  if(pTheme2) pTheme2.addEventListener('click', ()=>{ document.getElementById('themeBtn').click(); });
-  const pLogout2 = document.getElementById('pLogoutBtn2');
-  if(pLogout2) pLogout2.addEventListener('click', ()=>{ document.getElementById('logoutBtn').click(); });
-
-// ===== Auth helpers =====
+  // ===== Auth helpers =====
   function token(){ return localStorage.getItem('token') || ''; }
   function authHeaders(json=true){
     const t = token();

@@ -14,115 +14,9 @@
     .focus-ring:focus{outline:none;box-shadow:0 0 0 3px rgba(102,126,234,.35)}
     .line-clamp-6{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
   </style>
-<style id="mobileSafe">
-  *{box-sizing:border-box}
-  html,body{width:100%;overflow-x:hidden}
-  img,video,canvas,svg{max-width:100%;height:auto}
-  a,button,span,p,h1,h2,h3,h4,h5,h6,div{overflow-wrap:anywhere;word-break:break-word}
-  .container{max-width:100% !important}
-  button, a{ -webkit-tap-highlight-color: transparent; }
-  @media (max-width: 640px){
-    .container{padding-left:12px!important;padding-right:12px!important}
-    main.container{padding-top:14px!important;padding-bottom:18px!important}
-    h1{font-size:1.25rem!important;line-height:1.25!important}
-    .text-3xl{font-size:1.65rem!important;line-height:1.2!important}
-    .text-2xl{font-size:1.35rem!important;line-height:1.25!important}
-    .text-xl{font-size:1.15rem!important}
-    .h-16{height:auto!important;min-height:64px}
-    nav .space-x-4, nav .space-x-3{gap:.25rem!important}
-    nav .space-x-4>*, nav .space-x-3>*{margin-left:0!important}
-    #livePlayerWrap video{max-height:45vh!important}
-    .message-bubble{max-width:88%!important}
-    /* Side panels as drawers */
-    #infoPanel, #userInfoSidebar{
-      position:fixed !important;
-      top:64px; right:0; bottom:0;
-      width:min(92vw, 380px) !important;
-      z-index:60;
-      transform:translateX(105%);
-      transition:transform .25s ease;
-      display:block !important;
-    }
-    #infoPanel.open, #userInfoSidebar.open{ transform:translateX(0); }
-    #drawerOverlay{ display:none; }
-    #drawerOverlay.show{
-      display:block;
-      position:fixed;
-      inset:0;
-      z-index:55;
-      background:rgba(0,0,0,.45);
-      backdrop-filter: blur(4px);
-    }
-  }
-</style>
-<script id="mobileDrawerScript">
-(function(){
-  function qs(id){ return document.getElementById(id); }
-  function closePanel(){
-    const panel = qs('infoPanel') || qs('userInfoSidebar');
-    const ov = qs('drawerOverlay');
-    if(panel) panel.classList.remove('open');
-    if(ov) ov.classList.remove('show');
-    document.body.style.overflow = '';
-  }
-  function openPanel(){
-    const panel = qs('infoPanel') || qs('userInfoSidebar');
-    const ov = qs('drawerOverlay');
-    if(panel) panel.classList.add('open');
-    if(ov) ov.classList.add('show');
-    document.body.style.overflow = 'hidden';
-  }
-  window.__drawer = {openPanel, closePanel};
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePanel(); });
-  document.addEventListener('click', (e)=>{
-    const ov = qs('drawerOverlay');
-    if(ov && e.target === ov) closePanel();
-  });
-})();
-</script>
 </head>
 
 <body class="bg-gray-50 min-h-screen">
-<!-- Mobile Drawer -->
-<div id="mobileDrawerWrap" class="fixed inset-0 z-[70] hidden md:hidden" aria-hidden="true">
-  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeMobileMenu()"></div>
-  <aside id="mobileDrawer" class="absolute right-0 top-0 h-full w-[min(92vw,360px)] bg-white/10 border-l border-white/20 backdrop-blur-2xl p-4 overflow-y-auto">
-    <div class="flex items-center justify-between">
-      <div class="font-extrabold tracking-tight text-white">Menu</div>
-      <button class="p-2 rounded-xl hover:bg-white/10" aria-label="Close" onclick="closeMobileMenu()"><i class="fas fa-xmark text-white"></i></button>
-    </div>
-    <div class="mt-4 grid gap-2">
-      <a href="/channels.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-arrow-left w-5 text-center"></i><span>Back to Channels</span></a>
-<a href="/search.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-search w-5 text-center"></i><span>Search</span></a>
-<a href="/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-user w-5 text-center"></i><span>Profile</span></a>
-<button id="mLogout" onclick="document.getElementById('logoutBtn')?.click(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-right-from-bracket w-5 text-center"></i><span>Logout</span></button>
-    </div>
-  </aside>
-</div>
-
-<script>
-  function toggleMobileMenu(){
-    const w=document.getElementById('mobileDrawerWrap');
-    if(!w) return;
-    if(w.classList.contains('hidden')){
-      w.classList.remove('hidden');
-      document.body.style.overflow='hidden';
-    } else {
-      w.classList.add('hidden');
-      document.body.style.overflow='';
-    }
-  }
-  function closeMobileMenu(){
-    const w=document.getElementById('mobileDrawerWrap');
-    if(!w) return;
-    w.classList.add('hidden');
-    document.body.style.overflow='';
-  }
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMobileMenu(); });
-</script>
-
-<div id="drawerOverlay" aria-hidden="true"></div>
-
   <!-- Navigation -->
   <nav class="gradient-bg text-white h-16">
     <div class="container mx-auto px-4 h-full flex items-center justify-between">
@@ -131,7 +25,6 @@
         <span class="font-semibold">Back to Channels</span>
       </a>
       <div class="flex items-center space-x-3">
-        <button id="menuBtn" class="p-2 hover:bg-white/10 rounded-full md:hidden" aria-label="Menu" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
         <a href="/search.html" class="p-2 hover:bg-white/10 rounded-full" title="Search"><i class="fas fa-search"></i></a>
         <a href="/profile.html" class="p-2 hover:bg-white/10 rounded-full" title="Profile"><i class="fas fa-user"></i></a>
         <button id="logoutBtn" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-semibold">Logout</button>
