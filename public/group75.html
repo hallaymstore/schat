@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
+<script>const API_BASE='';</script>
     <style>
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -244,6 +245,7 @@
     document.body.style.overflow = 'hidden';
   }
   window.__drawer = {openPanel, closePanel};
+window.groupCall = groupCall;
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePanel(); });
   document.addEventListener('click', (e)=>{
     const ov = qs('drawerOverlay');
@@ -580,7 +582,7 @@
             container.innerHTML = members.map(member => `
                 <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
                     <div class="flex items-center space-x-3">
-                        <img src="${member.avatar||""}" class="w-10 h-10 rounded-full member-avatar" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,&lt;svg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; width=&#x27;80&#x27; height=&#x27;80&#x27;&gt;&lt;rect width=&#x27;100%&#x27; height=&#x27;100%&#x27; fill=&#x27;#ddd&#x27;/&gt;&lt;circle cx=&#x27;40&#x27; cy=&#x27;30&#x27; r=&#x27;16&#x27; fill=&#x27;#bbb&#x27;/&gt;&lt;rect x=&#x27;18&#x27; y=&#x27;52&#x27; width=&#x27;44&#x27; height=&#x27;20&#x27; rx=&#x27;10&#x27; fill=&#x27;#bbb&#x27;/&gt;&lt;/svg&gt;';">
+                        <img src="${member.avatar}" class="w-10 h-10 rounded-full member-avatar">
                         <div>
                             <h4 class="font-medium text-gray-800">${member.nickname}</h4>
                             <p class="text-sm text-gray-500">@${member.username}</p>
@@ -621,12 +623,12 @@
                         <i class="fas fa-phone mr-2"></i> Voice Call
                     </button>
 
-                    <button onclick="goToGroupLessons()" 
+                    
+                    <a href="/group-lessons.html?groupId=${group._id}" 
                             class="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition mr-2">
-                        <i class="fas fa-book-open mr-2"></i> O'tilgan darslar
-                    </button>
-
-                    <button onclick="editGroup()" 
+                        <i class="fas fa-book mr-2"></i> O‘tilgan darslar
+                    </a>
+<button onclick="editGroup()" 
                             class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition mr-2">
                         <i class="fas fa-edit mr-2"></i> Edit
                     </button>
@@ -646,43 +648,20 @@
                         <i class="fas fa-phone mr-2"></i> Voice Call
                     </button>
 
-                    <button onclick="goToGroupLessons()" 
+                    
+                    <a href="/group-lessons.html?groupId=${group._id}" 
                             class="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition mr-2">
-                        <i class="fas fa-book-open mr-2"></i> O'tilgan darslar
-                    </button>
-
-                    <button onclick="leaveGroup()" 
+                        <i class="fas fa-book mr-2"></i> O‘tilgan darslar
+                    </a>
+<button onclick="leaveGroup()" 
                             class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
                         <i class="fas fa-sign-out-alt mr-2"></i> Leave
                     </button>
                 `;
             }
         }
-
-        // Navigate to group lessons / recordings page
-        function goToGroupLessons() {
-            const gid = groupId || new URLSearchParams(location.search).get('id');
-            if (!gid) return alert('Group ID topilmadi');
-            // Support both variants used across pages
-            const ret = encodeURIComponent(window.location.pathname + window.location.search);
-            window.location.href = `/group-lessons.html?groupId=${encodeURIComponent(gid)}&return=${ret}`;
-        }
         
-        
-        async function updateLessonMeta(lessonId, meta){
-            try{
-                if(!lessonId) return;
-                const token = localStorage.getItem('token') || '';
-                const res = await fetch(`/api/group-lessons/${encodeURIComponent(lessonId)}/meta`, {
-                    method:'PUT',
-                    headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-                    body: JSON.stringify(meta||{})
-                });
-                return res.ok;
-            }catch(e){ console.warn('updateLessonMeta failed', e); }
-        }
-
-// Setup Socket.IO
+        // Setup Socket.IO
         function setupSocket() {
             const token = localStorage.getItem('token');
             socket = io();
@@ -725,14 +704,7 @@
             }
         }
         
-        
-        function openUserProfile(userId){
-            if (!userId) return;
-            // profile.html already exists in the project (and respects token)
-            window.location.href = `/profile.html?id=${encodeURIComponent(userId)}`;
-        }
-    
-// Render group messages
+        // Render group messages
         function renderGroupMessages(messages) {
             const container = document.getElementById('messagesContainer');
             
@@ -743,10 +715,10 @@
             container.innerHTML = messages.map(msg => `
                 <div class="message">
                     <div class="flex items-start space-x-2">
-                        <img src="${msg.senderId?.avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${msg.senderId?._id}')" title="Profil">
+                        <img src="${msg.senderId?.avatar}" class="w-8 h-8 rounded-full">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2 mb-1">
-                                <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${msg.senderId?._id}')" title="Profil">${msg.senderId?.nickname}</span>
+                                <span class="font-medium text-gray-800">${msg.senderId?.nickname}</span>
                                 <span class="text-xs text-gray-500">${formatTime(msg.createdAt)}</span>
                             </div>
                             <div class="message-bubble ${msg.senderId?._id === currentUser._id ? 'sent' : 'received'} p-3">
@@ -822,10 +794,10 @@
             messageDiv.className = 'message';
             messageDiv.innerHTML = `
                 <div class="flex items-start space-x-2">
-                    <img src="${message.senderId?.avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${message.senderId?._id}')" title="Profil">
+                    <img src="${message.senderId?.avatar}" class="w-8 h-8 rounded-full">
                     <div class="flex-1">
                         <div class="flex items-center space-x-2 mb-1">
-                            <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${message.senderId?._id}')" title="Profil">${message.senderId?.nickname}</span>
+                            <span class="font-medium text-gray-800">${message.senderId?.nickname}</span>
                             <span class="text-xs text-gray-500">${formatTime(message.createdAt)}</span>
                         </div>
                         <div class="message-bubble ${message.senderId?._id === currentUser._id ? 'sent' : 'received'} p-3">
@@ -1119,12 +1091,7 @@
     btn.addEventListener('click', ()=> apply(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
   })();
 
-        
-        // Shared audio constraints (used for mic capture and screen+cam mode)
-        const AUDIO_CONSTRAINTS = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
-        // Back-compat alias (some older code referenced audioConstraints)
-        const audioConstraints = AUDIO_CONSTRAINTS;
-// ==================== GROUP CALL (WebRTC Mesh) ====================
+        // ==================== GROUP CALL (WebRTC Mesh) ====================
         let groupCall = {
             active: false,
             groupId: null,
@@ -1154,7 +1121,8 @@ let _rtcConfigCache = null;
 async function getRtcConfig() {
     if (_rtcConfigCache) return _rtcConfigCache;
     try {
-        const res = await fetch('/api/rtc-config', { cache: 'no-store' });
+        if (Date.now() < attendanceBackoffUntil) return;
+  const res = await fetch('/api/rtc-config', { cache: 'no-store' });
         if (!res.ok) throw new Error('rtc-config http ' + res.status);
         const cfg = await res.json();
         if (cfg && Array.isArray(cfg.iceServers)) {
@@ -1223,7 +1191,6 @@ function isTeacher(userId) {
             document.getElementById('groupIncomingMeta').textContent = metaText;
             document.getElementById('groupIncomingBox').classList.remove('hidden');
             showGroupOverlay();
-            try{ if(document.getElementById('lessonTitleWrap')){ const isT = (String(currentUser?.role||'').toLowerCase()==='teacher'); document.getElementById('lessonTitleWrap').classList.toggle('hidden', !isT); } }catch(e){}
         }
 
         function dismissIncomingGroupCall() {
@@ -1251,14 +1218,13 @@ if (groupCall.localStream) return groupCall.localStream;
 // For camera-less / mic-less devices: allow "watch-only" participation.
 // We try video+audio -> audio-only -> no local tracks.
 const videoConstraints = { width: 1280, height: 720 };
-const audioConstraints = AUDIO_CONSTRAINTS;
 try {
     const constraints = (callType === 'audio')
-        ? { audio: AUDIO_CONSTRAINTS, video: false }
-        : { audio: AUDIO_CONSTRAINTS, video: videoConstraints };
+        ? { audio: true, video: false }
+        : { audio: true, video: videoConstraints };
 
     groupCall.localStream = await navigator.mediaDevices.getUserMedia(constraints);
-    addVideoTile(String(currentUser?._id || 'local'), groupCall.localStream, true);
+    addVideoTile('local', groupCall.localStream, true);
     return groupCall.localStream;
 } catch (err) {
     console.warn('ensureLocalStream getUserMedia failed:', err);
@@ -1266,8 +1232,8 @@ try {
     // If video failed, retry audio-only (common on devices with no camera permission/camera)
     if (callType !== 'audio') {
         try {
-            groupCall.localStream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CONSTRAINTS, video: false });
-            addVideoTile(String(currentUser?._id || 'local'), groupCall.localStream, true);
+            groupCall.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            addVideoTile('local', groupCall.localStream, true);
             return groupCall.localStream;
         } catch (err2) {
             console.warn('ensureLocalStream audio-only failed:', err2);
@@ -1511,14 +1477,11 @@ function removeVideoTile(userId) {
 
             try {
                 await ensureLocalStream(callType);
-                const lessonTitle = (document.getElementById('lessonTitleInput')?.value || '').trim();
-                socket.emit('groupCallStart', { groupId, callType, title: lessonTitle });
-                /* lessonTitleInput stays editable until recording starts */
+                socket.emit('groupCallStart', { groupId, callType });
             } catch (e) {
                 console.error(e);
                 alert('Failed to start call: ' + e.message);
                 cleanupGroupCallUI();
-                try{ const ti=document.getElementById('lessonTitleInput'); if(ti) { ti.disabled=false; } }catch(e){}
             }
         }
 
@@ -1533,7 +1496,6 @@ function removeVideoTile(userId) {
             setGroupCallStatus('Joining...');
 
             await ensureLocalStream(groupCall.callType);
-            try { if (currentUser && currentUser._id) groupCall.participantInfos.set(String(currentUser._id), { role: String(currentUser.role||'').toLowerCase() }); } catch(_) {}
             socket.emit('groupCallJoin', { groupId: gid, callId });
         }
 
@@ -1547,102 +1509,6 @@ function removeVideoTile(userId) {
         let _compositeStream = null;
         let _screenStream = null;
         let _camStream = null;
-        let _compositeAnimId = null;
-        let _screenShareActive = false;
-
-        // Build a composite canvas stream for recording that works even without screen-share:
-        // - If screen-share is active, canvas draws screen + PIP camera
-        // - If screen-share ends, canvas falls back to camera full-frame (no black video)
-        async function initCompositeCameraOnlyIfNeeded() {
-            if (_compositeCanvas && _compositeStream && _camVideoEl) return;
-            const base = groupCall._prevLocalStream || groupCall.localStream;
-            // Camera source (prefer already-open camera track)
-            let camStream = null;
-            if (base && base.getVideoTracks && base.getVideoTracks().length) {
-                camStream = new MediaStream([base.getVideoTracks()[0]]);
-            } else {
-                // device might be watch-only; try to open camera if available (ignore failure)
-                camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }).catch(() => null);
-            }
-            // Audio source (prefer already-open mic)
-            let micTrack = null;
-            if (base && base.getAudioTracks && base.getAudioTracks().length) micTrack = base.getAudioTracks()[0];
-            if (!micTrack) {
-                const micStream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CONSTRAINTS, video: false }).catch(() => null);
-                micTrack = micStream?.getAudioTracks?.()[0] || null;
-            }
-
-            _camStream = camStream;
-            const camVideo = document.createElement('video');
-            camVideo.srcObject = camStream || new MediaStream();
-            camVideo.muted = true;
-            try { await camVideo.play(); } catch(_) {}
-            _camVideoEl = camVideo;
-
-            const canvas = document.createElement('canvas');
-            canvas.width = 1280;
-            canvas.height = 720;
-            _compositeCanvas = canvas;
-            const ctx = canvas.getContext('2d');
-
-            // draw loop reuses the same logic as screen+cam (screen may be null)
-            const isScreenLive = () => {
-                const t = _screenStream?.getVideoTracks?.()[0];
-                return !!t && t.readyState === 'live';
-            };
-
-            const draw = () => {
-                try {
-                    const screenOk = _screenShareActive && isScreenLive() && _screenVideoEl && _screenVideoEl.readyState >= 2;
-                    const camOk = _camVideoEl && _camVideoEl.readyState >= 2;
-
-                    if (screenOk) {
-                        ctx.drawImage(_screenVideoEl, 0, 0, canvas.width, canvas.height);
-                        if (camOk) {
-                            const pipW = Math.round(canvas.width * 0.22);
-                            const pipH = Math.round(pipW * (9 / 16));
-                            const margin = 16;
-                            const x = canvas.width - pipW - margin;
-                            const y = margin;
-                            ctx.save();
-                            const r = 14;
-                            ctx.beginPath();
-                            ctx.moveTo(x + r, y);
-                            ctx.lineTo(x + pipW - r, y);
-                            ctx.quadraticCurveTo(x + pipW, y, x + pipW, y + r);
-                            ctx.lineTo(x + pipW, y + pipH - r);
-                            ctx.quadraticCurveTo(x + pipW, y + pipH, x + pipW - r, y + pipH);
-                            ctx.lineTo(x + r, y + pipH);
-                            ctx.quadraticCurveTo(x, y + pipH, x, y + pipH - r);
-                            ctx.lineTo(x, y + r);
-                            ctx.quadraticCurveTo(x, y, x + r, y);
-                            ctx.closePath();
-                            ctx.clip();
-                            ctx.drawImage(_camVideoEl, x, y, pipW, pipH);
-                            ctx.restore();
-                        }
-                    } else if (camOk) {
-                        ctx.drawImage(_camVideoEl, 0, 0, canvas.width, canvas.height);
-                    } else {
-                        ctx.fillStyle = 'black';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.fillStyle = 'white';
-                        ctx.font = '22px sans-serif';
-                        ctx.fillText('Video yo\'q', 20, 40);
-                    }
-                } catch (_) {}
-                _compositeAnimId = requestAnimationFrame(draw);
-            };
-            draw();
-
-            const out = new MediaStream();
-            const [vTrack] = canvas.captureStream(30).getVideoTracks();
-            if (vTrack) out.addTrack(vTrack);
-            if (micTrack) out.addTrack(micTrack);
-            _compositeStream = out;
-        }
-            let _screenVideoEl = null;
-        let _camVideoEl = null;
 
         function updateTeacherControls() {
             const isMeTeacher = String(currentUser?.role || '').toLowerCase() === 'teacher';
@@ -1650,10 +1516,11 @@ function removeVideoTile(userId) {
             const btnScreen = document.getElementById('btnScreen');
             const btnRec = document.getElementById('btnRecord');
             const btnAtt = document.getElementById('btnAttendance');
-            if (btnScreen) btnScreen.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson));
-            if (btnRec) btnRec.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson));
-            if (btnAtt) btnAtt.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson));
-        }
+            const isMeController = !groupCall.lessonControllerId || String(groupCall.lessonControllerId) === String(groupCall.userId);
+            if (btnScreen) btnScreen.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson && isMeController));
+if (btnRec) btnRec.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson && isMeController));
+if (btnAtt) btnAtt.classList.toggle('hidden', !(isMeTeacher && groupCall.active && hasLesson && isMeController));
+}
 
         function toggleAttendancePanel(show) {
             const p = document.getElementById('attendancePanel');
@@ -1692,7 +1559,8 @@ function removeVideoTile(userId) {
             return `${m}m ${String(s).padStart(2,'0')}s`;
         }
 
-        async function refreshAttendance() {
+        let attendanceBackoffUntil = 0;
+async function refreshAttendance() {
             try {
                 const hint = document.getElementById('attendanceHint');
                 if (hint) hint.textContent = 'Yangilanmoqda...';
@@ -1729,437 +1597,165 @@ function removeVideoTile(userId) {
 
                 if (hint) hint.textContent = `Kirdi: ${(data.joined||[]).length} • Kirmadi: ${(data.absent||[]).length}`;
             } catch (e) {
-                console.warn('attendance refresh failed', e);
+                attendanceBackoffUntil = Date.now() + 20000;
+    console.warn('attendance refresh failed', e);
                 const hint = document.getElementById('attendanceHint');
                 if (hint) hint.textContent = 'Davomatni olishda xatolik';
             }
         }
 
         async function startScreenWithCam() {
-    // Teacher: replace outgoing video with screen (and keep camera as PIP locally), without breaking camera-only mode.
-    if (!groupCall.active) return;
-    if (String(currentUser?.role || '').toLowerCase() !== 'teacher') return;
-
-    try {
-        // 1) Ask for screen
-        let screenStream;
-        try {
-            screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        } catch (e1) {
-            // Many browsers don't allow system audio capture; retry without audio
             try {
-                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-            } catch (e2) {
-                if (e2 && (e2.name === 'NotAllowedError' || e2.name === 'SecurityError')) {
-                    // User denied: don't change anything, keep camera on stage
-                    console.warn('Screen share denied', e2);
-                    setGroupCallStatus('Screen share bekor qilindi');
-                    return;
+            try {
+                if (!groupCall.active) return;
+                if (String(currentUser?.role || '').toLowerCase() !== 'teacher') return;
+
+                // Get screen
+                _screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }).catch(async () => {
+                    // some browsers block system audio; fallback without audio
+                    return navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+                });
+
+                // Get camera (for overlay only)
+                _camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }).catch(() => null);
+
+                // Get mic audio (more reliable than system audio)
+                const mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }).catch(() => null);
+
+                // Build composite canvas stream: screen + camera PIP
+                const screenVideo = document.createElement('video');
+                screenVideo.srcObject = _screenStream;
+                screenVideo.muted = true;
+                await screenVideo.play();
+
+                let camVideo = null;
+                if (_camStream) {
+                  camVideo = document.createElement('video');
+                  camVideo.srcObject = _camStream;
+                  camVideo.muted = true;
+                  await camVideo.play();
                 }
-                throw e2;
-            }
-        }
+_compositeCanvas = document.createElement('canvas');
+                const ctx = _compositeCanvas.getContext('2d');
 
-        // 2) Camera stream for local PIP (optional)
-        const camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }).catch(() => null);
+                const W = 1280, H = 720;
+                _compositeCanvas.width = W;
+                _compositeCanvas.height = H;
 
-        // 3) Mic audio (reliable)
-        const micStream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CONSTRAINTS, video: false }).catch(() => null);
-
-        _screenStream = screenStream;
-
-        // When user stops sharing, revert drawing to camera-only (prevents black recording)
-        try {
-            const t = _screenStream?.getVideoTracks?.()[0];
-            if (t) {
-                t.onended = () => {
-                    _screenShareActive = false;
-                    try { _screenStream?.getTracks?.().forEach(tr => tr.stop()); } catch(_) {}
-                    _screenStream = null;
-                    _screenVideoEl = null;
-                    setGroupCallStatus('Screen share tugadi');
+                const draw = () => {
+                    try {
+                        ctx.drawImage(screenVideo, 0, 0, W, H);
+                        // PIP camera (top-right)
+                        const pipW = Math.round(W * 0.26);
+                        const pipH = Math.round(pipW * 0.75);
+                        const pad = 16;
+                        const x = W - pipW - pad;
+                        const y = pad;
+                        // background
+                        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                        ctx.fillRect(x-6, y-6, pipW+12, pipH+12);
+                        if (camVideo) ctx.drawImage(camVideo, x, y, pipW, pipH);
+                        // border
+                        if (camVideo) {
+                          ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+                        ctx.lineWidth = 3;
+                                                  ctx.strokeRect(x, y, pipW, pipH);
+                        }
+                    } catch(e) {}
+                    requestAnimationFrame(draw);
                 };
-            }
-        } catch(_) {}
-        _camStream = camStream;
+                draw();
 
-        // 4) Composite: draw screen + small camera overlay
-        const screenVideo = document.createElement('video');
-        screenVideo.srcObject = _screenStream;
-        screenVideo.muted = true;
-        await screenVideo.play();
-        _screenVideoEl = screenVideo;
+                const canvasStream = _compositeCanvas.captureStream(25);
+                const out = new MediaStream();
+                const vTrack = canvasStream.getVideoTracks()[0];
+                if (vTrack) out.addTrack(vTrack);
 
-        let camVideo = null;
-        if (_camStream) {
-            camVideo = document.createElement('video');
-            camVideo.srcObject = _camStream;
-            camVideo.muted = true;
-            await camVideo.play();
-        }
-        _camVideoEl = camVideo;
+                // audio: prefer mic; optionally merge system audio track if available
+                if (mic && mic.getAudioTracks()[0]) out.addTrack(mic.getAudioTracks()[0]);
+                else if (_screenStream.getAudioTracks()[0]) out.addTrack(_screenStream.getAudioTracks()[0]);
 
-        const canvas = document.createElement('canvas');
-        canvas.width = 1280;
-        canvas.height = 720;
-        _compositeCanvas = canvas;
-        const ctx = canvas.getContext('2d');
+                _compositeStream = out;
 
-        _screenShareActive = true;
-        const isScreenLive = () => {
-            const t = _screenStream?.getVideoTracks?.()[0];
-            return !!t && t.readyState === 'live';
-        };
+                // Replace outgoing video track for each peer
+                groupCall.localStream = out;
+                // local preview on teacher stage
+                addVideoTile(currentUser?._id, out, true);
+                renderGroupCallLayout();
 
-        const draw = () => {
-            try {
-                const screenOk = _screenShareActive && isScreenLive() && screenVideo && screenVideo.readyState >= 2;
-                const camOk = camVideo && camVideo.readyState >= 2;
-
-                if (screenOk) {
-                    // Main: screen
-                    ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
-
-                    // PIP: camera
-                    if (camOk) {
-                        const pipW = Math.round(canvas.width * 0.22);
-                        const pipH = Math.round(pipW * (9 / 16));
-                        const margin = 16;
-                        const x = canvas.width - pipW - margin;
-                        const y = margin;
-                        ctx.save();
-                        const r = 14;
-                        ctx.beginPath();
-                        ctx.moveTo(x + r, y);
-                        ctx.lineTo(x + pipW - r, y);
-                        ctx.quadraticCurveTo(x + pipW, y, x + pipW, y + r);
-                        ctx.lineTo(x + pipW, y + pipH - r);
-                        ctx.quadraticCurveTo(x + pipW, y + pipH, x + pipW - r, y + pipH);
-                        ctx.lineTo(x + r, y + pipH);
-                        ctx.quadraticCurveTo(x, y + pipH, x, y + pipH - r);
-                        ctx.lineTo(x, y + r);
-                        ctx.quadraticCurveTo(x, y, x + r, y);
-                        ctx.closePath();
-                        ctx.clip();
-                        ctx.drawImage(camVideo, x, y, pipW, pipH);
-                        ctx.restore();
-                    }
-                } else if (camOk) {
-                    // Screen ended -> fallback to camera full-frame (prevents black recording)
-                    ctx.drawImage(camVideo, 0, 0, canvas.width, canvas.height);
-                } else {
-                    // No usable video
-                    ctx.fillStyle = 'black';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.fillStyle = 'white';
-                    ctx.font = '22px sans-serif';
-                    ctx.fillText('Video yo\'q', 20, 40);
-                }
-            } catch (_) {}
-            _compositeAnimId = requestAnimationFrame(draw);
-        };
-        draw();
-
-        // 5) Build outgoing stream: video from canvas, audio from mic/system
-        const out = new MediaStream();
-
-        const [vTrack] = canvas.captureStream(30).getVideoTracks();
-        if (vTrack) out.addTrack(vTrack);
-
-        // Prefer mic audio
-        const micTrack = micStream?.getAudioTracks?.()[0];
-        if (micTrack) out.addTrack(micTrack);
-
-        // If system audio exists and mic does not, add it
-        if (!micTrack) {
-            const sysTrack = _screenStream.getAudioTracks()[0];
-            if (sysTrack) out.addTrack(sysTrack);
-        }
-
-        _compositeStream = out;
-
-        // 6) Replace outgoing tracks for all peers (do NOT touch if no peers yet)
-        // Keep a reference so stopComposite() can revert.
-        groupCall._prevLocalStream = groupCall.localStream || null;
-        groupCall.localStream = out;
-
-        // Update local preview (teacher sees what's being sent)
-        addVideoTile(currentUser?._id, out, true);
-        renderGroupCallLayout();
-
-        for (const [uid, pc] of groupCall.peers.entries()) {
-            const senders = pc.getSenders();
-            const vs = senders.find(s => s.track && s.track.kind === 'video');
-            if (vs && vTrack) await vs.replaceTrack(vTrack);
-
-            const aTrack = out.getAudioTracks()[0];
-            const as = senders.find(s => s.track && s.track.kind === 'audio');
-            if (as && aTrack) await as.replaceTrack(aTrack);
-        }
-
-        // Auto-stop when screen share ends
-        const st = _screenStream.getVideoTracks()[0];
-        if (st) st.onended = () => {
-            // If recording is active, keep the canvas stream alive and continue with camera
-            _screenShareActive = false;
-            try { _screenStream && _screenStream.getTracks().forEach(t => t.stop()); } catch (_) {}
-            _screenStream = null;
-            if (_isRecording) {
-                setGroupCallStatus('Screen tugadi, camera yozuvi davom etadi');
-                return;
-            }
-            try { stopComposite(); } catch (_) {}
-        };
-
-        setGroupCallStatus('Teacher mode: Screen + Cam');
-    } catch (e) {
-        console.error('startScreenWithCam', e);
-        alert('Ekran ulashishda xatolik: ' + (e?.message || e));
-    }
-}
-
-        function stopComposite() {
-    try {
-        // Stop screen/cam overlay inputs
-        _screenStream && _screenStream.getTracks().forEach(t => t.stop());
-        _camStream && _camStream.getTracks().forEach(t => t.stop());
-    } catch(e) {}
-
-    // Stop animation loop
-    try { if (_compositeAnimId) cancelAnimationFrame(_compositeAnimId); } catch(_) {}
-    _compositeAnimId = null;
-    _screenShareActive = false;
-
-    // Stop canvas stream tracks (otherwise recording can keep a dead black track alive)
-    try { _compositeStream && _compositeStream.getTracks().forEach(t => t.stop()); } catch(_) {}
-
-    _screenStream = null;
-    _camStream = null;
-    _screenVideoEl = null;
-    _camVideoEl = null;
-    _compositeCanvas = null;
-    _compositeStream = null;
-
-    // Revert outgoing tracks back to previous local stream (camera mode)
-    const prev = groupCall._prevLocalStream || null;
-    if (prev) {
-        const prevV = prev.getVideoTracks()[0] || null;
-        const prevA = prev.getAudioTracks()[0] || null;
-        groupCall.localStream = prev;
-        groupCall._prevLocalStream = null;
-
-        // Update preview back to camera
-        addVideoTile(currentUser?._id, prev, true);
-        renderGroupCallLayout();
-
-        // Replace tracks for existing peers
-        (async () => {
-            try {
                 for (const [uid, pc] of groupCall.peers.entries()) {
                     const senders = pc.getSenders();
                     const vs = senders.find(s => s.track && s.track.kind === 'video');
-                    if (vs && prevV) await vs.replaceTrack(prevV);
+                    if (vs && vTrack) await vs.replaceTrack(vTrack);
+                    const aTrack = out.getAudioTracks()[0];
                     const as = senders.find(s => s.track && s.track.kind === 'audio');
-                    if (as && prevA) await as.replaceTrack(prevA);
+                    if (as && aTrack) await as.replaceTrack(aTrack);
                 }
-            } catch(_) {}
-        })();
 
-        setGroupCallStatus('Camera mode');
-    }
-}
+                // If user stops screen sharing, end it
+                const st = _screenStream.getVideoTracks()[0];
+                if (st) st.onended = () => {
+                    try { stopComposite(); } catch(e) {}
+                };
 
-                async function toggleRecording() {
+                setGroupCallStatus('Teacher mode: Screen + Cam');
+            } catch (e) {
+                console.error('startScreenWithCam', e);
+                alert('Ekran ulashishda xatolik: ' + (e?.message || e));
+            }
+            } catch (e) {
+                if (e && e.name === 'NotAllowedError') {
+                    alert('Ekran ulashishga ruxsat berilmadi. Brauzer pop-upida Allow/Share ni bosing.');
+                    return;
+                }
+                console.error('startScreenWithCam error:', e);
+                alert('Screen share ishga tushmadi: ' + (e?.message || e));
+            }
+        }
+
+        function stopComposite() {
+            try {
+                _screenStream && _screenStream.getTracks().forEach(t => t.stop());
+                _camStream && _camStream.getTracks().forEach(t => t.stop());
+            } catch(e) {}
+            _screenStream = null; _camStream = null; _compositeCanvas = null; _compositeStream = null;
+        }
+
+        async function toggleRecording() {
             try {
                 if (String(currentUser?.role || '').toLowerCase() !== 'teacher') return;
                 if (!groupCall.lessonId) return;
 
-                // Stop
-                if (_isRecording && _recorder) {
-                    try { _recorder.stop(); } catch(_) {}
+                if (_isRecording) {
+                    _recorder.stop();
                     return;
                 }
 
-                let baseStream = groupCall.localStream;
-                if (!baseStream) return alert('Avval Video/Voice Call ni boshlang, keyin recording yoqing.');
+                let stream = groupCall.localStream;
+                if (!stream) return alert('Stream topilmadi (avval qo‘ng‘iroqni boshlang)');
 
-                // Recording always uses a composite canvas stream:
-                // - camera-only works everywhere MediaRecorder works (including mobile Chrome)
-                // - if teacher shares screen later, composite will automatically show screen + PIP camera
-                
-                // Save lesson topic/mode before recording starts (so Group Lessons shows it)
-                const _title = (document.getElementById('lessonTitleInput')?.value || '').trim();
-                const _mode = groupCall.isScreenSharing ? 'screen' : 'camera';
-                if (_title) { try{ await updateLessonMeta(groupCall.lessonId, { title: _title, mode: _mode }); }catch(_){} }
-                try{ const ti=document.getElementById('lessonTitleInput'); if(ti) ti.disabled = true; }catch(e){}
-await initCompositeCameraOnlyIfNeeded();
-                baseStream = _compositeStream || baseStream;
-if (typeof MediaRecorder === 'undefined') {
-                    // Some browsers (especially older iOS Safari) cannot record via MediaRecorder.
-                    // Client-side recording is impossible there without a media server/SFU recorder.
-                    return alert('Bu brauzer Recording-ni qo‘llab-quvvatlamaydi (MediaRecorder yo‘q). Tavsiya: Chrome/Edge/Android Chrome yoki server-side recorder (SFU: LiveKit/mediasoup) qo‘shish.');
-                }
-
-                _recordingChunks = [];
-
-                // 1) Try direct stream recording with best supported mime
-                const mimeCandidates = [
-                    'video/webm;codecs=vp9,opus',
-                    'video/webm;codecs=vp8,opus',
-                    'video/webm'
-                ];
-                const pickMime = () => {
-                    try {
-                        if (!MediaRecorder.isTypeSupported) return '';
-                        for (const mt of mimeCandidates) {
-                            if (MediaRecorder.isTypeSupported(mt)) return mt;
-                        }
-                    } catch(_) {}
-                    return '';
-                };
-
-                // 2) Fallback: canvas composition recording (works on more devices when direct stream fails)
-                const makeCanvasRecorderStream = async (stream) => {
-                    const vEl = document.getElementById('localVideo') || document.querySelector('video#localVideo');
-                    const stageEl = document.getElementById('teacherStageVideo') || document.querySelector('video#teacherStageVideo') || vEl;
-
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 1280;
-                    canvas.height = 720;
-                    canvas.style.position = 'fixed';
-                    canvas.style.left = '-9999px';
-                    canvas.style.top = '-9999px';
-                    document.body.appendChild(canvas);
-                    const ctx = canvas.getContext('2d');
-
-                    const draw = () => {
-                        try {
-                            ctx.fillStyle = '#000';
-                            ctx.fillRect(0,0,canvas.width,canvas.height);
-
-                            // Main: screen if exists (stageEl may point to screen composite)
-                            const main = stageEl && stageEl.readyState >= 2 ? stageEl : vEl;
-                            if (main && main.readyState >= 2) {
-                                ctx.drawImage(main, 0, 0, canvas.width, canvas.height);
-                            }
-
-                            // PiP: camera (local video) at top-right
-                            if (vEl && vEl.readyState >= 2) {
-                                const w = Math.round(canvas.width * 0.22);
-                                const h = Math.round(canvas.height * 0.22);
-                                const pad = 16;
-                                ctx.save();
-                                // rounded rect clip
-                                const x = canvas.width - w - pad;
-                                const y = pad;
-                                const r = 16;
-                                ctx.beginPath();
-                                ctx.moveTo(x+r, y);
-                                ctx.arcTo(x+w, y, x+w, y+h, r);
-                                ctx.arcTo(x+w, y+h, x, y+h, r);
-                                ctx.arcTo(x, y+h, x, y, r);
-                                ctx.arcTo(x, y, x+w, y, r);
-                                ctx.closePath();
-                                ctx.clip();
-                                ctx.drawImage(vEl, x, y, w, h);
-                                ctx.restore();
-                            }
-                        } catch(_) {}
-                        _canvasRecRaf = requestAnimationFrame(draw);
-                    };
-                    if (typeof _canvasRecRaf !== 'undefined' && _canvasRecRaf) cancelAnimationFrame(_canvasRecRaf);
-                    window._canvasRecRaf = requestAnimationFrame(draw);
-
-                    const canvasStream = canvas.captureStream(15); // 15fps reduces lag + file size
-                    const outTracks = [];
-
-                    // video track from canvas
-                    const cVideo = canvasStream.getVideoTracks()[0];
-                    if (cVideo) outTracks.push(cVideo);
-
-                    // audio from base stream (mic)
-                    const aTrack = (stream.getAudioTracks && stream.getAudioTracks()[0]) ? stream.getAudioTracks()[0] : null;
-                    if (aTrack) outTracks.push(aTrack);
-
-                    // cleanup hook
-                    window._canvasRecCleanup = () => {
-                        try { cancelAnimationFrame(window._canvasRecRaf); } catch(_) {}
-                        try { canvas.remove(); } catch(_) {}
-                        try { window._canvasRecRaf = null; } catch(_) {}
-                    };
-
-                    return new MediaStream(outTracks);
-                };
-
-                let mimeType = pickMime();
-                let recordingStream = baseStream;
-
-                // Some devices fail when recording a stream that contains a screen track from getDisplayMedia + camera, so we fallback to canvas
-                let useCanvasFallback = false;
-
-                try {
-                    _recorder = new MediaRecorder(recordingStream, mimeType ? { mimeType } : undefined);
-                } catch (e) {
-                    useCanvasFallback = true;
-                }
-
-                if (useCanvasFallback) {
-                    recordingStream = await makeCanvasRecorderStream(baseStream);
-                    try {
-                        _recorder = new MediaRecorder(recordingStream, mimeType ? { mimeType } : undefined);
-                    } catch (e2) {
-                        // last resort: no mimeType
-                        _recorder = new MediaRecorder(recordingStream);
+                // If teacher hasn't enabled Screen+Cam yet, prompt to capture the screen so the recording matches what students saw
+                if (!_compositeStream) {
+                    const ok = confirm('Recording uchun ekran (screen) ham yozib olinishi kerakmi? OK bosilsa: Screen Share avtomatik yoqiladi.');
+                    if (ok) {
+                        await startScreenWithCam();
+                        stream = _compositeStream || groupCall.localStream;
                     }
                 }
-
-                _recorder.ondataavailable = (ev) => {
-                    try {
-                        if (ev.data && ev.data.size > 0) _recordingChunks.push(ev.data);
-                    } catch(_) {}
-                };
-
+_recordingChunks = [];
+                _recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
+                _recorder.ondataavailable = (e) => { if (e.data && e.data.size) _recordingChunks.push(e.data); };
                 _recorder.onstop = async () => {
-                    try {
-                        _isRecording = false;
-                        const btn = document.getElementById('btnRecord');
-                        if (btn) {
-                            btn.textContent = 'Recording';
-                            btn.classList.remove('btn-danger');
-                            btn.classList.add('btn-secondary');
-                        }
-
-                        // canvas cleanup
-                        if (window._canvasRecCleanup) window._canvasRecCleanup();
-
-                        // assemble + upload
-                        const blob = new Blob(_recordingChunks, { type: (_recorder && _recorder.mimeType) ? _recorder.mimeType : 'video/webm' });
-                        _recordingChunks = [];
-                        await uploadRecording(blob);
-                        try{ const ti=document.getElementById('lessonTitleInput'); if(ti) ti.disabled = false; }catch(e){}
-                    } catch (e) {
-                        console.error('Recording stop/upload error:', e);
-                        alert('Recording saqlashda xatolik: ' + (e?.message || e));
-                    }
+                    _isRecording = false;
+                    updateRecordButton();
+                    const blob = new Blob(_recordingChunks, { type: 'video/webm' });
+                    await uploadRecording(blob);
                 };
-
-                _recorder.onerror = (e) => {
-                    console.error('MediaRecorder error', e);
-                    alert('Recording xatolik: ' + (e?.error?.message || e?.message || e));
-                };
-
-                // start
-                _recorder.start(1000); // 1s chunks
+                _recorder.start(2000); // chunk every 2s (safer on memory)
                 _isRecording = true;
-
-                const btn = document.getElementById('btnRecord');
-                if (btn) {
-                    btn.textContent = 'Stop';
-                    btn.classList.remove('btn-secondary');
-                    btn.classList.add('btn-danger');
-                }
+                updateRecordButton();
             } catch (e) {
-                console.error('toggleRecording error:', e);
+                console.error('recording', e);
                 alert('Recording xatolik: ' + (e?.message || e));
             }
         }
@@ -2181,8 +1777,6 @@ if (typeof MediaRecorder === 'undefined') {
                 const token = localStorage.getItem('token');
                 const fd = new FormData();
                 fd.append('recording', blob, `lesson_${groupCall.lessonId}.webm`);
-                const title = (document.getElementById('lessonTitleInput')?.value || '').trim();
-                if (title) fd.append('title', title);
                 const res = await fetch(`/api/group-lessons/${groupCall.lessonId}/recording`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -2197,19 +1791,6 @@ if (typeof MediaRecorder === 'undefined') {
                 alert('❌ Yozuvni yuklashda xatolik: ' + (e?.message || e));
             }
         }
-function toggleSpeaker() {
-            groupCall.speakerMuted = !groupCall.speakerMuted;
-            // Mute/unmute all remote video elements (audio output).
-            document.querySelectorAll('#teacherStage video, #studentsGrid video').forEach(v => {
-                // keep local muted always
-                if (v.id && v.id.startsWith('vid_local')) return;
-                v.muted = !!groupCall.speakerMuted;
-                v.volume = groupCall.speakerMuted ? 0 : 1;
-            });
-            const b = document.getElementById('btnSpeaker');
-            if (b) b.innerHTML = groupCall.speakerMuted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
-        }
-
 function toggleMute() {
             if (!groupCall.localStream) return;
             groupCall.muted = !groupCall.muted;
@@ -2286,11 +1867,30 @@ function toggleMute() {
                 showIncomingGroupBox(`ACTIVE ${String(groupCall.incoming.callType).toUpperCase()} call • started by ${data.startedBy}`);
             });
 
-            socket.on('groupCallStarted', async (data) => {
+            
+        socket.on('lessonState', (st) => {
+            try {
+                if (!st) return;
+                if (st.lessonId && groupCall.lessonId && String(st.lessonId) !== String(groupCall.lessonId)) return;
+                groupCall.lessonControllerId = String(st.controllerId || '');
+                // small badge
+                const badge = document.getElementById('lessonControllerBadge');
+                if (badge) {
+                    const me = String(groupCall.userId||'');
+                    const isMe = me && groupCall.lessonControllerId && me === groupCall.lessonControllerId;
+                    badge.textContent = groupCall.lessonControllerId ? (isMe ? 'Siz boshqaruvchisiz' : 'Boshqaruvchi: ' + groupCall.lessonControllerId) : '';
+                    badge.classList.toggle('hidden', !groupCall.lessonControllerId);
+                }
+                if (typeof updateTeacherButtons === 'function') updateTeacherButtons();
+            } catch(e){}
+        });
+socket.on('groupCallStarted', async (data) => {
                 if (String(data.groupId) !== String(groupId)) return;
                 groupCall.active = true;
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
+                if (groupCall.lessonId) { try { socket.emit('lessonEnter', { lessonId: groupCall.lessonId }); } catch(e){} }
+
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
                 updateTeacherControls();
                 renderGroupCallLayout();
@@ -2311,6 +1911,8 @@ function toggleMute() {
                 groupCall.active = true;
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
+                if (groupCall.lessonId) { try { socket.emit('lessonEnter', { lessonId: groupCall.lessonId }); } catch(e){} }
+
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
                 updateTeacherControls();
                 renderGroupCallLayout();
@@ -2393,18 +1995,11 @@ function toggleMute() {
     <div class="flex items-center justify-between p-4 bg-black/60">
       <div class="text-white">
         <div class="font-semibold" id="groupCallTitle">Group Call</div>
-        <div class="mt-2 hidden" id="lessonTitleWrap">
-          <input id="lessonTitleInput" type="text" maxlength="120" placeholder="Dars mavzusi (masalan: Moliya 1-ma'ruza)"
-            class="w-[min(520px,70vw)] px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"/>
-        </div>
         <div class="text-xs opacity-80" id="groupCallStatus">Not connected</div>
       </div>
       <div class="flex items-center space-x-2">
         <button id="btnMute" onclick="toggleMute()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">
           <i class="fas fa-microphone"></i>
-        </button>
-        <button id="btnSpeaker" onclick="toggleSpeaker()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Speaker mute/unmute">
-          <i class="fas fa-volume-up"></i>
         </button>
         <button id="btnCam" onclick="toggleCamera()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20">
           <i class="fas fa-video"></i>
@@ -2415,7 +2010,7 @@ function toggleMute() {
         <button id="btnRecord" onclick="toggleRecording()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Yozib olish (o‘qituvchi)">
           <i class="fas fa-circle"></i>
         </button>
-        <button id="btnAttendance" onclick="toggleAttendancePanel()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Davomat (o‘qituvchi)">
+        <button id="btnAttendance" onclick="toggleAttendancePanel(true)" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Davomat (o‘qituvchi)">
           <i class="fas fa-clipboard-list"></i>
         </button>
         <button onclick="leaveOrEndGroupCall()" class="px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">

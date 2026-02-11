@@ -664,25 +664,10 @@
             const gid = groupId || new URLSearchParams(location.search).get('id');
             if (!gid) return alert('Group ID topilmadi');
             // Support both variants used across pages
-            const ret = encodeURIComponent(window.location.pathname + window.location.search);
-            window.location.href = `/group-lessons.html?groupId=${encodeURIComponent(gid)}&return=${ret}`;
+            window.location.href = `/group-lessons.html?groupId=${encodeURIComponent(gid)}`;
         }
         
-        
-        async function updateLessonMeta(lessonId, meta){
-            try{
-                if(!lessonId) return;
-                const token = localStorage.getItem('token') || '';
-                const res = await fetch(`/api/group-lessons/${encodeURIComponent(lessonId)}/meta`, {
-                    method:'PUT',
-                    headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-                    body: JSON.stringify(meta||{})
-                });
-                return res.ok;
-            }catch(e){ console.warn('updateLessonMeta failed', e); }
-        }
-
-// Setup Socket.IO
+        // Setup Socket.IO
         function setupSocket() {
             const token = localStorage.getItem('token');
             socket = io();
@@ -1223,7 +1208,6 @@ function isTeacher(userId) {
             document.getElementById('groupIncomingMeta').textContent = metaText;
             document.getElementById('groupIncomingBox').classList.remove('hidden');
             showGroupOverlay();
-            try{ if(document.getElementById('lessonTitleWrap')){ const isT = (String(currentUser?.role||'').toLowerCase()==='teacher'); document.getElementById('lessonTitleWrap').classList.toggle('hidden', !isT); } }catch(e){}
         }
 
         function dismissIncomingGroupCall() {
@@ -1511,14 +1495,11 @@ function removeVideoTile(userId) {
 
             try {
                 await ensureLocalStream(callType);
-                const lessonTitle = (document.getElementById('lessonTitleInput')?.value || '').trim();
-                socket.emit('groupCallStart', { groupId, callType, title: lessonTitle });
-                /* lessonTitleInput stays editable until recording starts */
+                socket.emit('groupCallStart', { groupId, callType });
             } catch (e) {
                 console.error(e);
                 alert('Failed to start call: ' + e.message);
                 cleanupGroupCallUI();
-                try{ const ti=document.getElementById('lessonTitleInput'); if(ti) { ti.disabled=false; } }catch(e){}
             }
         }
 
@@ -1986,13 +1967,7 @@ function removeVideoTile(userId) {
                 // Recording always uses a composite canvas stream:
                 // - camera-only works everywhere MediaRecorder works (including mobile Chrome)
                 // - if teacher shares screen later, composite will automatically show screen + PIP camera
-                
-                // Save lesson topic/mode before recording starts (so Group Lessons shows it)
-                const _title = (document.getElementById('lessonTitleInput')?.value || '').trim();
-                const _mode = groupCall.isScreenSharing ? 'screen' : 'camera';
-                if (_title) { try{ await updateLessonMeta(groupCall.lessonId, { title: _title, mode: _mode }); }catch(_){} }
-                try{ const ti=document.getElementById('lessonTitleInput'); if(ti) ti.disabled = true; }catch(e){}
-await initCompositeCameraOnlyIfNeeded();
+                await initCompositeCameraOnlyIfNeeded();
                 baseStream = _compositeStream || baseStream;
 if (typeof MediaRecorder === 'undefined') {
                     // Some browsers (especially older iOS Safari) cannot record via MediaRecorder.
@@ -2136,7 +2111,6 @@ if (typeof MediaRecorder === 'undefined') {
                         const blob = new Blob(_recordingChunks, { type: (_recorder && _recorder.mimeType) ? _recorder.mimeType : 'video/webm' });
                         _recordingChunks = [];
                         await uploadRecording(blob);
-                        try{ const ti=document.getElementById('lessonTitleInput'); if(ti) ti.disabled = false; }catch(e){}
                     } catch (e) {
                         console.error('Recording stop/upload error:', e);
                         alert('Recording saqlashda xatolik: ' + (e?.message || e));
@@ -2181,8 +2155,6 @@ if (typeof MediaRecorder === 'undefined') {
                 const token = localStorage.getItem('token');
                 const fd = new FormData();
                 fd.append('recording', blob, `lesson_${groupCall.lessonId}.webm`);
-                const title = (document.getElementById('lessonTitleInput')?.value || '').trim();
-                if (title) fd.append('title', title);
                 const res = await fetch(`/api/group-lessons/${groupCall.lessonId}/recording`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -2393,10 +2365,6 @@ function toggleMute() {
     <div class="flex items-center justify-between p-4 bg-black/60">
       <div class="text-white">
         <div class="font-semibold" id="groupCallTitle">Group Call</div>
-        <div class="mt-2 hidden" id="lessonTitleWrap">
-          <input id="lessonTitleInput" type="text" maxlength="120" placeholder="Dars mavzusi (masalan: Moliya 1-ma'ruza)"
-            class="w-[min(520px,70vw)] px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"/>
-        </div>
         <div class="text-xs opacity-80" id="groupCallStatus">Not connected</div>
       </div>
       <div class="flex items-center space-x-2">

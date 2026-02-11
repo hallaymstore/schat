@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Dashboard — QDTU LMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root{
       --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
@@ -195,7 +196,7 @@
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
         <div class="pills">
-          <span class="pill badge student"><a href="/index.html" class="flex items-center gap-3">STUDENT</a></span>
+          <span class="pill badge student"><a href="/index.html" class="flex items-center gap-3"><span class="u-anim">STUDENT</span></a></span>
           <span id="mePill" class="pill" style="display:none"></span>
         </div>
       </div>
@@ -226,6 +227,9 @@
         <a class="btn ghost" href="/courses.html">📚 Kurslar</a>
         <a class="btn ghost" href="/tests.html">🧪 Testlar</a>
         <a class="btn ghost" href="/certificate.html">🏅 Sertifikat</a>
+        <a class="btn ghost" href="/profile.html">💌 Xabarlar</a>
+        <a class="btn ghost" href="/profile.html">📣 Kanallar</a>
+        <a class="btn ghost" href="/groups.html">👥 Guruhlar</a>
         <a class="btn ghost" href="/profile.html">👤 Profil</a>
         <button class="btn danger" id="logoutBtn2">🚪 Chiqish</button>
       </div>
@@ -284,7 +288,7 @@
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          API bo‘lsa: <code>/api/me</code>, <code>/api/progress</code>, <code>/api/courses</code> dan real ma’lumotlar chiqadi.
+          API bo‘lsa: <code>/api/me</code>, <code>API/progress</code>, <code>API/courses</code> dan real ma’lumotlar chiqadi.
           Aks holda localStorage demo ishlaydi.
         </div>
       </div>
@@ -320,7 +324,7 @@
     </div>
   </div>
 
-  <footer>QDTU LMS — Student Dashboard</footer>
+  <footer><span class="u-anim">HALLAYM</span> edu — Student Dashboard</footer>
 
 <script>
   const API_BASE = "";

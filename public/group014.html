@@ -664,25 +664,10 @@
             const gid = groupId || new URLSearchParams(location.search).get('id');
             if (!gid) return alert('Group ID topilmadi');
             // Support both variants used across pages
-            const ret = encodeURIComponent(window.location.pathname + window.location.search);
-            window.location.href = `/group-lessons.html?groupId=${encodeURIComponent(gid)}&return=${ret}`;
+            window.location.href = `/group-lessons.html?groupId=${encodeURIComponent(gid)}`;
         }
         
-        
-        async function updateLessonMeta(lessonId, meta){
-            try{
-                if(!lessonId) return;
-                const token = localStorage.getItem('token') || '';
-                const res = await fetch(`/api/group-lessons/${encodeURIComponent(lessonId)}/meta`, {
-                    method:'PUT',
-                    headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-                    body: JSON.stringify(meta||{})
-                });
-                return res.ok;
-            }catch(e){ console.warn('updateLessonMeta failed', e); }
-        }
-
-// Setup Socket.IO
+        // Setup Socket.IO
         function setupSocket() {
             const token = localStorage.getItem('token');
             socket = io();
@@ -725,14 +710,7 @@
             }
         }
         
-        
-        function openUserProfile(userId){
-            if (!userId) return;
-            // profile.html already exists in the project (and respects token)
-            window.location.href = `/profile.html?id=${encodeURIComponent(userId)}`;
-        }
-    
-// Render group messages
+        // Render group messages
         function renderGroupMessages(messages) {
             const container = document.getElementById('messagesContainer');
             
@@ -743,10 +721,10 @@
             container.innerHTML = messages.map(msg => `
                 <div class="message">
                     <div class="flex items-start space-x-2">
-                        <img src="${msg.senderId?.avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${msg.senderId?._id}')" title="Profil">
+                        <img src="${msg.senderId?.avatar}" class="w-8 h-8 rounded-full">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2 mb-1">
-                                <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${msg.senderId?._id}')" title="Profil">${msg.senderId?.nickname}</span>
+                                <span class="font-medium text-gray-800">${msg.senderId?.nickname}</span>
                                 <span class="text-xs text-gray-500">${formatTime(msg.createdAt)}</span>
                             </div>
                             <div class="message-bubble ${msg.senderId?._id === currentUser._id ? 'sent' : 'received'} p-3">
@@ -822,10 +800,10 @@
             messageDiv.className = 'message';
             messageDiv.innerHTML = `
                 <div class="flex items-start space-x-2">
-                    <img src="${message.senderId?.avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${message.senderId?._id}')" title="Profil">
+                    <img src="${message.senderId?.avatar}" class="w-8 h-8 rounded-full">
                     <div class="flex-1">
                         <div class="flex items-center space-x-2 mb-1">
-                            <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${message.senderId?._id}')" title="Profil">${message.senderId?.nickname}</span>
+                            <span class="font-medium text-gray-800">${message.senderId?.nickname}</span>
                             <span class="text-xs text-gray-500">${formatTime(message.createdAt)}</span>
                         </div>
                         <div class="message-bubble ${message.senderId?._id === currentUser._id ? 'sent' : 'received'} p-3">
@@ -1122,8 +1100,6 @@
         
         // Shared audio constraints (used for mic capture and screen+cam mode)
         const AUDIO_CONSTRAINTS = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
-        // Back-compat alias (some older code referenced audioConstraints)
-        const audioConstraints = AUDIO_CONSTRAINTS;
 // ==================== GROUP CALL (WebRTC Mesh) ====================
         let groupCall = {
             active: false,
@@ -1223,7 +1199,6 @@ function isTeacher(userId) {
             document.getElementById('groupIncomingMeta').textContent = metaText;
             document.getElementById('groupIncomingBox').classList.remove('hidden');
             showGroupOverlay();
-            try{ if(document.getElementById('lessonTitleWrap')){ const isT = (String(currentUser?.role||'').toLowerCase()==='teacher'); document.getElementById('lessonTitleWrap').classList.toggle('hidden', !isT); } }catch(e){}
         }
 
         function dismissIncomingGroupCall() {
@@ -1258,7 +1233,7 @@ try {
         : { audio: AUDIO_CONSTRAINTS, video: videoConstraints };
 
     groupCall.localStream = await navigator.mediaDevices.getUserMedia(constraints);
-    addVideoTile(String(currentUser?._id || 'local'), groupCall.localStream, true);
+    addVideoTile('local', groupCall.localStream, true);
     return groupCall.localStream;
 } catch (err) {
     console.warn('ensureLocalStream getUserMedia failed:', err);
@@ -1267,7 +1242,7 @@ try {
     if (callType !== 'audio') {
         try {
             groupCall.localStream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CONSTRAINTS, video: false });
-            addVideoTile(String(currentUser?._id || 'local'), groupCall.localStream, true);
+            addVideoTile('local', groupCall.localStream, true);
             return groupCall.localStream;
         } catch (err2) {
             console.warn('ensureLocalStream audio-only failed:', err2);
@@ -1511,14 +1486,11 @@ function removeVideoTile(userId) {
 
             try {
                 await ensureLocalStream(callType);
-                const lessonTitle = (document.getElementById('lessonTitleInput')?.value || '').trim();
-                socket.emit('groupCallStart', { groupId, callType, title: lessonTitle });
-                /* lessonTitleInput stays editable until recording starts */
+                socket.emit('groupCallStart', { groupId, callType });
             } catch (e) {
                 console.error(e);
                 alert('Failed to start call: ' + e.message);
                 cleanupGroupCallUI();
-                try{ const ti=document.getElementById('lessonTitleInput'); if(ti) { ti.disabled=false; } }catch(e){}
             }
         }
 
@@ -1533,7 +1505,6 @@ function removeVideoTile(userId) {
             setGroupCallStatus('Joining...');
 
             await ensureLocalStream(groupCall.callType);
-            try { if (currentUser && currentUser._id) groupCall.participantInfos.set(String(currentUser._id), { role: String(currentUser.role||'').toLowerCase() }); } catch(_) {}
             socket.emit('groupCallJoin', { groupId: gid, callId });
         }
 
@@ -1549,99 +1520,7 @@ function removeVideoTile(userId) {
         let _camStream = null;
         let _compositeAnimId = null;
         let _screenShareActive = false;
-
-        // Build a composite canvas stream for recording that works even without screen-share:
-        // - If screen-share is active, canvas draws screen + PIP camera
-        // - If screen-share ends, canvas falls back to camera full-frame (no black video)
-        async function initCompositeCameraOnlyIfNeeded() {
-            if (_compositeCanvas && _compositeStream && _camVideoEl) return;
-            const base = groupCall._prevLocalStream || groupCall.localStream;
-            // Camera source (prefer already-open camera track)
-            let camStream = null;
-            if (base && base.getVideoTracks && base.getVideoTracks().length) {
-                camStream = new MediaStream([base.getVideoTracks()[0]]);
-            } else {
-                // device might be watch-only; try to open camera if available (ignore failure)
-                camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }).catch(() => null);
-            }
-            // Audio source (prefer already-open mic)
-            let micTrack = null;
-            if (base && base.getAudioTracks && base.getAudioTracks().length) micTrack = base.getAudioTracks()[0];
-            if (!micTrack) {
-                const micStream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CONSTRAINTS, video: false }).catch(() => null);
-                micTrack = micStream?.getAudioTracks?.()[0] || null;
-            }
-
-            _camStream = camStream;
-            const camVideo = document.createElement('video');
-            camVideo.srcObject = camStream || new MediaStream();
-            camVideo.muted = true;
-            try { await camVideo.play(); } catch(_) {}
-            _camVideoEl = camVideo;
-
-            const canvas = document.createElement('canvas');
-            canvas.width = 1280;
-            canvas.height = 720;
-            _compositeCanvas = canvas;
-            const ctx = canvas.getContext('2d');
-
-            // draw loop reuses the same logic as screen+cam (screen may be null)
-            const isScreenLive = () => {
-                const t = _screenStream?.getVideoTracks?.()[0];
-                return !!t && t.readyState === 'live';
-            };
-
-            const draw = () => {
-                try {
-                    const screenOk = _screenShareActive && isScreenLive() && _screenVideoEl && _screenVideoEl.readyState >= 2;
-                    const camOk = _camVideoEl && _camVideoEl.readyState >= 2;
-
-                    if (screenOk) {
-                        ctx.drawImage(_screenVideoEl, 0, 0, canvas.width, canvas.height);
-                        if (camOk) {
-                            const pipW = Math.round(canvas.width * 0.22);
-                            const pipH = Math.round(pipW * (9 / 16));
-                            const margin = 16;
-                            const x = canvas.width - pipW - margin;
-                            const y = margin;
-                            ctx.save();
-                            const r = 14;
-                            ctx.beginPath();
-                            ctx.moveTo(x + r, y);
-                            ctx.lineTo(x + pipW - r, y);
-                            ctx.quadraticCurveTo(x + pipW, y, x + pipW, y + r);
-                            ctx.lineTo(x + pipW, y + pipH - r);
-                            ctx.quadraticCurveTo(x + pipW, y + pipH, x + pipW - r, y + pipH);
-                            ctx.lineTo(x + r, y + pipH);
-                            ctx.quadraticCurveTo(x, y + pipH, x, y + pipH - r);
-                            ctx.lineTo(x, y + r);
-                            ctx.quadraticCurveTo(x, y, x + r, y);
-                            ctx.closePath();
-                            ctx.clip();
-                            ctx.drawImage(_camVideoEl, x, y, pipW, pipH);
-                            ctx.restore();
-                        }
-                    } else if (camOk) {
-                        ctx.drawImage(_camVideoEl, 0, 0, canvas.width, canvas.height);
-                    } else {
-                        ctx.fillStyle = 'black';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.fillStyle = 'white';
-                        ctx.font = '22px sans-serif';
-                        ctx.fillText('Video yo\'q', 20, 40);
-                    }
-                } catch (_) {}
-                _compositeAnimId = requestAnimationFrame(draw);
-            };
-            draw();
-
-            const out = new MediaStream();
-            const [vTrack] = canvas.captureStream(30).getVideoTracks();
-            if (vTrack) out.addTrack(vTrack);
-            if (micTrack) out.addTrack(micTrack);
-            _compositeStream = out;
-        }
-            let _screenVideoEl = null;
+        let _screenVideoEl = null;
         let _camVideoEl = null;
 
         function updateTeacherControls() {
@@ -1767,20 +1646,6 @@ function removeVideoTile(userId) {
         const micStream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CONSTRAINTS, video: false }).catch(() => null);
 
         _screenStream = screenStream;
-
-        // When user stops sharing, revert drawing to camera-only (prevents black recording)
-        try {
-            const t = _screenStream?.getVideoTracks?.()[0];
-            if (t) {
-                t.onended = () => {
-                    _screenShareActive = false;
-                    try { _screenStream?.getTracks?.().forEach(tr => tr.stop()); } catch(_) {}
-                    _screenStream = null;
-                    _screenVideoEl = null;
-                    setGroupCallStatus('Screen share tugadi');
-                };
-            }
-        } catch(_) {}
         _camStream = camStream;
 
         // 4) Composite: draw screen + small camera overlay
@@ -1983,18 +1848,19 @@ function removeVideoTile(userId) {
                 let baseStream = groupCall.localStream;
                 if (!baseStream) return alert('Avval Video/Voice Call ni boshlang, keyin recording yoqing.');
 
-                // Recording always uses a composite canvas stream:
-                // - camera-only works everywhere MediaRecorder works (including mobile Chrome)
-                // - if teacher shares screen later, composite will automatically show screen + PIP camera
-                
-                // Save lesson topic/mode before recording starts (so Group Lessons shows it)
-                const _title = (document.getElementById('lessonTitleInput')?.value || '').trim();
-                const _mode = groupCall.isScreenSharing ? 'screen' : 'camera';
-                if (_title) { try{ await updateLessonMeta(groupCall.lessonId, { title: _title, mode: _mode }); }catch(_){} }
-                try{ const ti=document.getElementById('lessonTitleInput'); if(ti) ti.disabled = true; }catch(e){}
-await initCompositeCameraOnlyIfNeeded();
-                baseStream = _compositeStream || baseStream;
-if (typeof MediaRecorder === 'undefined') {
+                // Optional: include screen if teacher is sharing; otherwise camera-only is still allowed (mobile friendly)
+                if (!_compositeStream) {
+                    // don't force on mobile; ask gently
+                    const ok = confirm('Ekran (screen) ham yozib olinsinmi? OK: Screen Share yoqiladi. Cancel: faqat kamera+audio yoziladi.');
+                    if (ok) {
+                        await startScreenWithCam();
+                        baseStream = _compositeStream || groupCall.localStream || baseStream;
+                    }
+                } else {
+                    baseStream = _compositeStream || baseStream;
+                }
+
+                if (typeof MediaRecorder === 'undefined') {
                     // Some browsers (especially older iOS Safari) cannot record via MediaRecorder.
                     // Client-side recording is impossible there without a media server/SFU recorder.
                     return alert('Bu brauzer Recording-ni qo‘llab-quvvatlamaydi (MediaRecorder yo‘q). Tavsiya: Chrome/Edge/Android Chrome yoki server-side recorder (SFU: LiveKit/mediasoup) qo‘shish.');
@@ -2136,7 +2002,6 @@ if (typeof MediaRecorder === 'undefined') {
                         const blob = new Blob(_recordingChunks, { type: (_recorder && _recorder.mimeType) ? _recorder.mimeType : 'video/webm' });
                         _recordingChunks = [];
                         await uploadRecording(blob);
-                        try{ const ti=document.getElementById('lessonTitleInput'); if(ti) ti.disabled = false; }catch(e){}
                     } catch (e) {
                         console.error('Recording stop/upload error:', e);
                         alert('Recording saqlashda xatolik: ' + (e?.message || e));
@@ -2181,8 +2046,6 @@ if (typeof MediaRecorder === 'undefined') {
                 const token = localStorage.getItem('token');
                 const fd = new FormData();
                 fd.append('recording', blob, `lesson_${groupCall.lessonId}.webm`);
-                const title = (document.getElementById('lessonTitleInput')?.value || '').trim();
-                if (title) fd.append('title', title);
                 const res = await fetch(`/api/group-lessons/${groupCall.lessonId}/recording`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -2393,10 +2256,6 @@ function toggleMute() {
     <div class="flex items-center justify-between p-4 bg-black/60">
       <div class="text-white">
         <div class="font-semibold" id="groupCallTitle">Group Call</div>
-        <div class="mt-2 hidden" id="lessonTitleWrap">
-          <input id="lessonTitleInput" type="text" maxlength="120" placeholder="Dars mavzusi (masalan: Moliya 1-ma'ruza)"
-            class="w-[min(520px,70vw)] px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"/>
-        </div>
         <div class="text-xs opacity-80" id="groupCallStatus">Not connected</div>
       </div>
       <div class="flex items-center space-x-2">
