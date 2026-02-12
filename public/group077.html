@@ -204,6 +204,7 @@
     nav .space-x-4>*, nav .space-x-3>*{margin-left:0!important}
     #livePlayerWrap video{max-height:45vh!important}
     .message-bubble{max-width:88%!important}
+
     /* Side panels as drawers */
     #infoPanel, #userInfoSidebar{
       position:fixed !important;
@@ -214,37 +215,38 @@
       transition:transform .25s ease;
       display:block !important;
     }
+    #infoPanel.open, #userInfoSidebar.open{ transform:translateX(0); }
 
-    /* Call overlay mobile */
+    #drawerOverlay{ display:none; }
+    #drawerOverlay.show{
+      display:block;
+      position:fixed;
+      inset:0;
+      z-index:55;
+      background:rgba(0,0,0,.45);
+      backdrop-filter: blur(4px);
+    }
 
-    /* Ensure overlay panels are above video */
-    #groupCallOverlay{ position: fixed !important; inset: 0 !important; z-index: 2147483600 !important; }
-    #groupIncomingBox{ z-index: 2147483605 !important; }
-    #callMoreMenu{ z-index: 2147483640 !important; }
-    #attendancePanel{ z-index: 2147483635 !important; }
-    #drawerOverlay.show{ z-index: 2147483590 !important; }
-
+    /* Call overlay mobile layout */
     #studentsGrid{ grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
     @media (orientation: landscape){
       #studentsGrid{ grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
       #teacherStage{ max-height: 52vh; }
     }
     #groupCallOverlay .p-4{ padding: 12px !important; }
-    #callMoreMenu{ width: min(86vw, 320px) !important; position: fixed !important; right: 12px !important; top: 84px !important; z-index: 2147483640 !important; }
-    #groupActionsMenu{ z-index: 2147483640 !important; }
-    #attendancePanel{ position: fixed !important; right: 12px !important; top: 84px !important; bottom: 12px !important; z-index: 2147483630 !important; }
-    .ctrl-active{ background: rgba(34,197,94,.18) !important; box-shadow: 0 0 0 3px rgba(34,197,94,.25) !important; }
-    .ctrl-off{ background: rgba(239,68,68,.18) !important; box-shadow: 0 0 0 3px rgba(239,68,68,.20) !important; }
-  }
-  #infoPanel.open, #userInfoSidebar.open{ transform:translateX(0); }
-  #drawerOverlay{ display:none; }
-  #drawerOverlay.show{
-    display:block;
-    position:fixed;
-    inset:0;
-    z-index:55;
-    background:rgba(0,0,0,.45);
-    backdrop-filter: blur(4px);
+    #callMoreMenu{ width: min(86vw, 320px) !important; }
+
+    /* CRITICAL: dropdown must stay above video tiles on mobile */
+    #groupCallOverlay{ z-index: 5000; }
+    #callMoreMenu{
+      position: fixed !important;
+      right: 12px;
+      top: 72px;
+      z-index: 999999 !important;
+      transform: translateZ(0);
+    }
+    #btnCallMore{ position: relative; z-index: 999999 !important; }
+    #teacherStage, #studentsGrid{ position: relative; z-index: 1; }
   }
 </style>
 <script id="mobileDrawerScript">
@@ -355,16 +357,6 @@
       <a href="/groups.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-arrow-left w-5 text-center"></i><span>Back to Groups</span></a>
 <button id="mInfo" onclick="toggleInfoPanel(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-circle-info w-5 text-center"></i><span>Group Info</span></button>
 <button id="mInvite" onclick="document.getElementById('inviteSearch')?.scrollIntoView({behavior:'smooth',block:'start'}); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-user-plus w-5 text-center"></i><span>Invite</span></button>
-<button id="mVideoCall" onclick="startGroupVideoCall(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
-  <i class="fas fa-video w-5 text-center"></i><span>Video Call</span>
-</button>
-<button id="mVoiceCall" onclick="startGroupAudioCall(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
-  <i class="fas fa-phone w-5 text-center"></i><span>Voice Call</span>
-</button>
-<button id="mLessons" onclick="goToGroupLessons(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
-  <i class="fas fa-book-open w-5 text-center"></i><span>O‘tilgan darslar</span>
-</button>
-
 <button id="mLogout2" onclick="logout(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-right-from-bracket w-5 text-center"></i><span>Logout</span></button>
     </div>
   </aside>
@@ -636,9 +628,6 @@
                 if (data.success) {
                     currentUser = data.user;
                 }
-                // If group already loaded, rebuild actions (important on mobile)
-                try { if (currentGroup) setupGroupActions(currentGroup); } catch(e){}
-
             } catch (error) {
                 console.error('Failed to load user:', error);
             }
@@ -658,8 +647,6 @@
                     currentGroup = data.group;
                     renderGroupInfo(data.group);
                     renderMembers(data.group.members);
-                    // Ensure currentUser is loaded before building action menu (mobile needs it)
-                    if (!currentUser) { try { await loadCurrentUser(); } catch(e){} }
                     setupGroupActions(data.group);
                 } else {
                     alert('Group not found or access denied');
@@ -1398,10 +1385,24 @@ function isTeacher(userId) {
 
         // Mobile: call controls dropdown
         function toggleCallMoreMenu(){
-            const m = document.getElementById('callMoreMenu');
-            if(!m) return;
-            m.classList.toggle('hidden');
-        }
+  const m = document.getElementById('callMoreMenu');
+  const btn = document.getElementById('btnCallMore');
+  if(!m) return;
+
+  // Ensure menu is always above the video tiles (mobile stacking contexts can be tricky)
+  m.style.position = 'fixed';
+  m.style.zIndex = '999999';
+
+  if(btn && btn.getBoundingClientRect){
+    const r = btn.getBoundingClientRect();
+    const right = Math.max(8, window.innerWidth - r.right);
+    const top = Math.min(window.innerHeight - 140, r.bottom + 10);
+    m.style.right = right + 'px';
+    m.style.top = top + 'px';
+  }
+
+  m.classList.toggle('hidden');
+}
         function closeCallMoreMenu(){
             const m = document.getElementById('callMoreMenu');
             if(m) m.classList.add('hidden');
@@ -1442,17 +1443,8 @@ function isTeacher(userId) {
 
         async function ensureLocalStream(callType) {
 
-  // If we already have a *live* local stream, reuse it.
-  // Important: after leaving a call we may have a stream object whose tracks are ended (mobile does this a lot).
-  if (groupCall.localStream) {
-    try {
-      const tracks = groupCall.localStream.getTracks ? groupCall.localStream.getTracks() : [];
-      const hasLive = tracks.some(t => t && t.readyState === 'live');
-      if (hasLive) return groupCall.localStream;
-    } catch(e) {}
-    try { groupCall.localStream.getTracks().forEach(t=>t.stop()); } catch(e) {}
-    groupCall.localStream = null;
-  }
+if (groupCall.localStream) return groupCall.localStream;
+
 // For camera-less / mic-less devices: allow "watch-only" participation.
 // We try video+audio -> audio-only -> no local tracks.
 const videoConstraints = { width: 1280, height: 720 };
@@ -2139,12 +2131,10 @@ function removeVideoTile(userId) {
             try { stopComposite(); } catch (_) {}
         };
 
-        groupCall.isScreenSharing = true;
-        updateCallControlUI();
         setGroupCallStatus('Teacher mode: Screen + Cam');
     } catch (e) {
         console.error('startScreenWithCam', e);
-        notify('Ekran ulashishda xatolik: ' + (e?.message || e), 'err');
+        alert('Ekran ulashishda xatolik: ' + (e?.message || e));
     }
 }
 
@@ -2159,8 +2149,6 @@ function removeVideoTile(userId) {
     try { if (_compositeAnimId) cancelAnimationFrame(_compositeAnimId); } catch(_) {}
     _compositeAnimId = null;
     _screenShareActive = false;
-    groupCall.isScreenSharing = false;
-    updateCallControlUI();
 
     // Stop canvas stream tracks (otherwise recording can keep a dead black track alive)
     try { _compositeStream && _compositeStream.getTracks().forEach(t => t.stop()); } catch(_) {}
@@ -2356,11 +2344,10 @@ if (typeof MediaRecorder === 'undefined') {
                         _isRecording = false;
                         const btn = document.getElementById('btnRecord');
                         if (btn) {
-                            btn.classList.remove('bg-red-600');
-                            btn.classList.add('bg-white/10');
-                            btn.innerHTML = '<i class="fas fa-circle"></i>';
+                            btn.textContent = 'Recording';
+                            btn.classList.remove('btn-danger');
+                            btn.classList.add('btn-secondary');
                         }
-                        updateCallControlUI();
 
                         // canvas cleanup
                         if (window._canvasRecCleanup) window._canvasRecCleanup();
@@ -2387,11 +2374,10 @@ if (typeof MediaRecorder === 'undefined') {
 
                 const btn = document.getElementById('btnRecord');
                 if (btn) {
-                    btn.classList.remove('bg-white/10');
-                    btn.classList.add('bg-red-600');
-                    btn.innerHTML = '<i class="fas fa-stop"></i>';
+                    btn.textContent = 'Stop';
+                    btn.classList.remove('btn-secondary');
+                    btn.classList.add('btn-danger');
                 }
-                updateCallControlUI();
             } catch (e) {
                 console.error('toggleRecording error:', e);
                 notify('Recording xatolik: ' + (e?.message || e), 'err');
@@ -2404,7 +2390,6 @@ if (typeof MediaRecorder === 'undefined') {
             if (_isRecording) {
                 btn.classList.remove('bg-white/10');
                 btn.classList.add('bg-red-600');
-                btn.innerHTML = '<i class="fas fa-stop"></i>';
             } else {
                 btn.classList.add('bg-white/10');
                 btn.classList.remove('bg-red-600');
@@ -2429,7 +2414,7 @@ if (typeof MediaRecorder === 'undefined') {
                 console.log('recording uploaded', data);
             } catch (e) {
                 console.error('uploadRecording', e);
-                notify('Yozuvni yuklashda xatolik: ' + (e?.message || e) + ' (keyin avtomatik urinamiz)', 'warn');
+                alert('❌ Yozuvni yuklashda xatolik: ' + (e?.message || e));
             }
         }
 function toggleSpeaker() {
@@ -2443,53 +2428,6 @@ function toggleSpeaker() {
             });
             const b = document.getElementById('btnSpeaker');
             if (b) b.innerHTML = groupCall.speakerMuted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
-            updateCallControlUI();
-        }
-
-
-function updateCallControlUI(){
-            const micOn = !groupCall.muted;
-            const camOn = !groupCall.cameraOff;
-            const spkOn = !groupCall.speakerMuted;
-            const recOn = !!window._isRecording;
-            const scrOn = !!groupCall.isScreenSharing;
-
-            const setBtn = (id, on) => {
-                const b = document.getElementById(id);
-                if (!b) return;
-                b.classList.toggle('ctrl-active', !!on);
-                b.classList.toggle('ctrl-off', !on);
-                b.setAttribute('aria-pressed', String(!!on));
-            };
-
-            // top buttons
-            setBtn('btnMute', micOn);
-            setBtn('btnCam', camOn);
-            setBtn('btnSpeaker', spkOn);
-            if (document.getElementById('btnRecord')) setBtn('btnRecord', recOn);
-            if (document.getElementById('btnScreen')) setBtn('btnScreen', scrOn);
-
-            // mobile menu icons follow state
-            const swapIcon = (btnId, html) => {
-                const b = document.getElementById(btnId);
-                if (!b) return;
-                const i = b.querySelector('i');
-                if (i) i.outerHTML = html;
-            };
-            swapIcon('mBtnMute', micOn ? '<i class="fas fa-microphone w-5 text-center"></i>' : '<i class="fas fa-microphone-slash w-5 text-center"></i>');
-            swapIcon('mBtnCam',  camOn ? '<i class="fas fa-video w-5 text-center"></i>' : '<i class="fas fa-video-slash w-5 text-center"></i>');
-            swapIcon('mBtnSpeaker', spkOn ? '<i class="fas fa-volume-up w-5 text-center"></i>' : '<i class="fas fa-volume-mute w-5 text-center"></i>');
-
-            const recBtn = document.getElementById('mBtnRecord');
-            if (recBtn) {
-                const i = recBtn.querySelector('i');
-                if (i) i.className = recOn ? 'fas fa-stop w-5 text-center' : 'fas fa-circle w-5 text-center';
-            }
-            const scrBtn = document.getElementById('mBtnScreen');
-            if (scrBtn) {
-                const i = scrBtn.querySelector('i');
-                if (i) i.className = scrOn ? 'fas fa-display w-5 text-center' : 'fas fa-desktop w-5 text-center';
-            }
         }
 
 function toggleMute() {
@@ -2498,7 +2436,6 @@ function toggleMute() {
             groupCall.localStream.getAudioTracks().forEach(t => t.enabled = !groupCall.muted);
             const btn = document.getElementById('btnMute');
             btn.innerHTML = groupCall.muted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
-            updateCallControlUI();
         }
 
         function toggleCamera() {
@@ -2507,7 +2444,6 @@ function toggleMute() {
             groupCall.localStream.getVideoTracks().forEach(t => t.enabled = !groupCall.cameraOff);
             const btn = document.getElementById('btnCam');
             btn.innerHTML = groupCall.cameraOff ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
-            updateCallControlUI();
         }
 
         async function switchCamera(){
@@ -2539,7 +2475,7 @@ function toggleMute() {
                 if (groupCall.localStream) groupCall.localStream.addTrack(newTrack);
                 else groupCall.localStream = new MediaStream([newTrack]);
 
-                const lv = document.getElementById('localVideo') || document.getElementById(`vid_${String(currentUser?._id || 'local')}`);
+                const lv = document.getElementById('localVideo');
                 if (lv) { lv.srcObject = groupCall.localStream; try{ await lv.play(); }catch(_){} }
 
                 for (const pc of groupCall.peers.values()){
@@ -2775,13 +2711,13 @@ function toggleMute() {
           <i class="fas fa-ellipsis-vertical"></i>
         </button>
         <div id="callMoreMenu" class="hidden absolute right-0 mt-2 w-56 rounded-2xl bg-black/80 border border-white/10 backdrop-blur-xl overflow-hidden shadow-2xl">
-          <button id="mBtnMute" onclick="toggleMute(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
+          <button onclick="toggleMute(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
             <i class="fas fa-microphone w-5 text-center"></i><span>Mic</span>
           </button>
-          <button id="mBtnSpeaker" onclick="toggleSpeaker(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
+          <button onclick="toggleSpeaker(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
             <i class="fas fa-volume-up w-5 text-center"></i><span>Speaker</span>
           </button>
-          <button id="mBtnCam" onclick="toggleCamera(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
+          <button onclick="toggleCamera(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
             <i class="fas fa-video w-5 text-center"></i><span>Kamera</span>
           </button>
           <button id="mBtnSwitchCam" onclick="switchCamera(); closeCallMoreMenu()" class="hidden w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">

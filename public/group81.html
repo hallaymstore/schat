@@ -1442,17 +1442,8 @@ function isTeacher(userId) {
 
         async function ensureLocalStream(callType) {
 
-  // If we already have a *live* local stream, reuse it.
-  // Important: after leaving a call we may have a stream object whose tracks are ended (mobile does this a lot).
-  if (groupCall.localStream) {
-    try {
-      const tracks = groupCall.localStream.getTracks ? groupCall.localStream.getTracks() : [];
-      const hasLive = tracks.some(t => t && t.readyState === 'live');
-      if (hasLive) return groupCall.localStream;
-    } catch(e) {}
-    try { groupCall.localStream.getTracks().forEach(t=>t.stop()); } catch(e) {}
-    groupCall.localStream = null;
-  }
+if (groupCall.localStream) return groupCall.localStream;
+
 // For camera-less / mic-less devices: allow "watch-only" participation.
 // We try video+audio -> audio-only -> no local tracks.
 const videoConstraints = { width: 1280, height: 720 };
@@ -2539,7 +2530,7 @@ function toggleMute() {
                 if (groupCall.localStream) groupCall.localStream.addTrack(newTrack);
                 else groupCall.localStream = new MediaStream([newTrack]);
 
-                const lv = document.getElementById('localVideo') || document.getElementById(`vid_${String(currentUser?._id || 'local')}`);
+                const lv = document.getElementById('localVideo');
                 if (lv) { lv.srcObject = groupCall.localStream; try{ await lv.play(); }catch(_){} }
 
                 for (const pc of groupCall.peers.values()){
