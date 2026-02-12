@@ -2253,124 +2253,38 @@ if (typeof MediaRecorder === 'undefined') {
                 // 2) Fallback: canvas composition recording (works on more devices when direct stream fails)
                 const makeCanvasRecorderStream = async (stream) => {
                     const vEl = document.getElementById('localVideo') || document.querySelector('video#localVideo');
-                    const stageEl = document.getElementById('teacherStageVideo') || document.querySelector('video#teacherStageVideo') || null;
-
-                    // Helper: safe video dimensions
-                    const getVidWH = (el) => {
-                        const w = Number(el?.videoWidth || 0);
-                        const h = Number(el?.videoHeight || 0);
-                        if (w > 0 && h > 0) return { w, h };
-                        // fallback to track settings
-                        const vt = stream?.getVideoTracks?.()[0];
-                        const st = vt?.getSettings?.() || {};
-                        const sw = Number(st.width || 0), sh = Number(st.height || 0);
-                        if (sw > 0 && sh > 0) return { w: sw, h: sh };
-                        return { w: 1280, h: 720 };
-                    };
-
-                    // Choose main element for sizing
-                    const mainElForSize = (stageEl && stageEl.readyState >= 2) ? stageEl : (vEl && vEl.readyState >= 2 ? vEl : stageEl || vEl);
-                    const base = getVidWH(mainElForSize);
-
-                    // Canvas size: keep native orientation (portrait stays portrait). Limit long side to 1280 (don’t upscale).
-                    const maxSide = 1280;
-                    const scale = Math.min(1, maxSide / Math.max(base.w, base.h));
-                    const cw = Math.max(2, Math.round((base.w * scale) / 2) * 2);
-                    const ch = Math.max(2, Math.round((base.h * scale) / 2) * 2);
+                    const stageEl = document.getElementById('teacherStageVideo') || document.querySelector('video#teacherStageVideo') || vEl;
 
                     const canvas = document.createElement('canvas');
-                    canvas.width = cw;
-                    canvas.height = ch;
+                    canvas.width = 1280;
+                    canvas.height = 720;
                     canvas.style.position = 'fixed';
                     canvas.style.left = '-9999px';
                     canvas.style.top = '-9999px';
                     document.body.appendChild(canvas);
-                    const ctx = canvas.getContext('2d', { alpha: false });
-
-                    const drawContain = (srcEl, dx, dy, dw, dh, flipX=false) => {
-                        if (!srcEl || srcEl.readyState < 2) return;
-                        const sw = srcEl.videoWidth || 0;
-                        const sh = srcEl.videoHeight || 0;
-                        if (!sw || !sh) return;
-
-                        // contain (letterbox)
-                        const sAR = sw / sh;
-                        const dAR = dw / dh;
-                        let rw, rh, rx, ry;
-                        if (sAR > dAR) {
-                            rw = dw;
-                            rh = dw / sAR;
-                            rx = dx;
-                            ry = dy + (dh - rh) / 2;
-                        } else {
-                            rh = dh;
-                            rw = dh * sAR;
-                            rx = dx + (dw - rw) / 2;
-                            ry = dy;
-                        }
-
-                        ctx.save();
-                        if (flipX) {
-                            ctx.translate(rx + rw, ry);
-                            ctx.scale(-1, 1);
-                            ctx.drawImage(srcEl, 0, 0, rw, rh);
-                        } else {
-                            ctx.drawImage(srcEl, rx, ry, rw, rh);
-                        }
-                        ctx.restore();
-                    };
-
-                    const drawCover = (srcEl, dx, dy, dw, dh, flipX=false) => {
-                        if (!srcEl || srcEl.readyState < 2) return;
-                        const sw = srcEl.videoWidth || 0;
-                        const sh = srcEl.videoHeight || 0;
-                        if (!sw || !sh) return;
-
-                        // cover (crop)
-                        const sAR = sw / sh;
-                        const dAR = dw / dh;
-                        let sx=0, sy=0, sww=sw, shh=sh;
-                        if (sAR > dAR) {
-                            // crop left/right
-                            sww = Math.round(sh * dAR);
-                            sx = Math.round((sw - sww) / 2);
-                        } else {
-                            // crop top/bottom
-                            shh = Math.round(sw / dAR);
-                            sy = Math.round((sh - shh) / 2);
-                        }
-
-                        ctx.save();
-                        if (flipX) {
-                            ctx.translate(dx + dw, dy);
-                            ctx.scale(-1, 1);
-                            ctx.drawImage(srcEl, sx, sy, sww, shh, 0, 0, dw, dh);
-                        } else {
-                            ctx.drawImage(srcEl, sx, sy, sww, shh, dx, dy, dw, dh);
-                        }
-                        ctx.restore();
-                    };
+                    const ctx = canvas.getContext('2d');
 
                     const draw = () => {
                         try {
                             ctx.fillStyle = '#000';
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.fillRect(0,0,canvas.width,canvas.height);
 
-                            // Main: stage if exists else camera
-                            const main = (stageEl && stageEl.readyState >= 2) ? stageEl : vEl;
-                            const flipMain = (!stageEl && (groupCall?.facingMode === 'user')); // unmirror selfie in recording
-                            drawContain(main, 0, 0, canvas.width, canvas.height, flipMain);
+                            // Main: screen if exists (stageEl may point to screen composite)
+                            const main = stageEl && stageEl.readyState >= 2 ? stageEl : vEl;
+                            if (main && main.readyState >= 2) {
+                                ctx.drawImage(main, 0, 0, canvas.width, canvas.height);
+                            }
 
-                            // PiP: camera at top-right (cover for nice look, but keeps aspect)
+                            // PiP: camera (local video) at top-right
                             if (vEl && vEl.readyState >= 2) {
-                                const w = Math.round(canvas.width * 0.28);
-                                const h = Math.round(canvas.height * 0.28);
-                                const pad = Math.max(10, Math.round(Math.min(canvas.width, canvas.height) * 0.02));
+                                const w = Math.round(canvas.width * 0.22);
+                                const h = Math.round(canvas.height * 0.22);
+                                const pad = 16;
+                                ctx.save();
+                                // rounded rect clip
                                 const x = canvas.width - w - pad;
                                 const y = pad;
                                 const r = 16;
-
-                                ctx.save();
                                 ctx.beginPath();
                                 ctx.moveTo(x+r, y);
                                 ctx.arcTo(x+w, y, x+w, y+h, r);
@@ -2379,24 +2293,16 @@ if (typeof MediaRecorder === 'undefined') {
                                 ctx.arcTo(x, y, x+w, y, r);
                                 ctx.closePath();
                                 ctx.clip();
-
-                                const flipPip = (groupCall?.facingMode === 'user'); // unmirror selfie
-                                drawCover(vEl, x, y, w, h, flipPip);
-
-                                // border
-                                ctx.lineWidth = 2;
-                                ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-                                ctx.stroke();
+                                ctx.drawImage(vEl, x, y, w, h);
                                 ctx.restore();
                             }
                         } catch(_) {}
-                        window._canvasRecRaf = requestAnimationFrame(draw);
+                        _canvasRecRaf = requestAnimationFrame(draw);
                     };
-
-                    if (window._canvasRecRaf) { try{ cancelAnimationFrame(window._canvasRecRaf); }catch(_){} }
+                    if (typeof _canvasRecRaf !== 'undefined' && _canvasRecRaf) cancelAnimationFrame(_canvasRecRaf);
                     window._canvasRecRaf = requestAnimationFrame(draw);
 
-                    const canvasStream = canvas.captureStream(24); // smoother than 15fps on phones
+                    const canvasStream = canvas.captureStream(15); // 15fps reduces lag + file size
                     const outTracks = [];
 
                     // video track from canvas
@@ -2415,7 +2321,7 @@ if (typeof MediaRecorder === 'undefined') {
                     };
 
                     return new MediaStream(outTracks);
-                };;
+                };
 
                 let mimeType = pickMime();
                 let recordingStream = baseStream;
@@ -2609,67 +2515,33 @@ function toggleMute() {
                 if (groupCall.callType === 'audio') return notify('Audio call: kamera yo\'q', 'info');
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return notify('getUserMedia yo\'q', 'err');
 
-                // Ensure we already have permission (deviceId is often empty before first permission)
                 const devices = await navigator.mediaDevices.enumerateDevices().catch(()=>[]);
                 const cams = devices.filter(d=>d.kind==='videoinput');
                 if (!cams.length) return notify('Kamera topilmadi', 'err');
 
-                // Track current
-                const curTrack = groupCall.localStream?.getVideoTracks?.()[0] || null;
-                const curSettings = curTrack?.getSettings?.() || {};
-                const curDeviceId = groupCall.videoDeviceId || curSettings.deviceId || null;
+                groupCall.facingMode = groupCall.facingMode || 'user';
+                const next = (groupCall.facingMode === 'user') ? 'environment' : 'user';
 
-                // Determine next facingMode
-                groupCall.facingMode = groupCall.facingMode || curSettings.facingMode || 'user';
-                const nextFacing = (groupCall.facingMode === 'user') ? 'environment' : 'user';
-
-                // helper: open camera with constraints
-                const tryOpen = async (cons) => {
-                    try { return await navigator.mediaDevices.getUserMedia(cons); } catch(_) { return null; }
+                const open = async (exact) => {
+                    const cons = { video: { facingMode: exact ? { exact: next } : next }, audio: false };
+                    return navigator.mediaDevices.getUserMedia(cons);
                 };
 
-                // 1) Try facingMode (exact -> ideal)
-                let newStream = await tryOpen({ video: { facingMode: { exact: nextFacing } }, audio: false });
-                if (!newStream) newStream = await tryOpen({ video: { facingMode: nextFacing }, audio: false });
-                if (!newStream) newStream = await tryOpen({ video: { facingMode: { ideal: nextFacing } }, audio: false });
-
-                // 2) Fallback: cycle deviceId (common Android/Safari quirk)
-                if (!newStream) {
-                    let idx = 0;
-                    if (curDeviceId) {
-                        const curIdx = cams.findIndex(c=>c.deviceId===curDeviceId);
-                        if (curIdx >= 0) idx = curIdx;
-                    }
-                    const nextIdx = (idx + 1) % cams.length;
-                    const nextId = cams[nextIdx]?.deviceId;
-
-                    if (nextId) {
-                        newStream = await tryOpen({ video: { deviceId: { exact: nextId }, facingMode: { ideal: nextFacing } }, audio: false })
-                                 || await tryOpen({ video: { deviceId: { exact: nextId } }, audio: false });
-                    }
-                }
-
+                let newStream = null;
+                try { newStream = await open(true); } catch(_) { newStream = await open(false).catch(()=>null); }
                 if (!newStream) return notify('Camera almashtirib bo\'lmadi (ruxsat yoki device)', 'err');
 
                 const newTrack = newStream.getVideoTracks()[0];
                 if (!newTrack) return notify('Yangi video track yo\'q', 'err');
 
-                // Update stored selectors
-                const ns = newTrack.getSettings?.() || {};
-                groupCall.videoDeviceId = ns.deviceId || groupCall.videoDeviceId || null;
-                groupCall.facingMode = ns.facingMode || nextFacing;
-
-                // Replace in local stream
-                const oldTrack = curTrack;
+                const oldTrack = groupCall.localStream?.getVideoTracks?.()[0] || null;
                 if (oldTrack) { try{ groupCall.localStream.removeTrack(oldTrack); }catch(_){} try{ oldTrack.stop(); }catch(_){} }
                 if (groupCall.localStream) groupCall.localStream.addTrack(newTrack);
                 else groupCall.localStream = new MediaStream([newTrack]);
 
-                // Re-attach to local preview
                 const lv = document.getElementById('localVideo') || document.getElementById(`vid_${String(currentUser?._id || 'local')}`);
                 if (lv) { lv.srcObject = groupCall.localStream; try{ await lv.play(); }catch(_){} }
 
-                // Replace in all peer connections
                 for (const pc of groupCall.peers.values()){
                     try{
                         const sender = pc.getSenders().find(s=>s.track && s.track.kind==='video');
@@ -2677,13 +2549,14 @@ function toggleMute() {
                     }catch(e){ console.warn('replaceTrack failed', e); }
                 }
 
-                // composite recorder camera source refresh (if canvas fallback used)
+                // composite recorder camera source refresh
                 try{
                     if (typeof _camStream !== 'undefined' && _camStream) { try{ _camStream.getTracks().forEach(t=>t.stop()); }catch(_){} }
                     if (typeof _camVideoEl !== 'undefined' && _camVideoEl) { _camVideoEl.srcObject = new MediaStream([newTrack]); try{ await _camVideoEl.play(); }catch(_){} }
                 }catch(_){}
 
-                notify(groupCall.facingMode === 'environment' ? 'Orqa kamera yoqildi' : 'Old kamera yoqildi', 'ok');
+                groupCall.facingMode = next;
+                notify(next === 'environment' ? 'Orqa kamera yoqildi' : 'Old kamera yoqildi', 'ok');
             }catch(e){
                 console.error('switchCamera', e);
                 notify('Camera switch xatolik: ' + (e?.message || e), 'err');
