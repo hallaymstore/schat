@@ -38,8 +38,8 @@
 .field::placeholder{color: rgba(226,232,240,.55)}
 .field:focus{outline:none; box-shadow: 0 0 0 4px rgba(20,184,166,.22); border-color: transparent;}
 .text-gray-800{color: rgba(226,232,240,.95)!important}
-.muted{color: rgba(226,232,240,.82)!important}
-.muted2{color: rgba(226,232,240,.68)!important}
+.text-gray-700{color: rgba(226,232,240,.82)!important}
+.text-gray-600{color: rgba(226,232,240,.68)!important}
 .text-gray-500{color: rgba(226,232,240,.62)!important}
 .text-gray-400{color: rgba(226,232,240,.52)!important}
 .bg-gray-50{background: rgba(255,255,255,.06)!important}
@@ -284,7 +284,7 @@
                 <i class="fas fa-users text-white text-3xl"></i>
             </div>
             <h1 class="text-3xl font-bold text-gray-800">O‘quv guruhlari</h1>
-            <p class="muted2">Kursdoshlar bilan guruhlarga qo‘shiling yoki yangi guruh yarating</p>
+            <p class="text-gray-600">Kursdoshlar bilan guruhlarga qo‘shiling yoki yangi guruh yarating</p>
         </div>
         
         <!-- Create Group Button -->
@@ -324,19 +324,19 @@
             <div class="grid md:grid-cols-4 gap-4">
                 <div class="text-center p-4 bg-white/5 border border-white/10 rounded-2xl">
                     <div class="text-2xl font-bold text-teal-200" id="totalGroups">0</div>
-                    <div class="text-sm muted2">Jami Guruhlar</div>
+                    <div class="text-sm text-gray-600">Total Groups</div>
                 </div>
                 <div class="text-center p-4 bg-white/5 border border-white/10 rounded-2xl">
                     <div class="text-2xl font-bold text-sky-200" id="myGroups">0</div>
-                    <div class="text-sm muted2">Mening guruhlarim</div>
+                    <div class="text-sm text-gray-600">Mening guruhlarim</div>
                 </div>
                 <div class="text-center p-4 bg-white/5 border border-white/10 rounded-2xl">
                     <div class="text-2xl font-bold text-emerald-200" id="joinedGroups">0</div>
-                    <div class="text-sm muted2">Qo'shilganlar</div>
+                    <div class="text-sm text-gray-600">Joined</div>
                 </div>
                 <div class="text-center p-4 bg-white/5 border border-white/10 rounded-2xl">
                     <div class="text-2xl font-bold text-amber-200" id="totalMembers">0</div>
-                    <div class="text-sm muted2">Jami A'zolar</div>
+                    <div class="text-sm text-gray-600">Total Members</div>
                 </div>
             </div>
         </div>
@@ -344,25 +344,25 @@
 
     <!-- Create Group Modal -->
     <div id="createModal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="glass rounded-3xl w-full max-w-md shadow-glass border border-white/20">
-            <div class="p-6 sm:p-7">
+        <div class="glass rounded-xl w-full max-w-md">
+            <div class="p-6">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold">Yangi guruh yaratish</h3>
-                    <button onclick="closeCreateModal()" class="p-2 rounded-2xl btn-ghost">
+                    <button onclick="closeCreateModal()" class="p-2 hover:bg-gray-100 rounded-full">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 
                 <form id="createGroupForm" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium muted mb-2">Guruh nomi *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Group Name *</label>
                         <input type="text" name="name" required 
                                class="w-full px-4 py-3 field rounded-lg focus:outline-none field focus:border-transparent"
                                placeholder="e.g., Computer Science Study Group">
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium muted mb-2">Group Username *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Group Username *</label>
                         <div class="relative">
                             <span class="absolute left-3 top-3 text-gray-400">@</span>
                             <input type="text" name="username" required 
@@ -372,33 +372,36 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium muted mb-2">Tavsif</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
                         <textarea name="description" rows="3" 
                                   class="w-full px-4 py-3 field rounded-lg focus:outline-none field focus:border-transparent"
-                                  placeholder="Bu guruh haqida nima deya olasiz?"></textarea>
+                                  placeholder="What is this group about?"></textarea>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium muted mb-2">Universitet</label>
-                        <select id="universitySelect" name="university"
-                                class="w-full px-4 py-3 field rounded-2xl focus:outline-none">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">University</label>
+                        <select name="university" 
+                                class="w-full px-4 py-3 field rounded-lg focus:outline-none field focus:border-transparent">
                             <option value="">All Universities</option>
-                            <!-- options injected by /api/catalog/universities -->
+                            <option value="Harvard University">Harvard University</option>
+                            <option value="Stanford University">Stanford University</option>
+                            <option value="MIT">MIT</option>
+                            <option value="Cambridge University">Cambridge University</option>
+                            <option value="Oxford University">Oxford University</option>
                         </select>
-                        <div id="uniHint" class="mt-2 text-xs text-white/60">Universitetlar admin katalogidan olinadi.</div>
                     </div>
                     
                     <div>
                         <label class="flex items-center">
                             <input type="checkbox" name="isPrivate" class="rounded border-gray-300 text-teal-200 focus:ring-purple-500">
-                            <span class="ml-2 text-sm muted2">Maxfiy guruh (Taklif asosida)</span>
+                            <span class="ml-2 text-sm text-gray-600">Private Group (Invite only)</span>
                         </label>
                     </div>
                     
                     <div class="pt-4">
                         <button type="submit" 
-                                class="w-full btn-primary text-white py-3 rounded-2xl font-extrabold hover:opacity-95 transition">
-                            Guruh yaratish
+                                class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                            Create Group
                         </button>
                     </div>
                 </form>
@@ -408,33 +411,6 @@
 
     <script>
         let currentGroupTab = 'my';
-
-        let allowedUniversities = [];
-        async function loadUniversityCatalog(){
-            try{
-                const res = await fetch('/api/catalog/universities');
-                const j = await res.json().catch(()=>null);
-                const list = (j && j.success && Array.isArray(j.universities)) ? j.universities : [];
-                allowedUniversities = list.map(u => (u && u.name ? String(u.name) : '')).filter(Boolean);
-                const sel = document.getElementById('universitySelect');
-                if(!sel) return;
-                // keep first option (All Universities)
-                sel.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
-                for(const name of allowedUniversities){
-                    const opt = document.createElement('option');
-                    opt.value = name;
-                    opt.textContent = name;
-                    sel.appendChild(opt);
-                }
-                const hint = document.getElementById('uniHint');
-                if(hint) hint.textContent = allowedUniversities.length ? `Katalog: ${allowedUniversities.length} ta universitet` : 'Universitet katalogi bo‘sh.';
-            }catch(e){
-                console.warn('loadUniversityCatalog failed', e);
-                const hint = document.getElementById('uniHint');
-                if(hint) hint.textContent = 'Universitetlar yuklanmadi (server xatolik).';
-            }
-        }
-
         
         // Check authentication
         async function checkAuth() {
@@ -521,14 +497,14 @@
             
             container.innerHTML = groups.map(group => `
                 <div class="group-card glass rounded-2xl shadow overflow-hidden relative">
-                    <div class="p-6 sm:p-7">
+                    <div class="p-6">
                         <div class="flex items-start justify-between mb-4">
                             <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center">
                                 <i class="fas fa-users text-white"></i>
                             </div>
                             <div class="flex items-center space-x-2">
                                 ${group.isPrivate ? 
-                                    '<span class="text-xs bg-gray-100 muted2 px-2 py-1 rounded">Private</span>' : 
+                                    '<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Private</span>' : 
                                     '<span class="text-xs bg-green-100 text-emerald-200 px-2 py-1 rounded">Public</span>'
                                 }
                                 ${currentGroupTab === 'my' ? 
@@ -538,9 +514,9 @@
                         </div>
                         
                         <h3 class="font-bold text-gray-800 text-lg mb-2">${group.name}</h3>
-                        <p class="muted2 text-sm mb-3">@${group.username}</p>
+                        <p class="text-gray-600 text-sm mb-3">@${group.username}</p>
                         
-                        <p class="muted mb-4">${group.description || 'No description provided.'}</p>
+                        <p class="text-gray-700 mb-4">${group.description || 'No description provided.'}</p>
                         
                         <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
                             <div class="flex items-center">
@@ -561,12 +537,12 @@
                             
                             ${currentGroupTab === 'my' ? `
                                 <button onclick="manageGroup('${group._id}')" 
-                                        class="px-4 py-2 field rounded-lg muted hover:bg-gray-50 transition">
+                                        class="px-4 py-2 field rounded-lg text-gray-700 hover:bg-gray-50 transition">
                                     <i class="fas fa-cog"></i>
                                 </button>
                             ` : `
                                 <button onclick="leaveGroup('${group._id}', event)" 
-                                        class="px-4 py-2 field rounded-lg muted hover:bg-gray-50 transition">
+                                        class="px-4 py-2 field rounded-lg text-gray-700 hover:bg-gray-50 transition">
                                     <i class="fas fa-sign-out-alt"></i>
                                 </button>
                             `}
@@ -576,7 +552,7 @@
                     <!-- Members Preview -->
                     <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-medium muted2">Members</span>
+                            <span class="text-sm font-medium text-gray-600">Members</span>
                             <span class="text-xs text-gray-500">${group.members?.length || 0} members</span>
                         </div>
                         <div class="flex -space-x-2">
@@ -642,8 +618,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.querySelectorAll('.group-tab').forEach(btn=>{
     btn.addEventListener('click', ()=> switchGroupTab(btn.dataset.tab));
   });
-  // preload catalog for create modal
-  loadUniversityCatalog();
 });
         
         // Open group
@@ -700,17 +674,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
             
-            
-            // Enforce admin university catalog (no "Stanford" etc)
-            const chosenUni = String(data.university || '').trim();
-            if (chosenUni && Array.isArray(allowedUniversities) && allowedUniversities.length) {
-                const ok = allowedUniversities.includes(chosenUni);
-                if (!ok) {
-                    alert('Universitet ro‘yxatda yo‘q. Admin paneldagi katalogdan tanlang.');
-                    return;
-                }
-            }
-try {
+            try {
                 const token = localStorage.getItem('token');
                 const response = await fetch('/api/groups', {
                     method: 'POST',

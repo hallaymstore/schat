@@ -3,27 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guruh — HALLAYM edu</title>
+    <title>Group — HALLAYM edu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, rgba(20,184,166,1) 0%, rgba(250,204,21,1) 45%, rgba(245,158,11,1) 100%);
-        }
+        .gradient-bg{background:linear-gradient(135deg, rgba(20,184,166,1) 0%, rgba(250,204,21,1) 55%, rgba(245,158,11,1) 100%);}
         .message-bubble {
             border-radius: 20px;
             max-width: 70%;
         }
-        .message-bubble.sent {
-            background: linear-gradient(135deg, rgba(20,184,166,1) 0%, rgba(250,204,21,1) 45%, rgba(245,158,11,1) 100%);
-            color: white;
+        .message-bubble.sent{background:linear-gradient(135deg, rgba(20,184,166,1) 0%, rgba(250,204,21,1) 55%, rgba(245,158,11,1) 100%);color: white;
             margin-left: auto;
         }
-        .message-bubble.received {
-            background: rgba(255,255,255,.38);
-            color: #334155;
-        }
+        .message-bubble.received{background:rgba(255,255,255,.10);color:rgba(226,232,240,.88);border:1px solid rgba(255,255,255,.14);}
         .member-avatar {
             transition: transform 0.3s ease;
         }
@@ -37,22 +30,30 @@
 
 <style id="glassTheme">
   :root{
-    --glass-bg: rgba(255,255,255,.52);
-    --glass-brd: rgba(255,255,255,.30);
-    --muted: rgba(15,23,42,.74);
-    --muted2: rgba(15,23,42,.56);
-    --grid: rgba(15,23,42,.06);
-    --ring: rgba(20,184,166,.40);
-    --shadow: rgba(0,0,0,.18);
+    --glass-bg: rgba(255,255,255,.14);
+    --glass-brd: rgba(255,255,255,.18);
+    --muted: rgba(226,232,240,.86);
+    --muted2: rgba(226,232,240,.62);
+    --grid: rgba(148,163,184,.08);
+    --ring: rgba(20,184,166,.28);
+    --shadow: rgba(0,0,0,.35);
+    --gold: rgba(245,158,11,1);
+    --gold2: rgba(250,204,21,1);
+    --teal: rgba(20,184,166,1);
+    --deep: rgba(2,6,23,1);
   }
   html.dark{
-    --glass-bg: rgba(2,6,23,.56);
-    --glass-brd: rgba(148,163,184,.16);
-    --muted: rgba(226,232,240,.78);
-    --muted2: rgba(226,232,240,.55);
+    --glass-bg: rgba(2,6,23,.55);
+    --glass-brd: rgba(148,163,184,.14);
+    --muted: rgba(226,232,240,.86);
+    --muted2: rgba(226,232,240,.62);
     --grid: rgba(148,163,184,.08);
-    --ring: rgba(245,158,11,.30);
-    --shadow: rgba(0,0,0,.45);
+    --ring: rgba(245,158,11,.18);
+    --shadow: rgba(0,0,0,.55);
+    --gold: rgba(245,158,11,1);
+    --gold2: rgba(250,204,21,1);
+    --teal: rgba(20,184,166,1);
+    --deep: rgba(2,6,23,1);
   }
 
   html, body{
@@ -61,19 +62,19 @@
 
   body{
     background:
-      radial-gradient(1200px 600px at 12% 12%, rgba(20,184,166,.30), transparent 60%),
-      radial-gradient(900px 520px at 88% 18%, rgba(245,158,11,.22), transparent 60%),
-      radial-gradient(1000px 700px at 50% 92%, rgba(56,189,248,.18), transparent 60%),
-      linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1)) !important;
+      radial-gradient(1200px 650px at 16% 14%, rgba(20,184,166,.34), transparent 62%),
+      radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.18), transparent 60%),
+      radial-gradient(1100px 760px at 50% 92%, rgba(34,211,238,.16), transparent 62%),
+      linear-gradient(180deg, rgba(3,28,33,1), rgba(2,6,23,1)) !important;
     background-attachment: fixed !important;
-    color: rgb(15 23 42);
+    color: rgb(226 232 240);
   }
   html.dark body{
     background:
-      radial-gradient(1200px 600px at 12% 12%, rgba(20,184,166,.20), transparent 60%),
-      radial-gradient(900px 520px at 88% 18%, rgba(245,158,11,.16), transparent 60%),
-      radial-gradient(1000px 700px at 50% 92%, rgba(56,189,248,.12), transparent 60%),
-      linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1)) !important;
+      radial-gradient(1200px 650px at 16% 14%, rgba(20,184,166,.18), transparent 62%),
+      radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.12), transparent 60%),
+      radial-gradient(1100px 760px at 50% 92%, rgba(34,211,238,.10), transparent 62%),
+      linear-gradient(180deg, rgba(2,6,23,1), rgba(3,28,33,1)) !important;
     color: rgb(226 232 240);
   }
 
@@ -119,7 +120,7 @@
     border-radius: 14px !important;
   }
   .btn-primary, button.primary, .primary-btn{
-    background: linear-gradient(135deg, rgba(20,184,166,1), rgba(245,158,11,1)) !important;
+    background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)) !important;
     color: white !important;
     border: 1px solid rgba(255,255,255,.18) !important;
   }
@@ -233,7 +234,7 @@
     #callMoreMenu{ width: min(86vw, 320px) !important; position: fixed !important; right: 12px !important; top: 84px !important; z-index: 2147483640 !important; }
     #groupActionsMenu{ z-index: 2147483640 !important; }
     #attendancePanel{ position: fixed !important; right: 12px !important; top: 84px !important; bottom: 12px !important; z-index: 2147483630 !important; }
-    .ctrl-active{ background: rgba(56,189,248,.18) !important; box-shadow: 0 0 0 3px rgba(56,189,248,.25) !important; }
+    .ctrl-active{ background: rgba(34,197,94,.18) !important; box-shadow: 0 0 0 3px rgba(34,197,94,.25) !important; }
     .ctrl-off{ background: rgba(239,68,68,.18) !important; box-shadow: 0 0 0 3px rgba(239,68,68,.20) !important; }
   }
   #infoPanel.open, #userInfoSidebar.open{ transform:translateX(0); }
@@ -272,21 +273,105 @@
   });
 })();
 </script>
-<style id="hallaym1v1">
-body{background-attachment:fixed;}
-.btn-primary{background:linear-gradient(135deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1));border:1px solid rgba(245,158,11,.22);box-shadow:0 18px 46px rgba(2,6,23,.18);}
-.dark .btn-primary{box-shadow:0 18px 46px rgba(0,0,0,.35);}
-.field{background:rgba(255,255,255,.70);border:1px solid rgba(148,163,184,.24);}
-.dark .field{background:rgba(2,6,23,.42);border:1px solid rgba(148,163,184,.16);}
-.field:focus{outline:none;box-shadow:0 0 0 4px rgba(20,184,166,.20);border-color:transparent;}
-.u-anim{background:linear-gradient(90deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1));-webkit-background-clip:text;background-clip:text;color:transparent;background-size:220% 220%;animation:shimmer 7s ease infinite;font-weight:950;letter-spacing:.6px;}
-@keyframes shimmer{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.group-card{position:relative;}
-.group-card:before{content:"";position:absolute;inset:-1px;border-radius:18px;background:linear-gradient(135deg, rgba(20,184,166,.42), rgba(250,204,21,.34), rgba(245,158,11,.28));opacity:0;transition:opacity .25s ease;pointer-events:none;}
-.group-card:hover:before{opacity:.9;}
-.group-card:hover{transform:translateY(-6px);box-shadow:0 22px 80px rgba(2,6,23,.18);}
-.dark .group-card:hover{box-shadow:0 22px 80px rgba(0,0,0,.45);}
+
+<style id="hallaymPremium">
+  /* HALLAYM "logo-like" premium glass adjustments */
+  .u-anim{
+    background: linear-gradient(90deg, rgba(34,211,238,1), rgba(250,204,21,1), rgba(245,158,11,1));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    background-size:220% 220%;
+    animation: shimmer 7s ease infinite;
+    font-weight: 950;
+    letter-spacing:.6px;
+  }
+  @keyframes shimmer{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+  /* Force no white panels */
+  .bg-white{ background: rgba(255,255,255,.08) !important; }
+  .bg-gray-50{ background: transparent !important; }
+  .border-gray-200{ border-color: rgba(255,255,255,.14) !important; }
+  .text-gray-800{ color: rgba(226,232,240,.95) !important; }
+  .text-gray-700{ color: rgba(226,232,240,.82) !important; }
+  .text-gray-600{ color: rgba(226,232,240,.68) !important; }
+  .text-gray-500{ color: rgba(226,232,240,.62) !important; }
+  .text-gray-400{ color: rgba(226,232,240,.52) !important; }
+  .text-gray-300{ color: rgba(226,232,240,.38) !important; }
+
+  /* Chat surface */
+  #messagesContainer{ background: rgba(255,255,255,.04) !important; border-radius: 22px; border: 1px solid rgba(255,255,255,.10); }
+  .message-bubble{ box-shadow: 0 16px 55px rgba(0,0,0,.25); }
+  .message-bubble.sent{ border: 1px solid rgba(255,255,255,.14); }
+  .message-bubble.received{ backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+
+  /* Inputs as glass */
+  #messageInput{
+    background: rgba(255,255,255,.10) !important;
+    border: 1px solid rgba(255,255,255,.16) !important;
+    color: rgba(226,232,240,.92) !important;
+  }
+  #messageInput::placeholder{ color: rgba(226,232,240,.55) !important; }
+  #messageInput:focus{ box-shadow: 0 0 0 5px rgba(20,184,166,.22) !important; }
+
+  /* Upload progress overlay */
+  #uploadOverlay{
+    position: fixed;
+    inset: 0;
+    z-index: 2147483646;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(0,0,0,.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  #uploadCard{
+    width: min(520px, 92vw);
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,.18);
+    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.08));
+    box-shadow: 0 30px 120px rgba(0,0,0,.45);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    overflow: hidden;
+    position: relative;
+  }
+  #uploadCard:before{
+    content:"";
+    position:absolute; inset:-2px;
+    background: linear-gradient(135deg, rgba(20,184,166,.40), rgba(250,204,21,.22), rgba(245,158,11,.18));
+    opacity:.55;
+    filter: blur(10px);
+    pointer-events:none;
+  }
+  #uploadInner{ position: relative; padding: 18px; }
+  #uploadTitle{ font-weight: 950; letter-spacing: .4px; font-size: 16px; color: rgba(226,232,240,.96); display:flex; gap:10px; align-items:center; }
+  #uploadTitle .dot{
+    width:10px;height:10px;border-radius:999px;
+    background: linear-gradient(135deg, rgba(34,211,238,1), rgba(250,204,21,1), rgba(245,158,11,1));
+    box-shadow: 0 0 0 6px rgba(20,184,166,.18);
+    animation: pulse 1.35s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{transform:scale(1);opacity:.95}50%{transform:scale(1.18);opacity:.7}}
+  #uploadSub{ margin-top: 8px; color: rgba(226,232,240,.70); font-weight: 650; font-size: 13px; }
+  #uploadBarWrap{ margin-top: 14px; border-radius: 999px; background: rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.14); overflow:hidden; }
+  #uploadBar{
+    height: 12px;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1));
+    box-shadow: 0 18px 46px rgba(0,0,0,.25);
+    transition: width .18s ease;
+  }
+  #uploadPct{
+    margin-top: 10px;
+    display:flex; justify-content:space-between; gap:12px;
+    font-weight: 900; letter-spacing:.4px;
+    color: rgba(226,232,240,.90);
+    font-size: 13px;
+  }
 </style>
+
 </head>
 
 <script>
@@ -355,7 +440,20 @@ body{background-attachment:fixed;}
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) retryQueuedRecordings(); });
 </script>
 
-<body class="min-h-screen">
+<body class="bg-gray-50 min-h-screen">
+
+<!-- Upload Progress Overlay (Teacher recording upload) -->
+<div id="uploadOverlay" role="dialog" aria-modal="true" aria-label="Uploading recording">
+  <div id="uploadCard">
+    <div id="uploadInner">
+      <div id="uploadTitle"><span class="dot"></span> Video yuklanmoqda <span class="u-anim">HALLAYM</span></div>
+      <div id="uploadSub">Yozuv saqlanyapti. Internet sekin bo‘lsa ham kuting — foiz ko‘rinadi.</div>
+      <div id="uploadBarWrap"><div id="uploadBar"></div></div>
+      <div id="uploadPct"><span id="uploadPctLeft">0%</span><span id="uploadPctRight">Tayyorlanmoqda…</span></div>
+    </div>
+  </div>
+</div>
+
 <div id="toastHost" style="position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:10px;max-width:min(92vw,520px);"></div>
 
 <!-- Mobile Drawer -->
@@ -403,6 +501,7 @@ body{background-attachment:fixed;}
   }
   // Redirect most alert() to toast
   window.alert = function(msg){ notify(msg,'info'); };
+
 </script>
 <script>
   function toggleMobileMenu(){
@@ -428,7 +527,7 @@ body{background-attachment:fixed;}
 <div id="drawerOverlay" aria-hidden="true"></div>
 
     <!-- Navigation -->
-    <nav class="gradient-bg text-white h-16">
+    <nav class="gradient-bg text-white h-16 sticky top-0 z-50">
         <div class="container mx-auto px-4 h-full flex items-center justify-between">
             <a href="/groups.html" class="flex items-center space-x-2">
                 <i class="fas fa-arrow-left"></i>
@@ -449,7 +548,7 @@ body{background-attachment:fixed;}
     <!-- Main Layout -->
     <div class="container mx-auto flex h-[calc(100vh-4rem)]">
         <!-- Chat Area -->
-        <div class="flex-1 flex flex-col bg-white">
+        <div class="flex-1 flex flex-col bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl overflow-hidden">
             <!-- Group Header -->
             <div class="border-b border-gray-200 p-4">
                 <div class="flex items-center justify-between">
@@ -480,33 +579,25 @@ body{background-attachment:fixed;}
             </div>
             
             <!-- Message Input -->
-            <div class="border-t border-white/15 p-4 bg-white/5 backdrop-blur-2xl">
+            <div class="border-t border-gray-200 p-4 bg-white/5">
                 <div class="flex space-x-2">
                     <button onclick="attachMedia()" class="p-3 hover:bg-gray-100 rounded-full">
                         <i class="fas fa-paperclip text-gray-600"></i>
                     </button>
-<input id="fileInput" type="file" class="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar" />
                     <input type="text" id="messageInput" 
-                           class="flex-1 field rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-400/40 focus:border-transparent"
+                           class="flex-1 border border-gray-300 rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                            placeholder="Type a message to the group..." 
                            onkeyup="handleEnter(event)">
                     <button onclick="sendGroupMessage()" 
-                            class="btn-primary text-white px-6 py-3 rounded-full font-extrabold hover:opacity-95 transition border border-white/10">
+                            class="gradient-bg text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
-<div id="fileChip" class="mt-2 hidden">
-  <div class="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/10 border border-white/15 text-white text-sm">
-    <i class="fa-solid fa-file-arrow-up"></i>
-    <span id="fileName" class="font-semibold"></span>
-    <button type="button" class="ml-1 px-2 py-1 rounded-xl hover:bg-white/10" onclick="clearAttachedFile()" aria-label="Remove">✕</button>
-  </div>
-</div>
-</div>
+            </div>
         </div>
         
         <!-- Info Panel -->
-        <div id="infoPanel" class="w-80 border-l border-gray-200 bg-white overflow-y-auto hidden md:block">
+        <div id="infoPanel" class="w-80 border-l border-gray-200 bg-white/5 overflow-y-auto hidden md:block">
             <div class="p-6">
                 <!-- Group Info -->
                 <div class="mb-8">
@@ -550,7 +641,7 @@ body{background-attachment:fixed;}
                     <h3 class="font-bold text-gray-800 text-lg mb-4">Invite Members</h3>
                     <div class="relative mb-3">
                         <input type="text" id="inviteSearch" 
-                               class="w-full px-4 py-2 field rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400/40 focus:border-transparent"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                placeholder="Search users...">
                     </div>
                     <div id="inviteResults" class="space-y-2 max-h-40 overflow-y-auto mb-3">
@@ -801,7 +892,7 @@ body{background-attachment:fixed;}
                     <button onclick="goToGroupLessons()" class="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition">
                       <i class="fas fa-book-open mr-2"></i> O'tilgan darslar
                     </button>
-                    <button onclick="editGroup()" class="px-4 py-2 field rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                    <button onclick="editGroup()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
                       <i class="fas fa-edit mr-2"></i> Edit
                     </button>
                     <button onclick="deleteGroup()" class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition">
@@ -829,7 +920,7 @@ body{background-attachment:fixed;}
                     <button onclick="goToGroupLessons()" class="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition">
                       <i class="fas fa-book-open mr-2"></i> O'tilgan darslar
                     </button>
-                    <button onclick="leaveGroup()" class="px-4 py-2 field rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                    <button onclick="leaveGroup()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
                       <i class="fas fa-sign-out-alt mr-2"></i> Leave
                     </button>
                   </div>
@@ -974,33 +1065,38 @@ body{background-attachment:fixed;}
         }
         
         // Send group message
-        async function sendGroupMessage(){
-  const input=document.getElementById('messageInput');
-  const text=(input?.value||'').trim();
-  if(!currentGroup) return;
-  if(!text && !attachedFile) return;
-
-  try{
-    const token=localStorage.getItem('token')||'';
-    if(attachedFile){
-      const fd=new FormData();
-      fd.append('file', attachedFile);
-      if(text) fd.append('text', text);
-      const up=await fetch(`/api/groups/${groupId}/messages/file`, {method:'POST', headers:{Authorization:`Bearer ${token}`}, body:fd});
-      const upData=await up.json().catch(()=>({}));
-      if(!up.ok || !upData?.success) throw new Error(upData?.error||'Upload failed');
-      input.value=''; clearAttachedFile(); addGroupMessageToUI(upData.message); return;
-    }
-    const res=await fetch(`/api/groups/${groupId}/messages`, {method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`}, body:JSON.stringify({text})});
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok || !data?.success) throw new Error(data?.error||'Send failed');
-    input.value=''; addGroupMessageToUI(data.message);
-  }catch(e){
-    console.error(e);
-    if(typeof notify==='function') notify('Xabar yuborishda xatolik ❌','bad');
-    else alert('Xabar yuborishda xatolik');
-  }
-}
+        async function sendGroupMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            
+            if (!text || !currentGroup) return;
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/groups/${groupId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // FIX: backend expects "Bearer <token>" (see authenticateToken split)
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        text: text
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    input.value = '';
+                    addGroupMessageToUI(data.message);
+                    
+                    // Emit via socket
+                    if (socket) {
+                        socket.emit('groupMessage', {
+                            groupId: groupId,
+                            text: text
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('Failed to send message:', error);
@@ -1148,16 +1244,9 @@ body{background-attachment:fixed;}
         }
         
         // Attach media
-        let attachedFile=null;
-function attachMedia(){ const inp=document.getElementById('fileInput'); if(inp) inp.click(); }
-function clearAttachedFile(){ attachedFile=null; const inp=document.getElementById('fileInput'); if(inp) inp.value=''; const chip=document.getElementById('fileChip'); if(chip) chip.classList.add('hidden'); }
-document.addEventListener('DOMContentLoaded', ()=>{ const inp=document.getElementById('fileInput'); if(!inp) return;
-  inp.addEventListener('change', ()=>{ attachedFile = inp.files && inp.files[0] ? inp.files[0] : null;
-    const chip=document.getElementById('fileChip'); const name=document.getElementById('fileName');
-    if(attachedFile && chip && name){ name.textContent=attachedFile.name; chip.classList.remove('hidden'); }
-    else { if(chip) chip.classList.add('hidden'); }
-  });
-});
+        function attachMedia() {
+            alert('Media upload would be implemented');
+        }
         
         // View media in modal
         function viewMedia(url) {
@@ -2595,17 +2684,67 @@ if (typeof MediaRecorder === 'undefined') {
         }
 
         async function uploadRecording(blob) {
+            // Show upload % overlay ONLY for teacher
+            const isTeacher = String(currentUser?.role || '').toLowerCase() === 'teacher';
             try {
+                if (isTeacher) showUploadOverlay();
+
                 const token = localStorage.getItem('token');
                 const fd = new FormData();
                 fd.append('recording', blob, `lesson_${groupCall.lessonId}.webm`);
                 const title = (document.getElementById('lessonTitleInput')?.value || '').trim();
                 if (title) fd.append('title', title);
-                const res = await fetch(`/api/group-lessons/${groupCall.lessonId}/recording`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: fd
+
+                // Use XHR to get upload progress %
+                const url = `/api/group-lessons/${groupCall.lessonId}/recording`;
+                const data = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', url, true);
+                    xhr.responseType = 'json';
+                    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+                    let lastPct = 0;
+                    xhr.upload.onprogress = (e) => {
+                        if (!isTeacher) return;
+                        if (e.lengthComputable) {
+                            const pct = Math.round((e.loaded / e.total) * 100);
+                            lastPct = pct;
+                            setUploadProgress(pct, 'Yuklanmoqda…');
+                        } else {
+                            // fallback animated count if total unknown
+                            lastPct = Math.min(99, lastPct + 1);
+                            setUploadProgress(lastPct, 'Yuklanmoqda…');
+                        }
+                    };
+
+                    xhr.onreadystatechange = () => {
+                        if (xhr.readyState !== 4) return;
+                        if (xhr.status >= 200 && xhr.status < 300) return resolve(xhr.response || {});
+                        reject(new Error('upload http ' + xhr.status));
+                    };
+
+                    xhr.onerror = () => reject(new Error('upload network error'));
+                    xhr.send(fd);
                 });
+
+                if (isTeacher) {
+                    setUploadProgress(100, 'Yakunlanmoqda…');
+                    setTimeout(() => hideUploadOverlay(), 650);
+                }
+
+                notify('Dars yozuvi saqlandi ✅', 'ok');
+                console.log('recording uploaded', data);
+                return data;
+            } catch (e) {
+                console.error('uploadRecording', e);
+                if (isTeacher) {
+                    setUploadProgress(0, 'Xatolik. Keyin avtomatik urinamiz…');
+                    setTimeout(() => hideUploadOverlay(), 1200);
+                }
+                notify('Yozuvni yuklashda xatolik: ' + (e?.message || e) + ' (keyin avtomatik urinamiz)', 'warn');
+                throw e;
+            }
+        });
                 if (!res.ok) throw new Error('upload http ' + res.status);
                 const data = await res.json();
                 notify('Dars yozuvi saqlandi', 'ok');

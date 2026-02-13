@@ -1,4 +1,26 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
+<div id="uploadOverlay">
+  <div id="uploadCard" class="glass">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-2xl flex items-center justify-center btn-primary text-white shadow-glass">
+        <i class="fa-solid fa-cloud-arrow-up spin"></i>
+      </div>
+      <div class="flex-1">
+        <div class="font-extrabold text-slate-100">Video yuklanmoqda…</div>
+        <div id="uploadSub" class="text-sm text-slate-200/70">Iltimos kuting, dars yozuvi saqlanmoqda.</div>
+      </div>
+      <div class="text-right">
+        <div id="uploadPct" class="text-2xl font-black u-anim">0%</div>
+      </div>
+    </div>
+    <div class="mt-4">
+      <div id="uploadBarWrap">
+        <div id="uploadBar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -9,19 +31,19 @@
     <script src="/socket.io/socket.io.js"></script>
     <style>
         .gradient-bg {
-            background: linear-gradient(135deg, rgba(20,184,166,1) 0%, rgba(250,204,21,1) 45%, rgba(245,158,11,1) 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         .message-bubble {
             border-radius: 20px;
             max-width: 70%;
         }
         .message-bubble.sent {
-            background: linear-gradient(135deg, rgba(20,184,166,1) 0%, rgba(250,204,21,1) 45%, rgba(245,158,11,1) 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             margin-left: auto;
         }
         .message-bubble.received {
-            background: rgba(255,255,255,.38);
+            background: #f1f5f9;
             color: #334155;
         }
         .member-avatar {
@@ -42,7 +64,7 @@
     --muted: rgba(15,23,42,.74);
     --muted2: rgba(15,23,42,.56);
     --grid: rgba(15,23,42,.06);
-    --ring: rgba(20,184,166,.40);
+    --ring: rgba(99,102,241,.40);
     --shadow: rgba(0,0,0,.18);
   }
   html.dark{
@@ -51,7 +73,7 @@
     --muted: rgba(226,232,240,.78);
     --muted2: rgba(226,232,240,.55);
     --grid: rgba(148,163,184,.08);
-    --ring: rgba(245,158,11,.30);
+    --ring: rgba(236,72,153,.30);
     --shadow: rgba(0,0,0,.45);
   }
 
@@ -61,18 +83,18 @@
 
   body{
     background:
-      radial-gradient(1200px 600px at 12% 12%, rgba(20,184,166,.30), transparent 60%),
-      radial-gradient(900px 520px at 88% 18%, rgba(245,158,11,.22), transparent 60%),
-      radial-gradient(1000px 700px at 50% 92%, rgba(56,189,248,.18), transparent 60%),
+      radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.30), transparent 60%),
+      radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.22), transparent 60%),
+      radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.18), transparent 60%),
       linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1)) !important;
     background-attachment: fixed !important;
     color: rgb(15 23 42);
   }
   html.dark body{
     background:
-      radial-gradient(1200px 600px at 12% 12%, rgba(20,184,166,.20), transparent 60%),
-      radial-gradient(900px 520px at 88% 18%, rgba(245,158,11,.16), transparent 60%),
-      radial-gradient(1000px 700px at 50% 92%, rgba(56,189,248,.12), transparent 60%),
+      radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.20), transparent 60%),
+      radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.16), transparent 60%),
+      radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.12), transparent 60%),
       linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1)) !important;
     color: rgb(226 232 240);
   }
@@ -119,7 +141,7 @@
     border-radius: 14px !important;
   }
   .btn-primary, button.primary, .primary-btn{
-    background: linear-gradient(135deg, rgba(20,184,166,1), rgba(245,158,11,1)) !important;
+    background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)) !important;
     color: white !important;
     border: 1px solid rgba(255,255,255,.18) !important;
   }
@@ -233,7 +255,7 @@
     #callMoreMenu{ width: min(86vw, 320px) !important; position: fixed !important; right: 12px !important; top: 84px !important; z-index: 2147483640 !important; }
     #groupActionsMenu{ z-index: 2147483640 !important; }
     #attendancePanel{ position: fixed !important; right: 12px !important; top: 84px !important; bottom: 12px !important; z-index: 2147483630 !important; }
-    .ctrl-active{ background: rgba(56,189,248,.18) !important; box-shadow: 0 0 0 3px rgba(56,189,248,.25) !important; }
+    .ctrl-active{ background: rgba(34,197,94,.18) !important; box-shadow: 0 0 0 3px rgba(34,197,94,.25) !important; }
     .ctrl-off{ background: rgba(239,68,68,.18) !important; box-shadow: 0 0 0 3px rgba(239,68,68,.20) !important; }
   }
   #infoPanel.open, #userInfoSidebar.open{ transform:translateX(0); }
@@ -272,21 +294,66 @@
   });
 })();
 </script>
-<style id="hallaym1v1">
-body{background-attachment:fixed;}
-.btn-primary{background:linear-gradient(135deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1));border:1px solid rgba(245,158,11,.22);box-shadow:0 18px 46px rgba(2,6,23,.18);}
-.dark .btn-primary{box-shadow:0 18px 46px rgba(0,0,0,.35);}
-.field{background:rgba(255,255,255,.70);border:1px solid rgba(148,163,184,.24);}
-.dark .field{background:rgba(2,6,23,.42);border:1px solid rgba(148,163,184,.16);}
-.field:focus{outline:none;box-shadow:0 0 0 4px rgba(20,184,166,.20);border-color:transparent;}
-.u-anim{background:linear-gradient(90deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1));-webkit-background-clip:text;background-clip:text;color:transparent;background-size:220% 220%;animation:shimmer 7s ease infinite;font-weight:950;letter-spacing:.6px;}
+
+<style id="HALLAYM_GLASS_THEME">
+:root{
+  --teal: rgba(20,184,166,1);
+  --gold: rgba(245,158,11,1);
+  --gold2: rgba(250,204,21,1);
+  --deep: rgba(2,6,23,1);
+  --muted: rgba(226,232,240,.78);
+  --muted2: rgba(226,232,240,.56);
+  --glass: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.08));
+  --glassBrd: rgba(255,255,255,.18);
+}
+body{
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  background:
+    radial-gradient(1200px 650px at 16% 14%, rgba(20,184,166,.34), transparent 62%),
+    radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.18), transparent 60%),
+    radial-gradient(1100px 760px at 50% 92%, rgba(34,211,238,.16), transparent 62%),
+    linear-gradient(180deg, rgba(3,28,33,1), rgba(2,6,23,1));
+  color: rgba(226,232,240,.92);
+}
+.glass{
+  background: var(--glass);
+  border: 1px solid var(--glassBrd);
+  box-shadow: 0 18px 80px rgba(0,0,0,.30);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.btn-primary{
+  background: linear-gradient(135deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1));
+  border: 1px solid rgba(245,158,11,.20);
+  box-shadow: 0 18px 46px rgba(0,0,0,.25);
+}
+.btn-primary:hover{filter:brightness(1.05)}
+.field{
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.16);
+  color: rgba(226,232,240,.92);
+}
+.field::placeholder{color: rgba(226,232,240,.55)}
+.field:focus{outline:none; box-shadow: 0 0 0 4px rgba(20,184,166,.22); border-color: transparent;}
+.u-anim{
+  background: linear-gradient(90deg, rgba(34,211,238,1), rgba(250,204,21,1), rgba(245,158,11,1));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  background-size:220% 220%;
+  animation: shimmer 7s ease infinite;
+  font-weight: 950;
+  letter-spacing:.6px;
+}
 @keyframes shimmer{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.group-card{position:relative;}
-.group-card:before{content:"";position:absolute;inset:-1px;border-radius:18px;background:linear-gradient(135deg, rgba(20,184,166,.42), rgba(250,204,21,.34), rgba(245,158,11,.28));opacity:0;transition:opacity .25s ease;pointer-events:none;}
-.group-card:hover:before{opacity:.9;}
-.group-card:hover{transform:translateY(-6px);box-shadow:0 22px 80px rgba(2,6,23,.18);}
-.dark .group-card:hover{box-shadow:0 22px 80px rgba(0,0,0,.45);}
+/* Upload progress overlay */
+#uploadOverlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;
+  background: rgba(0,0,0,.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);}
+#uploadCard{width:min(520px,92vw);border-radius:22px;padding:18px}
+#uploadBarWrap{height:12px;border-radius:999px;background: rgba(255,255,255,.10); overflow:hidden; border:1px solid rgba(255,255,255,.14)}
+#uploadBar{height:100%;width:0%;background: linear-gradient(90deg, rgba(34,211,238,1), rgba(250,204,21,1), rgba(245,158,11,1));}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin 1s linear infinite}
 </style>
+
 </head>
 
 <script>
@@ -355,32 +422,32 @@ body{background-attachment:fixed;}
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) retryQueuedRecordings(); });
 </script>
 
-<body class="min-h-screen">
+<body class="bg-white/5/5 min-h-screen">
 <div id="toastHost" style="position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:10px;max-width:min(92vw,520px);"></div>
 
 <!-- Mobile Drawer -->
 <div id="mobileDrawerWrap" class="fixed inset-0 z-[70] hidden md:hidden" aria-hidden="true">
   <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeMobileMenu()"></div>
-  <aside id="mobileDrawer" class="absolute right-0 top-0 h-full w-[min(92vw,360px)] bg-white/10 border-l border-white/20 backdrop-blur-2xl p-4 overflow-y-auto">
+  <aside id="mobileDrawer" class="absolute right-0 top-0 h-full w-[min(92vw,360px)] bg-white/5/10 border-l border-white/20 backdrop-blur-2xl p-4 overflow-y-auto">
     <div class="flex items-center justify-between">
       <div class="font-extrabold tracking-tight text-white">Menu</div>
-      <button class="p-2 rounded-xl hover:bg-white/10" aria-label="Close" onclick="closeMobileMenu()"><i class="fas fa-xmark text-white"></i></button>
+      <button class="p-2 rounded-xl hover:bg-white/5/10" aria-label="Close" onclick="closeMobileMenu()"><i class="fas fa-xmark text-white"></i></button>
     </div>
     <div class="mt-4 grid gap-2">
-      <a href="/groups.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-arrow-left w-5 text-center"></i><span>Back to Groups</span></a>
-<button id="mInfo" onclick="toggleInfoPanel(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-circle-info w-5 text-center"></i><span>Group Info</span></button>
-<button id="mInvite" onclick="document.getElementById('inviteSearch')?.scrollIntoView({behavior:'smooth',block:'start'}); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-user-plus w-5 text-center"></i><span>Invite</span></button>
-<button id="mVideoCall" onclick="startGroupVideoCall(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
+      <a href="/groups.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5/10 hover:bg-white/5/15 border border-white/15 text-white font-semibold"><i class="fas fa-arrow-left w-5 text-center"></i><span>Back to Groups</span></a>
+<button id="mInfo" onclick="toggleInfoPanel(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5/10 hover:bg-white/5/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-circle-info w-5 text-center"></i><span>Group Info</span></button>
+<button id="mInvite" onclick="document.getElementById('inviteSearch')?.scrollIntoView({behavior:'smooth',block:'start'}); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5/10 hover:bg-white/5/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-user-plus w-5 text-center"></i><span>Invite</span></button>
+<button id="mVideoCall" onclick="startGroupVideoCall(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5/10 hover:bg-white/5/15 border border-white/15 text-white font-semibold text-left">
   <i class="fas fa-video w-5 text-center"></i><span>Video Call</span>
 </button>
-<button id="mVoiceCall" onclick="startGroupAudioCall(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
+<button id="mVoiceCall" onclick="startGroupAudioCall(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5/10 hover:bg-white/5/15 border border-white/15 text-white font-semibold text-left">
   <i class="fas fa-phone w-5 text-center"></i><span>Voice Call</span>
 </button>
-<button id="mLessons" onclick="goToGroupLessons(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
+<button id="mLessons" onclick="goToGroupLessons(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5/10 hover:bg-white/5/15 border border-white/15 text-white font-semibold text-left">
   <i class="fas fa-book-open w-5 text-center"></i><span>O‘tilgan darslar</span>
 </button>
 
-<button id="mLogout2" onclick="logout(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-right-from-bracket w-5 text-center"></i><span>Logout</span></button>
+<button id="mLogout2" onclick="logout(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5/10 hover:bg-white/5/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-right-from-bracket w-5 text-center"></i><span>Logout</span></button>
     </div>
   </aside>
 </div>
@@ -435,11 +502,11 @@ body{background-attachment:fixed;}
                 <span class="font-semibold">Back to Groups</span>
             </a>
             <div class="flex items-center space-x-4">
-                <button id="menuBtn" class="p-2 hover:bg-white/10 rounded-full md:hidden" aria-label="Menu" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
-                <button onclick="toggleInfoPanel()" class="p-2 hover:bg-white/10 rounded-full">
+                <button id="menuBtn" class="p-2 hover:bg-white/5/10 rounded-full md:hidden" aria-label="Menu" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+                <button onclick="toggleInfoPanel()" class="p-2 hover:bg-white/5/10 rounded-full">
                     <i class="fas fa-info-circle"></i>
                 </button>
-                <a href="#" onclick="logout()" class="p-2 hover:bg-white/10 rounded-full">
+                <a href="#" onclick="logout()" class="p-2 hover:bg-white/5/10 rounded-full">
                     <i class="fas fa-sign-out-alt"></i>
                 </a>
             </div>
@@ -449,24 +516,24 @@ body{background-attachment:fixed;}
     <!-- Main Layout -->
     <div class="container mx-auto flex h-[calc(100vh-4rem)]">
         <!-- Chat Area -->
-        <div class="flex-1 flex flex-col bg-white">
+        <div class="flex-1 flex flex-col bg-white/5">
             <!-- Group Header -->
-            <div class="border-b border-gray-200 p-4">
+            <div class="border-b border-white/15 p-4">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center">
                             <i class="fas fa-users text-white text-xl"></i>
                         </div>
                         <div>
-                            <h1 id="groupName" class="text-xl font-bold text-gray-800">Loading...</h1>
-                            <p id="groupMembers" class="text-sm text-gray-600">0 members</p>
+                            <h1 id="groupName" class="text-xl font-bold text-slate-100">Loading...</h1>
+                            <p id="groupMembers" class="text-sm text-slate-200/70">0 members</p>
                         </div>
                     </div>
                     <div id="groupActions" class="flex items-center space-x-2">
                         <!-- Actions will be loaded here -->
                     </div>
                 </div>
-                <p id="groupDescription" class="text-gray-600 mt-2"></p>
+                <p id="groupDescription" class="text-slate-200/70 mt-2"></p>
             </div>
             
             <!-- Messages Container -->
@@ -480,37 +547,29 @@ body{background-attachment:fixed;}
             </div>
             
             <!-- Message Input -->
-            <div class="border-t border-white/15 p-4 bg-white/5 backdrop-blur-2xl">
+            <div class="border-t border-white/15 p-4 bg-white/5">
                 <div class="flex space-x-2">
                     <button onclick="attachMedia()" class="p-3 hover:bg-gray-100 rounded-full">
-                        <i class="fas fa-paperclip text-gray-600"></i>
+                        <i class="fas fa-paperclip text-slate-200/70"></i>
                     </button>
-<input id="fileInput" type="file" class="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar" />
                     <input type="text" id="messageInput" 
-                           class="flex-1 field rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-400/40 focus:border-transparent"
+                           class="flex-1 border border-white/15 rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                            placeholder="Type a message to the group..." 
                            onkeyup="handleEnter(event)">
                     <button onclick="sendGroupMessage()" 
-                            class="btn-primary text-white px-6 py-3 rounded-full font-extrabold hover:opacity-95 transition border border-white/10">
+                            class="gradient-bg text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
-<div id="fileChip" class="mt-2 hidden">
-  <div class="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/10 border border-white/15 text-white text-sm">
-    <i class="fa-solid fa-file-arrow-up"></i>
-    <span id="fileName" class="font-semibold"></span>
-    <button type="button" class="ml-1 px-2 py-1 rounded-xl hover:bg-white/10" onclick="clearAttachedFile()" aria-label="Remove">✕</button>
-  </div>
-</div>
-</div>
+            </div>
         </div>
         
         <!-- Info Panel -->
-        <div id="infoPanel" class="w-80 border-l border-gray-200 bg-white overflow-y-auto hidden md:block">
+        <div id="infoPanel" class="w-80 border-l border-white/15 bg-white/5 overflow-y-auto hidden md:block">
             <div class="p-6">
                 <!-- Group Info -->
                 <div class="mb-8">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Group Information</h3>
+                    <h3 class="font-bold text-slate-100 text-lg mb-4">Group Information</h3>
                     <div class="space-y-4">
                         <div>
                             <label class="text-sm text-gray-500">Created By</label>
@@ -529,7 +588,7 @@ body{background-attachment:fixed;}
                         </div>
                         <div>
                             <label class="text-sm text-gray-500">Description</label>
-                            <p id="fullDescription" class="text-gray-700"></p>
+                            <p id="fullDescription" class="text-slate-200/80"></p>
                         </div>
                     </div>
                 </div>
@@ -537,7 +596,7 @@ body{background-attachment:fixed;}
                 <!-- Members List -->
                 <div>
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-gray-800 text-lg">Members</h3>
+                        <h3 class="font-bold text-slate-100 text-lg">Members</h3>
                         <span id="membersCount" class="text-sm text-gray-500">0 members</span>
                     </div>
                     <div id="membersList" class="space-y-3">
@@ -546,18 +605,18 @@ body{background-attachment:fixed;}
                 </div>
                 
                 <!-- Invite Section -->
-                <div class="mt-8 pt-6 border-t border-gray-200">
-                    <h3 class="font-bold text-gray-800 text-lg mb-4">Invite Members</h3>
+                <div class="mt-8 pt-6 border-t border-white/15">
+                    <h3 class="font-bold text-slate-100 text-lg mb-4">Invite Members</h3>
                     <div class="relative mb-3">
                         <input type="text" id="inviteSearch" 
-                               class="w-full px-4 py-2 field rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400/40 focus:border-transparent"
+                               class="w-full px-4 py-2 border border-white/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                placeholder="Search users...">
                     </div>
                     <div id="inviteResults" class="space-y-2 max-h-40 overflow-y-auto mb-3">
                         <!-- Invite results will appear here -->
                     </div>
                     <button onclick="copyInviteLink()" 
-                            class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 transition">
+                            class="w-full bg-gray-100 text-slate-200/80 py-2 rounded-lg font-medium hover:bg-gray-200 transition">
                         <i class="fas fa-link mr-2"></i> Copy Invite Link
                     </button>
                 </div>
@@ -567,9 +626,9 @@ body{background-attachment:fixed;}
 
     <!-- Media Modal -->
     <div id="mediaModal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg max-w-2xl max-h-[90vh] overflow-hidden">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="font-bold text-gray-800">Media Preview</h3>
+        <div class="bg-white/5 rounded-lg max-w-2xl max-h-[90vh] overflow-hidden">
+            <div class="p-4 border-b border-white/15 flex justify-between items-center">
+                <h3 class="font-bold text-slate-100">Media Preview</h3>
                 <button onclick="closeMediaModal()" class="p-2 hover:bg-gray-100 rounded-full">
                     <i class="fas fa-times"></i>
                 </button>
@@ -729,11 +788,11 @@ body{background-attachment:fixed;}
             }
             
             container.innerHTML = members.map(member => `
-                <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between p-2 hover:bg-white/5/5 rounded-lg">
                     <div class="flex items-center space-x-3">
                         <img src="${member.avatar||""}" class="w-10 h-10 rounded-full member-avatar" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,&lt;svg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; width=&#x27;80&#x27; height=&#x27;80&#x27;&gt;&lt;rect width=&#x27;100%&#x27; height=&#x27;100%&#x27; fill=&#x27;#ddd&#x27;/&gt;&lt;circle cx=&#x27;40&#x27; cy=&#x27;30&#x27; r=&#x27;16&#x27; fill=&#x27;#bbb&#x27;/&gt;&lt;rect x=&#x27;18&#x27; y=&#x27;52&#x27; width=&#x27;44&#x27; height=&#x27;20&#x27; rx=&#x27;10&#x27; fill=&#x27;#bbb&#x27;/&gt;&lt;/svg&gt;';">
                         <div>
-                            <h4 class="font-medium text-gray-800">${member.nickname}</h4>
+                            <h4 class="font-medium text-slate-100">${member.nickname}</h4>
                             <p class="text-sm text-gray-500">@${member.username}</p>
                         </div>
                     </div>
@@ -759,21 +818,21 @@ body{background-attachment:fixed;}
             // helpers
             const mobileWrapOpen = `
               <div class="sm:hidden relative">
-                <button id="groupActionsToggle" onclick="toggleGroupActionsMenu()" class="px-3 py-2 rounded-xl bg-white/10 border border-white/15 hover:bg-white/15 text-gray-800 dark:text-white">
+                <button id="groupActionsToggle" onclick="toggleGroupActionsMenu()" class="px-3 py-2 rounded-xl bg-white/5/10 border border-white/15 hover:bg-white/5/15 text-slate-100 dark:text-white">
                   <i class="fas fa-ellipsis-vertical"></i>
                 </button>
-                <div id="groupActionsMenu" class="hidden absolute right-0 mt-2 w-64 rounded-2xl bg-white/80 dark:bg-black/70 border border-white/20 backdrop-blur-2xl overflow-hidden shadow-2xl z-40">
+                <div id="groupActionsMenu" class="hidden absolute right-0 mt-2 w-64 rounded-2xl bg-white/5/80 dark:bg-black/70 border border-white/20 backdrop-blur-2xl overflow-hidden shadow-2xl z-40">
             `;
             const mobileWrapClose = `
                 </div>
               </div>
             `;
             const mobileItem = (icon, label, onClick, danger=false) => `
-              <button onclick="${onClick}; closeGroupActionsMenu()" class="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-3 ${danger?'text-red-600 dark:text-red-300':''}">
+              <button onclick="${onClick}; closeGroupActionsMenu()" class="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5/10 flex items-center gap-3 ${danger?'text-red-600 dark:text-red-300':''}">
                 <i class="${icon} w-5 text-center"></i><span class="font-semibold">${label}</span>
               </button>
             `;
-            const divider = `<div class="h-px bg-black/10 dark:bg-white/10"></div>`;
+            const divider = `<div class="h-px bg-black/10 dark:bg-white/5/10"></div>`;
 
             if (!isMember) {
                 container.innerHTML = `
@@ -801,7 +860,7 @@ body{background-attachment:fixed;}
                     <button onclick="goToGroupLessons()" class="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition">
                       <i class="fas fa-book-open mr-2"></i> O'tilgan darslar
                     </button>
-                    <button onclick="editGroup()" class="px-4 py-2 field rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                    <button onclick="editGroup()" class="px-4 py-2 border border-white/15 rounded-lg text-slate-200/80 hover:bg-white/5/5 transition">
                       <i class="fas fa-edit mr-2"></i> Edit
                     </button>
                     <button onclick="deleteGroup()" class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition">
@@ -829,7 +888,7 @@ body{background-attachment:fixed;}
                     <button onclick="goToGroupLessons()" class="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition">
                       <i class="fas fa-book-open mr-2"></i> O'tilgan darslar
                     </button>
-                    <button onclick="leaveGroup()" class="px-4 py-2 field rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                    <button onclick="leaveGroup()" class="px-4 py-2 border border-white/15 rounded-lg text-slate-200/80 hover:bg-white/5/5 transition">
                       <i class="fas fa-sign-out-alt mr-2"></i> Leave
                     </button>
                   </div>
@@ -949,7 +1008,7 @@ body{background-attachment:fixed;}
                         <img src="${msg.senderId?.avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${msg.senderId?._id}')" title="Profil">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2 mb-1">
-                                <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${msg.senderId?._id}')" title="Profil">${msg.senderId?.nickname}</span>
+                                <span class="font-medium text-slate-100 cursor-pointer hover:underline" onclick="openUserProfile('${msg.senderId?._id}')" title="Profil">${msg.senderId?.nickname}</span>
                                 <span class="text-xs text-gray-500">${formatTime(msg.createdAt)}</span>
                             </div>
                             <div class="message-bubble ${msg.senderId?._id === currentUser._id ? 'sent' : 'received'} p-3">
@@ -974,33 +1033,38 @@ body{background-attachment:fixed;}
         }
         
         // Send group message
-        async function sendGroupMessage(){
-  const input=document.getElementById('messageInput');
-  const text=(input?.value||'').trim();
-  if(!currentGroup) return;
-  if(!text && !attachedFile) return;
-
-  try{
-    const token=localStorage.getItem('token')||'';
-    if(attachedFile){
-      const fd=new FormData();
-      fd.append('file', attachedFile);
-      if(text) fd.append('text', text);
-      const up=await fetch(`/api/groups/${groupId}/messages/file`, {method:'POST', headers:{Authorization:`Bearer ${token}`}, body:fd});
-      const upData=await up.json().catch(()=>({}));
-      if(!up.ok || !upData?.success) throw new Error(upData?.error||'Upload failed');
-      input.value=''; clearAttachedFile(); addGroupMessageToUI(upData.message); return;
-    }
-    const res=await fetch(`/api/groups/${groupId}/messages`, {method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`}, body:JSON.stringify({text})});
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok || !data?.success) throw new Error(data?.error||'Send failed');
-    input.value=''; addGroupMessageToUI(data.message);
-  }catch(e){
-    console.error(e);
-    if(typeof notify==='function') notify('Xabar yuborishda xatolik ❌','bad');
-    else alert('Xabar yuborishda xatolik');
-  }
-}
+        async function sendGroupMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            
+            if (!text || !currentGroup) return;
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/groups/${groupId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // FIX: backend expects "Bearer <token>" (see authenticateToken split)
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        text: text
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    input.value = '';
+                    addGroupMessageToUI(data.message);
+                    
+                    // Emit via socket
+                    if (socket) {
+                        socket.emit('groupMessage', {
+                            groupId: groupId,
+                            text: text
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('Failed to send message:', error);
@@ -1023,7 +1087,7 @@ body{background-attachment:fixed;}
                     <img src="${message.senderId?.avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${message.senderId?._id}')" title="Profil">
                     <div class="flex-1">
                         <div class="flex items-center space-x-2 mb-1">
-                            <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${message.senderId?._id}')" title="Profil">${message.senderId?.nickname}</span>
+                            <span class="font-medium text-slate-100 cursor-pointer hover:underline" onclick="openUserProfile('${message.senderId?._id}')" title="Profil">${message.senderId?.nickname}</span>
                             <span class="text-xs text-gray-500">${formatTime(message.createdAt)}</span>
                         </div>
                         <div class="message-bubble ${message.senderId?._id === currentUser._id ? 'sent' : 'received'} p-3">
@@ -1148,16 +1212,9 @@ body{background-attachment:fixed;}
         }
         
         // Attach media
-        let attachedFile=null;
-function attachMedia(){ const inp=document.getElementById('fileInput'); if(inp) inp.click(); }
-function clearAttachedFile(){ attachedFile=null; const inp=document.getElementById('fileInput'); if(inp) inp.value=''; const chip=document.getElementById('fileChip'); if(chip) chip.classList.add('hidden'); }
-document.addEventListener('DOMContentLoaded', ()=>{ const inp=document.getElementById('fileInput'); if(!inp) return;
-  inp.addEventListener('change', ()=>{ attachedFile = inp.files && inp.files[0] ? inp.files[0] : null;
-    const chip=document.getElementById('fileChip'); const name=document.getElementById('fileName');
-    if(attachedFile && chip && name){ name.textContent=attachedFile.name; chip.classList.remove('hidden'); }
-    else { if(chip) chip.classList.add('hidden'); }
-  });
-});
+        function attachMedia() {
+            alert('Media upload would be implemented');
+        }
         
         // View media in modal
         function viewMedia(url) {
@@ -1199,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', ()=>{ const inp=document.getElemen
                     
                     if (filteredUsers.length > 0) {
                         resultsContainer.innerHTML = filteredUsers.map(user => `
-                            <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
+                            <div class="flex items-center justify-between p-2 hover:bg-white/5/5 rounded-lg">
                                 <div class="flex items-center space-x-2">
                                     <img src="${user.avatar}" class="w-8 h-8 rounded-full">
                                     <div>
@@ -2017,7 +2074,7 @@ function removeVideoTile(userId) {
 
                 (data.joined || []).forEach(r => {
                     const div = document.createElement('div');
-                    div.className = 'p-2 rounded-xl bg-white/10 border border-white/10 text-white';
+                    div.className = 'p-2 rounded-xl bg-white/5/10 border border-white/10 text-white';
                     div.innerHTML = `
                       <div class="font-semibold text-sm">${r.fullName || 'Talaba'}</div>
                       <div class="text-xs text-white/70">Kirdi: ${fmtTime(r.joinedAt)} • Chiqdi: ${fmtTime(r.leftAt)} • Davomiylik: ${fmtDur(r.durationSec)}</div>
@@ -2027,7 +2084,7 @@ function removeVideoTile(userId) {
 
                 (data.absent || []).forEach(r => {
                     const div = document.createElement('div');
-                    div.className = 'p-2 rounded-xl bg-white/5 border border-white/10 text-white/90';
+                    div.className = 'p-2 rounded-xl bg-white/5/5 border border-white/10 text-white/90';
                     div.innerHTML = `<div class="font-semibold text-sm">${r.fullName || 'Talaba'}</div><div class="text-xs text-white/60">Kirmadi</div>`;
                     absentBox && absentBox.appendChild(div);
                 });
@@ -2528,7 +2585,7 @@ if (typeof MediaRecorder === 'undefined') {
                         const btn = document.getElementById('btnRecord');
                         if (btn) {
                             btn.classList.remove('bg-red-600');
-                            btn.classList.add('bg-white/10');
+                            btn.classList.add('bg-white/5/10');
                             btn.innerHTML = '<i class="fas fa-circle"></i>';
                         }
                         updateCallControlUI();
@@ -2558,7 +2615,7 @@ if (typeof MediaRecorder === 'undefined') {
 
                 const btn = document.getElementById('btnRecord');
                 if (btn) {
-                    btn.classList.remove('bg-white/10');
+                    btn.classList.remove('bg-white/5/10');
                     btn.classList.add('bg-red-600');
                     btn.innerHTML = '<i class="fas fa-stop"></i>';
                 }
@@ -2585,535 +2642,65 @@ if (typeof MediaRecorder === 'undefined') {
             const btn = document.getElementById('btnRecord');
             if (!btn) return;
             if (_isRecording) {
-                btn.classList.remove('bg-white/10');
+                btn.classList.remove('bg-white/5/10');
                 btn.classList.add('bg-red-600');
                 btn.innerHTML = '<i class="fas fa-stop"></i>';
             } else {
-                btn.classList.add('bg-white/10');
+                btn.classList.add('bg-white/5/10');
                 btn.classList.remove('bg-red-600');
             }
         }
 
-        async function uploadRecording(blob) {
-            try {
-                const token = localStorage.getItem('token');
-                const fd = new FormData();
-                fd.append('recording', blob, `lesson_${groupCall.lessonId}.webm`);
-                const title = (document.getElementById('lessonTitleInput')?.value || '').trim();
-                if (title) fd.append('title', title);
-                const res = await fetch(`/api/group-lessons/${groupCall.lessonId}/recording`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: fd
-                });
-                if (!res.ok) throw new Error('upload http ' + res.status);
-                const data = await res.json();
-                notify('Dars yozuvi saqlandi', 'ok');
-                console.log('recording uploaded', data);
-            } catch (e) {
-                console.error('uploadRecording', e);
-                notify('Yozuvni yuklashda xatolik: ' + (e?.message || e) + ' (keyin avtomatik urinamiz)', 'warn');
-            }
-        }
-function toggleSpeaker() {
-            groupCall.speakerMuted = !groupCall.speakerMuted;
-            // Mute/unmute all remote video elements (audio output).
-            document.querySelectorAll('#teacherStage video, #studentsGrid video').forEach(v => {
-                // keep local muted always
-                if (v.id && v.id.startsWith('vid_local')) return;
-                v.muted = !!groupCall.speakerMuted;
-                v.volume = groupCall.speakerMuted ? 0 : 1;
-            });
-            const b = document.getElementById('btnSpeaker');
-            if (b) b.innerHTML = groupCall.speakerMuted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
-            updateCallControlUI();
-        }
+        async function uploadRecording(lessonId, blob, title){
+  const token = localStorage.getItem('token') || '';
+  const fd = new FormData();
+  fd.append('recording', blob, `lesson_${lessonId}.webm`);
+  if(title) fd.append('title', title);
 
-
-function updateCallControlUI(){
-            const role = String(currentUser?.role||'').toLowerCase();
-            const hideStudentToggles = (role === 'student');
-            const micOn = !groupCall.muted;
-            const camOn = !groupCall.cameraOff;
-            const spkOn = !groupCall.speakerMuted;
-            const recOn = !!window._isRecording;
-            const scrOn = !!groupCall.isScreenSharing;
-
-            const setBtn = (id, on) => {
-                const b = document.getElementById(id);
-                if (!b) return;
-                b.classList.toggle('ctrl-active', !!on);
-                b.classList.toggle('ctrl-off', !on);
-                b.setAttribute('aria-pressed', String(!!on));
-            };
-            // Students must not have UI to turn off camera/mic
-            if (hideStudentToggles) {
-                ['btnMute','btnCam','mBtnMute','mBtnCam'].forEach(id=>{ const b=document.getElementById(id); if(b) b.classList.add('hidden'); });
-            } else {
-                ['btnMute','btnCam','mBtnMute','mBtnCam'].forEach(id=>{ const b=document.getElementById(id); if(b) b.classList.remove('hidden'); });
-            }
-
-
-            // top buttons
-            setBtn('btnMute', micOn);
-            setBtn('btnCam', camOn);
-            setBtn('btnSpeaker', spkOn);
-            if (document.getElementById('btnRecord')) setBtn('btnRecord', recOn);
-            if (document.getElementById('btnScreen')) setBtn('btnScreen', scrOn);
-
-            // mobile menu icons follow state
-            const swapIcon = (btnId, html) => {
-                const b = document.getElementById(btnId);
-                if (!b) return;
-                const i = b.querySelector('i');
-                if (i) i.outerHTML = html;
-            };
-            swapIcon('mBtnMute', micOn ? '<i class="fas fa-microphone w-5 text-center"></i>' : '<i class="fas fa-microphone-slash w-5 text-center"></i>');
-            swapIcon('mBtnCam',  camOn ? '<i class="fas fa-video w-5 text-center"></i>' : '<i class="fas fa-video-slash w-5 text-center"></i>');
-            swapIcon('mBtnSpeaker', spkOn ? '<i class="fas fa-volume-up w-5 text-center"></i>' : '<i class="fas fa-volume-mute w-5 text-center"></i>');
-
-            const recBtn = document.getElementById('mBtnRecord');
-            if (recBtn) {
-                const i = recBtn.querySelector('i');
-                if (i) i.className = recOn ? 'fas fa-stop w-5 text-center' : 'fas fa-circle w-5 text-center';
-            }
-            const scrBtn = document.getElementById('mBtnScreen');
-            if (scrBtn) {
-                const i = scrBtn.querySelector('i');
-                if (i) i.className = scrOn ? 'fas fa-display w-5 text-center' : 'fas fa-desktop w-5 text-center';
-            }
-        }
-
-function toggleMute() {
-            const role = String(currentUser?.role||'').toLowerCase();
-            if (role === 'student') return notify("Talabalarda mikrofonni o'chirish ruxsat yo'q", 'info');
-            if (OBSERVER_MODE) return notify('Observer mode: boshqaruv yo\'q', 'info');
-
-            if (!groupCall.localStream) return;
-            groupCall.muted = !groupCall.muted;
-            groupCall.localStream.getAudioTracks().forEach(t => t.enabled = !groupCall.muted);
-            const btn = document.getElementById('btnMute');
-            btn.innerHTML = groupCall.muted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
-            updateCallControlUI();
-        }
-
-        function toggleCamera() {
-            const role = String(currentUser?.role||'').toLowerCase();
-            if (role === 'student') return notify("Talabalarda kamerani o'chirish ruxsat yo'q", 'info');
-            if (OBSERVER_MODE) return notify('Observer mode: boshqaruv yo\'q', 'info');
-
-            if (!groupCall.localStream) return;
-            groupCall.cameraOff = !groupCall.cameraOff;
-            groupCall.localStream.getVideoTracks().forEach(t => t.enabled = !groupCall.cameraOff);
-            const btn = document.getElementById('btnCam');
-            btn.innerHTML = groupCall.cameraOff ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
-            updateCallControlUI();
-        }
-
-        async function switchCamera(){
-            try{
-                if (groupCall.callType === 'audio') return notify('Audio call: kamera yo\'q', 'info');
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return notify('getUserMedia yo\'q', 'err');
-
-                // Ensure we already have permission (deviceId is often empty before first permission)
-                const devices = await navigator.mediaDevices.enumerateDevices().catch(()=>[]);
-                const cams = devices.filter(d=>d.kind==='videoinput');
-                if (!cams.length) return notify('Kamera topilmadi', 'err');
-
-                // Track current
-                const curTrack = groupCall.localStream?.getVideoTracks?.()[0] || null;
-                const curSettings = curTrack?.getSettings?.() || {};
-                const curDeviceId = groupCall.videoDeviceId || curSettings.deviceId || null;
-
-                // Determine next facingMode
-                groupCall.facingMode = groupCall.facingMode || curSettings.facingMode || 'user';
-                const nextFacing = (groupCall.facingMode === 'user') ? 'environment' : 'user';
-
-                // helper: open camera with constraints
-                const tryOpen = async (cons) => {
-                    try { return await navigator.mediaDevices.getUserMedia(cons); } catch(_) { return null; }
-                };
-
-                // 1) Try facingMode (exact -> ideal)
-                let newStream = await tryOpen({ video: { facingMode: { exact: nextFacing } }, audio: false });
-                if (!newStream) newStream = await tryOpen({ video: { facingMode: nextFacing }, audio: false });
-                if (!newStream) newStream = await tryOpen({ video: { facingMode: { ideal: nextFacing } }, audio: false });
-
-                // 2) Fallback: cycle deviceId (common Android/Safari quirk)
-                if (!newStream) {
-                    let idx = 0;
-                    if (curDeviceId) {
-                        const curIdx = cams.findIndex(c=>c.deviceId===curDeviceId);
-                        if (curIdx >= 0) idx = curIdx;
-                    }
-                    const nextIdx = (idx + 1) % cams.length;
-                    const nextId = cams[nextIdx]?.deviceId;
-
-                    if (nextId) {
-                        newStream = await tryOpen({ video: { deviceId: { exact: nextId }, facingMode: { ideal: nextFacing } }, audio: false })
-                                 || await tryOpen({ video: { deviceId: { exact: nextId } }, audio: false });
-                    }
-                }
-
-                if (!newStream) return notify('Camera almashtirib bo\'lmadi (ruxsat yoki device)', 'err');
-
-                const newTrack = newStream.getVideoTracks()[0];
-                if (!newTrack) return notify('Yangi video track yo\'q', 'err');
-
-                // Update stored selectors
-                const ns = newTrack.getSettings?.() || {};
-                groupCall.videoDeviceId = ns.deviceId || groupCall.videoDeviceId || null;
-                groupCall.facingMode = ns.facingMode || nextFacing;
-
-                // Replace in local stream
-                const oldTrack = curTrack;
-                if (oldTrack) { try{ groupCall.localStream.removeTrack(oldTrack); }catch(_){} try{ oldTrack.stop(); }catch(_){} }
-                if (groupCall.localStream) groupCall.localStream.addTrack(newTrack);
-                else groupCall.localStream = new MediaStream([newTrack]);
-
-                // Re-attach to local preview
-                const lv = document.getElementById('localVideo') || document.getElementById(`vid_${String(currentUser?._id || 'local')}`);
-                if (lv) { lv.srcObject = groupCall.localStream; try{ await lv.play(); }catch(_){} }
-
-                // Replace in all peer connections
-                for (const pc of groupCall.peers.values()){
-                    try{
-                        const sender = pc.getSenders().find(s=>s.track && s.track.kind==='video');
-                        if (sender) await sender.replaceTrack(newTrack);
-                    }catch(e){ console.warn('replaceTrack failed', e); }
-                }
-
-                // composite recorder camera source refresh (if canvas fallback used)
-                try{
-                    if (typeof _camStream !== 'undefined' && _camStream) { try{ _camStream.getTracks().forEach(t=>t.stop()); }catch(_){} }
-                    if (typeof _camVideoEl !== 'undefined' && _camVideoEl) { _camVideoEl.srcObject = new MediaStream([newTrack]); try{ await _camVideoEl.play(); }catch(_){} }
-                }catch(_){}
-
-                notify(groupCall.facingMode === 'environment' ? 'Orqa kamera yoqildi' : 'Old kamera yoqildi', 'ok');
-            }catch(e){
-                console.error('switchCamera', e);
-                notify('Camera switch xatolik: ' + (e?.message || e), 'err');
-            }
-        }
-
-
-        function leaveOrEndGroupCall() {
-            if (!groupCall.active) {
-                cleanupGroupCallUI();
-                return;
-            }
-            // If starter -> end call for everyone; else leave
-            if (groupCall.starterId && currentUser && String(groupCall.starterId) === String(currentUser._id)) {
-                socket.emit('groupCallEnd', { groupId: groupCall.groupId, callId: groupCall.callId });
-            } else {
-                socket.emit('groupCallLeave', { groupId: groupCall.groupId, callId: groupCall.callId });
-                cleanupGroupCallUI();
-            }
-        }
-
-        function cleanupGroupCallUI() {
-            // Stop recording (will auto-upload onstop)
-            try { if (_isRecording && _recorder) _recorder.stop(); } catch(_) {}
-            groupCall.active = false;
-            groupCall.callId = null;
-            groupCall.starterId = null;
-
-            // close peers
-            for (const [uid, pc] of groupCall.peers.entries()) {
-                try { pc.close(); } catch(e){}
-            }
-            groupCall.peers.clear();
-            groupCall.remoteStreams.clear();
-
-            // stop local
-            if (groupCall.localStream) {
-                groupCall.localStream.getTracks().forEach(t => t.stop());
-            }
-            groupCall.localStream = null;
-
-            // clear tiles
-            const grid = document.getElementById('groupVideosGrid');
-            if (grid) grid.innerHTML = '';
-            hideGroupOverlay();
-        }
-
-        function setupGroupCallSocketHandlers() {
-            if (!socket) return;
-
-            socket.on('groupCallIncoming', (data) => {
-                // Only show if in this group page
-                if (String(data.groupId) !== String(groupId)) return;
-                if (groupCall.active) return;
-
-                groupCall.incoming = data;
-                if (AUTO_JOIN_CALL) {
-                    // Auto-join for admin observer links
-                    return joinGroupCall(data.groupId, data.callId, data.callType);
-                }
-                const meta = `${(data.title||'Live dars')} • ${data.callType.toUpperCase()} • started by ${data.from}`;
-                showIncomingGroupBox(meta);
-            });
-
-            socket.on('groupCallActive', (data) => {
-                // Called when we joinGroup and a call is already active
-                if (String(data.groupId) !== String(groupId)) return;
-                if (groupCall.active) return;
-
-                groupCall.incoming = { groupId: data.groupId, callId: data.callId, callType: data.callType || 'video', from: data.startedBy, title: data.title };
-                if (AUTO_JOIN_CALL) {
-                    return joinGroupCall(data.groupId, data.callId, data.callType || 'video');
-                }
-                showIncomingGroupBox(`ACTIVE: ${(data.title||'Live dars')} • ${String(groupCall.incoming.callType).toUpperCase()} • started by ${data.startedBy}`);
-            });
-
-            socket.on('groupCallStarted', async (data) => {
-                if (String(data.groupId) !== String(groupId)) return;
-                groupCall.active = true;
-                groupCall.callId = data.callId;
-                groupCall.lessonId = data.lessonId || null;
-                if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
-                updateTeacherControls();
-                renderGroupCallLayout();
-                groupCall.starterId = currentUser?._id; // we started
-                setGroupCallStatus('Connected (starter)');
-                // Auto recording for teacher (starts with lesson)
-                try{ await autoStartRecordingIfNeeded(); }catch(_){ }
-                try{ if(data.title) document.getElementById('groupCallTitle').textContent = data.title; }catch(_){}
-
-                // Create offers to existing participants
-                const participants = (data.participants || []).filter(u => String(u) !== String(currentUser?._id));
-                for (const uid of participants) {
-                    if (shouldInitiateOffer(currentUser?._id, uid)) {
-                        await sendOffer(uid);
-                    }
-                }
-            });
-
-            socket.on('groupCallJoined', async (data) => {
-                if (String(data.groupId) !== String(groupId)) return;
-                groupCall.active = true;
-                groupCall.callId = data.callId;
-                groupCall.lessonId = data.lessonId || null;
-                if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
-                updateTeacherControls();
-                renderGroupCallLayout();
-                groupCall.starterId = null; // unknown in this event
-                setGroupCallStatus('Connected');
-                // Auto recording for teacher when joining an ongoing lesson
-                try{ await autoStartRecordingIfNeeded(); }catch(_){ }
-
-                try{ if(data.title) document.getElementById('groupCallTitle').textContent = data.title; }catch(_){}
-
-                const participants = (data.participants || []).filter(u => String(u) !== String(currentUser?._id));
-                for (const uid of participants) {
-                    if (shouldInitiateOffer(currentUser?._id, uid)) {
-                        await sendOffer(uid);
-                    }
-                }
-            });
-
-            socket.on('groupCallUserJoined', async (data) => {
-                if (!groupCall.active) return;
-                if (String(data.groupId) !== String(groupCall.groupId)) return;
-                if (String(data.callId) !== String(groupCall.callId)) return;
-                if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
-                renderGroupCallLayout();
-
-                const uid = String(data.userId);
-                if (String(uid) === String(currentUser?._id)) return;
-
-                // Initiate offer only if tie-breaker says so
-                if (shouldInitiateOffer(currentUser?._id, uid)) {
-                    await sendOffer(uid);
-                }
-            });
-
-            socket.on('groupCallUserLeft', (data) => {
-                if (!groupCall.active) return;
-                if (String(data.groupId) !== String(groupCall.groupId)) return;
-                if (String(data.callId) !== String(groupCall.callId)) return;
-
-                const uid = String(data.userId);
-                const pc = groupCall.peers.get(uid);
-                if (pc) { try { pc.close(); } catch(e){} }
-                groupCall.peers.delete(uid);
-                groupCall.remoteStreams.delete(uid);
-                removeVideoTile(uid);
-            });
-
-            socket.on('groupCallEnded', (data) => {
-                if (!groupCall.active) return;
-                if (String(data.groupId) !== String(groupCall.groupId)) return;
-                if (String(data.callId) !== String(groupCall.callId)) return;
-
-                cleanupGroupCallUI();
-                alert('Group call ended: ' + (data.reason || 'ended'));
-            });
-
-            socket.on('groupCallSignal', async (payload) => {
-                if (!groupCall.active) return;
-                if (String(payload.groupId) !== String(groupCall.groupId)) return;
-                if (String(payload.callId) !== String(groupCall.callId)) return;
-
-                const from = String(payload.from);
-                const type = String(payload.type);
-                const data = payload.data;
-
-                if (type === 'offer') return handleOffer(from, data);
-                if (type === 'answer') return handleAnswer(from, data);
-                if (type === 'ice') return handleIce(from, data);
-            });
-
-            socket.on('groupCallError', (d) => {
-                console.error('groupCallError', d);
-                alert('Group call error: ' + (d?.error || 'unknown'));
-            });
-        }
-
+  // Only show for teacher-ish users (best-effort)
+  try{
+    showUploadOverlay(0, 'Yuklash boshlandi…');
+    const data = await uploadWithProgress(`/api/group-lessons/${lessonId}/recording`, fd, token, (pct)=>{
+      showUploadOverlay(pct, `Yuklanmoqda: ${Math.round(pct)}%`);
+    });
+    showUploadOverlay(100, 'Qayta ishlanmoqda…');
+    setTimeout(()=> hideUploadOverlay(), 650);
+    return data;
+  }catch(e){
+    console.error('uploadRecording failed', e);
+    hideUploadOverlay();
+    throw e;
+  }
+}
+function hideUploadOverlay(){
+  const ov=document.getElementById('uploadOverlay');
+  if(ov) ov.style.display='none';
+  showUploadOverlay(0);
+}
+function uploadWithProgress(url, formData, token, onProgress){
+  return new Promise((resolve, reject)=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    if(token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+    xhr.upload.onprogress = (e)=>{
+      if(e.lengthComputable){
+        const pct = (e.loaded / e.total) * 100;
+        if(onProgress) onProgress(pct, e.loaded, e.total);
+      }
+    };
+    xhr.onload = ()=>{
+      try{
+        const json = JSON.parse(xhr.responseText || '{}');
+        if(xhr.status >= 200 && xhr.status < 300) resolve(json);
+        else reject(Object.assign(new Error(json.error || 'Upload failed'), {status:xhr.status, body:json}));
+      }catch(err){
+        reject(err);
+      }
+    };
+    xhr.onerror = ()=> reject(new Error('Network error'));
+    xhr.send(formData);
+  });
+}
 </script>
-
-
-<!-- ==================== GROUP CALL OVERLAY ==================== -->
-<div id="groupCallOverlay" class="fixed inset-0 bg-black/80 hidden z-50">
-  <div class="absolute inset-0 flex flex-col">
-    
-    <!-- Top bar -->
-    <div class="flex items-center justify-between p-4 bg-black/60 gap-2">
-      <div class="text-white min-w-0">
-        <div class="font-semibold truncate" id="groupCallTitle">Group Call</div>
-        <div class="mt-2 hidden" id="lessonTitleWrap">
-          <input id="lessonTitleInput" type="text" maxlength="120" placeholder="Dars mavzusi (masalan: Moliya 1-ma'ruza)"
-            class="w-[min(520px,70vw)] px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"/>
-        </div>
-        <div class="text-xs opacity-80" id="groupCallStatus">Not connected</div>
-      </div>
-
-      <!-- Desktop controls -->
-      <div class="hidden sm:flex items-center space-x-2">
-        <button id="btnMute" onclick="toggleMute()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Mic">
-          <i class="fas fa-microphone"></i>
-        </button>
-        <button id="btnSpeaker" onclick="toggleSpeaker()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Speaker">
-          <i class="fas fa-volume-up"></i>
-        </button>
-        <button id="btnCam" onclick="toggleCamera()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Camera">
-          <i class="fas fa-video"></i>
-        </button>
-        <button id="btnSwitchCam" onclick="switchCamera()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Old/Orqa kamera">
-          <i class="fas fa-rotate"></i>
-        </button>
-        <button id="btnScreen" onclick="startScreenWithCam()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Ekran + kamera (o‘qituvchi)">
-          <i class="fas fa-desktop"></i>
-        </button>
-        <button id="btnRecord" onclick="toggleRecording()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Yozib olish (o‘qituvchi)">
-          <i class="fas fa-circle"></i>
-        </button>
-        <button id="btnAttendance" onclick="toggleAttendancePanel()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Davomat (o‘qituvchi)">
-          <i class="fas fa-clipboard-list"></i>
-        </button>
-        <button onclick="leaveOrEndGroupCall()" class="px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700" title="End/Leave">
-          <i class="fas fa-phone-slash"></i> <span class="hidden sm:inline">End</span>
-        </button>
-      </div>
-
-      <!-- Mobile controls: single toggle -->
-      <div class="sm:hidden relative">
-        <button id="btnCallMore" onclick="toggleCallMoreMenu()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" aria-label="More">
-          <i class="fas fa-ellipsis-vertical"></i>
-        </button>
-        <div id="callMoreMenu" class="hidden absolute right-0 mt-2 w-56 rounded-2xl bg-black/80 border border-white/10 backdrop-blur-xl overflow-hidden shadow-2xl">
-          <button id="mBtnMute" onclick="toggleMute(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
-            <i class="fas fa-microphone w-5 text-center"></i><span>Mic</span>
-          </button>
-          <button id="mBtnSpeaker" onclick="toggleSpeaker(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
-            <i class="fas fa-volume-up w-5 text-center"></i><span>Speaker</span>
-          </button>
-          <button id="mBtnCam" onclick="toggleCamera(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
-            <i class="fas fa-video w-5 text-center"></i><span>Kamera</span>
-          </button>
-          <button id="mBtnSwitchCam" onclick="switchCamera(); closeCallMoreMenu()" class="hidden w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
-            <i class="fas fa-rotate w-5 text-center"></i><span>Kamera almashtirish</span>
-          </button>
-
-          <div class="h-px bg-white/10"></div>
-
-          <button id="mBtnScreen" onclick="startScreenWithCam(); closeCallMoreMenu()" class="hidden w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
-            <i class="fas fa-desktop w-5 text-center"></i><span>Ekran + kamera</span>
-          </button>
-          <button id="mBtnRecord" onclick="toggleRecording(); closeCallMoreMenu()" class="hidden w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
-            <i class="fas fa-circle w-5 text-center"></i><span>Yozib olish</span>
-          </button>
-          <button id="mBtnAttendance" onclick="toggleAttendancePanel(); closeCallMoreMenu()" class="hidden w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
-            <i class="fas fa-clipboard-list w-5 text-center"></i><span>Davomat</span>
-          </button>
-
-          <div class="h-px bg-white/10"></div>
-
-          <button onclick="leaveOrEndGroupCall(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
-            <i class="fas fa-phone-slash w-5 text-center text-red-300"></i><span class="font-semibold">End / Leave</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- Videos (Teacher stage + Students grid) -->
-    <div class="flex-1 overflow-y-auto p-4 relative">
-      <div class="w-full rounded-2xl overflow-hidden border border-white/10 bg-black/30">
-        <div class="p-2 text-white/80 text-xs flex items-center justify-between">
-          <div><i class="fas fa-chalkboard-teacher"></i> O‘qituvchi</div>
-          <div id="teacherStageMeta" class="opacity-70"></div>
-        </div>
-        <div id="teacherStage" class="w-full" style="aspect-ratio: 16/9; position:relative;"></div>
-      </div>
-
-      <div class="mt-3">
-        <div class="p-1 text-white/80 text-xs flex items-center justify-between">
-          <div><i class="fas fa-users"></i> Talabalar</div>
-          <div id="studentsMeta" class="opacity-70"></div>
-        </div>
-        <div id="studentsGrid" class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr));"></div>
-      </div>
-
-      <!-- Attendance (teacher only) -->
-      <div id="attendancePanel" class="hidden absolute top-2 right-2 w-[360px] max-w-[92vw] h-[calc(100%-16px)] bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden">
-        <div class="p-3 flex items-center justify-between border-b border-white/10">
-          <div class="text-white font-semibold text-sm"><i class="fas fa-clipboard-list"></i> Davomat</div>
-          <button onclick="toggleAttendancePanel(false)" class="px-2 py-1 rounded-lg bg-white/10 text-white hover:bg-white/20"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="p-3 text-white/80 text-xs" id="attendanceHint">Yuklanmoqda...</div>
-        <div class="p-3 space-y-2 overflow-y-auto" style="max-height: calc(100% - 92px);">
-          <div>
-            <div class="text-white/90 font-semibold text-xs mb-2">KIRGANLAR</div>
-            <div id="attendanceJoined" class="space-y-2"></div>
-          </div>
-          <div class="pt-2 border-t border-white/10">
-            <div class="text-white/90 font-semibold text-xs mb-2">KIRMAGANLAR</div>
-            <div id="attendanceAbsent" class="space-y-2"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Incoming call prompt -->
-    <div id="groupIncomingBox" class="p-4 bg-black/70 hidden">
-      <div class="flex items-center justify-between">
-        <div class="text-white">
-          <div class="font-semibold">Incoming group call</div>
-          <div class="text-xs opacity-80" id="groupIncomingMeta">...</div>
-        </div>
-        <div class="flex items-center space-x-2">
-          <button onclick="acceptIncomingGroupCall()" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">
-            Accept
-          </button>
-          <button onclick="dismissIncomingGroupCall()" class="px-4 py-2 rounded-lg bg-gray-600 text-white hover:bg-gray-700">
-            Dismiss
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>

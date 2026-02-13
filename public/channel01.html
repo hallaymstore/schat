@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kanal • HALLAYM</title>
+  <title>Channel - UniConnect</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="/socket.io/socket.io.js"></script>
@@ -80,128 +80,6 @@
   });
 })();
 </script>
-
-  <style>
-    /* HALLAYM Glass Theme */
-    :root{
-      --teal-0:#062a2a;
-      --teal-1:#0a3b3a;
-      --teal-2:#0f6f6c;
-      --teal-3:#18b3ab;
-      --gold-1:#d8b35b;
-      --gold-2:#f2d27c;
-      --glass: rgba(255,255,255,.10);
-      --glass-2: rgba(255,255,255,.14);
-      --stroke: rgba(255,255,255,.18);
-      --stroke-2: rgba(255,255,255,.28);
-      --shadow: 0 20px 60px rgba(0,0,0,.35);
-    }
-    body{
-      background:
-        radial-gradient(1200px 800px at 20% 10%, rgba(24,179,171,.35), transparent 60%),
-        radial-gradient(900px 700px at 90% 20%, rgba(242,210,124,.18), transparent 55%),
-        radial-gradient(900px 700px at 30% 90%, rgba(9,83,80,.55), transparent 55%),
-        linear-gradient(135deg, var(--teal-0), var(--teal-1));
-      color: rgba(255,255,255,.92);
-      overflow-x:hidden;
-    }
-    /* subtle noise */
-    body:before{
-      content:"";
-      position:fixed; inset:0;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E");
-      pointer-events:none;
-      mix-blend-mode:overlay;
-      opacity:.22;
-    }
-    .glass{
-      background: var(--glass) !important;
-      border: 1px solid var(--stroke) !important;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      box-shadow: var(--shadow);
-    }
-    .glass-strong{
-      background: var(--glass-2) !important;
-      border: 1px solid var(--stroke-2) !important;
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      box-shadow: var(--shadow);
-    }
-    .gold-ring{
-      position:relative;
-    }
-    .gold-ring:before{
-      content:"";
-      position:absolute; inset:-2px;
-      border-radius: 20px;
-      padding:2px;
-      background: linear-gradient(135deg, rgba(242,210,124,.95), rgba(216,179,91,.35), rgba(24,179,171,.35));
-      -webkit-mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events:none;
-    }
-    .btn-teal{
-      background: linear-gradient(135deg, rgba(24,179,171,.95), rgba(15,111,108,.85));
-      color:#052424;
-      box-shadow: 0 12px 30px rgba(0,0,0,.35);
-    }
-    .btn-teal:hover{ filter: brightness(1.05); }
-    .btn-glass{
-      background: rgba(255,255,255,.10);
-      border:1px solid rgba(255,255,255,.20);
-      color: rgba(104, 227, 145, 0.92);
-    }
-    .btn-glass:hover{ background: rgba(255,255,255,.14); }
-    /* override common white cards */
-    .post-card, #liveSection, #composerSection, #manageModal .bg-white, .bg-white{
-      background: rgba(255,255,255,.10) !important;
-      border-color: rgba(255,255,255,.18) !important;
-      color: rgba(93, 226, 104, 0.92) !important;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-    }
-    .text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600, .text-gray-500{ color: rgba(86, 230, 54, 0.86) !important; }
-    .border{ border-color: rgba(255,255,255,.18) !important; }
-    .shadow, .shadow-sm{ box-shadow: 0 14px 50px rgba(0,0,0,.28) !important; }
-    .badge-teal{
-      background: rgba(24,179,171,.18);
-      border: 1px solid rgba(24,179,171,.30);
-      color: rgba(242,210,124,.95);
-    }
-    a, .link { color: rgba(242,210,124,.95); }
-    /* Live video frame */
-    #liveVideo{
-      background: rgba(0,0,0,.35);
-      border: 1px solid rgba(242,210,124,.22);
-      box-shadow: 0 18px 60px rgba(0,0,0,.45);
-    }
-
-    /* Inputs visibility fix (white text on glass) */
-    input:not([type="file"]), textarea, select{
-      background: rgba(0,0,0,.28) !important;
-      border: 1px solid rgba(255,255,255,.20) !important;
-      color: rgba(95, 207, 67, 0.92) !important;
-      caret-color: rgba(242,210,124,.95);
-    }
-    input:not([type="file"])::placeholder, textarea::placeholder{
-      color: rgba(255,255,255,.55) !important;
-    }
-    input:focus, textarea:focus, select:focus{
-      outline: none !important;
-      box-shadow: 0 0 0 3px rgba(24,179,171,.35) !important;
-      border-color: rgba(24,179,171,.55) !important;
-    }
-    select option{
-      color: #062a2a;
-      background: #ffffff;
-    }
-
-  </style>
-
 </head>
 
 <body class="bg-gray-50 min-h-screen">
@@ -217,7 +95,7 @@
       <a href="/channels.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-arrow-left w-5 text-center"></i><span>Back to Channels</span></a>
 <a href="/search.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-search w-5 text-center"></i><span>Search</span></a>
 <a href="/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-user w-5 text-center"></i><span>Profile</span></a>
-<button id="mChiqish" onclick="document.getElementById('logoutBtn')?.click(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-right-from-bracket w-5 text-center"></i><span>Chiqish</span></button>
+<button id="mLogout" onclick="document.getElementById('logoutBtn')?.click(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-right-from-bracket w-5 text-center"></i><span>Logout</span></button>
     </div>
   </aside>
 </div>
@@ -246,17 +124,17 @@
 <div id="drawerOverlay" aria-hidden="true"></div>
 
   <!-- Navigation -->
-  <nav class="text-green-500 bg-green-700 h-16">
+  <nav class="gradient-bg text-white h-16">
     <div class="container mx-auto px-4 h-full flex items-center justify-between">
       <a href="/channels.html" class="flex items-center space-x-2">
         <i class="fas fa-arrow-left"></i>
-        <span class="font-semibold text-gray-500">Back to Channels</span>
+        <span class="font-semibold">Back to Channels</span>
       </a>
       <div class="flex items-center space-x-3">
         <button id="menuBtn" class="p-2 hover:bg-white/10 rounded-full md:hidden" aria-label="Menu" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
         <a href="/search.html" class="p-2 hover:bg-white/10 rounded-full" title="Search"><i class="fas fa-search"></i></a>
         <a href="/profile.html" class="p-2 hover:bg-white/10 rounded-full" title="Profile"><i class="fas fa-user"></i></a>
-        <button id="logoutBtn" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-semibold">Chiqish</button>
+        <button id="logoutBtn" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-semibold">Logout</button>
       </div>
     </div>
   </nav>
@@ -274,9 +152,9 @@
     </div>
 
     <!-- Channel header -->
-    <section class="bg-green-700 rounded-2xl shadow-sm overflow-hidden">
+    <section class="bg-white rounded-2xl shadow-sm overflow-hidden">
       <div class="relative">
-        <div id="coverBanner" class="h-44 bg-green-400"></div>
+        <div id="coverBanner" class="h-44 bg-gray-200"></div>
         <div class="absolute left-6 -bottom-7 flex items-end gap-4">
           <div class="w-20 h-20 rounded-2xl bg-white shadow flex items-center justify-center overflow-hidden">
             <img id="channelAvatar" class="w-full h-full object-cover hidden" alt="Channel avatar"/>
@@ -285,9 +163,9 @@
           <div class="pb-2">
             <div class="flex flex-wrap items-center gap-2">
               <h1 id="channelName" class="text-2xl font-bold text-white drop-shadow"></h1>
-              <span id="channelPrivacy" class="px-2 py-0.5 text-xs rounded-full bg-green/20 text-white"></span>
+              <span id="channelPrivacy" class="px-2 py-0.5 text-xs rounded-full bg-white/20 text-white"></span>
             </div>
-            <div class="text-green/90 text-sm">
+            <div class="text-white/90 text-sm">
               <span id="channelUsername"></span>
               <span class="mx-2">•</span>
               <span id="channelCategory"></span>
@@ -298,17 +176,17 @@
         </div>
 
         <div class="absolute right-4 top-4 flex items-center gap-2">
-          <button id="subscribeBtn" class="px-4 py-2 rounded-xl btn-teal font-semibold">
+          <button id="subscribeBtn" class="px-4 py-2 rounded-xl bg-white text-gray-900 font-semibold hover:bg-gray-100 shadow">
             Subscribe
           </button>
-          <button id="manageBtn" class="px-4 py-2 rounded-xl btn-glass font-semibold">
+          <button id="manageBtn" class="px-4 py-2 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20 border border-white/20">
             <i class="fas fa-gear mr-2"></i>Manage
           </button>
         </div>
       </div>
 
       <div class="pt-10 px-6 pb-6">
-        <p id="channelDescription" class="text-white/80"></p>
+        <p id="channelDescription" class="text-gray-700"></p>
 
         
         <!-- Live Stream (owner broadcast, viewers watch) -->
@@ -320,8 +198,8 @@
                   <i class="fas fa-broadcast-tower"></i>
                 </span>
                 <div>
-                  <div class="font-semibold text-gray-900">Jonli efir</div>
-                  <div id="liveStatusText" class="text-sm text-gray-600">Holat tekshirilmoqda…</div>
+                  <div class="font-semibold text-gray-900">Live stream</div>
+                  <div id="liveStatusText" class="text-sm text-gray-600">Checking status…</div>
                 </div>
               </div>
               <div id="liveHint" class="text-xs text-gray-500 mt-1">
@@ -412,7 +290,7 @@
             <option value="views">Most viewed</option>
           </select>
           <button id="refreshBtn" class="px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 text-sm font-semibold">
-            <i class="fas fa-rotate mr-2"></i>Yangilash
+            <i class="fas fa-rotate mr-2"></i>Refresh
           </button>
         </div>
       </div>
@@ -431,8 +309,8 @@
     <div class="relative mx-auto mt-10 max-w-3xl bg-white rounded-2xl shadow-xl overflow-hidden">
       <div class="p-5 border-b flex items-center justify-between">
         <div>
-          <div class="text-lg font-bold text-gray-900">Kanal sozlamalari</div>
-          <div class="text-xs text-gray-500">Avatar, banner, nom, username va boshqalarni yangilang.</div>
+          <div class="text-lg font-bold text-gray-900">Channel settings</div>
+          <div class="text-xs text-gray-500">Update avatar, banner, name, username and more.</div>
         </div>
         <button class="p-2 rounded-lg hover:bg-gray-100" onclick="closeManage()"><i class="fas fa-xmark"></i></button>
       </div>
@@ -453,37 +331,37 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="text-sm font-semibold text-gray-700">Nomi</label>
+            <label class="text-sm font-semibold text-gray-700">Name</label>
             <input id="editName" class="mt-1 w-full px-4 py-2 rounded-xl border focus-ring" />
           </div>
           <div>
             <label class="text-sm font-semibold text-gray-700">Username</label>
             <input id="editUsername" class="mt-1 w-full px-4 py-2 rounded-xl border focus-ring" />
-            <div class="text-xs text-gray-500 mt-1">Link va qidiruvda ishlatiladi.</div>
+            <div class="text-xs text-gray-500 mt-1">Used in links and search.</div>
           </div>
           <div>
-            <label class="text-sm font-semibold text-gray-700">Kategoriya</label>
-            <select id="editCategory" class="mt-1 w-full px-4 py-2 rounded-xl border focus-ring" ></select>
+            <label class="text-sm font-semibold text-gray-700">Category</label>
+            <input id="editCategory" class="mt-1 w-full px-4 py-2 rounded-xl border focus-ring" />
           </div>
           <div>
-            <label class="text-sm font-semibold text-gray-700">Universitet</label>
-            <select id="editUniversity" class="mt-1 w-full px-4 py-2 rounded-xl border focus-ring" ></select>
+            <label class="text-sm font-semibold text-gray-700">University</label>
+            <input id="editUniversity" class="mt-1 w-full px-4 py-2 rounded-xl border focus-ring" />
           </div>
         </div>
 
         <div>
-          <label class="text-sm font-semibold text-gray-700">Tavsif</label>
+          <label class="text-sm font-semibold text-gray-700">Description</label>
           <textarea id="editDescription" rows="3" class="mt-1 w-full px-4 py-3 rounded-xl border focus-ring"></textarea>
         </div>
 
         <div class="flex items-center justify-between">
           <label class="inline-flex items-center gap-2">
             <input id="editIsPublic" type="checkbox" class="w-4 h-4" />
-            <span class="text-sm font-semibold text-gray-700">Ochiq kanal</span>
+            <span class="text-sm font-semibold text-gray-700">Public channel</span>
           </label>
 
           <button id="saveChannelBtn" class="px-5 py-2.5 rounded-xl gradient-bg text-white font-semibold">
-            <i class="fas fa-floppy-disk mr-2"></i>Saqlash
+            <i class="fas fa-floppy-disk mr-2"></i>Save changes
           </button>
         </div>
       </div>
@@ -569,24 +447,22 @@
   let liveStartedAt = null;
   let liveMode = null;
 
-  
-  // ----------------- WebRTC ICE (STUN/TURN) -----------------
-  let rtcIceServers = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
-  ];
-  async function initRtcConfig(){
-    try{
-      const res = await fetch('/api/rtc-config');
-      if (!res.ok) return;
-      const data = await res.json().catch(()=> ({}));
-      if (Array.isArray(data.iceServers) && data.iceServers.length) {
-        rtcIceServers = data.iceServers;
-      }
-    }catch(e){}
-  }
-  function getIceServers(){ return rtcIceServers; }
-
+  const ICE_SERVERS = (function buildIceServers(){
+    const servers = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ];
+    // Optional TURN (if you later add it)
+    // You can set these in window.TURN_URL / TURN_USERNAME / TURN_CREDENTIAL in a <script> tag or server template.
+    if (window.TURN_URL && window.TURN_USERNAME && window.TURN_CREDENTIAL) {
+      servers.push({
+        urls: String(window.TURN_URL),
+        username: String(window.TURN_USERNAME),
+        credential: String(window.TURN_CREDENTIAL)
+      });
+    }
+    return servers;
+  })();
 
   function decodeJwtPayload(tok){
     try{
@@ -795,7 +671,7 @@ function canManageChannel(){
   }
 
   async function createHostPCForViewer(viewerId){
-    const pc = new RTCPeerConnection({ iceServers: getIceServers() });
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     liveHostPCs.set(viewerId, pc);
 
     // Add tracks to pc
@@ -827,7 +703,7 @@ function canManageChannel(){
   async function ensureViewerPC(){
     if (liveViewerPC) return liveViewerPC;
 
-    const pc = new RTCPeerConnection({ iceServers: getIceServers() });
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     liveViewerPC = pc;
 
     pc.ontrack = (ev) => {
@@ -1041,59 +917,7 @@ function canManageChannel(){
     
 
 
-  
-  // ----------------- Catalogs (admin-managed) -----------------
-  let __catalogsLoaded = false;
-  let __uniList = [];
-  let __catList = [];
-
-  function norm(s){ return String(s||'').trim(); }
-  function slugifyUz(s){
-    return norm(s).toLowerCase()
-      .replace(/['"’`]/g,'')
-      .replace(/\s+/g,'-')
-      .replace(/[^a-z0-9\-а-яёқғҳўӣҷ]+/gi,'')
-      .replace(/\-\-+/g,'-')
-      .replace(/^\-+|\-+$/g,'');
-  }
-
-  function getCategoryName(slug){
-    const s = String(slug||'').trim();
-    const found = (__catList||[]).find(c => String(c.slug||c.name||c).trim()===s);
-    return found ? (found.name || found.slug || s) : (s || 'boshqa');
-  }
-
-  async function ensureCatalogs(){
-    if(__catalogsLoaded) return;
-    try{
-      const [u, c] = await Promise.all([
-        apiGet('/api/catalog/universities'),
-        apiGet('/api/catalog/channel-categories')
-      ]);
-      __uniList = (u.universities || u.items || []).map(x => (typeof x === 'string' ? {name:x, slug: slugifyUz(x)} : x));
-      __catList = (c.categories || c.items || []).map(x => (typeof x === 'string' ? {name:x, slug: slugifyUz(x)} : x));
-    }catch(e){
-      // fallback: keep empty lists
-      __uniList = __uniList || [];
-      __catList = __catList || [];
-    }
-    // Fill selects
-    const uniSel = document.getElementById('editUniversity');
-    const catSel = document.getElementById('editCategory');
-    if(uniSel){
-      const current = uniSel.value;
-      uniSel.innerHTML = '<option value="">— Tanlang —</option>' + __uniList.map(u=>`<option value="${escapeHtml(u.name||u)}">${escapeHtml(u.name||u)}</option>`).join('');
-      if(current) uniSel.value = current;
-    }
-    if(catSel){
-      const current = catSel.value;
-      catSel.innerHTML = '<option value="">— Tanlang —</option>' + __catList.map(c=>`<option value="${escapeHtml(c.slug||c.name||c)}">${escapeHtml(c.name||c)}</option>`).join('');
-      if(current) catSel.value = current;
-    }
-    __catalogsLoaded = true;
-  }
-
-// ----------------- API -----------------
+  // ----------------- API -----------------
   async function apiGet(url){
     const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json().catch(()=> ({}));
@@ -1149,8 +973,7 @@ function canManageChannel(){
       // Texts
       document.getElementById('channelName').textContent = channel.name || 'Channel';
       document.getElementById('channelUsername').textContent = channel.username ? '@' + channel.username : '';
-      await ensureCatalogs();
-      document.getElementById('channelCategory').textContent = getCategoryName(channel.category);
+      document.getElementById('channelCategory').textContent = channel.category || 'other';
       document.getElementById('channelUniversity').textContent = channel.university || 'All universities';
       document.getElementById('channelDescription').textContent = channel.description || '';
       document.getElementById('channelPrivacy').textContent = channel.isPublic ? 'Public' : 'Private';
@@ -1184,15 +1007,11 @@ function canManageChannel(){
       }
 
 // Prefill manage form
-      (async ()=>{
-        await ensureCatalogs();
-        document.getElementById('editName').value = channel.name || '';
-        document.getElementById('editUsername').value = channel.username || '';
-        document.getElementById('editDescription').value = channel.description || '';
-        document.getElementById('editCategory').value = channel.category || '';
-        document.getElementById('editUniversity').value = channel.university || '';
-        document.getElementById('editIsPublic').checked = !!channel.isPublic;
-      })();
+      document.getElementById('editName').value = channel.name || '';
+      document.getElementById('editUsername').value = channel.username || '';
+      document.getElementById('editDescription').value = channel.description || '';
+      document.getElementById('editCategory').value = channel.category || '';
+      document.getElementById('editUniversity').value = channel.university || '';
       document.getElementById('editIsPublic').checked = !!channel.isPublic;
 
       // Live controls depend on ownership + status
@@ -1246,8 +1065,8 @@ function canManageChannel(){
     if (!posts.length){
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-8 text-center text-gray-500 border">
-          <div class="text-lg font-semibold text-gray-700">Hali post yo‘q</div>
-          <div class="text-sm mt-1">Birinchi bo‘lib post joylang.</div>
+          <div class="text-lg font-semibold text-gray-700">No posts yet</div>
+          <div class="text-sm mt-1">Be the first to publish something.</div>
         </div>`;
       return;
     }
@@ -1259,15 +1078,15 @@ function canManageChannel(){
       const permalink = buildPostPermalink(p._id);
 
       return `
-      <article id="post_${p._id}" data-post-id="${p._id}" class="post-card js-post bg-white rounded-2xl shadow-sm border overflow-hidden">
+      <article id="post_${p._id}" class="post-card bg-white rounded-2xl shadow-sm border overflow-hidden">
         <div class="p-5">
           <div class="flex items-start justify-between gap-3">
             <div>
               ${p.title ? `<div class="text-lg font-bold text-gray-900">${escapeHtml(p.title)}</div>` : ''}
               <div class="text-xs text-gray-500 mt-1">
-                <span>${new Date(p.createdAt).toLocaleString()}</span></span>
+                <span>${new Date(p.createdAt).toLocaleString()}</span>
                 <span class="mx-2">•</span>
-                <span><i class="fas fa-eye mr-1"></i><span data-views>${p.viewsCount ?? 0}</span></span>
+                <span><i class="fas fa-eye mr-1"></i>${p.viewsCount ?? 0}</span>
               </div>
             </div>
 
@@ -1315,66 +1134,9 @@ function canManageChannel(){
         </div>
       </article>`;
     }).join('');
-    initPostViewObserver();
   }
 
-  
-  // ----------------- Views counter (scroll-based) -----------------
-  let postViewObserver = null;
-  const postViewTimers = new Map();   // postId -> timeoutId
-  const postViewCooldown = new Map(); // postId -> lastTimestamp
-
-  function initPostViewObserver(){
-    if (postViewObserver) { try{ postViewObserver.disconnect(); }catch(e){} }
-    postViewTimers.clear();
-
-    const threshold = 0.60; // 60% visible
-    postViewObserver = new IntersectionObserver((entries) => {
-      for (const ent of entries) {
-        const el = ent.target;
-        const postId = el.getAttribute('data-post-id');
-        if (!postId) continue;
-
-        if (ent.isIntersecting && ent.intersectionRatio >= threshold) {
-          if (postViewTimers.has(postId)) continue;
-
-          // 1s dwell to count as a view
-          const t = setTimeout(() => {
-            postViewTimers.delete(postId);
-            const last = postViewCooldown.get(postId) || 0;
-            const now = Date.now();
-            // "ham hisoblayverishi": count again if user sees it again later (cooldown 30s)
-            if (now - last < 30000) return;
-            postViewCooldown.set(postId, now);
-            incrementPostView(postId, el);
-          }, 1000);
-
-          postViewTimers.set(postId, t);
-        } else {
-          const t = postViewTimers.get(postId);
-          if (t) { clearTimeout(t); postViewTimers.delete(postId); }
-        }
-      }
-    }, { threshold: [threshold] });
-
-    document.querySelectorAll('.js-post[data-post-id]').forEach(el => postViewObserver.observe(el));
-  }
-
-  async function incrementPostView(postId, el){
-    try{
-      await fetch(`/api/posts/${postId}/view`, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      // Optimistic UI +1
-      const eye = el.querySelector('[data-views]');
-      if (eye) {
-        const n = parseInt(eye.textContent || '0', 10);
-        if (!Number.isNaN(n)) eye.textContent = String(n + 1);
-      }
-    }catch(e){}
-  }
-function renderMedia(url, type){
+  function renderMedia(url, type){
     if (type === 'video'){
       return `<video class="w-full rounded-xl border bg-black" controls src="${escapeHtml(url)}"></video>`;
     }
@@ -1627,7 +1389,6 @@ try{
   }
 }catch(e){}
 
-    await initRtcConfig();
     initSocket();
     await loadChannel();
     renderLiveControls();

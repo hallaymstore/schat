@@ -974,7 +974,7 @@ body{background-attachment:fixed;}
         }
         
         // Send group message
-        async function sendGroupMessage(){
+        async async function sendGroupMessage(){
   const input=document.getElementById('messageInput');
   const text=(input?.value||'').trim();
   if(!currentGroup) return;

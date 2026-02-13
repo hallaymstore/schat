@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ro‘yxatdan o‘tish — HALLAYM edu</title>
-  <meta name="description" content="HALLAYM edu’da ro‘yxatdan o‘ting: kanallar, guruhlar va real-time chat — barchasi bitta platformada." />
+  <title>Ro‘yxatdan o‘tish — SChat</title>
+  <meta name="description" content="SChat’da ro‘yxatdan o‘ting: kanallar, guruhlar va real-time chat — barchasi bitta platformada." />
 
   <script>
     tailwind = {
@@ -36,29 +36,23 @@
 
   <style>
     :root{
-      --glass-bg: rgba(255,255,255,.62);
-      --glass-brd: rgba(255,255,255,.34);
-      --muted: rgba(15,23,42,.74);
-      --muted2: rgba(15,23,42,.56);
-      --ring: rgba(20,184,166,.42);
-      --grid: rgba(2,132,199,.08);
-      --gold: rgba(245,158,11,1);
-      --teal: rgba(20,184,166,1);
-      --deep: rgba(2,6,23,1);
-      --ok: rgba(16,185,129,.18);
+      --glass-bg: rgba(255,255,255,.58);
+      --glass-brd: rgba(255,255,255,.36);
+      --muted: rgba(15,23,42,.72);
+      --muted2: rgba(15,23,42,.55);
+      --grid: rgba(15,23,42,.06);
+      --ring: rgba(99,102,241,.45);
+      --ok: rgba(34,197,94,.18);
       --bad: rgba(239,68,68,.18);
     }
     .dark{
-      --glass-bg: rgba(2,6,23,.62);
-      --glass-brd: rgba(148,163,184,.14);
-      --muted: rgba(226,232,240,.82);
-      --muted2: rgba(226,232,240,.58);
-      --ring: rgba(245,158,11,.22);
+      --glass-bg: rgba(2,6,23,.58);
+      --glass-brd: rgba(148,163,184,.16);
+      --muted: rgba(226,232,240,.78);
+      --muted2: rgba(226,232,240,.55);
       --grid: rgba(148,163,184,.08);
-      --gold: rgba(245,158,11,1);
-      --teal: rgba(20,184,166,1);
-      --deep: rgba(2,6,23,1);
-      --ok: rgba(16,185,129,.14);
+      --ring: rgba(236,72,153,.35);
+      --ok: rgba(34,197,94,.14);
       --bad: rgba(239,68,68,.14);
     }
     body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
@@ -71,35 +65,25 @@
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
     }
-    .btn-primary{ background: linear-gradient(135deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1)); }
+    .btn-primary{ background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)); }
     .btn-primary:hover{ filter: brightness(1.05); }
-.btn-primary{
-      border: 1px solid rgba(245,158,11,.22);
-      box-shadow: 0 18px 46px rgba(2,6,23,.18);
-    }
-    .dark .btn-primary{ box-shadow: 0 18px 46px rgba(0,0,0,.35); }
-
-    @media (max-width: 420px){
-      h1,h2{ letter-spacing: -0.02em; }
-      .glass{ backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-    }
     .btn-ghost:hover{ background: rgba(148,163,184,.12); }
     .glow-ring:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
 
     .bg-orbs{
       position: fixed; inset: 0; z-index: -2; overflow: hidden;
       background:
-        radial-gradient(1200px 700px at 12% 14%, rgba(20,184,166,.32), transparent 62%),
-        radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.20), transparent 60%),
-        radial-gradient(1000px 720px at 50% 92%, rgba(34,211,238,.18), transparent 62%),
-        linear-gradient(180deg, rgba(241,250,249,1), rgba(226,248,246,1));
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.38), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.28), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.22), transparent 60%),
+        linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
     }
     .dark .bg-orbs{
       background:
-        radial-gradient(1200px 700px at 12% 14%, rgba(20,184,166,.18), transparent 62%),
-        radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.12), transparent 60%),
-        radial-gradient(1000px 720px at 50% 92%, rgba(34,211,238,.10), transparent 62%),
-        linear-gradient(180deg, rgba(2,6,23,1), rgba(3,28,33,1));
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.24), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.19), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.14), transparent 60%),
+        linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));
     }
     .bg-grid{
       position: fixed; inset: 0; z-index: -1; pointer-events: none;
@@ -110,7 +94,7 @@
       opacity: .85;
     }
     .u-anim{
-      background: linear-gradient(90deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1));
+      background: linear-gradient(90deg, rgba(99,102,241,1), rgba(236,72,153,1));
       background-size: 200% 200%;
       -webkit-background-clip:text; background-clip:text; color:transparent;
       animation: shimmer 6s ease-in-out infinite;
@@ -134,7 +118,7 @@
     .g-border:before{
       content:"";
       position:absolute; inset:-1px; border-radius: 1.5rem;
-      background: linear-gradient(135deg, rgba(20,184,166,.42), rgba(250,204,21,.34), rgba(245,158,11,.28));
+      background: linear-gradient(135deg, rgba(99,102,241,.55), rgba(236,72,153,.45), rgba(34,197,94,.35));
       z-index:-1;
     }
     .panel-pop{ animation: pop .45s ease-out both; }
@@ -163,40 +147,12 @@
     <div class="mx-auto max-w-6xl px-4 py-4">
       <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
         <a href="/index.html" class="flex items-center gap-3">
-          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shadow-glass overflow-hidden"
-     style="background: radial-gradient(120% 120% at 20% 20%, rgba(20,184,166,.35), rgba(2,6,23,.0) 60%), radial-gradient(140% 140% at 80% 80%, rgba(245,158,11,.22), rgba(2,6,23,.0) 60%), rgba(2,6,23,.12);">
-  <svg viewBox="0 0 120 120" class="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px]" aria-hidden="true">
-    <defs>
-      <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="rgba(245,158,11,1)"/>
-        <stop offset="0.5" stop-color="rgba(250,204,21,1)"/>
-        <stop offset="1" stop-color="rgba(245,158,11,1)"/>
-      </linearGradient>
-      <linearGradient id="gIce" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="rgba(125,211,252,1)"/>
-        <stop offset="0.45" stop-color="rgba(34,211,238,1)"/>
-        <stop offset="1" stop-color="rgba(167,243,208,1)"/>
-      </linearGradient>
-      <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="2.2" result="b"/>
-        <feMerge>
-          <feMergeNode in="b"/>
-          <feMergeNode in="SourceGraphic"/>
-        </feMerge>
-      </filter>
-    </defs>
-
-    <circle cx="60" cy="60" r="54" fill="none" stroke="url(#gGold)" stroke-width="6" opacity="0.92"/>
-    <ellipse cx="60" cy="64" rx="42" ry="24" fill="rgba(2,6,23,.88)" stroke="url(#gGold)" stroke-width="4"/>
-    <path d="M20 44 L26 44 L28 38 L30 44 L36 44 L31 47 L33 53 L28 49 L23 53 L25 47 Z"
-          fill="rgba(250,204,21,.95)" filter="url(#softGlow)"/>
-    <text x="60" y="70" text-anchor="middle" font-size="22" font-family="Inter, ui-sans-serif" font-weight="800"
-          fill="url(#gIce)" style="letter-spacing:.5px">hallaym</text>
-  </svg>
-</div>
+          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white shadow-glass">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
           <div class="leading-tight">
-            <div class="font-extrabold tracking-tight">HALLAYM <span class="u-anim">edu</span></div>
-            <div class="text-xs muted">Ultra zamonaviy ta'lim platformasi</div>
+            <div class="font-extrabold tracking-tight">SChat</div>
+            <div class="text-xs muted">Talabalar uchun platforma</div>
           </div>
         </a>
 
@@ -241,8 +197,8 @@
             <svg id="robot" viewBox="0 0 220 220" class="w-full h-auto">
               <defs>
                 <linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="rgba(20,184,166,1)"/>
-                  <stop offset="1" stop-color="rgba(245,158,11,1)"/>
+                  <stop offset="0" stop-color="rgba(99,102,241,1)"/>
+                  <stop offset="1" stop-color="rgba(236,72,153,1)"/>
                 </linearGradient>
               </defs>
 
@@ -339,25 +295,19 @@
           </div>
 
           <div>
-            
-          <div>
             <label class="text-xs font-extrabold muted">Universitet</label>
             <div class="mt-2 relative">
               <i class="fa-solid fa-building-columns absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
               <select id="universitySelect" class="field w-full rounded-2xl px-11 py-3 text-sm glow-ring" name="university" required>
-                <option value="" selected disabled>Universitetni tanlang</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="text-xs font-extrabold muted">Fakultet</label>
-            <div class="mt-2 relative">
-              <i class="fa-solid fa-layer-group absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
-              <select id="facultySelect" class="field w-full rounded-2xl px-11 py-3 text-sm glow-ring" name="faculty" required>
-                <option value="" selected disabled>Fakultetni tanlang</option>
-              </select>
-            </div>
+  <option value="" selected disabled>Universitetni tanlang</option>
+\1
+<div class="relative mt-3">
+  <i class="fa-solid fa-building-columns absolute left-4 top-1/2 -translate-y-1/2 muted"></i>
+  <select id="facultySelect" class="field w-full rounded-2xl px-11 py-3 text-sm glow-ring" name="faculty" required>
+    <option value="" selected disabled>Fakultetni tanlang</option>
+  </select>
+</div>
+</div>
           </div>
 
           <div>
@@ -366,18 +316,21 @@
               <i class="fa-solid fa-users-rectangle absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
               <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="studyGroup" placeholder="Masalan: 21-01" />
             </div>
-          </div>
-
+          
           <div>
             <label class="text-xs font-extrabold muted">Role</label>
             <div class="mt-2 relative">
               <i class="fa-solid fa-user-tag absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
-              <select class="field w-full rounded-2xl px-11 py-3 text-sm glow-ring" name="role" required>
+              <select class="field w-full rounded-2xl px-11 py-3 text-sm" name="role" required>
                 <option value="student" selected>Student</option>
                 <option value="teacher">Teacher</option>
               </select>
             </div>
-          </div><div>
+          </div>
+
+</div>
+
+          <div>
             <label class="text-xs font-extrabold muted">Telefon</label>
             <div class="mt-2 relative">
               <i class="fa-solid fa-phone absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>

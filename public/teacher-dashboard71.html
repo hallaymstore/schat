@@ -3,58 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HALLAYM edu — Teacher Dashboard — HALLAYM edu — HALLAYM edu</title>
+  <title>Teacher Dashboard — QDTU LMS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root{
-      --bg: #f2fbfa;
-      --card: rgba(255,255,255,.68);
-      --card2: rgba(255,255,255,.52);
-      --text: rgba(2,6,23,1);
-      --muted: rgba(15,23,42,.74);
-      --muted2: rgba(15,23,42,.58);
-      --border: rgba(148,163,184,.26);
-
-      --teal: rgba(20,184,166,1);
-      --gold: rgba(245,158,11,1);
-      --gold2: rgba(250,204,21,1);
-      --sky: rgba(56,189,248,1);
-      --danger: rgba(239,68,68,1);
-      --ok: rgba(16,185,129,1);
-
-      --shadow: 0 18px 60px rgba(2,6,23,.12);
-      --ring: 0 0 0 4px rgba(20,184,166,.22);
-      --grid: rgba(2,132,199,.08);
+      --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
+      --primary:#2563eb; --primary2:#7c3aed; --danger:#ef4444; --ok:#10b981; --warn:#f59e0b;
+      --shadow: 0 18px 50px rgba(2,6,23,.10);
+      --ring: 0 0 0 4px rgba(37,99,235,.18);
+      --grid: rgba(15,23,42,.06);
     }
     .dark{
-      --bg: rgba(2,6,23,1);
-      --card: rgba(2,6,23,.62);
-      --card2: rgba(2,6,23,.48);
-      --text: rgba(226,232,240,.92);
-      --muted: rgba(226,232,240,.78);
-      --muted2: rgba(226,232,240,.56);
-      --border: rgba(148,163,184,.16);
-
-      --teal: rgba(20,184,166,1);
-      --gold: rgba(245,158,11,1);
-      --gold2: rgba(250,204,21,1);
-      --sky: rgba(56,189,248,1);
-      --danger: rgba(248,113,113,1);
-      --ok: rgba(52,211,153,1);
-
-      --shadow: 0 22px 80px rgba(0,0,0,.48);
-      --ring: 0 0 0 4px rgba(245,158,11,.18);
+      --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --border:#223047;
+      --shadow: 0 20px 70px rgba(0,0,0,.45);
       --grid: rgba(148,163,184,.10);
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); text-rendering:optimizeLegibility}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text)}
     a{color:inherit}
     .bg{
       position:fixed; inset:0; z-index:-2;
       background:
-        radial-gradient(1200px 700px at 12% 14%, rgba(20,184,166,.30), transparent 62%),
-        radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.18), transparent 60%),
-        radial-gradient(1000px 720px at 50% 92%, rgba(34,211,238,.14), transparent 62%),
+        radial-gradient(1100px 500px at 10% 10%, rgba(37,99,235,.22), transparent 60%),
+        radial-gradient(900px 500px at 92% 18%, rgba(124,58,237,.18), transparent 60%),
+        radial-gradient(900px 600px at 50% 92%, rgba(16,185,129,.14), transparent 60%),
         linear-gradient(180deg, var(--bg), var(--bg));
     }
     .gridbg{
@@ -69,9 +41,8 @@
     header{
       position:sticky; top:0; z-index:50;
       padding:14px 16px;
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      background: color-mix(in oklab, var(--card) 78%, transparent);
+      backdrop-filter: blur(10px);
+      background: color-mix(in oklab, var(--bg) 72%, transparent);
       border-bottom:1px solid color-mix(in oklab, var(--border) 70%, transparent);
     }
     .nav{
@@ -79,22 +50,15 @@
       display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
     }
     .brand{display:flex; align-items:center; gap:10px}
-    .logoWrap{
-      width:44px; height:44px; border-radius:16px;
-      display:flex; align-items:center; justify-content:center;
-      background:
-        radial-gradient(120% 120% at 20% 20%, rgba(20,184,166,.35), rgba(2,6,23,.0) 60%),
-        radial-gradient(140% 140% at 80% 80%, rgba(245,158,11,.22), rgba(2,6,23,.0) 60%),
-        color-mix(in oklab, var(--card) 85%, transparent);
-      border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
       box-shadow: var(--shadow);
-      overflow:hidden;
     }
-    .logoSvg{ width:38px; height:38px; display:block; }
     .pills{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
-    .pill{font-size:12px; padding:7px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 78%, transparent); background: color-mix(in oklab, var(--card2) 92%, transparent)}
+    .pill{font-size:12px; padding:7px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 80%, transparent); background: color-mix(in oklab, var(--card) 85%, transparent)}
     .badge{font-weight:900; letter-spacing:.6px}
-    .badge.teacher{color:color-mix(in oklab, var(--gold) 88%, white)}
+    .badge.teacher{color:color-mix(in oklab, var(--primary) 88%, white)}
 
     .btn{
       display:inline-flex; align-items:center; justify-content:center; gap:8px;
@@ -109,27 +73,18 @@
     }
     .btn:hover{filter:brightness(1.02)}
     .btn:active{transform:translateY(1px)}
-    .btn.primary{
-      background: linear-gradient(135deg, var(--teal), var(--gold2), var(--gold));
-      color:#fff; border-color: transparent;
-      box-shadow: 0 18px 46px rgba(2,6,23,.14);
-    }
-    .btn.danger{
-      background: linear-gradient(135deg, rgba(239,68,68,1), rgba(248,113,113,1));
-      color:#fff; border-color: transparent;
-    }
+    .btn.primary{background: linear-gradient(135deg, var(--primary), var(--primary2)); color:#fff; border-color:transparent}
+    .btn.danger{background: linear-gradient(135deg, #ef4444, #fb7185); color:#fff; border-color:transparent}
     .btn.ghost{background:transparent}
     .btn.small{padding:8px 10px; border-radius:11px; font-size:13px; font-weight:800}
 
     .container{max-width:1200px;margin:18px auto;padding:0 16px}
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
     .card{
-      background: color-mix(in oklab, var(--card) 92%, transparent);
-      border:1px solid color-mix(in oklab, var(--border) 78%, transparent);
-      border-radius:18px; padding:16px;
-      box-shadow: 0 10px 34px rgba(2,6,23,.08);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:16px; padding:16px;
+      box-shadow: 0 8px 28px rgba(2,6,23,.06);
     }
     .col-12{grid-column:span 12}
     .col-8{grid-column:span 8}
@@ -184,16 +139,6 @@
     .tag.paid{border-color:#93c5fd; background: color-mix(in oklab, #dbeafe 35%, var(--card))}
     .tag.pub{border-color:#86efac; background: color-mix(in oklab, #dcfce7 35%, var(--card))}
     .tag.draft{border-color:#fecaca; background: color-mix(in oklab, #fee2e2 35%, var(--card))}
-    .u-anim{
-      background: linear-gradient(90deg, var(--teal), var(--gold2), var(--gold));
-      -webkit-background-clip:text; background-clip:text; color:transparent;
-      background-size: 220% 220%;
-      animation: shimmer 7s ease infinite;
-      font-weight: 950;
-      letter-spacing:.6px;
-    }
-    @keyframes shimmer{ 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-
     code{background:color-mix(in oklab, var(--card) 92%, transparent);border:1px solid color-mix(in oklab, var(--border) 85%, transparent);border-radius:10px;padding:2px 7px}
 
     /* modal */
@@ -210,7 +155,7 @@
     .mobileOnly{display:none}
     .desktopOnly{display:flex}
     .iconBtn{
-      width:42px;height:42px;border-radius:14px;
+      width:44px;height:44px;border-radius:14px;
       display:inline-flex;align-items:center;justify-content:center;
       border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
       background: color-mix(in oklab, var(--card) 88%, transparent);
@@ -228,7 +173,7 @@
       display:none;
     }
     .drawer{
-      position:absolute; right:0; top:0; height:100%; width:min(340px, 92vw);
+      position:absolute; right:0; top:0; height:100%; width:min(360px, 92vw);
       background: color-mix(in oklab, var(--card) 92%, transparent);
       border-left:1px solid color-mix(in oklab, var(--border) 85%, transparent);
       backdrop-filter: blur(14px);
@@ -272,35 +217,7 @@
   <header>
     <div class="nav">
       <div class="brand">
-        <div class="logoWrap" aria-hidden="true">
-  <svg viewBox="0 0 120 120" class="logoSvg">
-    <defs>
-      <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="rgba(245,158,11,1)"/>
-        <stop offset="0.5" stop-color="rgba(250,204,21,1)"/>
-        <stop offset="1" stop-color="rgba(245,158,11,1)"/>
-      </linearGradient>
-      <linearGradient id="gIce" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="rgba(125,211,252,1)"/>
-        <stop offset="0.45" stop-color="rgba(34,211,238,1)"/>
-        <stop offset="1" stop-color="rgba(167,243,208,1)"/>
-      </linearGradient>
-      <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="2.2" result="b"/>
-        <feMerge>
-          <feMergeNode in="b"/>
-          <feMergeNode in="SourceGraphic"/>
-        </feMerge>
-      </filter>
-    </defs>
-    <circle cx="60" cy="60" r="54" fill="none" stroke="url(#gGold)" stroke-width="6" opacity="0.92"/>
-    <ellipse cx="60" cy="64" rx="42" ry="24" fill="rgba(2,6,23,.88)" stroke="url(#gGold)" stroke-width="4"/>
-    <path d="M20 44 L26 44 L28 38 L30 44 L36 44 L31 47 L33 53 L28 49 L23 53 L25 47 Z"
-          fill="rgba(250,204,21,.95)" filter="url(#softGlow)"/>
-    <text x="60" y="70" text-anchor="middle" font-size="22" font-family="Inter, ui-sans-serif" font-weight="800"
-          fill="url(#gIce)" style="letter-spacing:.5px">hallaym</text>
-  </svg>
-</div>
+        <div class="logo" aria-hidden="true"></div>
         <div class="pills">
           <span class="pill badge teacher"><a href="/index.html" class="flex items-center gap-3"><span class="u-anim">TEACHER</span></a></span>
           <span id="mePill" class="pill" style="display:none"></span>
@@ -321,7 +238,14 @@
 
   <div id="drawerBack" class="drawerBack" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="drawer" role="document">
-      <div class="drawerHead"><div><div class="drawerTitle">Menyu</div><div class="tiny" id="drawerMe">—</div></div><button class="iconBtn" id="drawerClose" aria-label="Close">✕</button></div><div class="drawerHr"></div>
+      <div class="drawerHead"><button class="iconBtn" id="drawerCloseBtn" aria-label="Close">✕</button>
+        <div>
+          <div class="drawerTitle">Menyu</div>
+          <div class="tiny" id="drawerMe">—</div>
+        </div>
+        <button class="iconBtn" id="drawerClose" aria-label="Close">✕</button>
+      </div>
+      <div class="drawerHr"></div>
       <div class="drawerLinks">
         <button class="btn ghost" id="themeBtn2">🌓 Tema</button>
         <a class="btn ghost" href="/courses.html">📚 Kurslar</a>
@@ -344,7 +268,7 @@
 
     <div class="grid">
       <div class="card col-8">
-        <h2 style="margin:0 0 6px 0;font-size:20px">HALLAYM edu — Teacher Dashboard</h2>
+        <h2 style="margin:0 0 6px 0;font-size:20px">Teacher Dashboard</h2>
         <div class="muted">
           Kurslar, testlar, live sessionlar — barchasi bitta panelda. API bo‘lmasa demo localStorage ishlaydi.
         </div>

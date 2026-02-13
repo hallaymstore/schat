@@ -191,6 +191,9 @@
         <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="users"><i class="fa-solid fa-users mr-2"></i>Foydalanuvchilar</button>
         <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="channels"><i class="fa-solid fa-hashtag mr-2"></i>Kanallar</button>
         <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="groups"><i class="fa-solid fa-people-group mr-2"></i>Guruhlar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="groupmsgs"><i class="fa-solid fa-comments mr-2"></i>Guruh xabarlari</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="lessons"><i class="fa-solid fa-video mr-2"></i>Yozilgan darslar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="channelposts"><i class="fa-solid fa-newspaper mr-2"></i>Kanal postlari</button>
         <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="realtime"><i class="fa-solid fa-satellite-dish mr-2"></i>Real-time</button>
           <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="catalog"><i class="fa-solid fa-university mr-2"></i>Katalog</button>
           <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="broadcast"><i class="fa-solid fa-bullhorn mr-2"></i>Broadcast</button>
@@ -228,7 +231,7 @@
     <div id="modal" class="hidden fixed inset-0 z-[70]">
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="absolute inset-0 flex items-end sm:items-center justify-center p-4">
-        <div class="glass rounded-3xl w-full max-w-xl p-5 sm:p-6 g-border">
+        <div class="glass rounded-3xl w-full max-w-xl p-5 sm:p-6 g-border flex flex-col" style="max-height:85vh;">
           <div class="flex items-center justify-between">
             <div>
               <div id="mTitle" class="text-lg font-black">—</div>
@@ -236,7 +239,7 @@
             </div>
             <button id="mClose" class="glass rounded-xl px-3 py-2 btn-ghost glow-ring"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <div id="mBody" class="mt-4"></div>
+          <div id="mBody" class="mt-4 flex-1 overflow-auto pr-1" style="min-height:0;"></div>
           <div class="mt-5 flex items-center justify-end gap-2">
             <button id="mCancel" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">Bekor</button>
             <button id="mOk" class="btn-primary rounded-xl px-4 py-2 text-sm font-extrabold text-white glow-ring">Saqlash</button>
@@ -320,6 +323,9 @@
       users: { title:'Foydalanuvchilar', sub:'Profil/coin/admin flag boshqaruvi. Ehtiyotkorlik bilan o‘chiring.' },
       channels: { title:'Kanallar', sub:'Kanallar ro‘yxati va o‘chirish. (Postlar bilan.)' },
       groups: { title:'Guruhlar', sub:'Guruhlar ro‘yxati va o‘chirish. (Xabarlar bilan.)' },
+      groupmsgs: { title:'Guruh xabarlari', sub:'Tanlangan guruh xabarlarini ko‘rish va o‘chirish (moderatsiya + audit).' },
+      lessons: { title:'Yozilgan darslar', sub:'Guruh bo‘yicha lesson/recording ro‘yxati. (audit log bor)' },
+      channelposts: { title:'Kanal postlari', sub:'Tanlangan kanal postlarini ko‘rish va o‘chirish (moderatsiya + audit).' },
       services: { title:'Xizmatlar', sub:'Services ro‘yxati va o‘chirish. (Order/Review bilan.)' },
       pms: { title:'Shaxsiy xabarlar', sub:'Private message’larni ko‘rish va o‘chirish (moderatsiya).' },
       realtime: { title:'Real-time', sub:'Online foydalanuvchilar va aktiv call/live ro‘yxati (real vaqt).' },
@@ -413,6 +419,9 @@
       if(tab === 'users') return loadUsers(q);
       if(tab === 'channels') return loadChannels(q);
       if(tab === 'groups') return loadGroups(q);
+      if(tab === 'groupmsgs') return loadGroupMessagesTab(q);
+      if(tab === 'lessons') return loadLessonsTab(q);
+      if(tab === 'channelposts') return loadChannelPostsTab(q);
       if(tab === 'services') return loadServices(q);
       if(tab === 'pms') return loadPMs(q);
       if(tab === 'realtime') return loadRealtime();
@@ -531,6 +540,7 @@
       if(!res.ok) return toast(j?.error || "Users yuklanmadi", 'error');
       const list = j.users || [];
       const total = j.total || 0;
+      window.usersCache = Object.fromEntries(list.map(u=>[u._id,u]));
 
       if(!list.length){
         document.getElementById('content').innerHTML = `<div class="text-sm muted2">Topilmadi.</div>`;
@@ -616,43 +626,128 @@
     }
 
     function openEditUser(userId){
+      const u = (window.usersCache && window.usersCache[userId]) || {};
+      const username = u.username || userId;
+      const mutedIso = u.mutedUntil ? new Date(u.mutedUntil).toISOString().slice(0,16) : '';
       modal.show({
-        title: "User profilini tahrirlash",
-        sub: "Asosiy maydonlar (nickname/bio/avatar/university) va admin flag",
+        title: "User moderatsiya",
+        sub: `${username} • Ban/Mute/Role/Verified`,
         okText: "Saqlash",
         bodyHTML: `
           <div class="grid sm:grid-cols-2 gap-3">
             <div>
-              <label class="text-xs font-extrabold muted">Nickname</label>
-              <input id="nickname" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Nickname"/>
+              <label class="text-xs font-extrabold muted">Full name</label>
+              <input id="fullName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Ism familiya" value="${escapeHtml(u.fullName||'')}"/>
             </div>
             <div>
+              <label class="text-xs font-extrabold muted">Nickname</label>
+              <input id="nickname" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Nickname" value="${escapeHtml(u.nickname||'')}"/>
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold muted">Email</label>
+              <input id="email" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="email@..." value="${escapeHtml(u.email||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Telefon</label>
+              <input id="phone" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="+998..." value="${escapeHtml(u.phone||'')}"/>
+            </div>
+
+            <div>
               <label class="text-xs font-extrabold muted">Universitet</label>
-              <input id="university" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Universitet"/>
+              <input id="university" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Universitet" value="${escapeHtml(u.university||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Fakultet</label>
+              <input id="faculty" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Fakultet" value="${escapeHtml(u.faculty||'')}"/>
             </div>
             <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Guruh (studyGroup)</label>
+              <input id="studyGroup" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: MMT-520-25" value="${escapeHtml(u.studyGroup||'')}"/>
+            </div>
+
+            <div class="sm:col-span-2">
               <label class="text-xs font-extrabold muted">Avatar URL</label>
-              <input id="avatar" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="https://..."/>
+              <input id="avatar" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="https://..." value="${escapeHtml(u.avatar||'')}"/>
             </div>
             <div class="sm:col-span-2">
               <label class="text-xs font-extrabold muted">Bio</label>
-              <textarea id="bio" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3" placeholder="Bio..."></textarea>
+              <textarea id="bio" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3" placeholder="Bio...">${escapeHtml(u.bio||'')}</textarea>
             </div>
+
+            <div>
+              <label class="text-xs font-extrabold muted">Role</label>
+              <select id="role" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2">
+                <option value="student" ${String(u.role||'student')==='student'?'selected':''}>student</option>
+                <option value="teacher" ${String(u.role||'')==='teacher'?'selected':''}>teacher</option>
+                <option value="admin" ${String(u.role||'')==='admin'?'selected':''}>admin</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2 mt-6">
+              <input id="verified" type="checkbox" class="scale-110" ${u.verified?'checked':''}>
+              <label for="verified" class="text-sm font-extrabold">Verified</label>
+            </div>
+
             <div class="sm:col-span-2 flex items-center gap-2">
-              <input id="isAdmin" type="checkbox" class="scale-110">
-              <label for="isAdmin" class="text-sm font-extrabold">Admin qilish</label>
-              <span class="text-xs muted2">Ehtiyot bo‘ling.</span>
+              <input id="isAdmin" type="checkbox" class="scale-110" ${u.isAdmin?'checked':''}>
+              <label for="isAdmin" class="text-sm font-extrabold">isAdmin flag</label>
+              <span class="text-xs muted2">Role=admin bilan birga ishlatish mumkin.</span>
+            </div>
+
+            <div class="sm:col-span-2 glass rounded-2xl p-4">
+              <div class="font-extrabold">Mute (xabar yozishni vaqtincha bloklash)</div>
+              <div class="text-xs muted2 mt-1">Muddat tugagach avtomatik ochiladi. Hozir: <span class="font-extrabold">${mutedIso||'—'}</span></div>
+              <div class="grid sm:grid-cols-2 gap-3 mt-3">
+                <div>
+                  <label class="text-xs font-extrabold muted">Mute minutes</label>
+                  <input id="muteMinutes" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" type="number" min="0" placeholder="Masalan: 60"/>
+                </div>
+                <div class="flex items-center gap-2 mt-6">
+                  <input id="unmute" type="checkbox" class="scale-110">
+                  <label for="unmute" class="text-sm font-extrabold">Unmute</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="sm:col-span-2 glass rounded-2xl p-4 border border-red-500/30">
+              <div class="font-extrabold text-red-400">Ban (akkauntni bloklash)</div>
+              <div class="text-xs muted2 mt-1">Ban bo‘lsa user token bilan ham kira olmaydi.</div>
+              <div class="flex items-center gap-2 mt-3">
+                <input id="banned" type="checkbox" class="scale-110" ${u.banned?'checked':''}>
+                <label for="banned" class="text-sm font-extrabold">Banned</label>
+              </div>
+              <div class="mt-3">
+                <label class="text-xs font-extrabold muted">Ban reason</label>
+                <textarea id="banReason" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="2" placeholder="Sabab...">${escapeHtml(u.banReason||'')}</textarea>
+              </div>
             </div>
           </div>
         `,
         onOk: async ()=>{
+          const muteMinutes = Number(document.getElementById('muteMinutes').value || 0);
+          const unmute = document.getElementById('unmute').checked;
+
           const payload = {
+            fullName: document.getElementById('fullName').value,
             nickname: document.getElementById('nickname').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
             university: document.getElementById('university').value,
+            faculty: document.getElementById('faculty').value,
+            studyGroup: document.getElementById('studyGroup').value,
             avatar: document.getElementById('avatar').value,
             bio: document.getElementById('bio').value,
-            isAdmin: document.getElementById('isAdmin').checked
+            role: document.getElementById('role').value,
+            verified: document.getElementById('verified').checked,
+            isAdmin: document.getElementById('isAdmin').checked,
+            banned: document.getElementById('banned').checked,
+            banReason: document.getElementById('banReason').value
           };
+
+          if (unmute) payload.mutedUntil = null;
+          else if (muteMinutes > 0) payload.mutedUntil = new Date(Date.now() + muteMinutes*60*1000).toISOString();
+
           const {res, j} = await api(`/api/admin/users/${userId}`, {
             method:'PATCH',
             headers:{'Content-Type':'application/json'},
@@ -698,53 +793,222 @@
       if(!res.ok) return toast(j?.error || "Guruhlar yuklanmadi", 'error');
       renderSimpleList(j.groups||[], j.total||0, 'groups');
     }
-    async function loadServices(q){
-      const {res, j} = await api(`/api/admin/services?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
-      if(!res.ok) return toast(j?.error || "Xizmatlar yuklanmadi", 'error');
-      renderSimpleList(j.services||[], j.total||0, 'services');
-    }
-    async function loadPMs(q){
-      const {res, j} = await api(`/api/admin/private-messages?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
-      if(!res.ok) return toast(j?.error || "Xabarlar yuklanmadi", 'error');
-      renderPMs(j.messages||[], j.total||0);
-    }
 
-    function renderSimpleList(list, total, type){
-      if(!list.length){
-        document.getElementById('content').innerHTML = `<div class="text-sm muted2">Topilmadi.</div>`;
-        pagerShow(total>limit, page);
+    // GROUP MESSAGES (moderation)
+    let gmGroupId = '';
+    async function loadGroupMessagesTab(q){
+      // Load groups for selector (best-effort)
+      const {res: grRes, j: grJ} = await api(`/api/admin/groups?page=1&limit=200&q=`);
+      const groups = grJ?.groups || [];
+      if(!gmGroupId && groups[0]) gmGroupId = groups[0]._id;
+
+      const sel = `<div class="flex flex-col lg:flex-row gap-3 lg:items-end justify-between">
+        <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+          <div>
+            <div class="text-xs muted2 font-extrabold mb-1">Guruh tanlang</div>
+            <select id="gmGroup" class="field rounded-2xl px-4 py-3 text-sm w-[320px] max-w-full">
+              ${groups.map(g=>`<option value="${g._id}" ${String(g._id)===String(gmGroupId)?'selected':''}>${escapeHtml(g.title||g.name||g._id)}</option>`).join('')}
+            </select>
+          </div>
+          <button id="gmReload" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow-ring">Yuklash</button>
+        </div>
+        <div class="text-xs muted2">Qidirish yuqoridagi qidiruv maydonidan ishlaydi. (audit log bor)</div>
+      </div>`;
+
+      if(!gmGroupId){
+        document.getElementById('content').innerHTML = sel + `<div class="mt-4 text-sm muted2">Guruh topilmadi.</div>`;
+        pagerShow(false, page);
         return;
       }
-      const rows = list.map(x => `
+
+      const {res, j} = await api(`/api/admin/group-messages?groupId=${gmGroupId}&q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Guruh xabarlari yuklanmadi", 'error');
+
+      const items = j.items || [];
+      const total = j.total || 0;
+
+      const rows = items.map(m=>`
         <tr class="row border-b border-white/10">
+          <td class="p-3 text-xs muted2">${fmtDate(m.createdAt)}</td>
           <td class="p-3">
-            <div class="font-extrabold">${x.name || x.title || '—'}</div>
-            <div class="text-xs muted2">ID: <span class="font-mono">${x._id}</span></div>
+            <div class="font-extrabold text-sm">${escapeHtml((m.sender && (m.sender.fullName||m.sender.username)) || '—')}</div>
+            <div class="text-xs muted2">@${escapeHtml((m.sender && m.sender.username) || '')} <span class="font-mono">${escapeHtml(String(m.senderId||''))}</span></div>
           </td>
-          <td class="p-3 text-xs muted2">${(x.description||'').slice(0,120)}</td>
-          <td class="p-3 text-xs muted2">${fmtDate(x.createdAt)}</td>
+          <td class="p-3 text-sm">${escapeHtml((m.text||'').toString()) || '<span class="muted2">—</span>'}</td>
           <td class="p-3 text-right">
-            <button class="delItem glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-type="${type}" data-id="${x._id}">
+            <button class="gmDel glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${m._id}">
               <i class="fa-solid fa-trash mr-2"></i>O‘chirish
             </button>
           </td>
         </tr>
       `).join('');
 
-      document.getElementById('content').innerHTML = tableWrap(`
+      document.getElementById('content').innerHTML = sel + `<div class="mt-4">` + tableWrap(`
         <thead><tr class="text-left text-xs muted2">
-          <th class="p-3">Nomi</th><th class="p-3">Tavsif</th><th class="p-3">Sana</th><th class="p-3 text-right">Amal</th>
+          <th class="p-3">Sana</th><th class="p-3">Yuboruvchi</th><th class="p-3">Matn</th><th class="p-3 text-right">Amal</th>
         </tr></thead>
-        <tbody>${rows}</tbody>
-      `);
+        <tbody>${rows || ''}</tbody>
+      `) + `</div>` + (items.length?'' : `<div class="text-sm muted2 mt-3">Xabar yo‘q.</div>`);
 
-      document.querySelectorAll('.delItem').forEach(b=> b.onclick = ()=> delItem(b.dataset.type, b.dataset.id));
+      document.getElementById('gmGroup')?.addEventListener('change', (e)=>{ gmGroupId = e.target.value; page = 1; loadList(); });
+      document.getElementById('gmReload')?.addEventListener('click', ()=>{ page = 1; loadList(); });
+
+      document.querySelectorAll('.gmDel').forEach(b=>{
+        b.onclick = async ()=>{
+          const id = b.dataset.id;
+          const {res2, j2} = await api(`/api/admin/group-messages/${id}`, { method:'DELETE' });
+          if(!res2.ok) return toast(j2?.error || "O‘chirish xatosi", 'error');
+          toast("O‘chirildi.", 'success');
+          await loadOverview();
+          await loadList();
+        };
+      });
 
       const hasMore = (page*limit) < total;
       pagerShow(total>limit, page);
       document.getElementById('prevBtn').disabled = page<=1;
       document.getElementById('nextBtn').disabled = !hasMore;
     }
+
+    // CHANNEL POSTS (moderation)
+    let cpChannelId = '';
+    async function loadChannelPostsTab(q){
+      const {res: chRes, j: chJ} = await api(`/api/admin/channels?page=1&limit=200&q=`);
+      const chans = chJ?.channels || [];
+      if(!cpChannelId && chans[0]) cpChannelId = chans[0]._id;
+
+      const sel = `<div class="flex flex-col lg:flex-row gap-3 lg:items-end justify-between">
+        <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+          <div>
+            <div class="text-xs muted2 font-extrabold mb-1">Kanal tanlang</div>
+            <select id="cpChannel" class="field rounded-2xl px-4 py-3 text-sm w-[320px] max-w-full">
+              ${chans.map(c=>`<option value="${c._id}" ${String(c._id)===String(cpChannelId)?'selected':''}>${escapeHtml(c.title||c.name||c._id)}</option>`).join('')}
+            </select>
+          </div>
+          <button id="cpReload" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow-ring">Yuklash</button>
+        </div>
+        <div class="text-xs muted2">Qidirish: title/content bo‘yicha. (audit log bor)</div>
+      </div>`;
+
+      if(!cpChannelId){
+        document.getElementById('content').innerHTML = sel + `<div class="mt-4 text-sm muted2">Kanal topilmadi.</div>`;
+        pagerShow(false, page);
+        return;
+      }
+
+      const {res, j} = await api(`/api/admin/channel-posts?channelId=${cpChannelId}&q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Kanal postlari yuklanmadi", 'error');
+
+      const items = j.items || [];
+      const total = j.total || 0;
+
+      const rows = items.map(p=>`
+        <tr class="row border-b border-white/10">
+          <td class="p-3 text-xs muted2">${fmtDate(p.createdAt)}</td>
+          <td class="p-3">
+            <div class="font-extrabold">${escapeHtml(p.title||'—')}</div>
+            <div class="text-xs muted2 truncate" style="max-width:520px">${escapeHtml((p.content||'').toString()).slice(0,140)}</div>
+          </td>
+          <td class="p-3 text-xs">${escapeHtml(String(p.authorId||p.userId||'—'))}</td>
+          <td class="p-3 text-right">
+            <button class="cpDel glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${p._id}">
+              <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('content').innerHTML = sel + `<div class="mt-4">` + tableWrap(`
+        <thead><tr class="text-left text-xs muted2">
+          <th class="p-3">Sana</th><th class="p-3">Post</th><th class="p-3">AuthorId</th><th class="p-3 text-right">Amal</th>
+        </tr></thead>
+        <tbody>${rows || ''}</tbody>
+      `) + `</div>` + (items.length?'' : `<div class="text-sm muted2 mt-3">Post yo‘q.</div>`);
+
+      document.getElementById('cpChannel')?.addEventListener('change', (e)=>{ cpChannelId = e.target.value; page = 1; loadList(); });
+      document.getElementById('cpReload')?.addEventListener('click', ()=>{ page = 1; loadList(); });
+
+      document.querySelectorAll('.cpDel').forEach(b=>{
+        b.onclick = async ()=>{
+          const id = b.dataset.id;
+          const {res2, j2} = await api(`/api/admin/channel-posts/${id}`, { method:'DELETE' });
+          if(!res2.ok) return toast(j2?.error || "O‘chirish xatosi", 'error');
+          toast("O‘chirildi.", 'success');
+          await loadOverview();
+          await loadList();
+        };
+      });
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+    async function loadServices(q){
+      const {res, j} = await api(`/api/admin/services?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Xizmatlar yuklanmadi", 'error');
+      renderSimpleList(j.services||[], j.total||0, 'services');
+    }
+    async function loadPMs(q){
+      const {res, j} = await api(`/api/admin/conversations?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Suhbatlar yuklanmadi", 'error');
+      renderPMs(j.items||[], j.total||0);
+    }
+
+    async function openThread(a, b, label){
+      // Load first page of thread into modal (pagination inside modal can be added later)
+      const {res, j} = await api(`/api/admin/conversations/${a}/${b}/messages?page=1&limit=50`);
+      if(!res.ok) return toast(j?.error || "Yozishmalar yuklanmadi", 'error');
+
+      const msgs = j.items || [];
+      const rows = msgs.map(m => {
+        const who = String(m.senderId) === String(a) ? 'A' : 'B';
+        const text = (m.text||'').toString();
+        const safe = escapeHtml(text);
+        return `
+          <div class="glass rounded-2xl p-3 mb-2">
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-xs muted2 font-extrabold">${who} • ${fmtDate(m.createdAt)}</div>
+              <button class="delPmMsg glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold glow-ring" data-id="${m._id}">
+                <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+              </button>
+            </div>
+            <div class="mt-2 text-sm">${safe || '<span class="muted2">—</span>'}</div>
+          </div>
+        `;
+      }).join('');
+
+      modal.show({
+        title: "Shaxsiy yozishmalar",
+        sub: label || `${a} ↔ ${b} (audit log yuritiladi)`,
+        okText: "Yopish",
+        bodyHTML: `
+          <div class="text-xs muted2 mb-3">
+            Eslatma: bu bo‘lim moderatsiya va xavfsizlik uchun. Kirishlar audit log’ga yoziladi.
+          </div>
+          <div style="max-height:60vh; overflow:auto">${rows || '<div class="text-sm muted2">Xabar yo‘q.</div>'}</div>
+        `,
+        onOk: async ()=>{}
+      });
+      // turn modal ok into close-only
+      modal.ok.onclick = ()=> modal.hide();
+
+      document.querySelectorAll('.delPmMsg').forEach(b=>{
+        b.onclick = async ()=>{
+          const id = b.dataset.id;
+          const {res2, j2} = await api(`/api/admin/private-messages/${id}`, { method:'DELETE' });
+          if(!res2.ok) return toast(j2?.error || "O‘chirish xatosi", 'error');
+          toast("O‘chirildi.", 'success');
+          // refresh thread
+          modal.hide();
+          await openThread(a,b,label);
+          await loadOverview();
+          await loadList();
+        };
+      });
+    }
+
 
     function renderPMs(list, total){
       if(!list.length){
@@ -752,26 +1016,49 @@
         pagerShow(total>limit, page);
         return;
       }
-      const rows = list.map(m => `
-        <tr class="row border-b border-white/10">
-          <td class="p-3">
-            <div class="font-extrabold">${(m.content||'').slice(0,70) || '—'}</div>
-            <div class="text-xs muted2">ID: <span class="font-mono">${m._id}</span></div>
-          </td>
-          <td class="p-3 text-xs muted2">${fmtDate(m.createdAt)}</td>
-          <td class="p-3 text-right">
-            <button class="delPm glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${m._id}">
-              <i class="fa-solid fa-trash mr-2"></i>O‘chirish
-            </button>
-          </td>
-        </tr>
-      `).join('');
+
+      const rows = list.map(x => {
+        const a = x.a, b = x.b;
+        const ua = x.userA || {};
+        const ub = x.userB || {};
+        const nameA = escapeHtml(ua.fullName || ua.username || a);
+        const nameB = escapeHtml(ub.fullName || ub.username || b);
+        const last = escapeHtml((x.lastText||'').slice(0,80));
+        const label = `${nameA} ↔ ${nameB}`;
+
+        return `
+          <tr class="row border-b border-white/10">
+            <td class="p-3">
+              <div class="font-extrabold">${label}</div>
+              <div class="text-xs muted2">A: <span class="font-mono">${a}</span> • B: <span class="font-mono">${b}</span></div>
+            </td>
+            <td class="p-3 text-xs muted2">
+              <div class="font-extrabold">So‘nggi xabar</div>
+              <div>${last || '—'}</div>
+              <div class="mt-1">${fmtDate(x.lastAt)}</div>
+            </td>
+            <td class="p-3 text-right">
+              <button class="openThread btn-primary text-white rounded-xl px-3 py-2 text-xs font-extrabold glow-ring"
+                data-a="${a}" data-b="${b}" data-label="${label}">
+                <i class="fa-solid fa-eye mr-2"></i>Ko‘rish
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
 
       document.getElementById('content').innerHTML = tableWrap(`
-        <thead><tr class="text-left text-xs muted2"><th class="p-3">Xabar</th><th class="p-3">Sana</th><th class="p-3 text-right">Amal</th></tr></thead>
+        <thead><tr class="text-left text-xs muted2">
+          <th class="p-3">Suhbat (kim-kim)</th>
+          <th class="p-3">Oxirgi aktivlik</th>
+          <th class="p-3 text-right">Amal</th>
+        </tr></thead>
         <tbody>${rows}</tbody>
       `);
-      document.querySelectorAll('.delPm').forEach(b=> b.onclick = ()=> delPM(b.dataset.id));
+
+      document.querySelectorAll('.openThread').forEach(b=>{
+        b.onclick = ()=> openThread(b.dataset.a, b.dataset.b, b.dataset.label);
+      });
 
       const hasMore = (page*limit) < total;
       pagerShow(total>limit, page);
@@ -779,7 +1066,289 @@
       document.getElementById('nextBtn').disabled = !hasMore;
     }
 
-    async function delItem(type, id){
+
+    
+    // SIMPLE LIST renderer (channels/groups/services)
+    function renderSimpleList(list, total, type){
+      window.simpleCache = window.simpleCache || {};
+      window.simpleCache[type] = Object.fromEntries((list||[]).map(x=>[x._id, x]));
+
+      if(!list.length){
+        document.getElementById('content').innerHTML = `<div class="text-sm muted2">Topilmadi.</div>`;
+        pagerShow(total>limit, page);
+        return;
+      }
+
+      const cols = type==='services'
+        ? `<th class="p-3">Xizmat</th><th class="p-3">Narx</th><th class="p-3">Sana</th><th class="p-3 text-right">Amal</th>`
+        : `<th class="p-3">${type==='channels'?'Kanal':'Guruh'}</th><th class="p-3">Public</th><th class="p-3">Sana</th><th class="p-3 text-right">Amal</th>`;
+
+      const rows = (list||[]).map(x=>{
+        if(type==='services'){
+          return `
+            <tr class="row border-b border-white/10">
+              <td class="p-3">
+                <div class="font-extrabold">${escapeHtml(x.title||x.name||'—')}</div>
+                <div class="text-xs muted2 truncate" style="max-width:560px">${escapeHtml(x.description||'')}</div>
+              </td>
+              <td class="p-3 text-sm"><span class="font-extrabold">${escapeHtml(String(x.price||x.priceSom||'—'))}</span></td>
+              <td class="p-3 text-xs muted2">${fmtDate(x.createdAt)}</td>
+              <td class="p-3 text-right">
+                <button class="delItem glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-type="${type}" data-id="${x._id}">
+                  <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+                </button>
+              </td>
+            </tr>
+          `;
+        }
+
+        const title = escapeHtml(x.name || x.title || '—');
+        const uname = escapeHtml(x.username || '');
+        const pub = x.isPublic ? '<span class="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-500 font-extrabold text-xs">Public</span>'
+                               : '<span class="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 font-extrabold text-xs">Private</span>';
+
+        return `
+          <tr class="row border-b border-white/10">
+            <td class="p-3">
+              <div class="flex items-center gap-3">
+                <img src="${x.avatar||''}" class="w-9 h-9 rounded-xl object-cover border border-white/20" onerror="this.style.display='none'"/>
+                <div class="min-w-0">
+                  <div class="font-extrabold truncate">${title}</div>
+                  <div class="text-xs muted2 truncate">@${uname}</div>
+                </div>
+              </div>
+            </td>
+            <td class="p-3 text-xs">${pub}</td>
+            <td class="p-3 text-xs muted2">${fmtDate(x.createdAt)}</td>
+            <td class="p-3 text-right">
+              <div class="flex justify-end gap-2">
+                <button class="editItem glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-type="${type}" data-id="${x._id}">
+                  <i class="fa-solid fa-pen mr-2"></i>Tahrir
+                </button>
+                <button class="delItem glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-type="${type}" data-id="${x._id}">
+                  <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('content').innerHTML = tableWrap(`
+        <thead><tr class="text-left text-xs muted2">${cols}</tr></thead>
+        <tbody>${rows}</tbody>
+      `);
+
+      document.querySelectorAll('.delItem').forEach(b=>{
+        b.onclick = ()=> delItem(b.dataset.type, b.dataset.id);
+      });
+      document.querySelectorAll('.editItem').forEach(b=>{
+        b.onclick = ()=> openEditSimple(b.dataset.type, b.dataset.id);
+      });
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+    function openEditSimple(type, id){
+      if(type==='groups') return openEditGroup(id);
+      if(type==='channels') return openEditChannel(id);
+      toast('Bu turdagi obyekt uchun tahrirlash yo‘q.', 'info');
+    }
+
+    function openEditGroup(groupId){
+      const g = (window.simpleCache?.groups && window.simpleCache.groups[groupId]) || {};
+      modal.show({
+        title: "Guruhni tahrirlash",
+        sub: `${escapeHtml(g.name||'—')} • @${escapeHtml(g.username||'')}`,
+        okText: "Saqlash",
+        bodyHTML: `
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Name</label>
+              <input id="gName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(g.name||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Username</label>
+              <input id="gUsername" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="masalan: group_1" value="${escapeHtml(g.username||'')}"/>
+              <div class="text-xs muted2 mt-1">Faqat a-z, 0-9, _, ., -</div>
+            </div>
+            <div class="flex items-center gap-2 mt-7">
+              <input id="gPublic" type="checkbox" class="scale-110" ${g.isPublic?'checked':''}>
+              <label for="gPublic" class="text-sm font-extrabold">Public</label>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Description</label>
+              <textarea id="gDesc" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3">${escapeHtml(g.description||'')}</textarea>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Avatar URL</label>
+              <input id="gAvatar" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="https://..." value="${escapeHtml(g.avatar||'')}"/>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Preview image</label>
+              <input id="gPreview" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="https://..." value="${escapeHtml(g.previewImage||'')}"/>
+            </div>
+          </div>
+        `,
+        onOk: async ()=>{
+          const payload = {
+            name: document.getElementById('gName').value,
+            username: document.getElementById('gUsername').value,
+            description: document.getElementById('gDesc').value,
+            avatar: document.getElementById('gAvatar').value,
+            previewImage: document.getElementById('gPreview').value,
+            isPublic: document.getElementById('gPublic').checked
+          };
+          const {res, j} = await api(`/api/admin/groups/${groupId}`, {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) return toast(j?.error || "Guruh saqlanmadi", 'error');
+          toast("Guruh yangilandi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    function openEditChannel(channelId){
+      const c = (window.simpleCache?.channels && window.simpleCache.channels[channelId]) || {};
+      modal.show({
+        title: "Kanalni tahrirlash",
+        sub: `${escapeHtml(c.name||'—')} • @${escapeHtml(c.username||'')}`,
+        okText: "Saqlash",
+        bodyHTML: `
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Name</label>
+              <input id="cName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(c.name||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Username</label>
+              <input id="cUsername" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="masalan: channel_1" value="${escapeHtml(c.username||'')}"/>
+              <div class="text-xs muted2 mt-1">Faqat a-z, 0-9, _, ., -</div>
+            </div>
+            <div class="flex items-center gap-2 mt-7">
+              <input id="cPublic" type="checkbox" class="scale-110" ${c.isPublic?'checked':''}>
+              <label for="cPublic" class="text-sm font-extrabold">Public</label>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Description</label>
+              <textarea id="cDesc" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3">${escapeHtml(c.description||'')}</textarea>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Avatar URL</label>
+              <input id="cAvatar" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="https://..." value="${escapeHtml(c.avatar||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Category</label>
+              <input id="cCategory" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(c.category||'other')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">University</label>
+              <input id="cUni" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(c.university||'')}"/>
+            </div>
+          </div>
+        `,
+        onOk: async ()=>{
+          const payload = {
+            name: document.getElementById('cName').value,
+            username: document.getElementById('cUsername').value,
+            description: document.getElementById('cDesc').value,
+            avatar: document.getElementById('cAvatar').value,
+            category: document.getElementById('cCategory').value,
+            university: document.getElementById('cUni').value,
+            isPublic: document.getElementById('cPublic').checked
+          };
+          const {res, j} = await api(`/api/admin/channels/${channelId}`, {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) return toast(j?.error || "Kanal saqlanmadi", 'error');
+          toast("Kanal yangilandi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    // GROUP LESSONS (recordings) tab
+    let glGroupId = '';
+    async function loadLessonsTab(q){
+      const {res: grRes, j: grJ} = await api(`/api/admin/groups?page=1&limit=200&q=`);
+      const groups = grJ?.groups || [];
+      if(!glGroupId && groups[0]) glGroupId = groups[0]._id;
+
+      const sel = `<div class="flex flex-col lg:flex-row gap-3 lg:items-end justify-between">
+        <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+          <div>
+            <div class="text-xs muted2 font-extrabold mb-1">Guruh tanlang</div>
+            <select id="glGroup" class="field rounded-2xl px-4 py-3 text-sm w-[320px] max-w-full">
+              ${groups.map(g=>`<option value="${g._id}" ${String(g._id)===String(glGroupId)?'selected':''}>${escapeHtml(g.name||g.title||g._id)}</option>`).join('')}
+            </select>
+          </div>
+          <button id="glReload" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow-ring">Yuklash</button>
+        </div>
+        <div class="text-xs muted2">Qidirish: title bo‘yicha. Recording link bo‘lsa “Ko‘rish” chiqadi.</div>
+      </div>`;
+
+      if(!glGroupId){
+        document.getElementById('content').innerHTML = sel + `<div class="mt-4 text-sm muted2">Guruh topilmadi.</div>`;
+        pagerShow(false, page);
+        return;
+      }
+
+      const {res, j} = await api(`/api/admin/group-lessons?groupId=${glGroupId}&q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Darslar yuklanmadi", 'error');
+
+      const items = j.items || [];
+      const total = j.total || 0;
+
+      const rows = items.map(x=>{
+        const host = x.host || {};
+        const hostLabel = escapeHtml(host.fullName || host.username || (x.hostId||'—'));
+        const rec = x.recordingUrl ? `<a class="underline font-extrabold" target="_blank" href="${x.recordingUrl}">Ko‘rish</a>` : `<span class="muted2">—</span>`;
+        const dur = x.recordingDurationSec ? `${Math.round(x.recordingDurationSec)}s` : '—';
+        return `
+          <tr class="row border-b border-white/10">
+            <td class="p-3 text-xs muted2">${fmtDate(x.startedAt || x.createdAt)}</td>
+            <td class="p-3">
+              <div class="font-extrabold">${escapeHtml(x.title||'—')}</div>
+              <div class="text-xs muted2">${escapeHtml(x.status||'—')} • mode: ${escapeHtml(x.mode||'')}</div>
+            </td>
+            <td class="p-3">
+              <div class="font-extrabold">${hostLabel}</div>
+              <div class="text-xs muted2">@${escapeHtml(host.username||'')}</div>
+            </td>
+            <td class="p-3 text-xs">${dur}</td>
+            <td class="p-3">${rec}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('content').innerHTML = sel + `<div class="mt-4">` + tableWrap(`
+        <thead><tr class="text-left text-xs muted2">
+          <th class="p-3">Boshlanish</th><th class="p-3">Dars</th><th class="p-3">Host</th><th class="p-3">Duration</th><th class="p-3">Recording</th>
+        </tr></thead>
+        <tbody>${rows || ''}</tbody>
+      `) + `</div>` + (items.length?'' : `<div class="text-sm muted2 mt-3">Dars yo‘q.</div>`);
+
+      document.getElementById('glGroup')?.addEventListener('change', (e)=>{ glGroupId = e.target.value; page = 1; loadList(); });
+      document.getElementById('glReload')?.addEventListener('click', ()=>{ page = 1; loadList(); });
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+
+async function delItem(type, id){
       const endpoint = type==='channels' ? `/api/admin/channels/${id}` :
                        type==='groups' ? `/api/admin/groups/${id}` :
                        type==='services' ? `/api/admin/services/${id}` : '';
@@ -1036,6 +1605,7 @@
               <td class="py-2 pr-3">${escapeHtml(g.callType)}</td>
               <td class="py-2 pr-3">${parts}</td>
               <td class="py-2 pr-3">
+                <button class="pill px-3 py-1 text-xs font-extrabold" onclick="adminJoinGroupCall('${gid}')">Join (Observer)</button>
                 <button class="pill px-3 py-1 text-xs font-extrabold glow-ring" onclick="adminEndGroupCall('${gid}')">End</button>
               </td>
             </tr>
@@ -1073,7 +1643,16 @@
       rtRefresh();
     }
 
-    async function adminEndGroupCall(groupId){
+    async function adminJoinGroupCall(groupId){
+      try{
+        const gid = encodeURIComponent(String(groupId||''));
+        if(!gid) return;
+        // Open group page in observer mode (no camera/mic). Admin will still appear in participants list.
+        window.open(`/group.html?id=${gid}&observer=1&autoJoin=1`, '_blank');
+      }catch(e){ console.error(e); }
+    }
+
+async function adminEndGroupCall(groupId){
       const {res, j} = await api(`/api/admin/group-calls/${encodeURIComponent(groupId)}/end`, { method:'POST' });
       if(!res.ok) return toast(j?.error || 'End bo‘lmadi', 'error');
       toast('Group call ended', 'success');
@@ -1369,6 +1948,49 @@
       adminSocket.on('admin:channelLiveUpdate', (p) => { rtLog(`📡 live ${escapeHtml(p.action)}: ${escapeHtml(p.channelId)}`); rtRefresh(); });
       adminSocket.on('admin:action', (p) => { rtLog(`⚙️ action: ${escapeHtml(JSON.stringify(p))}`); rtRefresh(); });
     }
+
+    // ==================== INIT / WIRING ====================
+    function wireUI(){
+      // Tabs
+      document.querySelectorAll('.tab').forEach(b=>{
+        b.addEventListener('click', ()=> setTab(b.dataset.tab));
+      });
+
+      // Refresh
+      document.getElementById('refreshBtn').addEventListener('click', ()=> loadList());
+
+      // Search (Enter)
+      document.getElementById('q').addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter') loadList();
+      });
+
+      // Pager
+      document.getElementById('prevBtn').addEventListener('click', ()=>{ if(page>1){ page--; loadList(); } });
+      document.getElementById('nextBtn').addEventListener('click', ()=>{ page++; loadList(); });
+
+      // Logout
+      document.getElementById('logoutBtn').addEventListener('click', ()=>{
+        localStorage.removeItem('token');
+        window.location.href = '/login.html';
+      });
+
+      // Close modal on backdrop
+      document.getElementById('modal').addEventListener('click', (e)=>{
+        if(e.target && e.target.id === 'modal') modal.hide();
+      });
+    }
+
+    // Boot
+    window.addEventListener('DOMContentLoaded', async ()=>{
+      try{
+        wireUI();
+        await ensureAdmin();
+      }catch(err){
+        console.error(err);
+        toast('Admin tekshiruvida xatolik (console ni tekshiring).', 'error');
+        document.getElementById('meAdmin').textContent = 'Xatolik';
+      }
+    });
 </script>
 </body>
 </html>
