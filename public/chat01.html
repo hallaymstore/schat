@@ -2330,46 +2330,25 @@ const floatingRobot = (() => {
         }
         
         // Create peer connection
-        
-        // ==================== WebRTC ICE config (STUN/TURN) ====================
-        // This calls the backend endpoint /api/rtc-config (server113.js) so TURN works on ANY network.
-        // Backend must be configured with env vars: TURN_URL, TURN_USERNAME, TURN_CREDENTIAL
-        let __rtcConfigCache = null;
-        async function getRtcConfig() {
-            if (__rtcConfigCache) return __rtcConfigCache;
-            try {
-                const res = await fetch('/api/rtc-config', { method: 'GET' });
-                const data = await res.json().catch(()=>null);
-                if (data && data.iceServers && Array.isArray(data.iceServers)) {
-                    __rtcConfigCache = data;
-                    return __rtcConfigCache;
-                }
-            } catch (e) {
-                console.warn('getRtcConfig failed, using STUN-only fallback', e);
-            }
-            // Fallback: STUN only
-            __rtcConfigCache = { iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' }
-            ]};
-            return __rtcConfigCache;
-        }
-
-async function createPeerConnection() {
-            const rtc = await getRtcConfig();
+        async function createPeerConnection() {
             const configuration = {
-                iceServers: rtc.iceServers || [],
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                                        { urls: 'stun:stun4.l.google.com:19302' },
+                    // ✅ TURN (optional). If you don't understand TURN yet, leave these empty.
+                    // Example:
+                    // { urls: 'turn:YOUR_TURN_HOST:3478', username: 'USER', credential: 'PASS' },
+                    // Runtime (optional): set in console => window.TURN_URL='turn:...'; window.TURN_USERNAME='...'; window.TURN_CREDENTIAL='...';
+                    ...(window.TURN_URL ? [{ urls: window.TURN_URL, username: window.TURN_USERNAME || '', credential: window.TURN_CREDENTIAL || '' }] : [])
+],
                 iceCandidatePoolSize: 10,
                 bundlePolicy: 'max-bundle',
                 rtcpMuxPolicy: 'require'
             };
-
-            // If you want to FORCE TURN-only (relay) to guarantee connectivity at the cost of bandwidth:
-            // configuration.iceTransportPolicy = 'relay';
-
+            
             peerConnection = new RTCPeerConnection(configuration);
             
             // Handle remote stream

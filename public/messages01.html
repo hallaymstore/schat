@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xabarlar — HALLAYM</title>
+    <title>Xabarlar — SChat</title>
     
   <script>
     tailwind = {
@@ -154,71 +154,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
-<style id="hallaymLogoGlass">
-  :root{
-    --hl-teal: rgba(20,184,166,1);
-    --hl-teal2: rgba(34,211,238,1);
-    --hl-gold: rgba(245,158,11,1);
-    --hl-gold2: rgba(250,204,21,1);
-    --hl-deep: rgba(2,6,23,1);
-  }
-  /* Stronger HALLAYM background (logo-like) */
-  .bg-orbs{
-    background:
-      radial-gradient(1200px 650px at 14% 14%, rgba(20,184,166,.34), transparent 62%),
-      radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.22), transparent 60%),
-      radial-gradient(1100px 760px at 52% 92%, rgba(34,211,238,.18), transparent 62%),
-      linear-gradient(180deg, rgba(3,28,33,1), rgba(2,6,23,1)) !important;
-  }
-  html.dark .bg-orbs{
-    background:
-      radial-gradient(1200px 650px at 14% 14%, rgba(20,184,166,.22), transparent 62%),
-      radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.14), transparent 60%),
-      radial-gradient(1100px 760px at 52% 92%, rgba(34,211,238,.12), transparent 62%),
-      linear-gradient(180deg, rgba(2,6,23,1), rgba(3,28,33,1)) !important;
-  }
-  /* Make any remaining white panels glass */
-  .bg-white, .bg-gray-50{
-    background: rgba(255,255,255,.08) !important;
-  }
-  .dark .bg-white, .dark .bg-gray-50{
-    background: rgba(2,6,23,.35) !important;
-  }
-  .border-gray-200, .border-gray-100{
-    border-color: rgba(255,255,255,.14) !important;
-  }
-  .dark .border-gray-200, .dark .border-gray-100{
-    border-color: rgba(148,163,184,.14) !important;
-  }
-  /* Header buttons */
-  .gradient-bg{
-    background: linear-gradient(135deg, var(--hl-teal), var(--hl-gold2), var(--hl-gold)) !important;
-  }
-  .btn-primary{
-    background: linear-gradient(135deg, var(--hl-teal2), var(--hl-teal), var(--hl-gold)) !important;
-  }
-  /* Conversation hover */
-  .conversation-item:hover{
-    background: linear-gradient(135deg, rgba(20,184,166,.10), rgba(245,158,11,.10)) !important;
-  }
-  /* Inputs: dark friendly, glass */
-  input, textarea{
-    background: rgba(255,255,255,.10) !important;
-    border: 1px solid rgba(255,255,255,.18) !important;
-    color: rgba(226,232,240,.92) !important;
-  }
-  input::placeholder, textarea::placeholder{ color: rgba(226,232,240,.55) !important; }
-  html:not(.dark) input, html:not(.dark) textarea{
-    color: rgba(15,23,42,.92) !important;
-    background: rgba(255,255,255,.55) !important;
-    border: 1px solid rgba(255,255,255,.30) !important;
-  }
-  /* Mobile spacing: leave room for bottom nav */
-  @media (max-width: 768px){
-    body{ padding-bottom: 84px; }
-    nav{ height: 76px !important; }
-  }
-</style>
 </head>
 <body class="h-screen overflow-hidden text-slate-900 dark:text-slate-100">
   <div class="bg-orbs"></div>
@@ -229,53 +164,19 @@
           <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between panel-pop">
         <div class="flex justify-between items-center w-full">
             <div class="flex items-center space-x-3">
-                <a href="/" class="flex items-center gap-3 select-none">
-  <div class="hallaym-mark" aria-hidden="true">
-    <svg viewBox="0 0 120 120" class="w-10 h-10">
-      <defs>
-        <linearGradient id="gGold" x1="0" x2="1">
-          <stop offset="0" stop-color="#facc15"/>
-          <stop offset="0.55" stop-color="#f59e0b"/>
-          <stop offset="1" stop-color="#fbbf24"/>
-        </linearGradient>
-        <linearGradient id="gTeal" x1="0" x2="1">
-          <stop offset="0" stop-color="#22d3ee"/>
-          <stop offset="0.5" stop-color="#14b8a6"/>
-          <stop offset="1" stop-color="#22d3ee"/>
-        </linearGradient>
-        <filter id="fGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2.4" result="b"/>
-          <feMerge>
-            <feMergeNode in="b"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      <circle cx="60" cy="60" r="52" fill="none" stroke="url(#gGold)" stroke-width="6" opacity="0.95"/>
-      <ellipse cx="60" cy="62" rx="44" ry="30" fill="rgba(2,6,23,.85)" stroke="url(#gGold)" stroke-width="4"/>
-      <text x="60" y="68" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="26" font-weight="900" fill="url(#gTeal)" filter="url(#fGlow)">hallaym</text>
-      <circle cx="22" cy="38" r="3" fill="#facc15"/>
-      <path d="M18 36 L22 28 L26 36 L34 40 L26 44 L22 52 L18 44 L10 40 Z" fill="#facc15" opacity="0.85"/>
-    </svg>
-  </div>
-  <div class="leading-tight">
-    <div class="text-lg font-black tracking-tight text-slate-900 dark:text-white">HALLAYM</div>
-    <div class="text-xs font-semibold muted2 hidden sm:block">Ultra glass chat</div>
-  </div>
-</a>
+                <a href="/" class="flex items-center space-x-2">
+                    <i class="fas fa-graduation-cap text-2xl"></i>
+                    <span class="text-xl font-bold">SChat</span>
+                </a>
                 <div class="hidden md:block">
                     <span class="text-sm opacity-80">Talabalar uchun xabarlar</span>
                 </div>
             </div>
             
             <div class="flex items-center space-x-2">
-                <button id="mobileMenuBtn" class="md:hidden glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring" aria-label="Menu">
-  <i class="fa-solid fa-bars"></i>
-</button>
                 <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring" title="Tungi/Kunduzgi">
                   <i id="themeIcon" class="fa-solid fa-moon"></i><span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
                 </button>
-                <div class="hidden md:flex items-center space-x-2">
                 <a href="/search.html" class="p-2 hover:bg-white/10 rounded-full transition">
                     <i class="fas fa-search"></i>
                 </a>
@@ -294,7 +195,6 @@
                 <a href="/signals.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Campus Signals">
                     <i class="fas fa-bell"></i>
                 </a>
-                </div>
                 <div class="relative">
                     <img id="userAvatar" src="https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png" 
                          class="w-8 h-8 rounded-full cursor-pointer" onclick="toggleUserMenu()">
@@ -353,9 +253,9 @@
         </div>
 
         <!-- Right Side - Chat Area -->
-        <div class="hidden md:flex flex-1 flex-col glass rounded-3xl overflow-hidden panel-pop" id="chatArea">
+        <div class="hidden md:flex flex-1 flex-col bg-gray-50" id="chatArea">
             <!-- Chat Header -->
-            <div class="glass border-b border-white/20 dark:border-slate-700/40 p-4 flex items-center justify-between">
+            <div class="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="relative">
                         <img id="chatAvatar" src="" class="w-10 h-10 diamond-avatar">
@@ -384,7 +284,7 @@
             </div>
             
             <!-- Message Input -->
-            <div class="glass border-t border-white/20 dark:border-slate-700/40 p-4">
+            <div class="bg-white border-t border-gray-200 p-4">
                 <div id="typingIndicator" class="text-sm text-gray-500 mb-2 hidden">
                     <span id="typingUser"></span> yozyapti...
                 </div>
@@ -408,7 +308,7 @@
         </div>
 
         <!-- User Info Sidebar -->
-        <div id="userInfoSidebar" class="hidden md:w-1/4 glass rounded-3xl overflow-hidden p-4 panel-pop">
+        <div id="userInfoSidebar" class="hidden md:w-1/4 bg-white border-l border-gray-200 p-4">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-semibold">User Ma'lumotlari</h3>
                 <button onclick="hideUserInfo()" class="p-2 hover:bg-gray-100 rounded-full">
@@ -468,69 +368,6 @@
             </div>
         </div>
     </div>
-
-<!-- Mobile Bottom Nav + Drawer -->
-<div id="mBottomNav" class="md:hidden fixed bottom-3 left-3 right-3 z-[80]">
-  <div class="glass rounded-2xl px-3 py-2 flex items-center justify-between">
-    <button class="px-3 py-2 rounded-xl btn-ghost glow-ring" onclick="window.location.href='/messages.html'" aria-label="Chats">
-      <i class="fa-solid fa-comments"></i>
-    </button>
-    <button class="px-3 py-2 rounded-xl btn-ghost glow-ring" onclick="window.location.href='/groups.html'" aria-label="Groups">
-      <i class="fa-solid fa-users"></i>
-    </button>
-    <button class="px-3 py-2 rounded-xl btn-ghost glow-ring" onclick="window.location.href='/channels.html'" aria-label="Channels">
-      <i class="fa-solid fa-bullhorn"></i>
-    </button>
-    <button class="px-3 py-2 rounded-xl btn-ghost glow-ring" onclick="window.location.href='/search.html'" aria-label="Search">
-      <i class="fa-solid fa-magnifying-glass"></i>
-    </button>
-    <button class="px-3 py-2 rounded-xl btn-ghost glow-ring" id="mOpenDrawer" aria-label="Menu">
-      <i class="fa-solid fa-ellipsis"></i>
-    </button>
-  </div>
-</div>
-
-<div id="mDrawerWrap" class="md:hidden fixed inset-0 z-[90] hidden" aria-hidden="true">
-  <div class="absolute inset-0 bg-black/45 backdrop-blur-sm" id="mDrawerOverlay"></div>
-  <aside class="absolute right-0 top-0 h-full w-[min(92vw,360px)] glass border-l border-white/20 p-4 overflow-y-auto">
-    <div class="flex items-center justify-between">
-      <div class="font-black tracking-tight text-white/90">HALLAYM Menu</div>
-      <button class="p-2 rounded-xl hover:bg-white/10" id="mCloseDrawer" aria-label="Close">
-        <i class="fa-solid fa-xmark text-white/90"></i>
-      </button>
-    </div>
-    <div class="mt-4 grid gap-2">
-        <a href="/search.html" class="glass rounded-2xl px-4 py-3 flex items-center gap-3 font-semibold">
-        <i class="fa-solid fa-magnifying-glass w-5 text-center"></i><span>Search</span>
-      </a>
-        <a href="/groups.html" class="glass rounded-2xl px-4 py-3 flex items-center gap-3 font-semibold">
-        <i class="fa-solid fa-users w-5 text-center"></i><span>Groups</span>
-      </a>
-      <a href="/channels.html" class="glass rounded-2xl px-4 py-3 flex items-center gap-3 font-semibold">
-        <i class="fa-solid fa-bullhorn w-5 text-center"></i><span>Channels</span>
-      </a>
-      <a href="/profile.html" class="glass rounded-2xl px-4 py-3 flex items-center gap-3 font-semibold">
-        <i class="fa-solid fa-user w-5 text-center"></i><span>Profile</span>
-      </a>
-      <a href="/stats.html" class="glass rounded-2xl px-4 py-3 flex items-center gap-3 font-semibold">
-        <i class="fa-solid fa-chart-column w-5 text-center"></i><span>Stats</span>
-      </a>
-      <a href="/services.html" class="glass rounded-2xl px-4 py-3 flex items-center gap-3 font-semibold">
-        <i class="fa-solid fa-store w-5 text-center"></i><span>Services</span>
-      </a>
-      <a href="/signals.html" class="glass rounded-2xl px-4 py-3 flex items-center gap-3 font-semibold">
-        <i class="fa-solid fa-bell w-5 text-center"></i><span>Signals</span>
-      </a>
-      <button class="glass rounded-2xl px-4 py-3 flex items-center gap-3 font-semibold text-left" id="mThemeBtn">
-        <i class="fa-solid fa-moon w-5 text-center"></i><span>Theme</span>
-      </button>
-      <button class="glass rounded-2xl px-4 py-3 flex items-center gap-3 font-semibold text-left text-red-200" onclick="logout()">
-        <i class="fa-solid fa-right-from-bracket w-5 text-center"></i><span>Chiqish</span>
-      </button>
-    </div>
-    <div class="mt-4 text-xs muted2">Mobile uchun kichik, tezkor UI. Glass + teal/gold vibe.</div>
-  </aside>
-</div>
 
     <script>
         let socket = null;
@@ -1103,30 +940,5 @@ async function loadCurrentUser() {
 </script>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/callkit.js"></script>
-<script id="hallaymMobileNav">
-(function(){
-  const wrap = document.getElementById('mDrawerWrap');
-  const ov = document.getElementById('mDrawerOverlay');
-  const open1 = document.getElementById('mobileMenuBtn');
-  const open2 = document.getElementById('mOpenDrawer');
-  const close = document.getElementById('mCloseDrawer');
-  const themeBtn = document.getElementById('mThemeBtn');
-  const themeToggle = document.getElementById('themeToggle');
-
-  function openDrawer(){ if(wrap){ wrap.classList.remove('hidden'); wrap.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; } }
-  function closeDrawer(){ if(wrap){ wrap.classList.add('hidden'); wrap.setAttribute('aria-hidden','true'); document.body.style.overflow=''; } }
-
-  [open1, open2].forEach(btn=> btn && btn.addEventListener('click', openDrawer));
-  [close, ov].forEach(btn=> btn && btn.addEventListener('click', closeDrawer));
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
-
-  if(themeBtn && themeToggle){
-    themeBtn.addEventListener('click', ()=>{
-      themeToggle.click();
-      closeDrawer();
-    });
-  }
-})();
-</script>
 </body>
 </html>
