@@ -232,7 +232,67 @@
       *{scroll-behavior:auto !important}
       .drawer,.btn,.courseItem,.item{transition:none !important}
     }
-  </style>
+  
+
+/* === MOBILE_COMPACT_V2 (hallaym glass + teal/gold) === */
+html, body{height:100%}
+body{overflow-x:hidden}
+img,svg,video,canvas{max-width:100%;height:auto}
+.container, .card, .item, .courseItem, .modal{min-width:0}
+.row{min-width:0}
+.grid{min-width:0}
+.kpi .box{min-width:0}
+
+:focus-visible{outline:none}
+a,button,input,select,textarea{touch-action:manipulation}
+
+/* nicer scrollbars */
+*{scrollbar-width:thin; scrollbar-color: color-mix(in oklab, var(--teal) 55%, var(--gold) 45%) color-mix(in oklab, var(--card) 70%, transparent);}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:color-mix(in oklab, var(--card) 70%, transparent); border-radius:999px}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg, var(--teal), var(--gold2), var(--gold)); border-radius:999px; border:2px solid color-mix(in oklab, var(--card) 72%, transparent)}
+::-webkit-scrollbar-thumb:hover{filter:brightness(1.05)}
+
+.drawer{overflow:auto}
+.drawerLinks{overflow:auto; padding-right:2px}
+.drawerBack{overscroll-behavior:contain}
+
+@media (max-width:720px){
+  body{font-size:13px}
+  header{padding:8px 10px}
+  .logoWrap{width:38px;height:38px;border-radius:14px}
+  .logoSvg{width:32px;height:32px}
+  .pill{font-size:11px;padding:6px 9px}
+  .btn{padding:8px 10px;border-radius:12px;font-size:12.5px}
+  .btn.small{padding:7px 9px;font-size:12px;border-radius:11px}
+  .iconBtn{width:38px;height:38px;border-radius:13px}
+  .container{margin:12px auto;padding:0 10px}
+  .grid{gap:10px}
+  .card{padding:12px;border-radius:16px}
+  .muted{font-size:12.5px}
+  .tiny{font-size:11.5px}
+  h2{font-size:16px !important}
+  h3{font-size:14px !important}
+  .kpi{gap:8px}
+  .kpi .box{padding:10px;border-radius:14px}
+  .kpi .val{font-size:16px}
+  .list{gap:10px}
+  .item{padding:10px;border-radius:14px}
+  .courseItem{padding:10px;border-radius:14px}
+  .drawer{width:min(320px, 92vw); padding:12px}
+  ::-webkit-scrollbar{width:8px;height:8px}
+}
+
+@media (max-width:420px){
+  body{font-size:12.5px}
+  .btn{padding:7px 9px;font-size:12px}
+  .pill{font-size:10.5px}
+  .card{padding:10px;border-radius:15px}
+  .kpi .val{font-size:15px}
+}
+/* === end MOBILE_COMPACT_V2 === */
+
+</style>
   <script>
     (function(){
       const key="theme";

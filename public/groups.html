@@ -172,6 +172,84 @@
   });
 })();
 </script>
+
+<style id="hallaymMobileCompactV2">
+
+/* MOBILE COMPACT V2 — prevent overflow, tiny UI, glass + teal/gold harmony */
+*{box-sizing:border-box}
+html,body{max-width:100%;overflow-x:hidden}
+img,video,canvas,svg{max-width:100%;height:auto}
+button,a{ -webkit-tap-highlight-color: transparent; }
+:root{ --safe-bottom: env(safe-area-inset-bottom, 0px); }
+
+@media (max-width: 640px){
+  /* Global tight mode */
+  body{ font-size: 13px !important; line-height: 1.25 !important; }
+  .container,.mx-auto{ max-width:100% !important; }
+  .px-4{ padding-left:12px !important; padding-right:12px !important; }
+  .py-8{ padding-top:16px !important; padding-bottom:18px !important; }
+  .p-8{ padding:16px !important; }
+  .p-6{ padding:14px !important; }
+  .p-4{ padding:12px !important; }
+  .rounded-3xl{ border-radius:20px !important; }
+  .rounded-2xl{ border-radius:18px !important; }
+  .rounded-xl{ border-radius:14px !important; }
+  .text-3xl{ font-size:1.35rem !important; line-height:1.15 !important; }
+  .text-2xl{ font-size:1.15rem !important; line-height:1.2 !important; }
+  .text-xl{ font-size:1.00rem !important; }
+  .text-lg{ font-size:.95rem !important; }
+  .text-sm{ font-size:.82rem !important; }
+  .text-xs{ font-size:.72rem !important; }
+  .w-20.h-20{ width:56px !important; height:56px !important; }
+  .text-4xl{ font-size:1.65rem !important; }
+
+  /* Buttons/input compact */
+  button, .btn, [role="button"]{ padding-top:.45rem !important; padding-bottom:.45rem !important; }
+  .px-6{ padding-left:14px !important; padding-right:14px !important; }
+  .py-3{ padding-top:.5rem !important; padding-bottom:.5rem !important; }
+  input,textarea,select{ font-size:13px !important; }
+  input.rounded-full, textarea.rounded-full{ padding-top:.45rem !important; padding-bottom:.45rem !important; }
+
+  /* FontAwesome icons a bit smaller */
+  .fa-solid,.fas,.far,.fab{ font-size: 0.95em; }
+
+  /* Horizontal sections should scroll safely */
+  .overflow-x-auto{ -webkit-overflow-scrolling: touch; }
+}
+
+/* Always keep composer visible and not clipped (group.html) */
+#chatComposer{
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  padding-bottom: calc(10px + var(--safe-bottom));
+}
+
+/* Make action icons/buttons never hide send button */
+#chatComposer .composer-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+#chatComposer .composer-row > *{ flex:0 0 auto; }
+#chatComposer input{ flex:1 1 auto; min-width: 0; }
+
+/* Reduce big bubbles on mobile */
+@media (max-width: 640px){
+  .message-bubble{ max-width: 92% !important; }
+}
+
+</style>
+
+<style id="hallaymGroupsExtra">
+
+@media (max-width: 420px){
+  .group-tab i{ display:none !important; }
+  .group-tab{ padding-left:12px !important; padding-right:12px !important; }
+  .group-card:hover{ transform:none !important; }
+}
+
+</style>
 </head>
 <body class="h-full text-slate-900 dark:text-slate-100">
 <!-- Mobile Drawer -->

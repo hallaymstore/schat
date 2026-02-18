@@ -219,6 +219,127 @@
     nav{ height: 76px !important; }
   }
 </style>
+
+<style id="hallaymMobileCompact">
+  /* ===== HALLAYM Mobile Compact (no overflow) ===== */
+  :root{
+    --mc-font: 13px;
+    --mc-font-sm: 12px;
+    --mc-radius: 18px;
+    --mc-pad: 10px;
+    --mc-gap: 10px;
+    --mc-icon: 14px;
+    --mc-btn-h: 36px;
+  }
+  html, body{ max-width:100%; overflow-x:hidden; }
+  /* Safe wrapping everywhere */
+  *{ min-width: 0; }
+  .wrap-anywhere{ overflow-wrap:anywhere; word-break:break-word; }
+
+  /* Scrollbars (thin + glassy) */
+  *{ scrollbar-width: thin; scrollbar-color: rgba(148,163,184,.45) transparent; }
+  *::-webkit-scrollbar{ width: 10px; height: 10px; }
+  *::-webkit-scrollbar-thumb{ background: rgba(148,163,184,.35); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+  *::-webkit-scrollbar-thumb:hover{ background: rgba(148,163,184,.52); }
+
+  /* Compact mode (<= 480px) */
+  @media (max-width: 480px){
+    body{ font-size: var(--mc-font); }
+    .glass{ border-radius: var(--mc-radius) !important; }
+
+    /* Reduce huge headings */
+    h1, h2{ font-size: 18px !important; line-height: 1.15 !important; }
+    h3{ font-size: 15px !important; line-height: 1.2 !important; }
+
+    /* Buttons/inputs compact */
+    button, a, input, textarea, select{
+      font-size: var(--mc-font) !important;
+    }
+    input, textarea{
+      padding-top: 10px !important;
+      padding-bottom: 10px !important;
+    }
+
+    /* Prevent icons from eating space */
+    i, svg{ max-width: 100%; }
+    .fa-solid, .fas{ font-size: var(--mc-icon) !important; }
+
+    /* Generic padding shrink helpers */
+    .p-6{ padding: 12px !important; }
+    .p-5{ padding: 12px !important; }
+    .p-4{ padding: 10px !important; }
+    .px-4{ padding-left: 10px !important; padding-right: 10px !important; }
+    .py-3{ padding-top: 10px !important; padding-bottom: 10px !important; }
+
+    /* Gap shrink */
+    .gap-6{ gap: 12px !important; }
+    .gap-4{ gap: 10px !important; }
+    .gap-3{ gap: 8px !important; }
+  }
+</style>
+
+<style id="hallaymMessagesCompactFix">
+  /* Make white dropdown glass and readable */
+  #userMenu{
+    background: rgba(255,255,255,.72) !important;
+    border: 1px solid rgba(255,255,255,.28) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  html.dark #userMenu{
+    background: rgba(2,6,23,.72) !important;
+    border-color: rgba(148,163,184,.16) !important;
+  }
+  #userMenu a{ color: rgba(15,23,42,.92) !important; }
+  html.dark #userMenu a{ color: rgba(226,232,240,.92) !important; }
+  #userMenu a:hover{ background: rgba(148,163,184,.14) !important; }
+
+  /* Force wrap for long names/university */
+  #chatNickname, #chatUniversity{ overflow-wrap:anywhere; }
+
+  /* Mobile: show chat area and sidebar as single column */
+  @media (max-width: 768px){
+    body{ overflow: hidden; }
+    .mx-auto.max-w-7xl.h-\[calc\(100vh-5rem\)\]{
+      height: calc(100vh - 4.25rem) !important;
+    }
+    /* make layout stack */
+    .mx-auto.max-w-7xl.h-\[calc\(100vh-5rem\)\].px-4.pb-4.pt-4.flex.gap-4{
+      flex-direction: column !important;
+      gap: 10px !important;
+      overflow: hidden;
+    }
+    /* conversations panel takes full height minus input */
+    #chatArea{
+      display: flex !important;
+      height: 52vh !important;
+    }
+    #conversationsList{ -webkit-overflow-scrolling: touch; }
+    #messagesContainer{ -webkit-overflow-scrolling: touch; }
+  }
+
+  /* Ultra compact (<=480px) */
+  @media (max-width: 480px){
+    nav.h-20{ height: 64px !important; }
+    nav .rounded-3xl{ border-radius: 18px !important; }
+    .w-10.h-10{ width: 34px !important; height: 34px !important; }
+    .text-lg{ font-size: 14px !important; }
+    .text-xl{ font-size: 16px !important; }
+
+    /* Bubble max width, smaller padding */
+    .message-bubble{ max-width: 84% !important; padding: 9px 12px !important; border-radius: 16px !important; font-size: 13px !important; }
+
+    /* Input row: keep send visible */
+    #messageInput{ padding-top: 10px !important; padding-bottom: 10px !important; }
+    .gradient-bg{ padding-left: 14px !important; padding-right: 14px !important; }
+    button[onclick="attachMedia()"]{ padding: 10px !important; }
+
+    /* Left panel header text */
+    h2.text-xl{ font-size: 16px !important; }
+    .text-sm{ font-size: 12.5px !important; }
+  }
+</style>
+
 </head>
 <body class="h-screen overflow-hidden text-slate-900 dark:text-slate-100">
   <div class="bg-orbs"></div>

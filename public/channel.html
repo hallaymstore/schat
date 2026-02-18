@@ -202,9 +202,117 @@
 
   </style>
 
+
+<style id="MOBILE_COMPACT_GLASS_V2">
+/* ===== HALLAYM Mobile Compact + Glass (V2) ===== */
+*{box-sizing:border-box}
+html,body{width:100%;overflow-x:hidden}
+img,video,canvas,svg{max-width:100%;height:auto}
+a,button,span,p,h1,h2,h3,h4,h5,h6,div{overflow-wrap:anywhere;word-break:break-word}
+:root{
+  --hc-teal:#18b3ab;
+  --hc-teal2:#0f6f6c;
+  --hc-gold:#f2d27c;
+  --hc-gold2:#d8b35b;
+  --hc-glass: rgba(255,255,255,.10);
+  --hc-stroke: rgba(255,255,255,.18);
+}
+/* Kill hard light backgrounds from Tailwind utility classes */
+.bg-white,.bg-gray-50,.bg-gray-100,.bg-green-700,.bg-green-400,
+.bg-purple-50,.bg-blue-50,.bg-green-50,.bg-yellow-50{
+  background: var(--hc-glass) !important;
+  border-color: var(--hc-stroke) !important;
+}
+.text-gray-900,.text-gray-800,.text-gray-700,.text-gray-600,.text-gray-500{
+  color: rgba(255,255,255,.82) !important;
+}
+nav{background: rgba(0,0,0,.18) !important; border-bottom:1px solid rgba(255,255,255,.10) !important;}
+/* Inputs */
+input:not([type="file"]),textarea,select{
+  background: rgba(0,0,0,.28) !important;
+  border: 1px solid rgba(255,255,255,.20) !important;
+  color: rgba(255,255,255,.90) !important;
+}
+input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important;}
+/* Scrollbar */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:999px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ===== Mobile super-compact ===== */
+@media (max-width: 640px){
+  body{font-size:12.5px}
+  .container{max-width:100% !important;padding-left:10px !important;padding-right:10px !important}
+  main.container, main{padding-top:12px !important;padding-bottom:14px !important}
+  h1{font-size:1.05rem !important; line-height:1.18 !important}
+  .text-3xl{font-size:1.35rem !important; line-height:1.18 !important}
+  .text-2xl{font-size:1.15rem !important; line-height:1.18 !important}
+  .text-xl{font-size:1.02rem !important}
+  .text-lg{font-size:.95rem !important}
+  .text-sm{font-size:.78rem !important}
+  .text-xs{font-size:.72rem !important}
+  .px-6{padding-left:12px !important;padding-right:12px !important}
+  .py-6{padding-top:12px !important;padding-bottom:12px !important}
+  .p-6{padding:12px !important}
+  .p-5{padding:12px !important}
+  .p-4{padding:10px !important}
+  .gap-6{gap:12px !important}
+  .gap-4{gap:10px !important}
+  .gap-3{gap:8px !important}
+  .rounded-2xl{border-radius:18px !important}
+  .rounded-xl{border-radius:16px !important}
+  button, .btn, a[role="button"]{padding-top:.5rem !important;padding-bottom:.5rem !important}
+  .fa, .fas, .far, .fab{font-size: .95em}
+  /* keep action buttons visible */
+  #publishBtn, #sendBtn, #subscribeBtn, #manageBtn{
+    min-height:42px !important;
+  }
+  /* Modal safe */
+  #manageModal > div.relative{
+    width: calc(100vw - 20px) !important;
+    margin-top: 14px !important;
+    max-height: 90vh !important;
+    overflow: hidden !important;
+  }
+  #manageModal > div.relative > div.p-5 + div{
+    max-height: calc(90vh - 72px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+</style>
+
+
+<style id="CHANNEL_MOBILE_LAYOUT_FIX_V1">
+@media (max-width: 640px){
+  /* Channel cover/header: prevent overlap */
+  #coverBanner{height:108px !important;}
+  section.overflow-hidden .absolute.left-6{left:12px !important; bottom:-18px !important;}
+  section.overflow-hidden .absolute.left-6 .w-20{width:56px !important;height:56px !important;border-radius:16px !important;}
+  section.overflow-hidden .absolute.left-6 .text-2xl{font-size:1.05rem !important;}
+  /* Move top-right buttons into flow and wrap */
+  section.overflow-hidden .absolute.right-4.top-4{
+    position: static !important;
+    padding: 10px 12px 0 12px !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  section.overflow-hidden .pt-10{padding-top:42px !important;}
+  /* Stats grid compress */
+  .grid.md\:grid-cols-3{grid-template-columns: 1fr !important;}
+  /* Live grid compress */
+  #livePlayerWrap .grid{grid-template-columns:1fr !important;}
+  #livePlayerWrap video{max-height:42vh !important;}
+  /* Composer action row wrap */
+  #composerSection .flex.flex-wrap{gap:8px !important;}
+  #composerSection label{padding:10px 12px !important;}
+}
+</style>
+
 </head>
 
-<body class="bg-gray-50 min-h-screen">
+<body class="min-h-screen">
 <!-- Mobile Drawer -->
 <div id="mobileDrawerWrap" class="fixed inset-0 z-[70] hidden md:hidden" aria-hidden="true">
   <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeMobileMenu()"></div>

@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guruhlar — HALLAYM edu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg{background:linear-gradient(135deg, rgba(20,184,166,1) 0%, rgba(250,204,21,1) 45%, rgba(245,158,11,1) 100%);}
+        .group-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .group-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+    
+/* HALLAYM premium */
+.u-anim{
+  background: linear-gradient(90deg, rgba(34,211,238,1), rgba(250,204,21,1), rgba(245,158,11,1));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  background-size:220% 220%;
+  animation: shimmer 7s ease infinite;
+  font-weight: 950;
+  letter-spacing:.6px;
+}
+@keyframes shimmer{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.group-card{border-radius:22px; overflow:hidden}
+.group-card:hover{transform: translateY(-8px); box-shadow: 0 28px 120px rgba(0,0,0,.45);}
+.group-card:before{
+  content:""; position:absolute; inset:-1px; border-radius:22px;
+  background: linear-gradient(135deg, rgba(20,184,166,.40), rgba(250,204,21,.26), rgba(245,158,11,.18));
+  opacity:0; transition:opacity .25s ease; pointer-events:none;
+}
+.group-card:hover:before{opacity:.95}
+.field{background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.16); color: rgba(226,232,240,.92)}
+.field::placeholder{color: rgba(226,232,240,.55)}
+.field:focus{outline:none; box-shadow: 0 0 0 4px rgba(20,184,166,.22); border-color: transparent;}
+.text-gray-800{color: rgba(226,232,240,.95)!important}
+.muted{color: rgba(226,232,240,.82)!important}
+.muted2{color: rgba(226,232,240,.68)!important}
+.text-gray-500{color: rgba(226,232,240,.62)!important}
+.text-gray-400{color: rgba(226,232,240,.52)!important}
+.bg-gray-50{background: rgba(255,255,255,.06)!important}
+.border-gray-200{border-color: rgba(255,255,255,.14)!important}
+
+</style>
+
+  <script>
+    tailwind = {config:{darkMode:'class',theme:{extend:{boxShadow:{glass:'0 10px 40px rgba(0,0,0,.15)'}}}}};
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    :root{
+  --glass-bg: rgba(255,255,255,.14);
+  --glass-brd: rgba(255,255,255,.18);
+  --muted: rgba(226,232,240,.86);
+  --muted2: rgba(226,232,240,.62);
+  --ring: rgba(20,184,166,.30);
+  --gold: rgba(245,158,11,1);
+  --gold2: rgba(250,204,21,1);
+  --teal: rgba(20,184,166,1);
+  --deep: rgba(2,6,23,1);
+}
+.dark{
+  --glass-bg: rgba(2,6,23,.55);
+  --glass-brd: rgba(148,163,184,.14);
+  --muted: rgba(226,232,240,.86);
+  --muted2: rgba(226,232,240,.62);
+  --ring: rgba(245,158,11,.18);
+  --gold: rgba(245,158,11,1);
+  --gold2: rgba(250,204,21,1);
+  --teal: rgba(20,184,166,1);
+  --deep: rgba(2,6,23,1);
+}
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .bg-orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;
+  background:
+    radial-gradient(1200px 650px at 16% 14%, rgba(20,184,166,.34), transparent 62%),
+    radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.18), transparent 60%),
+    radial-gradient(1100px 760px at 50% 92%, rgba(34,211,238,.16), transparent 62%),
+    linear-gradient(180deg, rgba(3,28,33,1), rgba(2,6,23,1));
+}
+.dark .bg-orbs{
+  background:
+    radial-gradient(1200px 650px at 16% 14%, rgba(20,184,166,.18), transparent 62%),
+    radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.12), transparent 60%),
+    radial-gradient(1100px 760px at 50% 92%, rgba(34,211,238,.10), transparent 62%),
+    linear-gradient(180deg, rgba(2,6,23,1), rgba(3,28,33,1));
+}
+    .glass{
+  background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.08));
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 18px 80px rgba(0,0,0,.30);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+    .muted{color:var(--muted)}
+    .btn-primary{background:linear-gradient(135deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1)); border:1px solid rgba(245,158,11,.20); box-shadow:0 18px 46px rgba(0,0,0,.25)}
+    .btn-primary:hover{filter:brightness(1.05)}
+    .btn-ghost:hover{background:rgba(148,163,184,.12)}
+  </style>
+
+<style id="mobileSafe">
+  *{box-sizing:border-box}
+  html,body{width:100%;overflow-x:hidden}
+  img,video,canvas,svg{max-width:100%;height:auto}
+  a,button,span,p,h1,h2,h3,h4,h5,h6,div{overflow-wrap:anywhere;word-break:break-word}
+  .container{max-width:100% !important}
+  button, a{ -webkit-tap-highlight-color: transparent; }
+  @media (max-width: 640px){
+    .container{padding-left:12px!important;padding-right:12px!important}
+    main.container{padding-top:14px!important;padding-bottom:18px!important}
+    h1{font-size:1.25rem!important;line-height:1.25!important}
+    .text-3xl{font-size:1.65rem!important;line-height:1.2!important}
+    .text-2xl{font-size:1.35rem!important;line-height:1.25!important}
+    .text-xl{font-size:1.15rem!important}
+    .h-16{height:auto!important;min-height:64px}
+    nav .space-x-4, nav .space-x-3{gap:.25rem!important}
+    nav .space-x-4>*, nav .space-x-3>*{margin-left:0!important}
+    #livePlayerWrap video{max-height:45vh!important}
+    .message-bubble{max-width:88%!important}
+    /* Side panels as drawers */
+    #infoPanel, #userInfoSidebar{
+      position:fixed !important;
+      top:64px; right:0; bottom:0;
+      width:min(92vw, 380px) !important;
+      z-index:60;
+      transform:translateX(105%);
+      transition:transform .25s ease;
+      display:block !important;
+    }
+    #infoPanel.open, #userInfoSidebar.open{ transform:translateX(0); }
+    #drawerOverlay{ display:none; }
+    #drawerOverlay.show{
+      display:block;
+      position:fixed;
+      inset:0;
+      z-index:55;
+      background:rgba(0,0,0,.45);
+      backdrop-filter: blur(4px);
+    }
+  }
+</style>
+<script id="mobileDrawerScript">
+(function(){
+  function qs(id){ return document.getElementById(id); }
+  function closePanel(){
+    const panel = qs('infoPanel') || qs('userInfoSidebar');
+    const ov = qs('drawerOverlay');
+    if(panel) panel.classList.remove('open');
+    if(ov) ov.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+  function openPanel(){
+    const panel = qs('infoPanel') || qs('userInfoSidebar');
+    const ov = qs('drawerOverlay');
+    if(panel) panel.classList.add('open');
+    if(ov) ov.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  window.__drawer = {openPanel, closePanel};
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePanel(); });
+  document.addEventListener('click', (e)=>{
+    const ov = qs('drawerOverlay');
+    if(ov && e.target === ov) closePanel();
+  });
+})();
+</script>
+</head>
+<body class="h-full text-slate-900 dark:text-slate-100">
+<!-- Mobile Drawer -->
+<div id="mobileDrawerWrap" class="fixed inset-0 z-[70] hidden md:hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeMobileMenu()"></div>
+  <aside id="mobileDrawer" class="absolute right-0 top-0 h-full w-[min(92vw,360px)] bg-white/10 border-l border-white/20 backdrop-blur-2xl p-4 overflow-y-auto">
+    <div class="flex items-center justify-between">
+      <div class="font-extrabold tracking-tight text-white">Menu</div>
+      <button class="p-2 rounded-xl hover:bg-white/10" aria-label="Close" onclick="closeMobileMenu()"><i class="fas fa-xmark text-white"></i></button>
+    </div>
+    <div class="mt-4 grid gap-2">
+      <a href="/messages.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-envelope w-5 text-center"></i><span>Messages</span></a>
+<a href="/groups.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-users w-5 text-center"></i><span>Groups</span></a>
+<a href="/channels.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-broadcast-tower w-5 text-center"></i><span>Channels</span></a>
+<a href="/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-user w-5 text-center"></i><span>Profile</span></a>
+    </div>
+  </aside>
+</div>
+
+<script>
+  function toggleMobileMenu(){
+    const w=document.getElementById('mobileDrawerWrap');
+    if(!w) return;
+    if(w.classList.contains('hidden')){
+      w.classList.remove('hidden');
+      document.body.style.overflow='hidden';
+    } else {
+      w.classList.add('hidden');
+      document.body.style.overflow='';
+    }
+  }
+  function closeMobileMenu(){
+    const w=document.getElementById('mobileDrawerWrap');
+    if(!w) return;
+    w.classList.add('hidden');
+    document.body.style.overflow='';
+  }
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMobileMenu(); });
+</script>
+
+<div id="drawerOverlay" aria-hidden="true"></div>
+
+  <div class="bg-orbs"></div>
+    <!-- Navigation -->
+    
+  <header class="sticky top-0 z-50">
+    <div class="mx-auto max-w-7xl px-4 py-4">
+      <div class="glass rounded-2xl px-4 py-3 flex items-center justify-between">
+        <a href="/index.html" class="flex items-center gap-3">
+          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shadow-glass overflow-hidden"
+     style="background: radial-gradient(120% 120% at 20% 20%, rgba(20,184,166,.35), rgba(2,6,23,.0) 60%),
+                    radial-gradient(140% 140% at 80% 80%, rgba(245,158,11,.22), rgba(2,6,23,.0) 60%),
+                    rgba(2,6,23,.12);">
+  <svg viewBox="0 0 120 120" class="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px]" aria-hidden="true">
+    <defs>
+      <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="rgba(245,158,11,1)"/>
+        <stop offset="0.5" stop-color="rgba(250,204,21,1)"/>
+        <stop offset="1" stop-color="rgba(245,158,11,1)"/>
+      </linearGradient>
+      <linearGradient id="gIce" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="rgba(125,211,252,1)"/>
+        <stop offset="0.45" stop-color="rgba(34,211,238,1)"/>
+        <stop offset="1" stop-color="rgba(167,243,208,1)"/>
+      </linearGradient>
+      <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="2.2" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <circle cx="60" cy="60" r="54" fill="none" stroke="url(#gGold)" stroke-width="6" opacity="0.92"/>
+    <ellipse cx="60" cy="64" rx="42" ry="24" fill="rgba(2,6,23,.88)" stroke="url(#gGold)" stroke-width="4"/>
+    <path d="M20 44 L26 44 L28 38 L30 44 L36 44 L31 47 L33 53 L28 49 L23 53 L25 47 Z"
+          fill="rgba(250,204,21,.95)" filter="url(#softGlow)"/>
+    <text x="60" y="70" text-anchor="middle" font-size="22" font-family="Inter, ui-sans-serif" font-weight="800"
+          fill="url(#gIce)" style="letter-spacing:.5px">hallaym</text>
+  </svg>
+</div>
+          <div class="leading-tight">
+            <div class="font-extrabold tracking-tight">HALLAYM <span class="u-anim">edu</span></div>
+            <div class="text-xs muted">Ultra zamonaviy ta'lim platformasi</div>
+          </div>
+        </a>
+        <nav class="hidden md:flex items-center gap-1">
+          <a href="/search.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">🔍 Search...</a>
+          <a href="/messages.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Xabarlar</a>
+          <a href="/groups.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Guruhlar</a>
+          <a href="/channels.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Kanallar</a>
+        </nav>
+        <div class="flex items-center gap-2">
+          <button id="menuBtn" class="btn-ghost glass rounded-xl px-3 py-2 text-sm font-semibold muted md:hidden" aria-label="Menu" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i></button>
+          <button id="themeToggle" class="btn-ghost glass rounded-xl px-3 py-2 text-sm font-semibold muted">
+            <i id="themeIcon" class="fa-solid fa-moon"></i>
+            <span class="ml-2" id="themeLabel">Tungi</span>
+          </button>
+          <a href="/profile.html" class="glass rounded-xl px-3 py-2 text-sm font-semibold muted btn-ghost">
+            <i class="fa-solid fa-user"></i><span class="ml-2 hidden sm:inline">Profil</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+
+    <!-- Main Content -->
+    <div class="mx-auto max-w-7xl px-4 py-8">
+        <!-- Header -->
+        <div class="glass rounded-3xl p-8 text-center mb-8">
+            <div class="w-20 h-20 gradient-bg rounded-full ring-1 ring-white/20 shadow-glass flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-users text-white text-3xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800">O‘quv guruhlari</h1>
+            <p class="muted2">Kursdoshlar bilan guruhlarga qo‘shiling yoki yangi guruh yarating</p>
+        </div>
+        
+        <!-- Create Group Button -->
+        <div class="flex justify-center mb-8">
+            <button onclick="openCreateModal()" 
+                    class="btn-primary text-white px-6 py-3 rounded-2xl font-semibold hover:opacity-90 transition flex items-center">
+                <i class="fas fa-plus mr-2"></i> Yangi guruh yaratish
+            </button>
+        </div>
+        
+        <!-- Groups Tabs -->
+<div class="glass rounded-2xl p-2 mb-6 flex overflow-x-auto gap-1">
+  <button type="button" class="group-tab px-4 py-2 rounded-xl font-semibold btn-ghost whitespace-nowrap" data-tab="my" aria-pressed="false">
+    <i class="fas fa-user-friends mr-2"></i> Mening guruhlarim
+  </button>
+  <button type="button" class="group-tab px-4 py-2 rounded-xl font-semibold btn-ghost whitespace-nowrap" data-tab="joined" aria-pressed="false">
+    <i class="fas fa-users mr-2"></i> Qo‘shilgan guruhlar
+  </button>
+  <button type="button" class="group-tab px-4 py-2 rounded-xl font-semibold btn-ghost whitespace-nowrap" data-tab="all" aria-pressed="false">
+    <i class="fas fa-globe mr-2"></i> Barcha guruhlar
+  </button>
+</div>
+
+<!-- Groups Grid -->
+        <div id="groupsContainer" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Groups will be loaded here -->
+            <div class="text-center py-12 col-span-full">
+                <i class="fas fa-users text-4xl text-gray-300 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-500">No groups yet</h3>
+                <p class="text-gray-400">Create or join a group to get started</p>
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="mt-12 glass rounded-xl shadow p-6">
+            <h3 class="font-bold text-gray-800 mb-4">Group Statistics</h3>
+            <div class="grid md:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-white/5 border border-white/10 rounded-2xl">
+                    <div class="text-2xl font-bold text-teal-200" id="totalGroups">0</div>
+                    <div class="text-sm muted2">Jami Guruhlar</div>
+                </div>
+                <div class="text-center p-4 bg-white/5 border border-white/10 rounded-2xl">
+                    <div class="text-2xl font-bold text-sky-200" id="myGroups">0</div>
+                    <div class="text-sm muted2">Mening guruhlarim</div>
+                </div>
+                <div class="text-center p-4 bg-white/5 border border-white/10 rounded-2xl">
+                    <div class="text-2xl font-bold text-emerald-200" id="joinedGroups">0</div>
+                    <div class="text-sm muted2">Qo'shilganlar</div>
+                </div>
+                <div class="text-center p-4 bg-white/5 border border-white/10 rounded-2xl">
+                    <div class="text-2xl font-bold text-amber-200" id="totalMembers">0</div>
+                    <div class="text-sm muted2">Jami A'zolar</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div id="createModal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="glass rounded-3xl w-full max-w-md shadow-glass border border-white/20">
+            <div class="p-6 sm:p-7">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold">Yangi guruh yaratish</h3>
+                    <button onclick="closeCreateModal()" class="p-2 rounded-2xl btn-ghost">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="createGroupForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium muted mb-2">Guruh nomi *</label>
+                        <input type="text" name="name" required 
+                               class="w-full px-4 py-3 field rounded-lg focus:outline-none field focus:border-transparent"
+                               placeholder="e.g., Computer Science Study Group">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium muted mb-2">Group Username *</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-3 text-gray-400">@</span>
+                            <input type="text" name="username" required 
+                                   class="w-full pl-8 px-4 py-3 field rounded-lg focus:outline-none field focus:border-transparent"
+                                   placeholder="e.g., cs-study-group">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium muted mb-2">Tavsif</label>
+                        <textarea name="description" rows="3" 
+                                  class="w-full px-4 py-3 field rounded-lg focus:outline-none field focus:border-transparent"
+                                  placeholder="Bu guruh haqida nima deya olasiz?"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium muted mb-2">Universitet</label>
+                        <select id="universitySelect" name="university"
+                                class="w-full px-4 py-3 field rounded-2xl focus:outline-none">
+                            <option value="">All Universities</option>
+                            <!-- options injected by /api/catalog/universities -->
+                        </select>
+                        <div id="uniHint" class="mt-2 text-xs text-white/60">Universitetlar admin katalogidan olinadi.</div>
+                    </div>
+                    
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="isPrivate" class="rounded border-gray-300 text-teal-200 focus:ring-purple-500">
+                            <span class="ml-2 text-sm muted2">Maxfiy guruh (Taklif asosida)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <button type="submit" 
+                                class="w-full btn-primary text-white py-3 rounded-2xl font-extrabold hover:opacity-95 transition">
+                            Guruh yaratish
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentGroupTab = 'my';
+
+        let allowedUniversities = [];
+        async function loadUniversityCatalog(){
+            try{
+                const res = await fetch('/api/catalog/universities');
+                const j = await res.json().catch(()=>null);
+                const list = (j && j.success && Array.isArray(j.universities)) ? j.universities : [];
+                allowedUniversities = list.map(u => (u && u.name ? String(u.name) : '')).filter(Boolean);
+                const sel = document.getElementById('universitySelect');
+                if(!sel) return;
+                // keep first option (All Universities)
+                sel.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
+                for(const name of allowedUniversities){
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    sel.appendChild(opt);
+                }
+                const hint = document.getElementById('uniHint');
+                if(hint) hint.textContent = allowedUniversities.length ? `Katalog: ${allowedUniversities.length} ta universitet` : 'Universitet katalogi bo‘sh.';
+            }catch(e){
+                console.warn('loadUniversityCatalog failed', e);
+                const hint = document.getElementById('uniHint');
+                if(hint) hint.textContent = 'Universitetlar yuklanmadi (server xatolik).';
+            }
+        }
+
+        
+        // Check authentication
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/me', {
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    console.warn('Auth check returned non-ok status:', response.status);
+                } else {
+                    const data = await response.json();
+                    if (!data.success) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Auth check error:', error);
+                if (error.name === 'TypeError' || error.message.includes('Failed to fetch')) {
+                    console.error('Network error during auth check');
+                } else {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                }
+            }
+        }
+        
+        // Load groups
+        async function loadGroups() {
+            try {
+                const token = localStorage.getItem('token');
+                const endpoint = currentGroupTab === 'my' ? '/api/groups/my' : 
+                                currentGroupTab === 'joined' ? '/api/groups/joined' : 
+                                '/api/groups/all';
+                
+                const response = await fetch(endpoint, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderGroups(data.groups);
+                    updateStats(data.stats);
+                }
+            } catch (error) {
+                console.error('Failed to load groups:', error);
+                showError('Failed to load groups');
+            }
+        }
+        
+        // Render groups
+        function renderGroups(groups) {
+            const container = document.getElementById('groupsContainer');
+            
+            if (!groups || groups.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 col-span-full">
+                        <i class="fas fa-users text-4xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-500">No groups found</h3>
+                        <p class="text-gray-400">${currentGroupTab === 'my' ? 'Create your first group!' : 
+                            currentGroupTab === 'joined' ? 'Join some groups to see them here!' : 
+                            'No public groups available'}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = groups.map(group => `
+                <div class="group-card glass rounded-2xl shadow overflow-hidden relative">
+                    <div class="p-6 sm:p-7">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center">
+                                <i class="fas fa-users text-white"></i>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                ${group.isPrivate ? 
+                                    '<span class="text-xs bg-gray-100 muted2 px-2 py-1 rounded">Private</span>' : 
+                                    '<span class="text-xs bg-green-100 text-emerald-200 px-2 py-1 rounded">Public</span>'
+                                }
+                                ${currentGroupTab === 'my' ? 
+                                    '<span class="text-xs bg-purple-100 text-teal-200 px-2 py-1 rounded">Admin</span>' : ''
+                                }
+                            </div>
+                        </div>
+                        
+                        <h3 class="font-bold text-gray-800 text-lg mb-2">${group.name}</h3>
+                        <p class="muted2 text-sm mb-3">@${group.username}</p>
+                        
+                        <p class="muted mb-4">${group.description || 'No description provided.'}</p>
+                        
+                        <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-university mr-1"></i>
+                                <span>${group.university || 'All Universities'}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-users mr-1"></i>
+                                <span>${group.memberCount || group.members?.length || 0} members</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-2">
+                            <button onclick="openGroup('${group._id}')" 
+                                    class="flex-1 btn-primary text-white py-2 rounded-2xl font-extrabold hover:opacity-95 transition">
+                                <i class="fas fa-door-open mr-2"></i> Open
+                            </button>
+                            
+                            ${currentGroupTab === 'my' ? `
+                                <button onclick="manageGroup('${group._id}')" 
+                                        class="px-4 py-2 field rounded-lg muted hover:bg-gray-50 transition">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            ` : `
+                                <button onclick="leaveGroup('${group._id}', event)" 
+                                        class="px-4 py-2 field rounded-lg muted hover:bg-gray-50 transition">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                    
+                    <!-- Members Preview -->
+                    <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium muted2">Members</span>
+                            <span class="text-xs text-gray-500">${group.members?.length || 0} members</span>
+                        </div>
+                        <div class="flex -space-x-2">
+                            ${(group.members || []).slice(0, 5).map(member => `
+                                <img src="${member.avatar}" 
+                                     class="w-8 h-8 rounded-full border-2 border-white" 
+                                     title="${member.nickname}">
+                            `).join('')}
+                            ${(group.members || []).length > 5 ? `
+                                <div class="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs">
+                                    +${(group.members || []).length - 5}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Update statistics
+        function updateStats(stats) {
+            if (stats) {
+                document.getElementById('totalGroups').textContent = stats.totalGroups || 0;
+                document.getElementById('myGroups').textContent = stats.myGroups || 0;
+                document.getElementById('joinedGroups').textContent = stats.joinedGroups || 0;
+                document.getElementById('totalMembers').textContent = stats.totalMembers || 0;
+            }
+        }
+        
+        // Show error
+        function showError(message) {
+            const container = document.getElementById('groupsContainer');
+            container.innerHTML = `
+                <div class="text-center py-12 col-span-full">
+                    <i class="fas fa-exclamation-triangle text-4xl text-red-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-red-500">Error Loading Groups</h3>
+                    <p class="text-red-400">${message}</p>
+                    <button onclick="loadGroups()" 
+                            class="mt-4 px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition">
+                        Try Again
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Switch group tab (HALLAYM 1v1)
+function switchGroupTab(tab){
+  currentGroupTab = tab;
+
+  document.querySelectorAll('.group-tab').forEach(btn=>{
+    const on = btn.dataset.tab === tab;
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.classList.toggle('text-teal-200', on);
+    btn.classList.toggle('border-b-2', on);
+    btn.classList.toggle('border-amber-300/80', on);
+    btn.classList.toggle('text-slate-200/75', !on);
+  });
+
+  loadGroups();
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.querySelectorAll('.group-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=> switchGroupTab(btn.dataset.tab));
+  });
+  // preload catalog for create modal
+  loadUniversityCatalog();
+});
+        
+        // Open group
+        function openGroup(groupId) {
+            window.location.href = `/group.html?id=${groupId}`;
+        }
+        
+        // Manage group
+        function manageGroup(groupId) {
+            alert(`Manage group ${groupId} - This would open group management interface`);
+        }
+        
+        // Leave group
+        async function leaveGroup(groupId, event) {
+            event.stopPropagation();
+            
+            if (!confirm('Are you sure you want to leave this group?')) {
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/groups/${groupId}/leave`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    loadGroups();
+                } else {
+                    alert(data.error || 'Failed to leave group');
+                }
+            } catch (error) {
+                console.error('Leave group error:', error);
+                alert('Failed to leave group');
+            }
+        }
+        
+        // Open create modal
+        function openCreateModal() {
+            document.getElementById('createModal').classList.remove('hidden');
+        }
+        
+        // Close create modal
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.add('hidden');
+        }
+        
+        // Create group form submission
+        document.getElementById('createGroupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            
+            // Enforce admin university catalog (no "Stanford" etc)
+            const chosenUni = String(data.university || '').trim();
+            if (chosenUni && Array.isArray(allowedUniversities) && allowedUniversities.length) {
+                const ok = allowedUniversities.includes(chosenUni);
+                if (!ok) {
+                    alert('Universitet ro‘yxatda yo‘q. Admin paneldagi katalogdan tanlang.');
+                    return;
+                }
+            }
+try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/groups', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // FIX: backend expects "Bearer <token>"
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Group created successfully!');
+                    closeCreateModal();
+                    loadGroups();
+                } else {
+                    alert(result.error || 'Failed to create group');
+                }
+            } catch (error) {
+                console.error('Create group error:', error);
+                alert('Failed to create group');
+            }
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            switchGroupTab('my');
+        });
+    </script>
+
+<script>
+(function(){
+  const key='theme';
+  const html=document.documentElement;
+  const btn=document.getElementById('themeToggle');
+  const icon=document.getElementById('themeIcon');
+  const label=document.getElementById('themeLabel');
+
+  function apply(mode){
+    if(mode==='dark'){ html.classList.add('dark'); }
+    else { html.classList.remove('dark'); }
+    localStorage.setItem(key, mode);
+    if(icon){ icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon'; }
+    if(label){ label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi'; }
+  }
+
+  const saved = localStorage.getItem(key);
+  if(saved){ apply(saved); }
+  else {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    apply(prefersDark ? 'dark' : 'light');
+  }
+
+  if(btn){
+    btn.addEventListener('click', ()=>{
+      const isDark = html.classList.contains('dark');
+      apply(isDark ? 'light' : 'dark');
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

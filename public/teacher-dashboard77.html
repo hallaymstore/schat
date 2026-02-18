@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HALLAYM edu — Teacher Dashboard — HALLAYM edu — HALLAYM edu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{
+      --bg: #f2fbfa;
+      --card: rgba(255,255,255,.68);
+      --card2: rgba(255,255,255,.52);
+      --text: rgba(2,6,23,1);
+      --muted: rgba(15,23,42,.74);
+      --muted2: rgba(15,23,42,.58);
+      --border: rgba(148,163,184,.26);
+
+      --teal: rgba(20,184,166,1);
+      --gold: rgba(245,158,11,1);
+      --gold2: rgba(250,204,21,1);
+      --sky: rgba(56,189,248,1);
+      --danger: rgba(239,68,68,1);
+      --ok: rgba(16,185,129,1);
+
+      --shadow: 0 18px 60px rgba(2,6,23,.12);
+      --ring: 0 0 0 4px rgba(20,184,166,.22);
+      --grid: rgba(2,132,199,.08);
+    }
+    .dark{
+      --bg: rgba(2,6,23,1);
+      --card: rgba(2,6,23,.62);
+      --card2: rgba(2,6,23,.48);
+      --text: rgba(226,232,240,.92);
+      --muted: rgba(226,232,240,.78);
+      --muted2: rgba(226,232,240,.56);
+      --border: rgba(148,163,184,.16);
+
+      --teal: rgba(20,184,166,1);
+      --gold: rgba(245,158,11,1);
+      --gold2: rgba(250,204,21,1);
+      --sky: rgba(56,189,248,1);
+      --danger: rgba(248,113,113,1);
+      --ok: rgba(52,211,153,1);
+
+      --shadow: 0 22px 80px rgba(0,0,0,.48);
+      --ring: 0 0 0 4px rgba(245,158,11,.18);
+      --grid: rgba(148,163,184,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); text-rendering:optimizeLegibility}
+    a{color:inherit}
+    .bg{
+      position:fixed; inset:0; z-index:-2;
+      background:
+        radial-gradient(1200px 700px at 12% 14%, rgba(20,184,166,.30), transparent 62%),
+        radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.18), transparent 60%),
+        radial-gradient(1000px 720px at 50% 92%, rgba(34,211,238,.14), transparent 62%),
+        linear-gradient(180deg, var(--bg), var(--bg));
+    }
+    .gridbg{
+      position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 72%);
+      opacity:.85;
+    }
+
+    header{
+      position:sticky; top:0; z-index:50;
+      padding:14px 16px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: color-mix(in oklab, var(--card) 78%, transparent);
+      border-bottom:1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    }
+    .nav{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    }
+    .brand{display:flex; align-items:center; gap:10px}
+    .logoWrap{
+      width:44px; height:44px; border-radius:16px;
+      display:flex; align-items:center; justify-content:center;
+      background:
+        radial-gradient(120% 120% at 20% 20%, rgba(20,184,166,.35), rgba(2,6,23,.0) 60%),
+        radial-gradient(140% 140% at 80% 80%, rgba(245,158,11,.22), rgba(2,6,23,.0) 60%),
+        color-mix(in oklab, var(--card) 85%, transparent);
+      border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .logoSvg{ width:38px; height:38px; display:block; }
+    .pills{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .pill{font-size:12px; padding:7px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 78%, transparent); background: color-mix(in oklab, var(--card2) 92%, transparent)}
+    .badge{font-weight:900; letter-spacing:.6px}
+    .badge.teacher{color:color-mix(in oklab, var(--gold) 88%, white)}
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      color:var(--text);
+      padding:10px 12px; border-radius:12px; text-decoration:none; cursor:pointer;
+      box-shadow: 0 1px 0 rgba(0,0,0,.03);
+      transition: transform .08s ease, filter .12s ease, background .12s ease;
+      user-select:none;
+      font-weight:650;
+    }
+    .btn:hover{filter:brightness(1.02)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{
+      background: linear-gradient(135deg, var(--teal), var(--gold2), var(--gold));
+      color:#fff; border-color: transparent;
+      box-shadow: 0 18px 46px rgba(2,6,23,.14);
+    }
+    .btn.danger{
+      background: linear-gradient(135deg, rgba(239,68,68,1), rgba(248,113,113,1));
+      color:#fff; border-color: transparent;
+    }
+    .btn.ghost{background:transparent}
+    .btn.small{padding:8px 10px; border-radius:11px; font-size:13px; font-weight:800}
+
+    .container{max-width:1200px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      border:1px solid color-mix(in oklab, var(--border) 78%, transparent);
+      border-radius:18px; padding:16px;
+      box-shadow: 0 10px 34px rgba(2,6,23,.08);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .col-12{grid-column:span 12}
+    .col-8{grid-column:span 8}
+    .col-4{grid-column:span 4}
+    @media (max-width:980px){ .col-8,.col-4{grid-column:span 12} }
+
+    .muted{color:var(--muted);font-size:13px;line-height:1.55}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .divider{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:12px 0}
+    .tiny{font-size:12px;color:var(--muted)}
+    footer{padding:18px 16px;color:var(--muted);text-align:center}
+
+    .err,.ok{
+      border-radius:14px; padding:12px 14px; margin:14px 0; display:none;
+      border:1px solid transparent;
+    }
+    .err{background: color-mix(in oklab, #ffedd5 65%, var(--card)); border-color:#fed7aa; color:#9a3412}
+    .ok{background: color-mix(in oklab, #dcfce7 50%, var(--card)); border-color:#86efac; color:#065f46}
+
+    .input, select, textarea{
+      width:100%; padding:11px 12px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:12px; font-size:14px;
+      background: color-mix(in oklab, var(--card) 95%, transparent);
+      color:var(--text);
+      outline:none;
+    }
+    .input:focus, select:focus, textarea:focus{box-shadow: var(--ring); border-color:transparent}
+
+    .kpi{display:flex; gap:10px; flex-wrap:wrap}
+    .kpi .box{flex:1; min-width:190px; padding:12px; border-radius:16px; border:1px dashed color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent)}
+    .kpi .val{font-size:20px; font-weight:950; margin-top:4px}
+    .kpi .label{font-size:12px;color:var(--muted)}
+
+    .list{display:grid; grid-template-columns:repeat(12,1fr); gap:12px; margin-top:12px}
+    .item{
+      grid-column:span 6;
+      border-radius:16px; overflow:hidden;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      padding:12px;
+      transition: transform .08s ease, filter .12s ease;
+    }
+    .item:hover{filter:brightness(1.01)}
+    .item:active{transform:translateY(1px)}
+    @media (max-width:980px){ .item{grid-column:span 12} }
+
+    .title{font-weight:950}
+    .meta{margin-top:6px; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+    .tag{display:inline-flex; gap:8px; align-items:center; font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent); font-weight:900}
+    .tag.free{border-color:#86efac; background: color-mix(in oklab, #dcfce7 35%, var(--card))}
+    .tag.paid{border-color:#93c5fd; background: color-mix(in oklab, #dbeafe 35%, var(--card))}
+    .tag.pub{border-color:#86efac; background: color-mix(in oklab, #dcfce7 35%, var(--card))}
+    .tag.draft{border-color:#fecaca; background: color-mix(in oklab, #fee2e2 35%, var(--card))}
+    .u-anim{
+      background: linear-gradient(90deg, var(--teal), var(--gold2), var(--gold));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      background-size: 220% 220%;
+      animation: shimmer 7s ease infinite;
+      font-weight: 950;
+      letter-spacing:.6px;
+    }
+    @keyframes shimmer{ 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+    code{background:color-mix(in oklab, var(--card) 92%, transparent);border:1px solid color-mix(in oklab, var(--border) 85%, transparent);border-radius:10px;padding:2px 7px}
+
+    /* modal */
+    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:70}
+    .modal{max-width:980px;width:100%;border-radius:18px;overflow:hidden;background:var(--card);
+      border:1px solid color-mix(in oklab, var(--border) 70%, transparent); box-shadow: var(--shadow);}
+    .modal header{
+      background: linear-gradient(135deg, rgba(37,99,235,.95), rgba(124,58,237,.92));
+      color:#fff; padding:14px 16px; border-bottom:none;
+    }
+    .modal .body{padding:16px}
+  
+    /* mobile drawer */
+    .mobileOnly{display:none}
+    .desktopOnly{display:flex}
+    .iconBtn{
+      width:42px;height:42px;border-radius:14px;
+      display:inline-flex;align-items:center;justify-content:center;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 88%, transparent);
+      backdrop-filter: blur(10px);
+      transition: transform .08s ease, filter .12s ease;
+      box-shadow: 0 6px 18px rgba(2,6,23,.08);
+      user-select:none;
+      font-weight:900;
+    }
+    .iconBtn:hover{filter:brightness(1.03)}
+    .iconBtn:active{transform:translateY(1px)}
+    .drawerBack{
+      position:fixed; inset:0; z-index:80;
+      background: rgba(2,6,23,.55);
+      display:none;
+    }
+    .drawer{
+      position:absolute; right:0; top:0; height:100%; width:min(340px, 92vw);
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      border-left:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      backdrop-filter: blur(14px);
+      padding:14px;
+      transform: translateX(12px);
+      opacity:0;
+      transition: transform .18s ease, opacity .18s ease;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .drawerBack.open{display:block}
+    .drawerBack.open .drawer{transform:translateX(0); opacity:1}
+    .drawerHead{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .drawerTitle{font-weight:950}
+    .drawerLinks{display:flex; flex-direction:column; gap:10px; margin-top:4px}
+    .drawerLinks .btn{width:100%; justify-content:flex-start}
+    .drawerHr{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:6px 0}
+    @media (max-width:720px){
+      .desktopOnly{display:none}
+      .mobileOnly{display:inline-flex}
+      header{padding:12px 12px}
+      .nav{flex-wrap:nowrap}
+    }
+    @media (prefers-reduced-motion: reduce){
+      *{scroll-behavior:auto !important}
+      .drawer,.btn,.courseItem,.item{transition:none !important}
+    }
+  </style>
+  <script>
+    (function(){
+      const key="theme";
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark ? "dark" : "light");
+      if(mode==="dark") document.documentElement.classList.add("dark");
+    })();
+  </script>
+</head>
+<body>
+  <div class="bg"></div><div class="gridbg"></div>
+
+  <header>
+    <div class="nav">
+      <div class="brand">
+        <div class="logoWrap" aria-hidden="true">
+  <svg viewBox="0 0 120 120" class="logoSvg">
+    <defs>
+      <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="rgba(245,158,11,1)"/>
+        <stop offset="0.5" stop-color="rgba(250,204,21,1)"/>
+        <stop offset="1" stop-color="rgba(245,158,11,1)"/>
+      </linearGradient>
+      <linearGradient id="gIce" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="rgba(125,211,252,1)"/>
+        <stop offset="0.45" stop-color="rgba(34,211,238,1)"/>
+        <stop offset="1" stop-color="rgba(167,243,208,1)"/>
+      </linearGradient>
+      <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="2.2" result="b"/>
+        <feMerge>
+          <feMergeNode in="b"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <circle cx="60" cy="60" r="54" fill="none" stroke="url(#gGold)" stroke-width="6" opacity="0.92"/>
+    <ellipse cx="60" cy="64" rx="42" ry="24" fill="rgba(2,6,23,.88)" stroke="url(#gGold)" stroke-width="4"/>
+    <path d="M20 44 L26 44 L28 38 L30 44 L36 44 L31 47 L33 53 L28 49 L23 53 L25 47 Z"
+          fill="rgba(250,204,21,.95)" filter="url(#softGlow)"/>
+    <text x="60" y="70" text-anchor="middle" font-size="22" font-family="Inter, ui-sans-serif" font-weight="800"
+          fill="url(#gIce)" style="letter-spacing:.5px">hallaym</text>
+  </svg>
+</div>
+        <div class="pills">
+          <span class="pill badge teacher"><a href="/index.html" class="flex items-center gap-3"><span class="u-anim">TEACHER</span></a></span>
+          <span id="mePill" class="pill" style="display:none"></span>
+        </div>
+      </div>
+
+      <div class="row desktopOnly">
+        <button class="btn ghost small" id="themeBtn">🌓 Tema</button>
+        <a class="btn ghost small" href="/courses.html">Kurslar</a>
+        <a class="btn ghost small" href="/tests.html">Testlar</a>
+        <a class="btn ghost small" href="/certificate.html">Sertifikat</a>
+        <a class="btn ghost small" href="/profile.html">Profile</a>
+        <button class="btn danger small" id="logoutBtn">Chiqish</button>
+      </div>
+      <button class="iconBtn mobileOnly" id="menuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false">☰</button>
+    </div>
+  </header>
+
+  <div id="drawerBack" class="drawerBack" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="drawer" role="document">
+      <div class="drawerHead"><div><div class="drawerTitle">Menyu</div><div class="tiny" id="drawerMe">—</div></div><button class="iconBtn" id="drawerClose" aria-label="Close">✕</button></div><div class="drawerHr"></div>
+      <div class="drawerLinks">
+        <button class="btn ghost" id="themeBtn2">🌓 Tema</button>
+        <a class="btn ghost" href="/courses.html">📚 Kurslar</a>
+        <a class="btn ghost" href="/tests.html">🧪 Testlar</a>
+        <a class="btn ghost" href="/certificate.html">🏅 Sertifikat</a>
+        <a class="btn ghost" href="/profile.html">💌 Xabarlar</a>
+        <a class="btn ghost" href="/profile.html">📣 Kanallar</a>
+        <a class="btn ghost" href="/groups.html">👥 Guruhlar</a>
+        <a class="btn ghost" href="/profile.html">👤 Profil</a>
+        <button class="btn danger" id="logoutBtn2">🚪 Chiqish</button>
+      </div>
+      <div class="drawerHr"></div>
+      <div class="tiny">Tip: menyu tashqarisini bosib yopasiz.</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="errBox" class="err"></div>
+    <div id="okBox" class="ok"></div>
+
+    <div class="grid">
+      <div class="card col-8">
+        <h2 style="margin:0 0 6px 0;font-size:20px">HALLAYM edu — Teacher Dashboard</h2>
+        <div class="muted">
+          Kurslar, testlar, live sessionlar — barchasi bitta panelda. API bo‘lmasa demo localStorage ishlaydi.
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="kpi">
+          <div class="box">
+            <div class="label">Teacher</div>
+            <div class="val" id="nameVal">—</div>
+          </div>
+          <div class="box">
+            <div class="label">Kurslar</div>
+            <div class="val" id="courseCount">0</div>
+          </div>
+          <div class="box">
+            <div class="label">Testlar</div>
+            <div class="val" id="testCount">0</div>
+          </div>
+          <div class="box">
+            <div class="label">Live session</div>
+            <div class="val" id="liveCount">0</div>
+          </div>
+          <div class="box">
+            <div class="label">Teacher balans (demo)</div>
+            <div class="val" id="balVal">0</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <button class="btn primary" id="newCourseBtn">+ Yangi kurs</button>
+          <button class="btn primary" id="newLiveBtn">+ Live yaratish</button>
+          <a class="btn" href="/tests.html">Testlarni boshqarish</a>
+          <button class="btn" id="refreshBtn">Yangilash</button>
+        </div>
+
+        <div class="tiny" style="margin-top:10px">
+          Kurs CRUD: <code>GET/POST/PUT/DELETE /api/courses</code>, Live CRUD: <code>/api/lives</code> (fallback: localStorage).
+        </div>
+      </div>
+
+      <div class="card col-4">
+        <h3 style="margin:0 0 10px 0">Quick Settings</h3>
+        <div class="muted">
+          Bu yerda teacher o‘z kurslarini “published/draft”, bepul/pullik, guruh cheklovi bilan tez boshqaradi.
+        </div>
+        <div class="divider"></div>
+
+        <div class="row">
+          <input id="q" class="input" placeholder="Qidirish: kurs nomi, fakultet..." />
+        </div>
+        <div class="row" style="margin-top:10px">
+          <select id="statusFilter" class="input">
+            <option value="">Status (barchasi)</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <select id="sortSel" class="input">
+            <option value="new">Saralash: yangi</option>
+            <option value="old">Saralash: eski</option>
+            <option value="title">Saralash: nom</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card col-12">
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div>
+            <h3 style="margin:0">Mening kurslarim</h3>
+            <div class="muted" id="modeTxt">—</div>
+          </div>
+        </div>
+        <div id="courseList" class="list">
+          <div class="muted" style="grid-column:span 12">Yuklanmoqda...</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div>
+            <h3 style="margin:0">Live sessionlar</h3>
+            <div class="muted">Nom, preview image, tavsif, narx (bepul/pullik) + start/stop.</div>
+          </div>
+        </div>
+        <div id="liveList" class="list">
+          <div class="muted" style="grid-column:span 12">Yuklanmoqda...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COURSE MODAL -->
+  <div id="courseModalBack" class="modalBackdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <header>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div style="font-weight:950" id="courseModalTitle">Yangi kurs</div>
+          <button class="btn ghost small" id="courseCloseBtn" style="border-color:rgba(255,255,255,.35);color:#fff">Yopish</button>
+        </div>
+        <div class="tiny" style="color:rgba(255,255,255,.9);margin-top:6px">Kurs metadata + content + pricing + group restriction</div>
+      </header>
+      <div class="body">
+        <div class="grid">
+          <div class="col-8">
+            <div class="tiny">Kurs nomi</div>
+            <input id="c_title" class="input" placeholder="Masalan: Energetika muhandisligi — 1-modul" />
+          </div>
+          <div class="col-4">
+            <div class="tiny">Status</div>
+            <select id="c_status" class="input">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+
+          <div class="col-6">
+            <div class="tiny">Fakultet</div>
+            <select id="c_faculty" class="input">
+              <option value="Neft-gaz va geologiya fakulteti">Neft-gaz va geologiya fakulteti</option>
+              <option value="Iqtisodiyot va boshqaruv fakulteti">Iqtisodiyot va boshqaruv fakulteti</option>
+              <option value="Energetika muhandisligi fakulteti">Energetika muhandisligi fakulteti</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <div class="tiny">Guruhlar (vergul bilan)</div>
+            <input id="c_groups" class="input" placeholder="Masalan: MMT-520-25, EEM-101-26" />
+          </div>
+
+          <div class="col-12">
+            <div class="tiny">Tavsif</div>
+            <textarea id="c_desc" class="input" rows="3" placeholder="Kurs haqida qisqacha..."></textarea>
+          </div>
+
+          <div class="col-4">
+            <div class="tiny">Narx turi</div>
+            <select id="c_type" class="input">
+              <option value="free">Bepul</option>
+              <option value="paid">Pullik</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <div class="tiny">Narx (coin)</div>
+            <input id="c_price" class="input" type="number" min="0" value="0" />
+          </div>
+          <div class="col-4">
+            <div class="tiny">Preview image URL</div>
+            <input id="c_preview" class="input" placeholder="https://..." />
+          </div>
+
+          <div class="col-12">
+            <div class="tiny" style="font-weight:900">Darslar (oddiy format)</div>
+            <div class="tiny">Har qator: <code>type|title|url_or_text</code> (type: video/pdf/text). Video uchun YouTube URL.</div>
+            <textarea id="c_lessons" class="input" rows="6" placeholder="video|Kirish|https://youtube.com/watch?v=...\npdf|1-mavzu pdf|/uploads/a.pdf\ntext|Topshiriq|1) ..."></textarea>
+          </div>
+
+          <div class="col-12 row" style="justify-content:space-between; margin-top:10px">
+            <div class="row">
+              <button class="btn primary" id="c_saveBtn">Saqlash</button>
+              <button class="btn" id="c_saveDraftBtn">Draft saqlash</button>
+            </div>
+            <button class="btn danger" id="c_deleteBtn" style="display:none">O‘chirish</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE MODAL -->
+  <div id="liveModalBack" class="modalBackdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <header>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div style="font-weight:950" id="liveModalTitle">Yangi live</div>
+          <button class="btn ghost small" id="liveCloseBtn" style="border-color:rgba(255,255,255,.35);color:#fff">Yopish</button>
+        </div>
+        <div class="tiny" style="color:rgba(255,255,255,.9);margin-top:6px">Live: name + preview + description + pricing + start/stop</div>
+      </header>
+      <div class="body">
+        <div class="grid">
+          <div class="col-8">
+            <div class="tiny">Live nomi</div>
+            <input id="l_name" class="input" placeholder="Masalan: Real vaqt dars — 1" />
+          </div>
+          <div class="col-4">
+            <div class="tiny">Status</div>
+            <select id="l_status" class="input">
+              <option value="offline">Offline</option>
+              <option value="live">Live</option>
+              <option value="ended">Ended</option>
+            </select>
+          </div>
+
+          <div class="col-12">
+            <div class="tiny">Tavsif</div>
+            <textarea id="l_desc" class="input" rows="3" placeholder="Nima bo'ladi bu live'da..."></textarea>
+          </div>
+
+          <div class="col-4">
+            <div class="tiny">Narx turi</div>
+            <select id="l_type" class="input">
+              <option value="free">Bepul</option>
+              <option value="paid">Pullik</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <div class="tiny">Narx (coin)</div>
+            <input id="l_price" class="input" type="number" min="0" value="0" />
+          </div>
+          <div class="col-4">
+            <div class="tiny">Preview image URL</div>
+            <input id="l_preview" class="input" placeholder="https://..." />
+          </div>
+
+          <div class="col-12">
+            <div class="tiny">Join URL (ixtiyoriy)</div>
+            <input id="l_joinUrl" class="input" placeholder="Masalan: /live-room.html?id=..." />
+          </div>
+
+          <div class="col-12 row" style="justify-content:space-between; margin-top:10px">
+            <div class="row">
+              <button class="btn primary" id="l_saveBtn">Saqlash</button>
+            </div>
+            <button class="btn danger" id="l_deleteBtn" style="display:none">O‘chirish</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer><span class="u-anim">HALLAYM</span> edu — Teacher Dashboard</footer>
+
+<script>
+  const API_BASE = "";
+  const $ = (id)=> document.getElementById(id);
+  function getToken(){ return localStorage.getItem("token") || ""; }
+
+  function setErr(msg){ $("errBox").textContent=msg; $("errBox").style.display="block"; $("okBox").style.display="none"; }
+  function setOk(msg){ $("okBox").textContent=msg; $("okBox").style.display="block"; $("errBox").style.display="none"; }
+  function clearMsg(){ $("errBox").style.display="none"; $("okBox").style.display="none"; }
+
+  async function apiFetch(url, opts={}){
+    const token = getToken();
+    const headers = Object.assign({}, opts.headers || {});
+    if(token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + url, Object.assign({}, opts, { headers }));
+    let data = null;
+    const ct = res.headers.get("content-type") || "";
+    if(ct.includes("application/json")){
+      try{ data = await res.json(); }catch{ data = null; }
+    }else{
+      try{ data = await res.text(); }catch{ data = null; }
+    }
+    if(!res.ok){
+      const msg = (data && data.error) ? data.error : ("So'rov xatosi: " + res.status);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  // theme/logout
+  $("themeBtn").addEventListener("click", ()=>{
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+  });
+  $("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token"); location.href="/login.html";
+  });
+
+  async function apiMe(){
+    const token = getToken();
+    if(!token){ location.href="/login.html"; return null; }
+    try{ return await apiFetch("/api/me"); }
+    catch(e){ localStorage.removeItem("token"); location.href="/login.html"; return null; }
+  }
+
+  // demo storage
+  function demoCourseKey(){ return "demoCourses_v2"; }
+  function readDemoCourses(){ try{ return JSON.parse(localStorage.getItem(demoCourseKey()) || "[]"); }catch{ return []; } }
+  function writeDemoCourses(list){ localStorage.setItem(demoCourseKey(), JSON.stringify(list)); }
+
+  function demoLiveKey(){ return "demoLives_v1"; }
+  function readDemoLives(){ try{ return JSON.parse(localStorage.getItem(demoLiveKey()) || "[]"); }catch{ return []; } }
+  function writeDemoLives(list){ localStorage.setItem(demoLiveKey(), JSON.stringify(list)); }
+
+  function seedDemoLives(){
+    const cur = readDemoLives();
+    if(cur.length) return;
+    const seed = [
+      { id:"live1", name:"Live demo — 1", description:"Real vaqt darsi", status:"offline", type:"free", price:0, preview:"", joinUrl:"/live-room.html?id=live1", createdAt: Date.now()-86400000 }
+    ];
+    writeDemoLives(seed);
+  }
+
+  function normalizeCourse(raw){
+    return {
+      id: raw._id || raw.id || raw.courseId,
+      title: raw.title || raw.name || "Nomsiz kurs",
+      description: raw.description || raw.desc || "",
+      status: raw.status || (raw.published ? "published" : "draft"),
+      type: (raw.type || (raw.isPaid ? "paid" : "free") || "free"),
+      price: Number(raw.price ?? raw.cost ?? 0),
+      faculty: raw.faculty || raw.facultyName || "",
+      groups: Array.isArray(raw.groups) ? raw.groups : (raw.allowedGroups || []),
+      preview: raw.previewImage || raw.preview || raw.image || "",
+      lessons: Array.isArray(raw.lessons) ? raw.lessons : (raw.modules || raw.content || []),
+      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
+      createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : (raw.createdAtMs || Date.now())
+    };
+  }
+
+  function normalizeLive(raw){
+    return {
+      id: raw._id || raw.id || raw.liveId,
+      name: raw.name || raw.title || "Live",
+      description: raw.description || raw.desc || "",
+      status: raw.status || "offline", // offline/live/ended
+      type: raw.type || "free",
+      price: Number(raw.price || 0),
+      preview: raw.previewImage || raw.preview || "",
+      joinUrl: raw.joinUrl || raw.url || "",
+      createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : (raw.createdAtMs || Date.now())
+    };
+  }
+
+  let state = { me:null, courses:[], lives:[], mode:"", isDemo:false };
+
+  async function fetchCourses(){
+    try{
+      const data = await apiFetch("/api/courses?mine=1");
+      const list = Array.isArray(data) ? data : (data.courses || []);
+      state.isDemo = false; state.mode = "API";
+      return list.map(normalizeCourse);
+    }catch(e){
+      state.isDemo = true; state.mode = "DEMO(localStorage)";
+      return readDemoCourses().map(normalizeCourse);
+    }
+  }
+
+  async function fetchLives(){
+    try{
+      const data = await apiFetch("/api/lives?mine=1");
+      const list = Array.isArray(data) ? data : (data.lives || []);
+      return list.map(normalizeLive);
+    }catch(e){
+      seedDemoLives();
+      return readDemoLives().map(normalizeLive);
+    }
+  }
+
+  function matchCourseFilters(c){
+    const q = ($("q").value || "").trim().toLowerCase();
+    const st = $("statusFilter").value || "";
+    if(st && String(c.status) !== st) return false;
+    if(q){
+      const hay = `${c.title} ${c.description} ${c.faculty}`.toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }
+
+  function applySort(list){
+    const key = $("sortSel").value;
+    const out = [...list];
+    if(key==="new") out.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+    else if(key==="old") out.sort((a,b)=> (a.createdAt||0)-(b.createdAt||0));
+    else if(key==="title") out.sort((a,b)=> String(a.title||"").localeCompare(String(b.title||""), "uz"));
+    return out;
+  }
+
+  function courseLessonsToText(lessons){
+    // best effort: accept objects with type/title/youtubeUrl/pdfUrl/text
+    if(!Array.isArray(lessons)) return "";
+    return lessons.map(l=>{
+      const type = (l.type || l.kind || "").toLowerCase() || (l.youtubeUrl ? "video" : l.pdfUrl ? "pdf" : "text");
+      const title = l.title || l.name || "Dars";
+      const body = l.youtubeUrl || l.pdfUrl || l.text || "";
+      return `${type}|${title}|${body}`;
+    }).join("\n");
+  }
+
+  function parseLessons(text){
+    const lines = String(text||"").split("\n").map(x=>x.trim()).filter(Boolean);
+    const out = [];
+    for(const line of lines){
+      const parts = line.split("|");
+      const type = (parts[0] || "text").trim().toLowerCase();
+      const title = (parts[1] || "Dars").trim();
+      const body = parts.slice(2).join("|").trim();
+      if(type==="video") out.push({ type:"video", title, youtubeUrl: body });
+      else if(type==="pdf") out.push({ type:"pdf", title, pdfUrl: body });
+      else out.push({ type:"text", title, text: body });
+    }
+    return out;
+  }
+
+  function render(){
+    $("modeTxt").textContent = "Rejim: " + state.mode;
+
+    // KPI
+    $("courseCount").textContent = String(state.courses.length);
+    $("liveCount").textContent = String(state.lives.length);
+
+    // tests count (from demo tests store)
+    let tcount = 0;
+    try{
+      const dt = JSON.parse(localStorage.getItem("demoTests_v2") || "[]");
+      tcount = Array.isArray(dt) ? dt.length : 0;
+    }catch{ tcount = 0; }
+    $("testCount").textContent = String(tcount);
+
+    // teacher balance (demo)
+    const bal = Number(state.me?.teacherBalance ?? state.me?.balance ?? 0);
+    $("balVal").textContent = String(bal);
+
+    // courses list
+    const wrap = $("courseList");
+    wrap.innerHTML = "";
+    const list = applySort(state.courses.filter(matchCourseFilters));
+    if(!list.length){
+      wrap.innerHTML = `<div class="muted" style="grid-column:span 12">Kurs topilmadi.</div>`;
+    }else{
+      list.forEach(c=>{
+        const el = document.createElement("div");
+        el.className = "item";
+        el.innerHTML = `
+          <div class="title">${c.title}</div>
+          <div class="muted" style="margin-top:6px">${(c.description||"").slice(0,140)}${(c.description||"").length>140?"…":""}</div>
+          <div class="meta">
+            <span class="tag">${c.faculty || "—"}</span>
+            <span class="tag ${c.type==="paid" ? "paid" : "free"}">${c.type==="paid" ? ("Pullik • "+Number(c.price||0)+" coin") : "Bepul"}</span>
+            <span class="tag ${c.status==="published" ? "pub" : "draft"}">${c.status}</span>
+            <span class="tag">Guruh: ${(c.groups||[]).length ? c.groups.join(", ") : "ochiq"}</span>
+            <span class="tag">Dars: ${(c.lessons||[]).length}</span>
+          </div>
+          <div class="row" style="margin-top:10px; justify-content:flex-end">
+            <a class="btn small" href="/course.html?id=${encodeURIComponent(c.id)}">Kurs sahifasi</a>
+            <a class="btn small" href="/joinedcourse.html?id=${encodeURIComponent(c.id)}">Lessons</a>
+            <a class="btn small" href="/tests.html?courseId=${encodeURIComponent(c.id)}">Testlar</a>
+            <button class="btn small primary" data-act="edit" data-id="${c.id}">Tahrirlash</button>
+          </div>
+        `;
+        el.querySelector('[data-act="edit"]').addEventListener("click", ()=> openCourseEdit(c.id));
+        wrap.appendChild(el);
+      });
+    }
+
+    // lives list
+    const lwrap = $("liveList");
+    lwrap.innerHTML = "";
+    if(!state.lives.length){
+      lwrap.innerHTML = `<div class="muted" style="grid-column:span 12">Live session yo‘q.</div>`;
+    }else{
+      state.lives.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0)).forEach(l=>{
+        const el = document.createElement("div");
+        el.className = "item";
+        const statusTag = l.status==="live" ? `<span class="tag pub">LIVE</span>` : l.status==="ended" ? `<span class="tag draft">ENDED</span>` : `<span class="tag">OFFLINE</span>`;
+        el.innerHTML = `
+          <div class="title">${l.name}</div>
+          <div class="muted" style="margin-top:6px">${(l.description||"").slice(0,140)}${(l.description||"").length>140?"…":""}</div>
+          <div class="meta">
+            ${statusTag}
+            <span class="tag ${l.type==="paid" ? "paid" : "free"}">${l.type==="paid" ? ("Pullik • "+Number(l.price||0)+" coin") : "Bepul"}</span>
+            <span class="tag">Join: ${l.joinUrl || "-"}</span>
+          </div>
+          <div class="row" style="margin-top:10px; justify-content:flex-end">
+            <button class="btn small" data-act="start" data-id="${l.id}">Start</button>
+            <button class="btn small" data-act="stop" data-id="${l.id}">Stop</button>
+            <button class="btn small primary" data-act="edit" data-id="${l.id}">Tahrirlash</button>
+          </div>
+        `;
+        el.querySelector('[data-act="edit"]').addEventListener("click", ()=> openLiveEdit(l.id));
+        el.querySelector('[data-act="start"]').addEventListener("click", ()=> setLiveStatus(l.id, "live"));
+        el.querySelector('[data-act="stop"]').addEventListener("click", ()=> setLiveStatus(l.id, "offline"));
+        lwrap.appendChild(el);
+      });
+    }
+  }
+
+  async function reload(){
+    clearMsg();
+    state.courses = await fetchCourses();
+    state.lives = await fetchLives();
+    render();
+  }
+
+  // ---------- COURSE MODAL ----------
+  function openCourseModal(){ $("courseModalBack").style.display="flex"; document.body.style.overflow="hidden"; }
+  function closeCourseModal(){
+    $("courseModalBack").style.display="none"; document.body.style.overflow="";
+    delete $("c_saveBtn").dataset.editing;
+    $("c_deleteBtn").style.display="none";
+  }
+  $("courseCloseBtn").addEventListener("click", closeCourseModal);
+  $("courseModalBack").addEventListener("click", (e)=>{ if(e.target===$("courseModalBack")) closeCourseModal(); });
+  document.addEventListener("keydown", (e)=>{ if(e.key==="Escape"){ closeCourseModal(); closeLiveModal(); } });
+
+  function fillCourseModal(c){
+    $("c_title").value = c?.title || "";
+    $("c_desc").value = c?.description || "";
+    $("c_status").value = c?.status || "draft";
+    $("c_faculty").value = c?.faculty || "Energetika muhandisligi fakulteti";
+    $("c_groups").value = (c?.groups || []).join(", ");
+    $("c_type").value = c?.type || "free";
+    $("c_price").value = Number(c?.price || 0);
+    $("c_preview").value = c?.preview || "";
+    $("c_lessons").value = c ? courseLessonsToText(c.lessons) : "";
+  }
+
+  function collectCoursePayload(publish){
+    const title = ($("c_title").value || "").trim();
+    const description = ($("c_desc").value || "").trim();
+    const status = publish ? "published" : ($("c_status").value || "draft");
+    const faculty = ($("c_faculty").value || "").trim();
+    const groups = ($("c_groups").value || "").split(",").map(x=>x.trim()).filter(Boolean);
+    const type = ($("c_type").value || "free");
+    const price = Number($("c_price").value || 0);
+    const previewImage = ($("c_preview").value || "").trim();
+    const lessonsText = ($("c_lessons").value || "");
+    const lessons = parseLessons(lessonsText);
+
+    if(!title) throw new Error("Kurs nomi majburiy.");
+    if(type==="paid" && (!Number.isFinite(price) || price<1)) throw new Error("Pullik kurs uchun narx (coin) 1+ bo‘lsin.");
+
+    return { title, description, status, faculty, groups, type, price, previewImage, lessons };
+  }
+
+  async function saveCourse(publish){
+    clearMsg();
+    const editingId = $("c_saveBtn").dataset.editing || "";
+    let payload;
+    try{ payload = collectCoursePayload(publish); }catch(e){ return setErr(e.message || "Kurs xato."); }
+
+    // API attempt
+    try{
+      let url="/api/courses", method="POST";
+      if(editingId){ url="/api/courses/" + encodeURIComponent(editingId); method="PUT"; }
+      await apiFetch(url, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
+      setOk("Kurs saqlandi (API).");
+      closeCourseModal();
+      await reload();
+      return;
+    }catch(e){
+      // demo
+      const list = readDemoCourses();
+      if(editingId){
+        const idx = list.findIndex(x=>String(x.id)===String(editingId));
+        if(idx>=0){
+          list[idx] = { ...list[idx], ...payload, id: list[idx].id, teacherName: state.me?.fullname || state.me?.name || state.me?.username || "Teacher", createdAtMs: list[idx].createdAtMs || Date.now() };
+        }
+      }else{
+        const id = "c_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+        list.push({ id, ...payload, teacherName: state.me?.fullname || state.me?.name || state.me?.username || "Teacher", createdAtMs: Date.now() });
+      }
+      writeDemoCourses(list);
+      setOk("Kurs saqlandi (demo/localStorage).");
+      closeCourseModal();
+      await reload();
+    }
+  }
+
+  async function deleteCourse(id){
+    if(!id) return;
+    clearMsg();
+    // API attempt
+    try{
+      await apiFetch("/api/courses/" + encodeURIComponent(id), { method:"DELETE" });
+      setOk("Kurs o‘chirildi (API).");
+      closeCourseModal();
+      await reload();
+      return;
+    }catch(e){
+      const list = readDemoCourses().filter(x=>String(x.id)!==String(id));
+      writeDemoCourses(list);
+      setOk("Kurs o‘chirildi (demo/localStorage).");
+      closeCourseModal();
+      await reload();
+    }
+  }
+
+  function openCourseEdit(id){
+    const c = state.courses.find(x=>String(x.id)===String(id));
+    if(!c) return setErr("Kurs topilmadi.");
+    $("courseModalTitle").textContent = "Kursni tahrirlash";
+    fillCourseModal(c);
+    $("c_saveBtn").dataset.editing = id;
+    $("c_deleteBtn").style.display="inline-flex";
+    $("c_deleteBtn").onclick = ()=> deleteCourse(id);
+    openCourseModal();
+  }
+
+  $("newCourseBtn").addEventListener("click", ()=>{
+    $("courseModalTitle").textContent = "Yangi kurs";
+    fillCourseModal(null);
+    delete $("c_saveBtn").dataset.editing;
+    $("c_deleteBtn").style.display="none";
+    openCourseModal();
+  });
+  $("c_saveBtn").addEventListener("click", ()=> saveCourse(true));
+  $("c_saveDraftBtn").addEventListener("click", ()=> saveCourse(false));
+
+  // ---------- LIVE MODAL ----------
+  function openLiveModal(){ $("liveModalBack").style.display="flex"; document.body.style.overflow="hidden"; }
+  function closeLiveModal(){
+    $("liveModalBack").style.display="none"; document.body.style.overflow="";
+    delete $("l_saveBtn").dataset.editing;
+    $("l_deleteBtn").style.display="none";
+  }
+  $("liveCloseBtn").addEventListener("click", closeLiveModal);
+  $("liveModalBack").addEventListener("click", (e)=>{ if(e.target===$("liveModalBack")) closeLiveModal(); });
+
+  function fillLiveModal(l){
+    $("l_name").value = l?.name || "";
+    $("l_desc").value = l?.description || "";
+    $("l_status").value = l?.status || "offline";
+    $("l_type").value = l?.type || "free";
+    $("l_price").value = Number(l?.price || 0);
+    $("l_preview").value = l?.preview || "";
+    $("l_joinUrl").value = l?.joinUrl || "";
+  }
+
+  function collectLivePayload(){
+    const name = ($("l_name").value || "").trim();
+    const description = ($("l_desc").value || "").trim();
+    const status = ($("l_status").value || "offline");
+    const type = ($("l_type").value || "free");
+    const price = Number($("l_price").value || 0);
+    const previewImage = ($("l_preview").value || "").trim();
+    const joinUrl = ($("l_joinUrl").value || "").trim();
+    if(!name) throw new Error("Live nomi majburiy.");
+    if(type==="paid" && (!Number.isFinite(price) || price<1)) throw new Error("Pullik live uchun narx 1+ bo‘lsin.");
+    return { name, description, status, type, price, previewImage, joinUrl };
+  }
+
+  async function saveLive(){
+    clearMsg();
+    const editingId = $("l_saveBtn").dataset.editing || "";
+    let payload;
+    try{ payload = collectLivePayload(); }catch(e){ return setErr(e.message || "Live xato."); }
+
+    // API attempt
+    try{
+      let url="/api/lives", method="POST";
+      if(editingId){ url="/api/lives/" + encodeURIComponent(editingId); method="PUT"; }
+      await apiFetch(url, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
+      setOk("Live saqlandi (API).");
+      closeLiveModal();
+      await reload();
+      return;
+    }catch(e){
+      // demo
+      seedDemoLives();
+      const list = readDemoLives();
+      if(editingId){
+        const idx = list.findIndex(x=>String(x.id)===String(editingId));
+        if(idx>=0){
+          list[idx] = { ...list[idx], ...payload, id: list[idx].id, createdAtMs: list[idx].createdAtMs || Date.now() };
+        }
+      }else{
+        const id = "live_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+        list.push({ id, ...payload, createdAtMs: Date.now() });
+      }
+      writeDemoLives(list);
+      setOk("Live saqlandi (demo/localStorage).");
+      closeLiveModal();
+      await reload();
+    }
+  }
+
+  async function deleteLive(id){
+    if(!id) return;
+    clearMsg();
+    // API attempt
+    try{
+      await apiFetch("/api/lives/" + encodeURIComponent(id), { method:"DELETE" });
+      setOk("Live o‘chirildi (API).");
+      closeLiveModal();
+      await reload();
+      return;
+    }catch(e){
+      seedDemoLives();
+      const list = readDemoLives().filter(x=>String(x.id)!==String(id));
+      writeDemoLives(list);
+      setOk("Live o‘chirildi (demo/localStorage).");
+      closeLiveModal();
+      await reload();
+    }
+  }
+
+  async function setLiveStatus(id, status){
+    if(!id) return;
+    clearMsg();
+    // API attempt
+    try{
+      await apiFetch("/api/lives/" + encodeURIComponent(id) + "/status", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ status })
+      });
+      setOk("Live status yangilandi (API).");
+      await reload();
+      return;
+    }catch(e){
+      // demo: update in store
+      seedDemoLives();
+      const list = readDemoLives();
+      const idx = list.findIndex(x=>String(x.id)===String(id));
+      if(idx>=0){
+        list[idx].status = status;
+        writeDemoLives(list);
+        setOk("Live status yangilandi (demo/localStorage).");
+        await reload();
+      }else{
+        setErr("Live topilmadi.");
+      }
+    }
+  }
+
+  function openLiveEdit(id){
+    const l = state.lives.find(x=>String(x.id)===String(id));
+    if(!l) return setErr("Live topilmadi.");
+    $("liveModalTitle").textContent = "Live tahrirlash";
+    fillLiveModal(l);
+    $("l_saveBtn").dataset.editing = id;
+    $("l_deleteBtn").style.display="inline-flex";
+    $("l_deleteBtn").onclick = ()=> deleteLive(id);
+    openLiveModal();
+  }
+
+  $("newLiveBtn").addEventListener("click", ()=>{
+    $("liveModalTitle").textContent = "Yangi live";
+    fillLiveModal(null);
+    delete $("l_saveBtn").dataset.editing;
+    $("l_deleteBtn").style.display="none";
+    openLiveModal();
+  });
+  $("l_saveBtn").addEventListener("click", saveLive);
+
+  // events
+  $("refreshBtn").addEventListener("click", reload);
+  ["q","statusFilter","sortSel"].forEach(id=>{
+    $(id).addEventListener("input", ()=> render());
+    $(id).addEventListener("change", ()=> render());
+  });
+
+  async function init(){
+    const me = await apiMe();
+    if(!me) return;
+    state.me = me;
+
+    const role = String(me.role || "").toLowerCase();
+    if(role !== "teacher"){
+      location.href = role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html";
+      return;
+    }
+    const name = me.fullname || me.name || me.username || "—";
+    $("mePill").textContent = name;
+    $("mePill").style.display="inline-flex";
+    $("nameVal").textContent = name;
+
+    await reload();
+  }
+
+  init().catch(e=> setErr(e?.message || "Xatolik yuz berdi."));
+</script>
+
+<script>
+(function(){
+  const menuBtn = document.getElementById('menuBtn');
+  const back = document.getElementById('drawerBack');
+  const closeBtn = document.getElementById('drawerCloseBtn');
+  function openDrawer(){
+    if(!back) return;
+    back.classList.add('open');
+    if(menuBtn) menuBtn.setAttribute('aria-expanded','true');
+    document.body.style.overflow='hidden';
+  }
+  function closeDrawer(){
+    if(!back) return;
+    back.classList.remove('open');
+    if(menuBtn) menuBtn.setAttribute('aria-expanded','false');
+    document.body.style.overflow='';
+  }
+  window.openTeacherMenu = openDrawer;
+  window.closeTeacherMenu = closeDrawer;
+  if(menuBtn) menuBtn.addEventListener('click', ()=> back && back.classList.contains('open') ? closeDrawer() : openDrawer());
+  if(closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  if(back) back.addEventListener('click', (e)=>{ if(e.target === back) closeDrawer(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
+})();
+</script>
+
+</body>
+</html>

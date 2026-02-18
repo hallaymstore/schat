@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Services - UniConnect</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <nav class="gradient-bg text-white h-16 flex items-center px-4">
+    <div class="container mx-auto flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <a href="/messages.html" class="flex items-center space-x-2">
+          <i class="fas fa-graduation-cap text-2xl"></i>
+          <span class="text-xl font-bold">UniConnect</span>
+        </a>
+        <span class="hidden md:block text-sm opacity-80">Student Services Marketplace</span>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <a href="/search.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Search">
+          <i class="fas fa-search"></i>
+        </a>
+        <a href="/signals.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Campus Signals">
+          <i class="fas fa-bell"></i>
+        </a>
+        <a href="/groups.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Groups">
+          <i class="fas fa-users"></i>
+        </a>
+        <a href="/channels.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Channels">
+          <i class="fas fa-bullhorn"></i>
+        </a>
+        <div class="relative">
+          <img id="userAvatar" src="https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png"
+               class="w-8 h-8 rounded-full cursor-pointer" onclick="toggleUserMenu()">
+          <div id="userMenu" class="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg hidden z-50">
+            <a href="/profile.html" class="block px-4 py-3 text-gray-700 hover:bg-gray-100">
+              <i class="fas fa-user mr-2"></i> Profile
+            </a>
+            <a href="/services_orders.html" class="block px-4 py-3 text-gray-700 hover:bg-gray-100">
+              <i class="fas fa-clipboard-list mr-2"></i> My Orders
+            </a>
+            <a href="#" onclick="logout()" class="block px-4 py-3 text-red-600 hover:bg-gray-100">
+              <i class="fas fa-sign-out-alt mr-2"></i> Chiqish
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mx-auto px-4 py-6">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">Services Marketplace</h1>
+        <p class="text-gray-600">Talabalar o'z qo'l mehnatini, xizmatini va bilimini sotishi yoki sotib olishi mumkin.</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="openCreateModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg">
+          <i class="fas fa-plus mr-2"></i> Add Service
+        </button>
+        <a href="/services_orders.html" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 px-4 py-2 rounded-lg">
+          <i class="fas fa-clipboard-list mr-2"></i> My Orders
+        </a>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div class="md:col-span-2">
+          <label class="text-sm text-gray-600">Search</label>
+          <input id="q" type="text" placeholder="e.g. IELTS, Logo, Math tutoring..."
+                 class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Category</label>
+          <select id="category" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2">
+            <option value="">All</option>
+            <option value="Tutoring">Tutoring</option>
+            <option value="Design">Design</option>
+            <option value="Translation">Translation</option>
+            <option value="Programming">Programming</option>
+            <option value="Writing">Writing</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Sort</label>
+          <select id="sort" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2">
+            <option value="new">Newest</option>
+            <option value="price_asc">Price ↑</option>
+            <option value="price_desc">Price ↓</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button onclick="loadServices(1)" class="w-full bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg">
+            <i class="fas fa-filter mr-2"></i> Apply
+          </button>
+        </div>
+      </div>
+      <div class="mt-3 flex items-center justify-between text-sm text-gray-500">
+        <div id="contextLine">Loading...</div>
+        <div class="flex items-center gap-2">
+          <button id="prevBtn" onclick="prevPage()" class="px-3 py-1 border rounded-lg disabled:opacity-40" disabled>Prev</button>
+          <button id="nextBtn" onclick="nextPage()" class="px-3 py-1 border rounded-lg disabled:opacity-40" disabled>Next</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="grid" class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+    <div id="empty" class="hidden mt-10 text-center text-gray-600">
+      <i class="fas fa-store text-4xl mb-3 text-gray-400"></i>
+      <div class="font-semibold">No services found</div>
+      <div class="text-sm">Try changing filters or add the first service.</div>
+    </div>
+  </main>
+
+  <!-- Create Modal -->
+  <div id="createModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl w-full max-w-2xl shadow-xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b">
+        <h2 class="font-bold text-gray-800">Create Service</h2>
+        <button onclick="closeCreateModal()" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label class="text-sm text-gray-600">Title</label>
+          <input id="c_title" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="e.g. CV review (24h), Logo design, Math-2 tutoring"/>
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Category</label>
+          <select id="c_category" class="mt-1 w-full border rounded-lg px-3 py-2">
+            <option value="Tutoring">Tutoring</option>
+            <option value="Design">Design</option>
+            <option value="Translation">Translation</option>
+            <option value="Programming">Programming</option>
+            <option value="Writing">Writing</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Price Type</label>
+          <select id="c_priceType" class="mt-1 w-full border rounded-lg px-3 py-2">
+            <option value="fixed">Fixed</option>
+            <option value="hour">Hourly</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Price</label>
+          <input id="c_price" type="number" min="0" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="e.g. 50000"/>
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">SLA (hours)</label>
+          <input id="c_sla" type="number" min="1" value="24" class="mt-1 w-full border rounded-lg px-3 py-2"/>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-sm text-gray-600">Tags (comma separated)</label>
+          <input id="c_tags" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="ielts, math, logo, cv, python"/>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-sm text-gray-600">Description</label>
+          <textarea id="c_desc" rows="5" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="What you will deliver, requirements from buyer, timeline..."></textarea>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-sm text-gray-600">Media (optional)</label>
+          <input id="c_media" type="file" class="mt-1 w-full"/>
+          <div class="text-xs text-gray-500 mt-1">Image/video/pdf allowed. Uses your existing Cloudinary pipeline.</div>
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t flex justify-end gap-2">
+        <button onclick="closeCreateModal()" class="px-4 py-2 rounded-lg border">Cancel</button>
+        <button onclick="createService()" class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white">
+          <i class="fas fa-check mr-2"></i>Create
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    let me = null;
+    let page = 1;
+    let pages = 1;
+
+    function toggleUserMenu(){
+      document.getElementById('userMenu').classList.toggle('hidden');
+    }
+    window.addEventListener('click', (e) => {
+      const menu = document.getElementById('userMenu');
+      const avatar = document.getElementById('userAvatar');
+      if (!menu || !avatar) return;
+      if (!menu.contains(e.target) && !avatar.contains(e.target)) menu.classList.add('hidden');
+    });
+
+    function logout(){
+      localStorage.removeItem('token');
+      window.location.href = '/login.html';
+    }
+
+    async function api(path, opts={}){
+      const headers = opts.headers || {};
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return fetch(path, { ...opts, headers });
+    }
+
+    async function loadMe(){
+      if (!token) return (window.location.href='/login.html');
+      const r = await api('/api/me');
+      const j = await r.json();
+      if (!j.success) return (window.location.href='/login.html');
+      me = j.user;
+      document.getElementById('userAvatar').src = me.avatar || document.getElementById('userAvatar').src;
+    }
+
+    function card(service){
+      const priceLabel = service.priceType === 'hour' ? (service.price + ' / hour') : (service.price + ' fixed');
+      const img = service.mediaUrl ? `
+        <img src="${service.mediaUrl}" class="w-full h-40 object-cover rounded-lg mb-3" />
+      ` : `
+        <div class="w-full h-40 bg-gray-100 rounded-lg mb-3 flex items-center justify-center text-gray-400">
+          <i class="fas fa-image text-3xl"></i>
+        </div>
+      `;
+      const tags = (service.tags || []).slice(0,4).map(t => `<span class="text-xs bg-gray-100 px-2 py-1 rounded-full">${t}</span>`).join('');
+      return `
+        <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition">
+          ${img}
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="font-semibold text-gray-800 line-clamp-2">${escapeHtml(service.title)}</div>
+              <div class="text-sm text-gray-500 mt-1">${escapeHtml(service.category)} • <span class="font-medium">${escapeHtml(priceLabel)}</span></div>
+            </div>
+            <a href="/service.html?id=${service._id}" class="text-purple-700 hover:text-purple-900">
+              <i class="fas fa-arrow-right"></i>
+            </a>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2">${tags}</div>
+        </div>
+      `;
+    }
+
+    function escapeHtml(str){
+      return String(str||'').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    async function loadServices(p){
+      page = p;
+      const q = document.getElementById('q').value.trim();
+      const category = document.getElementById('category').value;
+      const sort = document.getElementById('sort').value;
+
+      const params = new URLSearchParams();
+      params.set('university', me?.university || '');
+      if (q) params.set('q', q);
+      if (category) params.set('category', category);
+      if (sort) params.set('sort', sort);
+      params.set('page', String(page));
+      params.set('limit', '12');
+
+      const r = await fetch('/api/services?' + params.toString());
+      const j = await r.json();
+      if (!j.success) {
+        document.getElementById('contextLine').textContent = 'Failed to load services';
+        return;
+      }
+      pages = j.pages || 1;
+      document.getElementById('contextLine').textContent = `University: ${me?.university || '-'} • Total: ${j.total} • Page ${j.page}/${j.pages}`;
+      document.getElementById('prevBtn').disabled = page <= 1;
+      document.getElementById('nextBtn').disabled = page >= pages;
+
+      const grid = document.getElementById('grid');
+      grid.innerHTML = (j.services || []).map(card).join('');
+      document.getElementById('empty').classList.toggle('hidden', (j.services||[]).length>0);
+    }
+
+    function prevPage(){ if (page>1) loadServices(page-1); }
+    function nextPage(){ if (page<pages) loadServices(page+1); }
+
+    function openCreateModal(){
+      document.getElementById('createModal').classList.remove('hidden');
+      document.getElementById('createModal').classList.add('flex');
+    }
+    function closeCreateModal(){
+      document.getElementById('createModal').classList.add('hidden');
+      document.getElementById('createModal').classList.remove('flex');
+    }
+
+    async function createService(){
+      const title = document.getElementById('c_title').value.trim();
+      const category = document.getElementById('c_category').value;
+      const priceType = document.getElementById('c_priceType').value;
+      const price = document.getElementById('c_price').value;
+      const slaHours = document.getElementById('c_sla').value;
+      const tags = document.getElementById('c_tags').value;
+      const description = document.getElementById('c_desc').value.trim();
+      const media = document.getElementById('c_media').files[0];
+
+      if (!title || !description || !price) return alert('Title, Description, Price required');
+
+      const fd = new FormData();
+      fd.append('title', title);
+      fd.append('category', category);
+      fd.append('priceType', priceType);
+      fd.append('price', price);
+      fd.append('slaHours', slaHours);
+      fd.append('tags', tags);
+      fd.append('description', description);
+      if (media) fd.append('media', media);
+
+      const r = await api('/api/services', { method: 'POST', body: fd });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed to create');
+
+      closeCreateModal();
+      // reset
+      document.getElementById('c_title').value='';
+      document.getElementById('c_desc').value='';
+      document.getElementById('c_price').value='';
+      document.getElementById('c_tags').value='';
+      document.getElementById('c_media').value='';
+
+      loadServices(1);
+    }
+
+    (async function init(){
+      await loadMe();
+      await loadServices(1);
+    })();
+  </script>
+</body>
+</html>

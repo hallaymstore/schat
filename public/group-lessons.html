@@ -285,6 +285,81 @@ document.getElementById('attClose').addEventListener('click', ()=>{
   modal.classList.remove('flex');
 });
 
+
+function toDownloadUrl(url){
+  try{
+    if(!url) return url;
+
+    // Local recordings: use server download proxy (adds Content-Disposition).
+    if(url.startsWith('/uploads/lessons/')){
+      return '/api/group-lessons/download?url=' + encodeURIComponent(url);
+    }
+
+    // Cloudinary: build attachment MP4 URL
+    if(url.includes('res.cloudinary.com') && url.includes('/video/upload/')){
+      const marker = '/video/upload/';
+      const i = url.indexOf(marker);
+      const prefix = url.slice(0, i + marker.length);
+      let rest = url.slice(i + marker.length);
+
+      const parts = rest.split('/');
+      const vIndex = parts.findIndex(p => /^v\d+$/.test(p));
+      if(vIndex > 0) parts.splice(0, vIndex);
+      rest = parts.join('/');
+
+      rest = rest.replace(/\.[a-zA-Z0-9]+($|\?)/, '.mp4$1');
+
+      const transform = 'fl_attachment,q_auto,f_mp4/';
+      return prefix + transform + rest;
+    }
+
+    return url;
+  }catch(_){ return url; }
+}
+
+function toPlayableUrl(url){
+  try{
+    if(!url) return url;
+
+    // Local recordings served by our server: keep as-is (supports Range).
+    if(url.startsWith('/uploads/lessons/')) return url;
+
+    // Cloudinary: prefer MP4 derived URL (more compatible than WebM).
+    if(url.includes('res.cloudinary.com') && url.includes('/video/upload/')){
+      const marker = '/video/upload/';
+      const i = url.indexOf(marker);
+      const prefix = url.slice(0, i + marker.length);
+      let rest = url.slice(i + marker.length); // may include transforms and/or version segment
+
+      // Strip existing transforms if any (keep from first /v123... segment)
+      const parts = rest.split('/');
+      const vIndex = parts.findIndex(p => /^v\d+$/.test(p));
+      if(vIndex > 0) parts.splice(0, vIndex);
+      rest = parts.join('/');
+
+      // Convert filename extension to .mp4
+      rest = rest.replace(/\.[a-zA-Z0-9]+($|\?)/, '.mp4$1');
+
+      // Use safe transforms only (vc_auto can 400 on some accounts/files)
+      const transform = 'q_auto,f_mp4/';
+      return prefix + transform + rest;
+    }
+    return url;
+  }catch(_){ return url; }
+}
+
+
+async function downloadRecording(url, fallbackName){
+  if(!url) return;
+  const dl = toDownloadUrl(url);
+  const a = document.createElement('a');
+  a.href = dl;
+  a.download = fallbackName || '';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 async function load(){
   resolveBackLink();
 
@@ -315,8 +390,18 @@ async function load(){
     const div = document.createElement('div');
     div.className = 'lessonCard p-4 sm:p-5';
 
+    const safeName = ((l.title||'lesson')+'').replace(/[^a-z0-9_-]+/gi,'_').slice(0,40);
+
     const rec = l.recordingUrl
-      ? `<a class="btn btn-primary" href="${l.recordingUrl}" target="_blank" rel="noreferrer">▶ Ko‘rish / Yuklab olish</a>`
+      ? `
+        <div class="w-full max-w-[520px]">
+          <video class="w-full rounded-2xl border border-white/10 bg-black/30" controls preload="metadata" src="${toPlayableUrl(l.recordingUrl)}"></video>
+          <div class="mt-2 flex gap-2 flex-wrap">
+            <a class="btn btn-primary" href="${l.recordingUrl}" target="_blank" rel="noreferrer">▶ Ochish</a>
+            <button class="btn" onclick="downloadRecording('${l.recordingUrl}', '${safeName}')">⬇ Yuklab olish</button>
+          </div>
+          <div class="text-xs text-white/60 mt-1">Agar video o‘ynamasa: “Ochish” ni bosib alohida tabda ko‘ring.</div>
+        </div>`
       : `<span class="chip">Yozuv yo‘q</span>`;
 
     const title = (l.title && String(l.title).trim()) ? String(l.title).trim() : 'Live dars';

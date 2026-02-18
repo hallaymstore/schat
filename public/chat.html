@@ -716,6 +716,123 @@
   });
 })();
 </script>
+
+<style id="hallaymThemeV1">
+  :root{
+    --h-teal: #0ea5a4;
+    --h-teal2:#0b8f8e;
+    --h-gold:#d4af37;
+    --h-gold2:#f2d46b;
+    --h-bg0:#030712;
+    --h-bg1:#071325;
+    --h-glass: rgba(255,255,255,.08);
+    --h-glass2: rgba(255,255,255,.05);
+    --h-brd: rgba(255,255,255,.14);
+    --h-txt: rgba(255,255,255,.92);
+    --h-muted: rgba(255,255,255,.70);
+  }
+
+  /* Background */
+  html,body{
+    background:
+      radial-gradient(1000px 520px at 14% 10%, rgba(14,165,164,.26), transparent 60%),
+      radial-gradient(900px 520px at 86% 18%, rgba(212,175,55,.18), transparent 60%),
+      radial-gradient(1100px 720px at 50% 92%, rgba(59,130,246,.10), transparent 60%),
+      linear-gradient(180deg, var(--h-bg0), var(--h-bg1)) !important;
+    background-attachment: fixed !important;
+    color: var(--h-txt) !important;
+    overflow-x:hidden;
+  }
+
+  /* Primary gradient helper used by buttons/nav */
+  .gradient-bg, .bg-gradient-to-r{
+    background: linear-gradient(135deg, rgba(14,165,164,.48), rgba(212,175,55,.22)) !important;
+  }
+
+  /* Glass surfaces */
+  nav, .glass-surface, #messagesContainer, #userInfoSidebar, .chat-composer{
+    background: var(--h-glass) !important;
+    border-color: var(--h-brd) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+  }
+  #messagesContainer{
+    background: var(--h-glass2) !important;
+    border: 1px solid var(--h-brd) !important;
+  }
+
+  /* Kill hard white backgrounds */
+  .bg-white, .bg-gray-50, .bg-gray-100, .bg-gray-200 { background: transparent !important; }
+  .border-gray-200, .border-gray-300 { border-color: rgba(255,255,255,.12) !important; }
+  .text-gray-500, .text-gray-600, .text-gray-700, .text-gray-800 { color: var(--h-muted) !important; }
+
+  /* Buttons / icons */
+  button, a, i { -webkit-tap-highlight-color: transparent; }
+  .call-btn.toggle-audio, .call-btn.toggle-video{ background: rgba(255,255,255,.16) !important; }
+  .call-btn.active{ background: rgba(14,165,164,.72) !important; }
+  .call-btn.inactive, .call-btn.end-call{ background: rgba(239,68,68,.90) !important; }
+
+  /* Message bubbles */
+  .message-bubble.sent{
+    background: linear-gradient(135deg, rgba(14,165,164,.55), rgba(212,175,55,.20)) !important;
+    border: 1px solid rgba(255,255,255,.14) !important;
+  }
+  .message-bubble.received{
+    background: rgba(255,255,255,.10) !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    color: var(--h-txt) !important;
+  }
+
+  /* Inputs */
+  input, textarea, select{
+    background: rgba(255,255,255,.08) !important;
+    border: 1px solid rgba(255,255,255,.16) !important;
+    color: var(--h-txt) !important;
+  }
+  textarea::placeholder, input::placeholder{ color: rgba(255,255,255,.55) !important; }
+
+  /* Compact scrollbars */
+  .messages-container::-webkit-scrollbar{ width:6px; }
+  .messages-container::-webkit-scrollbar-track{ background: transparent; }
+  .messages-container::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.22); border-radius: 99px; }
+  .messages-container::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,.30); }
+
+  /* Sticky composer (send never disappears) */
+  .chat-composer{
+    position: sticky;
+    bottom: 0;
+    z-index: 40;
+    border-top: 1px solid rgba(255,255,255,.12) !important;
+  }
+
+  /* Make attachment row horizontally scrollable on tiny screens */
+  .attach-row{ overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+  .attach-row::-webkit-scrollbar{ height:0; }
+
+  /* Mobile ultra-compact */
+  @media (max-width: 640px){
+    nav.h-16{ height: 56px !important; }
+    nav .container{ padding-left:10px !important; padding-right:10px !important; }
+    #chatUserAvatar{ width:34px !important; height:34px !important; }
+    #chatUserName{ font-size: 13px !important; line-height: 1.1 !important; }
+    #chatUserUniversity{ font-size: 11px !important; }
+    #videoCallBtn, #voiceCallBtn{ padding: 8px !important; }
+    #messagesContainer{ padding: 10px !important; border-radius: 16px !important; }
+    .message-bubble{ max-width: 90% !important; padding: 9px 12px !important; border-radius: 16px !important; }
+    .message-time{ font-size: 10px !important; }
+    .chat-composer{ padding: 10px !important; }
+    .attach-row button{ padding: 9px !important; }
+    #messageInput{ font-size: 13px !important; padding: 10px 12px !important; border-radius: 14px !important; }
+    #sendButton{ padding: 11px !important; border-radius: 14px !important; }
+    .call-controls{ gap: 12px !important; bottom: 18px !important; }
+    .call-btn{ width: 52px !important; height: 52px !important; }
+  }
+
+  /* Prevent any accidental overflow */
+  .container{ max-width: 100% !important; }
+  img,video,canvas,svg{ max-width:100%; height:auto; }
+</style>
+
 </head>
 <body class="bg-gray-50 min-h-screen">
 <!-- Mobile Drawer -->
@@ -815,7 +932,7 @@
             </div>
             
             <!-- Message Input Area -->
-            <div class="border-t border-gray-200 p-4 bg-white shadow-md">
+            <div class="border-t border-gray-200 p-3 bg-white shadow-md chat-composer">
                 <!-- Recording Indicator -->
                 <div id="recordingIndicator" class="recording-indicator hidden">
                     <i class="fas fa-microphone animate-pulse"></i>
@@ -827,7 +944,7 @@
                 
                 <div class="flex items-end space-x-3">
                     <!-- Attachment Buttons -->
-                    <div class="flex space-x-1">
+                    <div class="flex space-x-1 attach-row">
                         <button onclick="attachFile()" class="p-3 text-gray-600 hover:bg-gray-100 rounded-full transition" title="Attach File">
                             <i class="fas fa-paperclip"></i>
                         </button>

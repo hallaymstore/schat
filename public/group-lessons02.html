@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Guruh dars yozuvlari • HALLAYM edu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,.08);
+      --glass-brd: rgba(255,255,255,.18);
+      --shadow: rgba(0,0,0,.40);
+      --ring1: rgba(0,255,208,.65);
+      --ring2: rgba(212,175,55,.85);
+      --muted: rgba(255,255,255,.72);
+      --muted2: rgba(255,255,255,.56);
+    }
+    html,body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    body{
+      min-height:100vh;
+      color:#e5e7eb;
+      background:
+        radial-gradient(900px 520px at 18% 18%, rgba(0,255,208,.22), transparent 55%),
+        radial-gradient(800px 520px at 84% 22%, rgba(212,175,55,.15), transparent 55%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(0,120,255,.12), transparent 60%),
+        linear-gradient(180deg, #071119, #081721 55%, #061019);
+      background-attachment: fixed;
+      overflow-x:hidden;
+    }
+    /* subtle grid */
+    body:before{
+      content:"";
+      position:fixed; inset:0; pointer-events:none; z-index:-1;
+      background-image: linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(closest-side at 50% 20%, black 0%, transparent 72%);
+      opacity:.55;
+    }
+
+    .glass{
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      box-shadow: 0 22px 70px var(--shadow);
+      border-radius: 22px;
+    }
+    .ring{ position:relative; }
+    .ring:before{
+      content:"";
+      position:absolute; inset:-2px; border-radius:24px; padding:2px;
+      background: linear-gradient(135deg, rgba(212,175,55,.95), rgba(255,255,255,.70), rgba(0,255,208,.70), rgba(212,175,55,.95));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      pointer-events:none;
+      opacity:.95;
+    }
+    .titleGlow{
+      font-weight:900;
+      letter-spacing:.2px;
+      background: linear-gradient(180deg, rgba(182,255,242,1), rgba(0,255,208,1));
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      text-shadow: 0 0 28px rgba(0,255,208,.18);
+    }
+    .btn{
+      display:inline-flex; align-items:center; gap:.6rem;
+      padding:.65rem .9rem;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      transition: transform .15s ease, filter .15s ease, background .15s ease;
+      color:#fff;
+      font-weight:800;
+      font-size: 13px;
+    }
+    .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.11); }
+    .btn:active{ transform: translateY(0px); filter: brightness(.95); }
+    .btn-primary{
+      background: linear-gradient(135deg, rgba(0,255,208,.22), rgba(212,175,55,.18));
+      border-color: rgba(255,255,255,.22);
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:.5rem;
+      padding:.35rem .6rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .muted{ color: var(--muted); }
+    .muted2{ color: var(--muted2); }
+    a{ color: rgba(182,255,242,.95); }
+    code{ background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 8px; border: 1px solid rgba(255,255,255,.10); }
+
+    /* list card */
+    .lessonCard{
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.14);
+      background:
+        radial-gradient(600px 240px at 20% 10%, rgba(0,255,208,.12), transparent 60%),
+        rgba(255,255,255,.06);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      box-shadow: 0 18px 55px rgba(0,0,0,.35);
+    }
+    .lessonCard:hover{ border-color: rgba(255,255,255,.22); transform: translateY(-1px); transition: transform .18s ease; }
+    .kpi{
+      display:flex; flex-wrap:wrap; gap:.45rem .55rem; margin-top:.45rem;
+      color: var(--muted2);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    /* modal */
+    #attModal{ backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+    @media (max-width: 640px){
+      .wrap{ padding: 12px !important; }
+      .btn{ padding:.6rem .85rem; }
+      .kpi{ font-size: 11px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap max-w-6xl mx-auto p-4">
+    <div class="glass ring p-5 sm:p-6">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl border border-white/15 bg-white/10 flex items-center justify-center">
+              <span style="font-size:20px">📚</span>
+            </div>
+            <div>
+              <h1 class="titleGlow text-2xl sm:text-3xl">Guruh dars yozuvlari</h1>
+              <div class="text-sm muted2 mt-1">Faqat shu guruh a’zolari ko‘ra oladi.</div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <span class="chip">Group ID: <span class="font-mono text-[11px]" id="gid">—</span></span>
+            <span class="chip">URL: <span class="font-mono text-[11px]" id="retInfo">—</span></span>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <a id="backLink" href="/groups.html" class="btn btn-primary">← Orqaga</a>
+          <button id="refreshBtn" class="btn">⟳ Yangilash</button>
+        </div>
+      </div>
+
+      <div class="mt-4 text-xs muted2">
+        Agar URL’da <code>?groupId=...</code> bo‘lmasa, bu sahifa ishlamaydi.
+        <span class="opacity-70"> (Tavsiya: group.html sahifasidan <code>return</code> param bilan oching.)</span>
+      </div>
+    </div>
+
+    <div id="msg" class="mt-4 text-sm muted"></div>
+    <div id="list" class="mt-4 grid gap-3"></div>
+
+    <!-- Attendance Modal -->
+    <div id="attModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-[9999]">
+      <div class="glass ring max-w-3xl w-full p-4 sm:p-5">
+        <div class="flex items-center justify-between gap-3">
+          <div class="font-extrabold text-lg">📋 Davomat</div>
+          <button id="attClose" class="btn">Yopish</button>
+        </div>
+        <div id="attBody" class="mt-3 text-sm text-white/80"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+function getToken(){ return localStorage.getItem('token') || ''; }
+function q(name){ return new URLSearchParams(location.search).get(name); }
+
+function resolveBackLink(){
+  const groupId = q('groupId');
+  const ret = q('return');
+  const back = document.getElementById('backLink');
+  const retInfo = document.getElementById('retInfo');
+
+  // Show short info
+  try{ retInfo.textContent = ret ? 'return=1' : 'return=0'; }catch(e){}
+
+  // Priority:
+  // 1) explicit return param (coming from group.html / group01)
+  // 2) fallback to group page by id
+  // 3) fallback groups list
+  if (ret) {
+    try{
+      const decoded = decodeURIComponent(ret);
+      back.href = decoded;
+      back.title = 'Oldingi sahifaga qaytish';
+      return;
+    }catch(e){}
+  }
+  if (groupId) {
+    back.href = `/group.html?id=${encodeURIComponent(groupId)}`;
+    back.title = 'Shu guruh chatiga qaytish';
+  } else {
+    back.href = '/groups.html';
+    back.title = 'Guruhlar ro‘yxati';
+  }
+}
+
+function fmt(d){
+  if(!d) return '—';
+  const x=new Date(d);
+  return x.toLocaleString([], {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function fmtDur(sec){
+  sec = Number(sec||0);
+  const m=Math.floor(sec/60), s=sec%60;
+  return `${m}m ${String(s).padStart(2,'0')}s`;
+}
+
+async function showAttendance(lessonId){
+  try{
+    const modal=document.getElementById('attModal');
+    const body=document.getElementById('attBody');
+    body.innerHTML='Yuklanmoqda...';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    const res = await fetch(`/api/group-lessons/${lessonId}/attendance`, {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    if(!res.ok){
+      body.innerHTML = `<div class="text-red-200">Davomatni ko‘rsatib bo‘lmadi (HTTP ${res.status}). Bu funksiya faqat o‘qituvchi (host) uchun.</div>`;
+      return;
+    }
+    const data = await res.json();
+    const joined = data.joined||[];
+    const absent = data.absent||[];
+
+    const jRows = joined.map(x => `<tr class="border-b border-white/10">
+      <td class="py-1 pr-2">${x.fullName||x.username||x.userId}</td>
+      <td class="py-1 pr-2 text-xs text-white/70">${fmt(x.joinedAt)}</td>
+      <td class="py-1 pr-2 text-xs text-white/70">${fmt(x.leftAt)}</td>
+      <td class="py-1 text-xs">${fmtDur(x.durationSec||0)}</td>
+    </tr>`).join('');
+
+    const aRows = absent.map(x => `<li class="py-0.5">${x.fullName||x.username||x.userId}</li>`).join('');
+
+    body.innerHTML = `
+      <div class="text-xs text-white/70 mb-2">Kirdi: <b>${joined.length}</b> • Kirmadi: <b>${absent.length}</b></div>
+      <div class="glass p-3" style="box-shadow:none;border-radius:18px">
+        <table class="w-full text-sm">
+          <thead class="text-white/70">
+            <tr>
+              <th class="text-left py-1 pr-2">Ism</th>
+              <th class="text-left py-1 pr-2">Kirdi</th>
+              <th class="text-left py-1 pr-2">Chiqdi</th>
+              <th class="text-left py-1">Davomiylik</th>
+            </tr>
+          </thead>
+          <tbody>${jRows || `<tr><td class="py-2 text-white/60" colspan="4">Hech kim kirmagan</td></tr>`}</tbody>
+        </table>
+      </div>
+      <div class="mt-3">
+        <div class="font-semibold mb-1">Kirmagan talabalar</div>
+        <ul class="text-sm text-white/80">${aRows || '<li class="text-white/60">Yo‘q</li>'}</ul>
+      </div>
+    `;
+  }catch(e){
+    console.error(e);
+    const body=document.getElementById('attBody');
+    body.innerHTML = `<div class="text-red-200">Xatolik: ${e?.message||e}</div>`;
+  }
+}
+document.getElementById('attClose').addEventListener('click', ()=>{
+  const modal=document.getElementById('attModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+});
+
+async function load(){
+  resolveBackLink();
+
+  const groupId = q('groupId');
+  document.getElementById('gid').textContent = groupId || '—';
+  if(!groupId){
+    document.getElementById('msg').innerHTML = 'URLga <code>?groupId=...</code> qo‘shing.';
+    return;
+  }
+
+  document.getElementById('msg').textContent = 'Yuklanmoqda...';
+  const res = await fetch(`/api/group-lessons?groupId=${encodeURIComponent(groupId)}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  });
+
+  if(!res.ok){
+    document.getElementById('msg').textContent = 'Xatolik: ' + res.status;
+    return;
+  }
+
+  const data = await res.json();
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const lessons = data.lessons || [];
+  document.getElementById('msg').textContent = lessons.length ? `${lessons.length} ta dars topildi` : 'Hali dars yozuvlari yo‘q';
+
+  lessons.forEach(l => {
+    const div = document.createElement('div');
+    div.className = 'lessonCard p-4 sm:p-5';
+
+    const rec = l.recordingUrl
+      ? `<a class="btn btn-primary" href="${l.recordingUrl}" target="_blank" rel="noreferrer">▶ Ko‘rish / Yuklab olish</a>`
+      : `<span class="chip">Yozuv yo‘q</span>`;
+
+    const title = (l.title && String(l.title).trim()) ? String(l.title).trim() : 'Live dars';
+
+    div.innerHTML = `
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div class="min-w-[260px]">
+          <div class="text-lg sm:text-xl font-extrabold">${title}</div>
+          <div class="text-xs muted mt-1">
+            Teacher: <span class="font-semibold">${l.host?.fullName || 'Teacher'}</span>
+            • Boshlanish: ${fmt(l.startedAt)} • Tugash: ${fmt(l.endedAt)}
+          </div>
+
+          <div class="kpi">
+            <span class="chip">Live: ${fmtDur(l.liveDurationSec || 0)}</span>
+            <span class="chip">Video: ${fmtDur(l.recordingDurationSec || 0)}</span>
+            <span class="chip">Rejim: ${l.mode || 'camera'}</span>
+            <span class="chip">Status: ${l.status || '—'}</span>
+          </div>
+        </div>
+
+        <div class="text-sm flex gap-2 items-center flex-wrap justify-end">
+          ${rec}
+          <button class="btn" onclick="showAttendance('${l._id}')">📋 Davomat</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+document.getElementById('refreshBtn').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>

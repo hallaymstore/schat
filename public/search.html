@@ -1,12 +1,13 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search - UniConnect</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Search - UniConnect</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<style>
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
@@ -18,9 +19,9 @@
             background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
         }
     </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
 <script>
   tailwind = { config: { darkMode:'class', theme:{ extend:{
     fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
@@ -190,134 +191,281 @@
     background-size: 200% 100%;
   }
 </style>
+
+<style id="mobileCompactGlassV1">
+:root{
+  --a1:#18D7C5; /* teal */
+  --a2:#F6B400; /* gold */
+  --a3:#1E3A8A; /* deep blue */
+  --glass-bg: rgba(255,255,255,.56);
+  --glass-brd: rgba(255,255,255,.26);
+  --muted: rgba(15,23,42,.78);
+  --muted2: rgba(15,23,42,.56);
+  --shadow: rgba(0,0,0,.22);
+  --ring: rgba(24,215,197,.35);
+  --grid: rgba(15,23,42,.06);
+}
+html.dark{
+  --glass-bg: rgba(2,6,23,.62);
+  --glass-brd: rgba(148,163,184,.16);
+  --muted: rgba(226,232,240,.82);
+  --muted2: rgba(226,232,240,.58);
+  --shadow: rgba(0,0,0,.55);
+  --ring: rgba(246,180,0,.28);
+  --grid: rgba(148,163,184,.08);
+}
+
+/* background */
+html,body{height:100%;}
+body{
+  background:
+    radial-gradient(1100px 680px at 14% 10%, rgba(24,215,197,.22), transparent 62%),
+    radial-gradient(900px 600px at 90% 18%, rgba(246,180,0,.18), transparent 62%),
+    radial-gradient(900px 700px at 50% 100%, rgba(30,58,138,.14), transparent 60%),
+    linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1)) !important;
+  background-attachment: fixed !important;
+  color: rgb(15 23 42);
+}
+html.dark body{
+  background:
+    radial-gradient(1100px 680px at 14% 10%, rgba(24,215,197,.16), transparent 62%),
+    radial-gradient(900px 600px at 90% 18%, rgba(246,180,0,.12), transparent 62%),
+    radial-gradient(900px 700px at 50% 100%, rgba(30,58,138,.10), transparent 60%),
+    linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1)) !important;
+  color: rgb(226 232 240);
+}
+body:before{
+  content:"";
+  position:fixed; inset:0; z-index:-1;
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+  opacity:.85;
+  pointer-events:none;
+}
+
+html, body{ overflow-x:hidden; }
+*{ max-width:100%; }
+img, video{ height:auto; }
+
+/* glass */
+nav.text-white, nav.text-white *{ color: var(--muted) !important; }
+html.dark nav.text-white, html.dark nav.text-white *{ color: rgb(226 232 240) !important; }
+
+.gradient-bg{
+  background: linear-gradient(135deg, var(--a1), var(--a2)) !important;
+}
+nav, header, .navbar, .topbar{
+  background: var(--glass-bg) !important;
+  border-bottom: 1px solid var(--glass-brd) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 55px var(--shadow) !important;
+}
+.bg-gray-50{ background: transparent !important; }
+.bg-white{
+  background: var(--glass-bg) !important;
+  border-color: var(--glass-brd) !important;
+}
+.border-gray-100, .border-gray-200{ border-color: var(--glass-brd) !important; }
+.text-gray-800{ color: var(--muted) !important; }
+.text-gray-700{ color: var(--muted) !important; }
+.text-gray-600, .text-gray-500{ color: var(--muted2) !important; }
+.shadow-sm, .shadow-lg, .shadow-xl{ box-shadow: 0 18px 55px var(--shadow) !important; }
+
+input, textarea, select{
+  background: rgba(255,255,255,.42) !important;
+  border: 1px solid rgba(255,255,255,.26) !important;
+  color: rgb(15 23 42) !important;
+  border-radius: 14px !important;
+  outline: none !important;
+}
+html.dark input, html.dark textarea, html.dark select{
+  background: rgba(2,6,23,.34) !important;
+  border: 1px solid rgba(148,163,184,.18) !important;
+  color: rgb(226 232 240) !important;
+}
+input:focus, textarea:focus, select:focus{
+  box-shadow: 0 0 0 5px var(--ring) !important;
+  border-color: transparent !important;
+}
+button, .btn, [role="button"], input[type="submit"], .button{
+  border-radius: 14px !important;
+  transition: transform .18s ease, filter .18s ease, box-shadow .18s ease !important;
+}
+button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
+.bg-purple-600, .hover\:bg-purple-700:hover, .text-purple-600, .hover\:text-purple-600:hover{
+  /* map old purple palette to logo vibe */
+}
+.bg-purple-600{ background: linear-gradient(135deg, var(--a1), var(--a2)) !important; }
+.hover\:bg-purple-700:hover{ filter: brightness(.96) !important; }
+.text-purple-600{ color: var(--a1) !important; }
+.hover\:text-purple-800:hover, .hover\:text-purple-800:hover{ color: var(--a2) !important; }
+.focus\:ring-purple-500:focus, .focus\:ring-purple-300:focus{ box-shadow: 0 0 0 5px var(--ring) !important; }
+
+/* scrollbars */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-thumb{ background: rgba(148,163,184,.28); border-radius: 999px; }
+::-webkit-scrollbar-track{ background: transparent; }
+
+/* compact mobile */
+@media (max-width: 480px){
+  body{ font-size:12px !important; }
+  .h-16{ height:52px !important; }
+  nav{ height:52px !important; }
+  .container{ padding-left:10px !important; padding-right:10px !important; }
+  .px-4{ padding-left:10px !important; padding-right:10px !important; }
+  .py-8{ padding-top:14px !important; padding-bottom:14px !important; }
+  .py-6{ padding-top:12px !important; padding-bottom:12px !important; }
+  .p-6{ padding:12px !important; }
+  .p-5{ padding:12px !important; }
+  .p-4{ padding:10px !important; }
+  .gap-4{ gap:10px !important; }
+  .gap-3{ gap:8px !important; }
+  .space-x-4 > :not([hidden]) ~ :not([hidden]){ margin-left:10px !important; }
+  .space-x-3 > :not([hidden]) ~ :not([hidden]){ margin-left:8px !important; }
+  .text-3xl{ font-size:18px !important; line-height:1.15 !important; }
+  .text-2xl{ font-size:16px !important; line-height:1.15 !important; }
+  .text-xl{ font-size:14px !important; }
+  .text-lg{ font-size:13px !important; }
+  .text-sm{ font-size:12px !important; }
+  .text-xs{ font-size:11px !important; }
+  .w-12{ width:40px !important; }
+  .h-12{ height:40px !important; }
+  .w-10{ width:34px !important; }
+  .h-10{ height:34px !important; }
+  .w-8{ width:28px !important; }
+  .h-8{ height:28px !important; }
+  button, .btn{ padding:8px 10px !important; font-size:12px !important; }
+  input, select, textarea{ padding:8px 10px !important; font-size:12px !important; border-radius: 12px !important; }
+  .rounded-xl{ border-radius: 16px !important; }
+  .rounded-lg{ border-radius: 14px !important; }
+  .overflow-x-auto{ -webkit-overflow-scrolling: touch; }
+  .whitespace-nowrap{ white-space: nowrap !important; }
+}
+
+/* modals: keep inside screen + scroll */
+.fixed.inset-0 > div, #createModal > div, #uploadModal > div{
+  max-height: 90vh;
+  overflow: auto;
+}
+</style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 <div class="px-4 md:px-8 pt-6">
-  <div id="pageHero" class="max-w-6xl mx-auto p-6 md:p-8 animate-pop">
-    <div class="flex items-start justify-between gap-4 flex-wrap">
-      <div>
-        <div class="text-xs font-extrabold tracking-widest uppercase" style="color: var(--muted2);">SChat • Qidiruv</div>
-        <div class="mt-2 text-2xl md:text-3xl font-black leading-tight">Qidiruv</div>
-        <div class="mt-2 text-sm" style="color: var(--muted);">
+<div class="max-w-6xl mx-auto p-6 md:p-8 animate-pop" id="pageHero">
+<div class="flex items-start justify-between gap-4 flex-wrap">
+<div>
+<div class="text-xs font-extrabold tracking-widest uppercase" style="color: var(--muted2);">SChat • Qidiruv</div>
+<div class="mt-2 text-2xl md:text-3xl font-black leading-tight">Qidiruv</div>
+<div class="mt-2 text-sm" style="color: var(--muted);">
           Kanallar, guruhlar, xizmatlar va postlarni tez toping. Kunduzgi/tungi rejim va shisha dizayn yoqilgan.
         </div>
-      </div>
-      <div class="glass rounded-2xl px-4 py-3 animate-floaty" style="border: 1px solid var(--glass-brd); background: var(--glass-bg);">
-        <div class="text-xs font-extrabold" style="color: var(--muted2);">Maslahat</div>
-        <div class="mt-1 flex items-center gap-2 text-sm font-extrabold" style="color: var(--muted);">
-          <i class="fa-solid fa-magnifying-glass"></i> Kalit so‘z yozing
-        </div>
-      </div>
-    </div>
-    <div class="shine mt-5 h-1 rounded-full animate-shimmer"></div>
-  </div>
 </div>
-    <!-- Navigation -->
-    <nav class="gradient-bg text-white h-16">
-        <div class="container mx-auto px-4 h-full flex items-center justify-between">
-            <a href="/messages.html" class="flex items-center space-x-2">
-                <i class="fas fa-arrow-left"></i>
-                <span class="font-semibold">Back to Messages</span>
-            </a>
-            <div class="flex items-center space-x-4">
-                <a href="/profile.html" class="p-2 hover:bg-white/10 rounded-full">
-                    <i class="fas fa-user"></i>
-                </a>
-                <a href="#" onclick="logout()" class="p-2 hover:bg-white/10 rounded-full">
-                    <i class="fas fa-sign-out-alt"></i>
-                </a>
-            </div>
+<div class="glass rounded-2xl px-4 py-3 animate-floaty" style="border: 1px solid var(--glass-brd); background: var(--glass-bg);">
+<div class="text-xs font-extrabold" style="color: var(--muted2);">Maslahat</div>
+<div class="mt-1 flex items-center gap-2 text-sm font-extrabold" style="color: var(--muted);">
+<i class="fa-solid fa-magnifying-glass"></i> Kalit so‘z yozing
         </div>
-    </nav>
-
-    <!-- Search Container -->
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <!-- Search Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Search Everything</h1>
-            <p class="text-gray-600">Find users, messages, groups, and channels</p>
-        </div>
-        
-        <!-- Search Input -->
-        <div class="relative mb-8">
-            <i class="fas fa-search absolute left-4 top-4 text-gray-400 text-lg"></i>
-            <input type="text" id="searchInput" 
-                   class="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                   placeholder="Type to search users, messages, groups, channels..."
-                   onkeyup="performSearch(this.value)">
-            <button onclick="clearSearch()" 
-                    class="absolute right-4 top-4 text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times"></i>
+</div>
+</div>
+<div class="shine mt-5 h-1 rounded-full animate-shimmer"></div>
+</div>
+</div>
+<!-- Navigation -->
+<nav class="gradient-bg text-white h-16">
+<div class="container mx-auto px-4 h-full flex items-center justify-between">
+<a class="flex items-center space-x-2" href="/messages.html">
+<i class="fas fa-arrow-left"></i>
+<span class="font-semibold">Back to Messages</span>
+</a>
+<div class="flex items-center space-x-4">
+<a class="p-2 hover:bg-white/10 rounded-full" href="/profile.html">
+<i class="fas fa-user"></i>
+</a>
+<a class="p-2 hover:bg-white/10 rounded-full" href="#" onclick="logout()">
+<i class="fas fa-sign-out-alt"></i>
+</a>
+</div>
+</div>
+</nav>
+<!-- Search Container -->
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+<!-- Search Header -->
+<div class="text-center mb-8">
+<h1 class="text-3xl font-bold text-gray-800 mb-2">Search Everything</h1>
+<p class="text-gray-600">Find users, messages, groups, and channels</p>
+</div>
+<!-- Search Input -->
+<div class="relative mb-8">
+<i class="fas fa-search absolute left-4 top-4 text-gray-400 text-lg"></i>
+<input class="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" id="searchInput" onkeyup="performSearch(this.value)" placeholder="Type to search users, messages, groups, channels..." type="text"/>
+<button class="absolute right-4 top-4 text-gray-400 hover:text-gray-600" onclick="clearSearch()">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<!-- Tabs -->
+<div class="flex border-b border-gray-200 mb-6 overflow-x-auto">
+<button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap" onclick="switchTab('users')">
+<i class="fas fa-users mr-2"></i> Users
             </button>
-        </div>
-        
-        <!-- Tabs -->
-        <div class="flex border-b border-gray-200 mb-6 overflow-x-auto">
-            <button onclick="switchTab('users')" 
-                    class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
-                <i class="fas fa-users mr-2"></i> Users
+<button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap" onclick="switchTab('messages')">
+<i class="fas fa-comments mr-2"></i> Messages
             </button>
-            <button onclick="switchTab('messages')" 
-                    class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
-                <i class="fas fa-comments mr-2"></i> Messages
+<button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap" onclick="switchTab('groups')">
+<i class="fas fa-user-friends mr-2"></i> Groups
             </button>
-            <button onclick="switchTab('groups')" 
-                    class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
-                <i class="fas fa-user-friends mr-2"></i> Groups
+<button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap" onclick="switchTab('channels')">
+<i class="fas fa-broadcast-tower mr-2"></i> Channels
             </button>
-            <button onclick="switchTab('channels')" 
-                    class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-purple-600 whitespace-nowrap">
-                <i class="fas fa-broadcast-tower mr-2"></i> Channels
-            </button>
-        </div>
-        
-        <!-- Results Area -->
-        <div id="searchResults">
-            <!-- Initial State -->
-            <div class="text-center py-12">
-                <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
-                <h3 class="text-xl font-semibold text-gray-500">Start Searching</h3>
-                <p class="text-gray-400">Type in the search box to find content</p>
-            </div>
-        </div>
-        
-        <!-- Search Tips -->
-        <div class="mt-12 bg-gray-50 border border-gray-200 rounded-xl p-6">
-            <h3 class="font-bold text-gray-800 mb-4">Search Tips:</h3>
-            <div class="grid md:grid-cols-2 gap-4">
-                <div class="flex items-start">
-                    <i class="fas fa-lightbulb text-yellow-500 mt-1 mr-3"></i>
-                    <div>
-                        <h4 class="font-medium text-gray-700">User Search</h4>
-                        <p class="text-sm text-gray-600">Search by username, nickname, or university</p>
-                    </div>
-                </div>
-                <div class="flex items-start">
-                    <i class="fas fa-lightbulb text-yellow-500 mt-1 mr-3"></i>
-                    <div>
-                        <h4 class="font-medium text-gray-700">Message Search</h4>
-                        <p class="text-sm text-gray-600">Find text in your conversation history</p>
-                    </div>
-                </div>
-                <div class="flex items-start">
-                    <i class="fas fa-lightbulb text-yellow-500 mt-1 mr-3"></i>
-                    <div>
-                        <h4 class="font-medium text-gray-700">Group Search</h4>
-                        <p class="text-sm text-gray-600">Find study groups by name or description</p>
-                    </div>
-                </div>
-                <div class="flex items-start">
-                    <i class="fas fa-lightbulb text-yellow-500 mt-1 mr-3"></i>
-                    <div>
-                        <h4 class="font-medium text-gray-700">Channel Search</h4>
-                        <p class="text-sm text-gray-600">Discover campus channels and announcements</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
+</div>
+<!-- Results Area -->
+<div id="searchResults">
+<!-- Initial State -->
+<div class="text-center py-12">
+<i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+<h3 class="text-xl font-semibold text-gray-500">Start Searching</h3>
+<p class="text-gray-400">Type in the search box to find content</p>
+</div>
+</div>
+<!-- Search Tips -->
+<div class="mt-12 bg-gray-50 border border-gray-200 rounded-xl p-6">
+<h3 class="font-bold text-gray-800 mb-4">Search Tips:</h3>
+<div class="grid md:grid-cols-2 gap-4">
+<div class="flex items-start">
+<i class="fas fa-lightbulb text-yellow-500 mt-1 mr-3"></i>
+<div>
+<h4 class="font-medium text-gray-700">User Search</h4>
+<p class="text-sm text-gray-600">Search by username, nickname, or university</p>
+</div>
+</div>
+<div class="flex items-start">
+<i class="fas fa-lightbulb text-yellow-500 mt-1 mr-3"></i>
+<div>
+<h4 class="font-medium text-gray-700">Message Search</h4>
+<p class="text-sm text-gray-600">Find text in your conversation history</p>
+</div>
+</div>
+<div class="flex items-start">
+<i class="fas fa-lightbulb text-yellow-500 mt-1 mr-3"></i>
+<div>
+<h4 class="font-medium text-gray-700">Group Search</h4>
+<p class="text-sm text-gray-600">Find study groups by name or description</p>
+</div>
+</div>
+<div class="flex items-start">
+<i class="fas fa-lightbulb text-yellow-500 mt-1 mr-3"></i>
+<div>
+<h4 class="font-medium text-gray-700">Channel Search</h4>
+<p class="text-sm text-gray-600">Discover campus channels and announcements</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
         let currentTab = 'users';
         let searchTimeout = null;
         
@@ -758,9 +906,9 @@
         });
     </script>
 <div id="themeFab" title="Kunduzgi / Tungi rejim">
-  <i id="themeFabIcon" class="fa-solid fa-moon"></i>
-  <span id="themeFabLabel">Tungi</span>
-  <span class="kicker">• Qidiruv</span>
+<i class="fa-solid fa-moon" id="themeFabIcon"></i>
+<span id="themeFabLabel">Tungi</span>
+<span class="kicker">• Qidiruv</span>
 </div>
 <script>
   (function(){

@@ -400,6 +400,74 @@
   }
 </style>
 
+
+<style id="hallaymMobileCompactV2">
+
+/* MOBILE COMPACT V2 — prevent overflow, tiny UI, glass + teal/gold harmony */
+*{box-sizing:border-box}
+html,body{max-width:100%;overflow-x:hidden}
+img,video,canvas,svg{max-width:100%;height:auto}
+button,a{ -webkit-tap-highlight-color: transparent; }
+:root{ --safe-bottom: env(safe-area-inset-bottom, 0px); }
+
+@media (max-width: 640px){
+  /* Global tight mode */
+  body{ font-size: 13px !important; line-height: 1.25 !important; }
+  .container,.mx-auto{ max-width:100% !important; }
+  .px-4{ padding-left:12px !important; padding-right:12px !important; }
+  .py-8{ padding-top:16px !important; padding-bottom:18px !important; }
+  .p-8{ padding:16px !important; }
+  .p-6{ padding:14px !important; }
+  .p-4{ padding:12px !important; }
+  .rounded-3xl{ border-radius:20px !important; }
+  .rounded-2xl{ border-radius:18px !important; }
+  .rounded-xl{ border-radius:14px !important; }
+  .text-3xl{ font-size:1.35rem !important; line-height:1.15 !important; }
+  .text-2xl{ font-size:1.15rem !important; line-height:1.2 !important; }
+  .text-xl{ font-size:1.00rem !important; }
+  .text-lg{ font-size:.95rem !important; }
+  .text-sm{ font-size:.82rem !important; }
+  .text-xs{ font-size:.72rem !important; }
+  .w-20.h-20{ width:56px !important; height:56px !important; }
+  .text-4xl{ font-size:1.65rem !important; }
+
+  /* Buttons/input compact */
+  button, .btn, [role="button"]{ padding-top:.45rem !important; padding-bottom:.45rem !important; }
+  .px-6{ padding-left:14px !important; padding-right:14px !important; }
+  .py-3{ padding-top:.5rem !important; padding-bottom:.5rem !important; }
+  input,textarea,select{ font-size:13px !important; }
+  input.rounded-full, textarea.rounded-full{ padding-top:.45rem !important; padding-bottom:.45rem !important; }
+
+  /* FontAwesome icons a bit smaller */
+  .fa-solid,.fas,.far,.fab{ font-size: 0.95em; }
+
+  /* Horizontal sections should scroll safely */
+  .overflow-x-auto{ -webkit-overflow-scrolling: touch; }
+}
+
+/* Always keep composer visible and not clipped (group.html) */
+#chatComposer{
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  padding-bottom: calc(10px + var(--safe-bottom));
+}
+
+/* Make action icons/buttons never hide send button */
+#chatComposer .composer-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+#chatComposer .composer-row > *{ flex:0 0 auto; }
+#chatComposer input{ flex:1 1 auto; min-width: 0; }
+
+/* Reduce big bubbles on mobile */
+@media (max-width: 640px){
+  .message-bubble{ max-width: 92% !important; }
+}
+
+</style>
 </head>
 
 <script>
@@ -608,17 +676,17 @@
             </div>
             
             <!-- Message Input -->
-            <div class="border-t border-white/15 p-4 hallaym-surface">
-                <div class="flex space-x-2">
-                    <button onclick="attachMedia()" class="p-3 hover:bg-gray-100 rounded-full">
-                        <i class="fas fa-paperclip text-gray-600"></i>
+            <div id="chatComposer" class="border-t border-white/15 p-4 hallaym-surface">
+                <div class="composer-row">
+                    <button onclick="attachMedia()" class="p-2 bg-white/10 hover:bg-white/15 border border-white/15 rounded-full">
+                        <i class="fas fa-paperclip text-white/80"></i>
                     </button>
                     <input type="text" id="messageInput" 
-                           class="flex-1 border border-gray-300 rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                           class="flex-1 field rounded-full px-4 py-2 focus:outline-none"
                            placeholder="Type a message to the group..." 
                            onkeyup="handleEnter(event)">
                     <button onclick="sendGroupMessage()" 
-                            class="gradient-bg text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition">
+                            class="btn-primary text-white px-4 py-2 rounded-full font-extrabold hover:opacity-90 transition whitespace-nowrap">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
@@ -703,6 +771,22 @@
     <script>
         let socket = null;
         let currentUser = null;
+        // Robust my userId (so stage owner logic works even if currentUser is not loaded yet)
+        const __MY_ID_FROM_TOKEN = (function(){
+            try{
+                const t = localStorage.getItem('token') || '';
+                const parts = t.split('.');
+                if(parts.length < 2) return '';
+                const json = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+                return String(json.userId || json.id || json._id || '');
+            }catch(e){ return ''; }
+        })();
+        function myUserId(){
+            try{
+                return String(currentUser?._id || currentUser?.id || __MY_ID_FROM_TOKEN || '');
+            }catch(e){ return String(__MY_ID_FROM_TOKEN || ''); }
+        }
+
         let currentGroup = null;
         let groupId = null;
         const __urlParams = new URLSearchParams(window.location.search);
@@ -1434,7 +1518,7 @@
       if(mode==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
       localStorage.setItem(key, mode);
       icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-      label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+      label.textContent = mode==='dark' ? '' : '';
     }
     const saved=localStorage.getItem(key);
     const prefers=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1452,6 +1536,7 @@
             active: false,
             groupId: null,
             callId: null,
+            stage: { ownerTeacherId: null, pinnedUserId: null },
             callType: 'video',
             localStream: null,
             peers: new Map(), // remoteUserId -> RTCPeerConnection
@@ -1617,7 +1702,7 @@ try {
         : { audio: AUDIO_CONSTRAINTS, video: videoConstraints };
 
     groupCall.localStream = await navigator.mediaDevices.getUserMedia(constraints);
-    addVideoTile(String(currentUser?._id || 'local'), groupCall.localStream, true);
+    addVideoTile(String(myUserId() || 'local'), groupCall.localStream, true);
     return groupCall.localStream;
 } catch (err) {
     console.warn('ensureLocalStream getUserMedia failed:', err);
@@ -1626,7 +1711,7 @@ try {
     if (callType !== 'audio') {
         try {
             groupCall.localStream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CONSTRAINTS, video: false });
-            addVideoTile(String(currentUser?._id || 'local'), groupCall.localStream, true);
+            addVideoTile(String(myUserId() || 'local'), groupCall.localStream, true);
             return groupCall.localStream;
         } catch (err2) {
             console.warn('ensureLocalStream audio-only failed:', err2);
@@ -1644,8 +1729,25 @@ try {
             const tStage = document.getElementById('teacherStage');
             const sGrid = document.getElementById('studentsGrid');
             const uid = String(userId);
-            // Teacher goes to stage; everyone else to grid
-            if (isTeacher(uid)) return tStage || sGrid;
+
+            // Decide who should be on 1-stage:
+            // 1) pinned participant
+            // 2) owner teacher (first teacher)
+            // 3) fallback: any teacher in participantInfos
+            const st = groupCall?.stage || {};
+            const pinnedId = st.pinnedUserId ? String(st.pinnedUserId) : '';
+            const ownerId  = st.ownerTeacherId ? String(st.ownerTeacherId) : '';
+
+            let fallbackTeacherId = '';
+            try {
+                const entries = Array.from((groupCall?.participantInfos || new Map()).entries());
+                fallbackTeacherId = entries.find(([id, info]) => String(info?.role || '').toLowerCase() === 'teacher')?.[0] || '';
+            } catch(_) {}
+
+            const stageUserId = pinnedId || ownerId || fallbackTeacherId || '';
+
+            // Only the chosen stage user goes to stage; EVERYONE else goes to grid (including teacher when a student is pinned).
+            if (stageUserId && uid === String(stageUserId)) return tStage || sGrid;
             return sGrid || tStage;
         }
 
@@ -1676,24 +1778,52 @@ try {
                 `;
             }
 
-            const video = tile.querySelector('video');
+            
+                // Pin button (only visible for stage owner teacher)
+                try {
+                    tile.dataset.uid = String(userId);
+                    if (!tile.querySelector('.pin-btn')) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'pin-btn absolute top-2 right-2 px-2 py-1 rounded-xl bg-black/55 hover:bg-black/70 border border-white/15 text-white text-[11px] font-extrabold';
+                        btn.innerHTML = '<i class="fas fa-thumbtack mr-1"></i>Pin';
+                        btn.onclick = (e) => {
+                            e.preventDefault(); e.stopPropagation();
+                            if (!isMeStageOwnerTeacher()) return;
+                            socket?.emit('groupStagePin', { groupId: groupCall.groupId, callId: groupCall.callId, userId: String(userId) });
+                        };
+                        tile.appendChild(btn);
+                    }
+                } catch(_) {}
+const video = tile.querySelector('video');
             if (video && stream) {
                 video.srcObject = stream;
             }
 
             const container = getTileContainerFor(userId);
             if (container) {
-                // Teacher stage wants single element; replace current stage content
-                if (container.id === 'teacherStage' && isTeacher(String(userId))) {
-                    container.innerHTML = '';
-                    container.appendChild(tile);
-                    tile.style.width = '100%';
-                    tile.style.height = '100%';
-                    tile.querySelector('video').style.width='100%';
-                    tile.querySelector('video').style.height='100%';
+                // Stage can show ANY participant (pinned student or owner teacher).
+                const desiredStageUserId = String((groupCall?.stage?.pinnedUserId) || (groupCall?.stage?.ownerTeacherId) || '');
+                if (container.id === 'teacherStage') {
+                    // Only render the selected stage user into stage
+                    if (desiredStageUserId && String(userId) === desiredStageUserId) {
+                        container.innerHTML = '';
+                        container.appendChild(tile);
+                        container.setAttribute('data-stage-user', desiredStageUserId);
+                        tile.style.width = '100%';
+                        tile.style.height = '100%';
+                        const v = tile.querySelector('video');
+                        if (v) { v.style.width='100%'; v.style.height='100%'; }
+                    }
                 } else {
                     if (!tile.parentElement || tile.parentElement.id !== container.id) {
-                        container.appendChild(tile);
+                        const ownerId = String(groupCall?.stage?.ownerTeacherId || '');
+                        const pinned = !!(groupCall?.stage?.pinnedUserId);
+                        if (container.id === 'studentsGrid' && pinned && ownerId && String(userId) === ownerId) {
+                            container.prepend(tile); // owner teacher stays visible as 1st tile in grid while someone is pinned
+                        } else {
+                            container.appendChild(tile);
+                        }
                     }
                     tile.style.height = '220px';
                 }
@@ -1709,41 +1839,142 @@ try {
         }
 
         function renderGroupCallLayout() {
-            // Re-assign tiles between teacher stage and students grid based on latest participantInfos.
+            // Stage selection priority:
+            // 1) pinnedUserId (set by owner teacher, broadcast by server)
+            // 2) ownerTeacherId (first teacher who entered)
+            // 3) fallback: any teacher in participantInfos
             const tStage = document.getElementById('teacherStage');
             const sGrid = document.getElementById('studentsGrid');
             if (!tStage || !sGrid) return;
 
-            // Find teacher id (prefer remote teacher; fallback local if teacher)
-            const entries = Array.from(groupCall.participantInfos.entries());
-            let teacherId = entries.find(([id, info]) => info?.role === 'teacher')?.[0] || null;
-            if (!teacherId && currentUser && (String(currentUser.role || '').toLowerCase() === 'teacher')) teacherId = String(currentUser._id);
+            // Helper: get tile element by userId, with robust fallback for local teacher tile id
+            function __getTile(uid){
+                uid = String(uid || '');
+                if(!uid) return null;
+                let el = document.getElementById(`tile_${uid}`);
+                if(el) return el;
+                // If owner teacher is the local user, local tile id might be based on token id or 'local'
+                try{
+                    const st = groupCall.stage || {};
+                    const ownerId = st.ownerTeacherId ? String(st.ownerTeacherId) : '';
+                    if(ownerId && uid === ownerId && isMeStageOwnerTeacher()){
+                        const myId = String(myUserId() || currentUser?._id || 'local');
+                        el = document.getElementById(`tile_${myId}`);
+                        if(el) return el;
+                        el = document.getElementById('tile_local');
+                        if(el) return el;
+                    }
+                }catch(_){}
+                return null;
+            }
 
-            // Move teacher tile to stage if exists
-            if (teacherId) {
-                const tTile = document.getElementById(`tile_${teacherId}`);
+            const st = groupCall.stage || { ownerTeacherId: null, pinnedUserId: null };
+            const pinnedId = st.pinnedUserId ? String(st.pinnedUserId) : null;
+            const ownerId = st.ownerTeacherId ? String(st.ownerTeacherId) : null;
+
+            const entries = Array.from(groupCall.participantInfos.entries());
+            const fallbackTeacherId = entries.find(([id, info]) => String(info?.role || '').toLowerCase() === 'teacher')?.[0] || null;
+
+            let stageUserId = pinnedId || ownerId || fallbackTeacherId || null;
+
+            // If stage user is not present, reset pin and fallback
+            if (stageUserId) {
+                const present = __getTile(stageUserId);
+                if (!present) {
+                    if (pinnedId && stageUserId === pinnedId) {
+                        // pinned left; clear locally (server will also broadcast)
+                        groupCall.stage.pinnedUserId = null; try{ tStage.removeAttribute('data-stage-user'); }catch(_){}
+                        stageUserId = ownerId || fallbackTeacherId || null;
+                    } else {
+                        stageUserId = ownerId || fallbackTeacherId || null;
+                    }
+                }
+            }
+
+            // Ensure stage shows only stageUserId tile
+            if (stageUserId) {
+                const tTile = __getTile(stageUserId);
                 if (tTile) {
-                    tStage.innerHTML = '';
-                    tStage.appendChild(tTile);
-                    tTile.style.width='100%'; tTile.style.height='100%';
+                    const current = tStage.getAttribute('data-stage-user');
+                    if (String(current || '') !== String(stageUserId)) {
+                        tStage.innerHTML = '';
+                        tStage.appendChild(tTile);
+                        tStage.setAttribute('data-stage-user', String(stageUserId));
+                    }
+                    tTile.style.width = '100%';
+                    tTile.style.height = '100%';
                 } else {
+                    tStage.removeAttribute('data-stage-user');
                     ensureStagePlaceholder();
                 }
             } else {
+                tStage.removeAttribute('data-stage-user');
                 ensureStagePlaceholder();
             }
 
-            // Ensure non-teacher tiles are in students grid
+            // Unpin button (only owner teacher)
+            try {
+                const meta = document.getElementById('teacherStageMeta');
+                if (meta) {
+                    const canControl = isMeStageOwnerTeacher();
+                    const showUnpin = !!(groupCall.stage?.pinnedUserId);
+                    meta.innerHTML = '';
+                    if (showUnpin) {
+                        const b = document.createElement('button');
+                        b.className = 'px-2 py-1 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white text-xs font-bold';
+                        b.textContent = 'Unpin';
+                        b.onclick = (e) => {
+                            e.preventDefault(); e.stopPropagation();
+                            if (!canControl) return;
+                            try {
+                            groupCall.stage = groupCall.stage || {};
+                            groupCall.stage.pinnedUserId = null;
+
+                            // Force immediate revert to owner teacher on UI
+                            try{
+                                const ownerId = groupCall.stage.ownerTeacherId ? String(groupCall.stage.ownerTeacherId) : null;
+                                const ts = document.getElementById('teacherStage');
+                                if(ts){
+                                    ts.removeAttribute('data-stage-user');
+                                    if(ownerId) ts.setAttribute('data-stage-user', ownerId); // hint for render
+                                }
+                            }catch(_){}
+
+                            // Render twice (next frame) to avoid race where DOM still holds old stage tile
+                            try{ renderGroupCallLayout(); }catch(_){}
+                            try{
+                                requestAnimationFrame(()=>{ try{ renderGroupCallLayout(); }catch(_){} });
+                                requestAnimationFrame(()=>{ try{ renderGroupCallLayout(); }catch(_){} });
+                            }catch(_){}
+                        } catch(_) {}
+                            socket?.emit('groupStageUnpin', { groupId: groupCall.groupId, callId: groupCall.callId });
+                        };
+                        if (!canControl) b.style.opacity = '0.6';
+                        meta.appendChild(b);
+                    } else if (ownerId) {
+                        meta.textContent = (String(ownerId) === String(currentUser?._id)) ? 'Siz (asosiy)' : 'Asosiy o‘qituvchi';
+                    }
+                }
+            } catch(_) {}
+
+            // Move all other tiles to students grid
             document.querySelectorAll('[id^="tile_"]').forEach(tile => {
-                const uid = tile.id.replace('tile_','');
-                if (teacherId && String(uid) === String(teacherId)) return;
+                const uid = tile.id.replace('tile_', '');
+                if (stageUserId && String(uid) === String(stageUserId)) return;
                 if (!sGrid.contains(tile)) sGrid.appendChild(tile);
                 tile.style.height = '220px';
             });
         }
 
-        
-        function updateGroupGridLayout() {
+        function isMeStageOwnerTeacher() {
+            try {
+                const meId = String(myUserId() || '');
+                const role = String(currentUser?.role || '').toLowerCase();
+                const ownerId = String(groupCall.stage?.ownerTeacherId || '');
+                return role === 'teacher' && meId && ownerId && meId === ownerId;
+            } catch(e) { return false; }
+        }
+function updateGroupGridLayout() {
             const grid = document.getElementById('groupVideosGrid');
             if (!grid) return;
             const count = grid.children.length || 0;
@@ -3038,6 +3269,7 @@ function toggleMute() {
                 if (groupCall.active) return;
 
                 groupCall.incoming = { groupId: data.groupId, callId: data.callId, callType: data.callType || 'video', from: data.startedBy, title: data.title };
+                if (data.stage) { groupCall.stage = { ownerTeacherId: data.stage.ownerTeacherId || null, pinnedUserId: data.stage.pinnedUserId || null }; }
                 if (AUTO_JOIN_CALL) {
                     return joinGroupCall(data.groupId, data.callId, data.callType || 'video');
                 }
@@ -3050,6 +3282,7 @@ function toggleMute() {
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
+                if (data.stage) { groupCall.stage = { ownerTeacherId: data.stage.ownerTeacherId || null, pinnedUserId: data.stage.pinnedUserId || null }; }
                 updateTeacherControls();
                 renderGroupCallLayout();
                 groupCall.starterId = currentUser?._id; // we started
@@ -3073,6 +3306,7 @@ function toggleMute() {
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
+                if (data.stage) { groupCall.stage = { ownerTeacherId: data.stage.ownerTeacherId || null, pinnedUserId: data.stage.pinnedUserId || null }; }
                 updateTeacherControls();
                 renderGroupCallLayout();
                 groupCall.starterId = null; // unknown in this event
@@ -3095,6 +3329,7 @@ function toggleMute() {
                 if (String(data.groupId) !== String(groupCall.groupId)) return;
                 if (String(data.callId) !== String(groupCall.callId)) return;
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
+                if (data.stage) { groupCall.stage = { ownerTeacherId: data.stage.ownerTeacherId || null, pinnedUserId: data.stage.pinnedUserId || null }; }
                 renderGroupCallLayout();
 
                 const uid = String(data.userId);
@@ -3117,7 +3352,34 @@ function toggleMute() {
                 groupCall.peers.delete(uid);
                 groupCall.remoteStreams.delete(uid);
                 removeVideoTile(uid);
+
+                // 🔁 Auto-revert stage:
+                // If the pinned participant left (or got disconnected), instantly bring stage back to owner teacher.
+                try {
+                    if (groupCall.stage && groupCall.stage.pinnedUserId && String(groupCall.stage.pinnedUserId) === uid) {
+                        groupCall.stage.pinnedUserId = null;
+                    }
+                } catch(_) {}
+                try { renderGroupCallLayout(); } catch(_) {}
             });
+
+            // Stage state sync (owner + pinned) from server
+            socket.on('groupStageState', (data) => {
+                try {
+                    if (!groupCall.active) return;
+                    if (String(data.groupId) !== String(groupCall.groupId)) return;
+                    if (String(data.callId) !== String(groupCall.callId)) return;
+                    if (data.stage) {
+                        groupCall.stage = {
+                            ownerTeacherId: data.stage.ownerTeacherId || null,
+                            pinnedUserId: data.stage.pinnedUserId || null
+                        };
+                        renderGroupCallLayout();
+                    }
+                } catch(e) {}
+            });
+
+
 
             socket.on('groupCallEnded', (data) => {
                 if (!groupCall.active) return;
@@ -3292,6 +3554,204 @@ function toggleMute() {
     </div>
   </div>
 </div>
+
+
+<script id="stageSuperFix">
+/**
+ * STAGE SUPER FIX
+ * - Stage user = pinnedUserId || ownerTeacherId || any teacher fallback
+ * - When pinned: owner teacher MUST stay visible in students grid (1st tile)
+ * - Unpin or pinned user leaves: stage instantly reverts to owner teacher for everyone
+ * - Robust against tile id being "tile_local" or token-based ids: uses tile.dataset.uid logical id.
+ */
+
+(function(){
+  function str(x){ return (x===null||x===undefined)?'':String(x); }
+
+  function isTeacherId(uid){
+    try{
+      const info = groupCall?.participantInfos?.get?.(uid);
+      if(info && String(info.role||'').toLowerCase()==='teacher') return true;
+    }catch(_){}
+    // fallback: currentUser role for self
+    try{
+      if(str(uid)===str(currentUser?._id) && String(currentUser?.role||'').toLowerCase()==='teacher') return true;
+    }catch(_){}
+    return false;
+  }
+
+  function computeStageUserId(){
+    const st = groupCall?.stage || {};
+    const pinned = str(st.pinnedUserId);
+    const owner  = str(st.ownerTeacherId);
+
+    let fallbackTeacher = '';
+    try{
+      const entries = Array.from((groupCall?.participantInfos || new Map()).entries());
+      const hit = entries.find(([id, info]) => String(info?.role||'').toLowerCase()==='teacher');
+      fallbackTeacher = hit ? str(hit[0]) : '';
+    }catch(_){}
+
+    return pinned || owner || fallbackTeacher || '';
+  }
+
+  function buildTileMap(){
+    const st = groupCall?.stage || {};
+    const ownerId = str(st.ownerTeacherId);
+
+    const tiles = Array.from(document.querySelectorAll('[id^="tile_"]'));
+    const map = new Map();
+    for(const tile of tiles){
+      let logical = str(tile.dataset.uid) || str(tile.id).replace('tile_','');
+      // If local tile is still "local", map it to ownerId when I'm the owner teacher
+      if(logical === 'local' && ownerId){
+        // If this tile looks like "Siz" (local) or muted video, treat as owner
+        try{
+          const v = tile.querySelector('video');
+          const muted = !!(v && v.muted);
+          if(muted || tile.innerText.includes('Siz')) logical = ownerId;
+        }catch(_){}
+      }
+      if(logical) map.set(logical, tile);
+    }
+    return map;
+  }
+
+  function ensureStagePlaceholderSafe(){
+    try{ ensureStagePlaceholder(); }catch(_){}
+  }
+
+  // Override renderGroupCallLayout with robust version
+  window.renderGroupCallLayout = function renderGroupCallLayout(){
+    const tStage = document.getElementById('teacherStage');
+    const sGrid = document.getElementById('studentsGrid');
+    if(!tStage || !sGrid) return;
+
+    const st = groupCall?.stage || {};
+    const pinnedId = str(st.pinnedUserId);
+    const ownerId  = str(st.ownerTeacherId);
+
+    const tileMap = buildTileMap();
+
+    // If pinned user tile is missing => clear pin and broadcast if I'm owner teacher
+    if(pinnedId && !tileMap.get(pinnedId)){
+      try{
+        groupCall.stage = groupCall.stage || {};
+        groupCall.stage.pinnedUserId = null;
+        if(typeof isMeStageOwnerTeacher === 'function' && isMeStageOwnerTeacher()){
+          try{ socket?.emit('groupStageUnpin', { groupId: groupCall.groupId, callId: groupCall.callId }); }catch(_){}
+        }
+      }catch(_){}
+    }
+
+    const stageUserId = computeStageUserId();
+    const stageTile = stageUserId ? tileMap.get(stageUserId) : null;
+
+    // ----- Stage render -----
+    if(stageTile){
+      const current = str(tStage.getAttribute('data-stage-user'));
+      if(current !== stageUserId || !tStage.contains(stageTile)){
+        tStage.innerHTML = '';
+        tStage.appendChild(stageTile);
+        tStage.setAttribute('data-stage-user', stageUserId);
+      }
+      stageTile.style.width='100%';
+      stageTile.style.height='100%';
+      const v = stageTile.querySelector('video');
+      if(v){ v.style.width='100%'; v.style.height='100%'; }
+    }else{
+      try{ tStage.removeAttribute('data-stage-user'); }catch(_){}
+      ensureStagePlaceholderSafe();
+    }
+
+    // ----- Grid rebuild (stable order) -----
+    const frag = document.createDocumentFragment();
+
+    // If someone is pinned, owner teacher should be 1st in grid (if exists & not on stage)
+    if(pinnedId && ownerId && ownerId !== stageUserId){
+      const ownerTile = tileMap.get(ownerId);
+      if(ownerTile && ownerTile !== stageTile){
+        frag.appendChild(ownerTile);
+      }
+    }
+
+    // Append everyone else except stage user and except already appended owner tile
+    for(const [logicalId, tile] of tileMap.entries()){
+      if(logicalId === stageUserId) continue;
+      if(pinnedId && ownerId && logicalId === ownerId && ownerId !== stageUserId){
+        // already prepended above
+        continue;
+      }
+      frag.appendChild(tile);
+    }
+
+    // Clear + attach
+    sGrid.innerHTML = '';
+    sGrid.appendChild(frag);
+
+    // Grid sizing
+    Array.from(sGrid.children).forEach(el=>{
+      try{ el.style.height = '220px'; }catch(_){}
+    });
+
+    ensureStagePlaceholderSafe();
+  };
+
+  // Ensure getTileContainerFor never misroutes teachers to stage when pinned
+  window.getTileContainerFor = function getTileContainerFor(userId){
+    const tStage = document.getElementById('teacherStage');
+    const sGrid = document.getElementById('studentsGrid');
+    const uid = str(userId);
+    const stageUserId = computeStageUserId();
+    if(stageUserId && uid === stageUserId) return tStage || sGrid;
+    return sGrid || tStage;
+  };
+
+  // When we receive pin/unpin events, force instant relayout (twice)
+  try{
+    socket?.off?.('groupStagePinned');
+    socket?.off?.('groupStageUnpinned');
+  }catch(_){}
+
+  // If your file already has these handlers, this just adds a safety relayout.
+  try{
+    socket?.on?.('groupStagePinned', (payload)=>{
+      try{
+        groupCall.stage = groupCall.stage || {};
+        groupCall.stage.pinnedUserId = str(payload?.userId);
+      }catch(_){}
+      try{ renderGroupCallLayout(); }catch(_){}
+      try{ requestAnimationFrame(()=>{ try{ renderGroupCallLayout(); }catch(_){} }); }catch(_){}
+    });
+    socket?.on?.('groupStageUnpinned', ()=>{
+      try{
+        groupCall.stage = groupCall.stage || {};
+        groupCall.stage.pinnedUserId = null;
+      }catch(_){}
+      try{ renderGroupCallLayout(); }catch(_){}
+      try{ requestAnimationFrame(()=>{ try{ renderGroupCallLayout(); }catch(_){} }); }catch(_){}
+    });
+  }catch(_){}
+
+  // After currentUser is fetched/updated, layout again (covers async profile load)
+  try{
+    const _origSetCurrentUser = window.setCurrentUser;
+    if(typeof _origSetCurrentUser === 'function'){
+      window.setCurrentUser = function(u){
+        const r = _origSetCurrentUser.apply(this, arguments);
+        try{ renderGroupCallLayout(); }catch(_){}
+        try{ requestAnimationFrame(()=>{ try{ renderGroupCallLayout(); }catch(_){} }); }catch(_){}
+        return r;
+      };
+    }
+  }catch(_){}
+
+  // Kick once on load
+  try{
+    setTimeout(()=>{ try{ renderGroupCallLayout(); }catch(_){} }, 50);
+  }catch(_){}
+})();
+</script>
 
 </body>
 </html>

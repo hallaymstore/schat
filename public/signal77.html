@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Signal - UniConnect</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>.gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <nav class="gradient-bg text-white h-16 flex items-center px-4">
+    <div class="container mx-auto flex justify-between items-center">
+      <a href="/signals.html" class="flex items-center space-x-2">
+        <i class="fas fa-arrow-left"></i>
+        <span class="font-semibold">Back to Signals</span>
+      </a>
+      <div class="flex items-center space-x-4">
+        <a href="/services.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Services"><i class="fas fa-store"></i></a>
+        <a href="/messages.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Messages"><i class="fas fa-comments"></i></a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mx-auto px-4 py-6">
+    <div id="wrap" class="bg-white border border-gray-100 rounded-xl shadow-sm p-5">
+      <div id="loading" class="text-gray-600">Loading...</div>
+
+      <div id="content" class="hidden">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h1 id="title" class="text-2xl font-bold text-gray-800"></h1>
+            <div class="mt-2 text-sm text-gray-600">
+              <span id="meta"></span>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="vote(1)" class="px-4 py-2 rounded-lg border hover:bg-gray-50"><i class="fas fa-thumbs-up mr-2"></i>Up</button>
+            <button onclick="vote(-1)" class="px-4 py-2 rounded-lg border hover:bg-gray-50"><i class="fas fa-thumbs-down mr-2"></i>Down</button>
+          </div>
+        </div>
+
+        <div id="tags" class="mt-4 flex flex-wrap gap-2"></div>
+        <div id="body" class="mt-4 text-gray-700 whitespace-pre-wrap"></div>
+
+        <div class="mt-6 border-t pt-4">
+          <h2 class="font-semibold text-gray-800 mb-3">Comments</h2>
+          <div class="flex gap-2">
+            <input id="c" class="flex-1 border rounded-lg px-3 py-2" placeholder="Write a comment..."/>
+            <button onclick="comment()" class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white">
+              <i class="fas fa-paper-plane mr-2"></i>Send
+            </button>
+          </div>
+          <div id="comments" class="mt-4 space-y-3"></div>
+        </div>
+
+        <div class="mt-6 border-t pt-4">
+          <button onclick="report()" class="text-red-600 hover:text-red-700 text-sm">
+            <i class="fas fa-flag mr-2"></i>Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const id = new URLSearchParams(location.search).get('id');
+
+    async function api(path, opts={}){
+      const headers = opts.headers || {};
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return fetch(path, { ...opts, headers });
+    }
+    function esc(s){ return String(s||'').replace(/[&<>"']/g, (m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    function badge(status){
+      const map = {
+        open: 'bg-red-100 text-red-800',
+        acknowledged: 'bg-yellow-100 text-yellow-800',
+        in_progress: 'bg-blue-100 text-blue-800',
+        resolved: 'bg-green-100 text-green-800'
+      };
+      return `<span class="text-xs px-2 py-1 rounded-full ${map[status]||'bg-gray-100 text-gray-800'}">${status}</span>`;
+    }
+
+    async function load(){
+      const r = await fetch('/api/signals/' + id);
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+
+      document.getElementById('title').textContent = j.signal.title;
+      document.getElementById('meta').innerHTML = `Impact: ${Number(j.signal.impactScore||0).toFixed(2)} • Urgency: ${j.signal.urgency} • ${badge(j.signal.status)}`;
+      document.getElementById('tags').innerHTML = (j.signal.tags||[]).map(t=>`<span class="text-xs bg-gray-100 px-2 py-1 rounded-full">${esc(t)}</span>`).join('');
+      document.getElementById('body').textContent = j.signal.body;
+
+      renderComments(j.comments||[]);
+
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('content').classList.remove('hidden');
+    }
+
+    function renderComments(items){
+      document.getElementById('comments').innerHTML = items.map(c => `
+        <div class="bg-gray-50 border border-gray-100 rounded-lg p-3">
+          <div class="text-sm text-gray-700">${esc(c.body)}</div>
+          <div class="text-xs text-gray-500 mt-1">${new Date(c.createdAt).toLocaleString()}</div>
+        </div>
+      `).join('');
+    }
+
+    async function vote(v){
+      if (!token) return (window.location.href='/login.html');
+      const r = await api('/api/signals/' + id + '/vote', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ vote: v })
+      });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+      load();
+    }
+
+    async function comment(){
+      if (!token) return (window.location.href='/login.html');
+      const body = document.getElementById('c').value.trim();
+      if (!body) return;
+      const r = await api('/api/signals/' + id + '/comment', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ body })
+      });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+      document.getElementById('c').value='';
+      load();
+    }
+
+    async function report(){
+      if (!token) return (window.location.href='/login.html');
+      const reason = prompt('Report reason (short):');
+      if (!reason) return;
+      const r = await api('/api/signals/' + id + '/report', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+      alert('Reported. Thanks.');
+    }
+
+    load();
+  </script>
+</body>
+</html>

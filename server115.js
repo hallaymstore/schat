@@ -184,10 +184,21 @@ const upload = multer({
 });
 
 
-// Separate multer for lesson recordings (avoid disk ENOENT on Windows/Render)
+// Separate multer for lesson recordings.
+// IMPORTANT: recordings can be large (e.g., 60–90 min). Using memoryStorage can crash the server.
+// We store to /uploads/tmp, then (optionally) upload to Cloudinary (upload_large). Finally we delete the temp file.
+try { fs.mkdirSync(path.join(__dirname, 'uploads', 'tmp'), { recursive: true }); } catch(_) {}
 const recordingUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 300 * 1024 * 1024 }, // 300MB per recording upload (tune as needed)
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, path.join(__dirname, 'uploads', 'tmp'));
+    },
+    filename: function (req, file, cb) {
+      const ext = path.extname(file.originalname || '.webm') || '.webm';
+      cb(null, `lesson_${Date.now()}_${Math.round(Math.random()*1e9)}${ext}`);
+    }
+  }),
+  limits: { fileSize: 1024 * 1024 * 1024 }, // 1GB per recording upload
   fileFilter: (req, file, cb) => cb(null, true)
 });
 
@@ -1192,58 +1203,67 @@ app.post('/api/group-lessons/:lessonId/recording', authenticateToken, attachUser
     if (!(role === 'admin' || isHost)) return res.status(403).json({ error: 'Only host teacher can upload recording' });
 
     if (!req.file) return res.status(400).json({ error: 'No recording file uploaded' });
-const incomingTitle = (req.body && req.body.title ? String(req.body.title) : '').trim();
 
-if (!req.file) return res.status(400).json({ error: 'No recording file uploaded' });
+    const incomingTitle = (req.body && req.body.title ? String(req.body.title) : '').trim();
 
-// NOTE: Using memory upload to avoid disk path issues (ENOENT) and to prevent server crash.
-// Upload strategy:
-// 1) If Cloudinary env is present -> upload to Cloudinary.
-// 2) Otherwise (or if Cloudinary upload fails) -> save to local /uploads and serve it back.
-// This prevents "video dars saqlashda xatolik" in local/dev and ensures recordings still persist.
+    // Upload strategy:
+    // 1) If Cloudinary env is present -> upload_large from temp file (supports big files).
+    // 2) Otherwise (or if Cloudinary upload fails) -> move temp file to /uploads/lessons and serve it back.
+    // Always delete temp file when done.
 
-const fs = require('fs');
-const uploadsDir = path.join(__dirname, 'uploads', 'lessons');
-try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch(_) {}
+    const uploadsDir = path.join(__dirname, 'uploads', 'lessons');
+    try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch(_) {}
 
-async function saveLocalRecordingBuffer(buf) {
-  const fname = `lesson_${lessonId}_${Date.now()}.webm`;
-  const fp = path.join(uploadsDir, fname);
-  await fs.promises.writeFile(fp, buf);
-  const url = `/uploads/lessons/${fname}`;
-  return { secure_url: url, url, public_id: '', bytes: buf?.length || 0, duration: 0, _local: true };
-}
+    async function saveLocalRecordingFile(tmpPath) {
+      const ext = path.extname(tmpPath || '.webm') || '.webm';
+      const fname = `lesson_${lessonId}_${Date.now()}${ext}`;
+      const dest = path.join(uploadsDir, fname);
 
-let uploadResult = null;
-const hasCloudinary = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+      // rename() can fail across devices (EXDEV). Use a safe fallback.
+      try {
+        await fs.promises.rename(tmpPath, dest);
+      } catch (err) {
+        if (String(err?.code || '').toUpperCase() === 'EXDEV') {
+          await fs.promises.copyFile(tmpPath, dest);
+          try { await fs.promises.unlink(tmpPath); } catch(_) {}
+        } else {
+          throw err;
+        }
+      }
+      const url = `/uploads/lessons/${fname}`;
+      let bytes = 0;
+      try { bytes = (await fs.promises.stat(dest)).size || 0; } catch(_) {}
+      return { secure_url: url, url, public_id: '', bytes, duration: 0, _local: true };
+    }
 
-if (hasCloudinary) {
-  const folder = `schat_lessons/group_${String(lesson.groupId)}`;
-  try {
-    uploadResult = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream({
-        resource_type: 'video',
-        folder,
-        overwrite: true,
-        eager: [
-          { width: 1280, height: 720, crop: 'limit', quality: 'auto', fetch_format: 'mp4' }
-        ],
-        eager_async: false
-      }, (err, result) => {
-        if (err) return reject(err);
-        return resolve(result);
-      });
+    let uploadResult = null;
+    const hasCloudinary = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+    const tmpPath = req.file.path;
 
-      stream.on('error', reject);
-      stream.end(req.file.buffer);
-    });
-  } catch (cloudErr) {
-    console.warn('Cloudinary upload failed, fallback to local:', cloudErr?.message || cloudErr);
-    uploadResult = await saveLocalRecordingBuffer(req.file.buffer);
-  }
-} else {
-  uploadResult = await saveLocalRecordingBuffer(req.file.buffer);
-}
+    if (hasCloudinary) {
+      const folder = `schat_lessons/group_${String(lesson.groupId)}`;
+      try {
+        // Cloudinary large upload from local file path.
+        uploadResult = await cloudinary.uploader.upload_large(tmpPath, {
+          resource_type: 'video',
+          folder,
+          overwrite: true,
+          chunk_size: 20 * 1024 * 1024,
+          eager: [
+            { width: 1280, height: 720, crop: 'limit', quality: 'auto', fetch_format: 'mp4' }
+          ],
+          eager_async: false
+        });
+        // Remove temp file
+        try { await fs.promises.unlink(tmpPath); } catch(_) {}
+      } catch (cloudErr) {
+        console.warn('Cloudinary upload failed, fallback to local:', cloudErr?.message || cloudErr);
+        // If Cloudinary fails, still keep the recording locally so the lesson is not lost.
+        uploadResult = await saveLocalRecordingFile(tmpPath);
+      }
+    } else {
+      uploadResult = await saveLocalRecordingFile(tmpPath);
+    }
 
 await GroupLesson.updateOne({ _id: lesson._id }, {
   $set: Object.assign({
@@ -1266,6 +1286,18 @@ return res.json({
     console.error('POST /api/group-lessons/:lessonId/recording error:', e);
     return res.status(500).json({ error: 'Failed to upload recording' });
   }
+});
+
+// Multer error guard (prevents silent 500 for large files / aborted uploads)
+app.use((err, req, res, next) => {
+  try {
+    if (err && err.name === 'MulterError') {
+      const code = String(err.code || '').toUpperCase();
+      if (code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Recording file is too large' });
+      return res.status(400).json({ error: 'Upload error', details: err.message || code });
+    }
+  } catch(_) {}
+  return next(err);
 });
 
 
@@ -1568,7 +1600,8 @@ io.on('connection', (socket) => {
           title: call.title,
           startedBy: call.startedBy,
           startedAt: call.startedAt,
-          participants: Array.from(call.participants || [])
+          participants: Array.from(call.participants || []),
+          pinnedUserId: call.pinnedUserId || ''
         });
       }
 
@@ -1788,7 +1821,8 @@ socket.on('lessonTransferControl', async (data) => {
         title: call.title,
         participants: Array.from(call.participants),
         participantInfos,
-        lessonId
+        lessonId,
+        pinnedUserId: call.pinnedUserId || ''
       });
 
 // Notify others that this user joined
@@ -1837,7 +1871,8 @@ adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId),
         callType: call.callType,
         participants: Array.from(call.participants),
         participantInfos,
-        lessonId
+        lessonId,
+        pinnedUserId: call.pinnedUserId || ''
       });
 
 io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
@@ -1880,6 +1915,73 @@ io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
 
     } catch (e) {
       console.error('groupCallSignal error:', e);
+    }
+  });
+
+  // Pin/Stage selection (teacher broadcasts who is on main stage)
+  socket.on('groupCallPin', async (payload) => {
+    try {
+      if (!socket.userId) return;
+      const groupId = String(payload?.groupId || '');
+      const callId = String(payload?.callId || '');
+      const pinnedUserId = String(payload?.pinnedUserId || '');
+      if (!groupId || !callId || !pinnedUserId) return;
+
+      const call = activeGroupCalls.get(groupId);
+      if (!call || String(call.callId) !== callId) return;
+
+      // Only starter (teacher) or admin can change stage.
+      const me = await User.findById(socket.userId).select('role isAdmin').lean().catch(()=>null);
+      const isAdmin = !!(me?.isAdmin || String(me?.role||'').toLowerCase()==='admin');
+      if (!isAdmin && String(call.startedBy) !== String(socket.userId)) return;
+
+      call.pinnedUserId = pinnedUserId;
+      activeGroupCalls.set(groupId, call);
+      io.to(getGroupRoomName(groupId)).emit('groupCallPinned', { groupId, callId, pinnedUserId, by: socket.userId, timestamp: Date.now() });
+    } catch (e) {
+      console.error('groupCallPin error:', e);
+    }
+  });
+
+  // Whiteboard realtime events (teacher broadcasts strokes to everyone in group room)
+  socket.on('whiteboardStroke', async (payload) => {
+    try {
+      if (!socket.userId) return;
+      const groupId = String(payload?.groupId || '');
+      const callId = String(payload?.callId || '');
+      if (!groupId || !callId) return;
+      const call = activeGroupCalls.get(groupId);
+      if (!call || String(call.callId) !== callId) return;
+
+      const me = await User.findById(socket.userId).select('role isAdmin').lean().catch(()=>null);
+      const isAdmin = !!(me?.isAdmin || String(me?.role||'').toLowerCase()==='admin');
+      const isTeacher = String(me?.role||'').toLowerCase()==='teacher';
+      // Only teacher/admin can draw on shared whiteboard
+      if (!isAdmin && !isTeacher) return;
+
+      io.to(getGroupRoomName(groupId)).emit('whiteboardStroke', Object.assign({}, payload, { by: socket.userId, timestamp: Date.now() }));
+    } catch (e) {
+      console.error('whiteboardStroke error:', e);
+    }
+  });
+
+  socket.on('whiteboardClear', async (payload) => {
+    try {
+      if (!socket.userId) return;
+      const groupId = String(payload?.groupId || '');
+      const callId = String(payload?.callId || '');
+      if (!groupId || !callId) return;
+      const call = activeGroupCalls.get(groupId);
+      if (!call || String(call.callId) !== callId) return;
+
+      const me = await User.findById(socket.userId).select('role isAdmin').lean().catch(()=>null);
+      const isAdmin = !!(me?.isAdmin || String(me?.role||'').toLowerCase()==='admin');
+      const isTeacher = String(me?.role||'').toLowerCase()==='teacher';
+      if (!isAdmin && !isTeacher) return;
+
+      io.to(getGroupRoomName(groupId)).emit('whiteboardClear', { groupId, callId, by: socket.userId, timestamp: Date.now() });
+    } catch (e) {
+      console.error('whiteboardClear error:', e);
     }
   });
 

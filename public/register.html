@@ -142,6 +142,90 @@
     .dark .robot-head{ fill: rgba(2,6,23,.55); }
     .dark .robot-visor{ fill: rgba(226,232,240,.08); }
     .dark .eye-fill{ fill: rgba(226,232,240,.80); }
+  
+    /* MOBILE_COMPACT_V1 */
+    /* Thin, pretty scrollbars (mobile/desktop) */
+    *{ scrollbar-width: thin; scrollbar-color: rgba(245,158,11,.45) rgba(148,163,184,.12); }
+    *::-webkit-scrollbar{ height: 8px; width: 8px; }
+    *::-webkit-scrollbar-track{ background: rgba(148,163,184,.12); border-radius: 999px; }
+    *::-webkit-scrollbar-thumb{
+      background: linear-gradient(180deg, rgba(20,184,166,.55), rgba(245,158,11,.55));
+      border-radius: 999px;
+      border: 2px solid rgba(148,163,184,.12);
+    }
+
+    /* Helpers */
+    .scroll-x{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .scroll-y{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
+    .no-tap-highlight{ -webkit-tap-highlight-color: transparent; }
+
+    /* Ultra-compact mobile layout */
+    @media (max-width: 520px){
+      body{ font-size: 13px; }
+      .muted{ letter-spacing: 0; }
+
+      header .mx-auto{ padding-left: 12px !important; padding-right: 12px !important; padding-top: 10px !important; padding-bottom: 10px !important; }
+      header .glass{
+        border-radius: 18px !important;
+        padding: 10px 10px !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+      }
+
+      /* Logo block */
+      header a.flex.items-center.gap-3{ gap: 10px !important; }
+      header a .leading-tight .text-xs{ font-size: 10px !important; line-height: 1.2 !important; }
+      header a .leading-tight .font-extrabold{ font-size: 14px !important; line-height: 1.15 !important; }
+      header a .w-10.h-10{ width: 38px !important; height: 38px !important; border-radius: 16px !important; }
+      header a svg{ width: 32px !important; height: 32px !important; }
+
+      /* Header actions */
+      #mobileMenuBtn,
+      #themeToggle,
+      a[href="/login.html"],
+      a[href="/register.html"]{
+        padding: 8px 10px !important;
+        font-size: 12px !important;
+        border-radius: 14px !important;
+      }
+      #themeLabel{ display:none !important; }
+      a[href="/login.html"] span{ display:none !important; } /* icon only on tight screens */
+      a[href="/register.html"]{ padding: 8px 12px !important; }
+      .magnet{ transform:none !important; }
+
+      /* Headings/panels tighter */
+      h1{ font-size: 28px !important; line-height: 1.1 !important; }
+      h2{ font-size: 22px !important; line-height: 1.15 !important; }
+      p{ font-size: 13px !important; }
+
+      .glass.rounded-3xl{ border-radius: 18px !important; }
+      .rounded-2xl{ border-radius: 16px !important; }
+      .rounded-xl{ border-radius: 14px !important; }
+
+      /* Sections padding */
+      section.mx-auto, main.mx-auto{ padding-left: 12px !important; padding-right: 12px !important; }
+      .p-8{ padding: 18px !important; }
+      .p-7{ padding: 18px !important; }
+      .p-6{ padding: 16px !important; }
+      .p-5{ padding: 14px !important; }
+      .p-4{ padding: 12px !important; }
+
+      /* Prevent text/buttons from forcing overflow */
+      button, a, input, select, textarea{ max-width: 100%; }
+      .safe-wrap{ overflow-wrap:anywhere; word-break:break-word; }
+
+      /* Mobile drawer: make it scrollable */
+      #mobileMenu .glass{ height: 100%; overflow-y: auto; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+    }
+
+    @media (max-width: 380px){
+      h1{ font-size: 26px !important; }
+      #mobileMenuBtn,
+      #themeToggle,
+      a[href="/login.html"],
+      a[href="/register.html"]{ padding: 7px 9px !important; font-size: 11px !important; }
+    }
+    
   </style>
 
   <script>
@@ -337,6 +421,7 @@
               <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="username" placeholder="Masalan: ali_uz" required />
             </div>
           </div>
+          <div id="usernameHint" class="mt-2 text-xs muted2" style="min-height:16px;"></div>
 
           <div>
             
@@ -389,7 +474,7 @@
             <label class="text-xs font-extrabold muted">Email</label>
             <div class="mt-2 relative">
               <i class="fa-solid fa-envelope absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
-              <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="email" placeholder="ali@example.com" required />
+              <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="email" placeholder="ali@example.com" />
             </div>
           </div>
 
@@ -474,7 +559,46 @@
       const msg = document.getElementById('message');
       const submitBtn = document.getElementById('submitBtn');
 
-      function showMessage(text, type){
+      
+const usernameInput = form.querySelector('input[name="username"]');
+const usernameHint = document.getElementById('usernameHint');
+let _usernameOk = false;
+let _usernameTimer = null;
+
+async function checkUsername(){
+  const u = String(usernameInput?.value || '').trim();
+  _usernameOk = false;
+  if (!u){
+    if(usernameHint) usernameHint.textContent = '';
+    return;
+  }
+  if(!/^[a-zA-Z0-9._]{3,24}$/.test(u)){
+    if(usernameHint) usernameHint.textContent = "Username: 3-24 ta belgi, faqat harf/son/./_";
+    return;
+  }
+  try{
+    const r = await fetch('/api/auth/check-username?username=' + encodeURIComponent(u));
+    const j = await r.json().catch(()=>null);
+    if(j && j.success){
+      _usernameOk = !!j.available;
+      if(usernameHint){
+        usernameHint.textContent = j.available ? "✅ Username bo‘sh." : "❌ Username band. Boshqasini tanlang.";
+      }
+    }
+  }catch(e){
+    if(usernameHint) usernameHint.textContent = '';
+  }
+}
+
+if(usernameInput){
+  usernameInput.addEventListener('input', ()=>{
+    clearTimeout(_usernameTimer);
+    _usernameTimer = setTimeout(checkUsername, 350);
+  });
+  usernameInput.addEventListener('blur', checkUsername);
+}
+
+function showMessage(text, type){
         msg.textContent = text;
         msg.classList.remove('hidden');
         msg.style.background = type === 'error' ? 'var(--bad)' : 'var(--ok)';
@@ -525,7 +649,14 @@
         const data = Object.fromEntries(fd.entries());
 
         // basic validation
-        if((data.password || '').length < 6){
+        // username availability
+await checkUsername();
+if(!_usernameOk){
+  showMessage("Username band yoki noto‘g‘ri. Boshqasini tanlang.", 'error');
+  return;
+}
+
+if((data.password || '').length < 6){
           showMessage("Parol kamida 6 ta belgidan iborat bo‘lsin.", 'error');
           return;
         }

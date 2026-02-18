@@ -1,189 +1,340 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Services - UniConnect</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Services - UniConnect</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<style>
     .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
   </style>
+
+<style id="mobileCompactGlassV1">
+:root{
+  --a1:#18D7C5; /* teal */
+  --a2:#F6B400; /* gold */
+  --a3:#1E3A8A; /* deep blue */
+  --glass-bg: rgba(255,255,255,.56);
+  --glass-brd: rgba(255,255,255,.26);
+  --muted: rgba(15,23,42,.78);
+  --muted2: rgba(15,23,42,.56);
+  --shadow: rgba(0,0,0,.22);
+  --ring: rgba(24,215,197,.35);
+  --grid: rgba(15,23,42,.06);
+}
+html.dark{
+  --glass-bg: rgba(2,6,23,.62);
+  --glass-brd: rgba(148,163,184,.16);
+  --muted: rgba(226,232,240,.82);
+  --muted2: rgba(226,232,240,.58);
+  --shadow: rgba(0,0,0,.55);
+  --ring: rgba(246,180,0,.28);
+  --grid: rgba(148,163,184,.08);
+}
+
+/* background */
+html,body{height:100%;}
+body{
+  background:
+    radial-gradient(1100px 680px at 14% 10%, rgba(24,215,197,.22), transparent 62%),
+    radial-gradient(900px 600px at 90% 18%, rgba(246,180,0,.18), transparent 62%),
+    radial-gradient(900px 700px at 50% 100%, rgba(30,58,138,.14), transparent 60%),
+    linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1)) !important;
+  background-attachment: fixed !important;
+  color: rgb(15 23 42);
+}
+html.dark body{
+  background:
+    radial-gradient(1100px 680px at 14% 10%, rgba(24,215,197,.16), transparent 62%),
+    radial-gradient(900px 600px at 90% 18%, rgba(246,180,0,.12), transparent 62%),
+    radial-gradient(900px 700px at 50% 100%, rgba(30,58,138,.10), transparent 60%),
+    linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1)) !important;
+  color: rgb(226 232 240);
+}
+body:before{
+  content:"";
+  position:fixed; inset:0; z-index:-1;
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+  opacity:.85;
+  pointer-events:none;
+}
+
+html, body{ overflow-x:hidden; }
+*{ max-width:100%; }
+img, video{ height:auto; }
+
+/* glass */
+nav.text-white, nav.text-white *{ color: var(--muted) !important; }
+html.dark nav.text-white, html.dark nav.text-white *{ color: rgb(226 232 240) !important; }
+
+.gradient-bg{
+  background: linear-gradient(135deg, var(--a1), var(--a2)) !important;
+}
+nav, header, .navbar, .topbar{
+  background: var(--glass-bg) !important;
+  border-bottom: 1px solid var(--glass-brd) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 55px var(--shadow) !important;
+}
+.bg-gray-50{ background: transparent !important; }
+.bg-white{
+  background: var(--glass-bg) !important;
+  border-color: var(--glass-brd) !important;
+}
+.border-gray-100, .border-gray-200{ border-color: var(--glass-brd) !important; }
+.text-gray-800{ color: var(--muted) !important; }
+.text-gray-700{ color: var(--muted) !important; }
+.text-gray-600, .text-gray-500{ color: var(--muted2) !important; }
+.shadow-sm, .shadow-lg, .shadow-xl{ box-shadow: 0 18px 55px var(--shadow) !important; }
+
+input, textarea, select{
+  background: rgba(255,255,255,.42) !important;
+  border: 1px solid rgba(255,255,255,.26) !important;
+  color: rgb(15 23 42) !important;
+  border-radius: 14px !important;
+  outline: none !important;
+}
+html.dark input, html.dark textarea, html.dark select{
+  background: rgba(2,6,23,.34) !important;
+  border: 1px solid rgba(148,163,184,.18) !important;
+  color: rgb(226 232 240) !important;
+}
+input:focus, textarea:focus, select:focus{
+  box-shadow: 0 0 0 5px var(--ring) !important;
+  border-color: transparent !important;
+}
+button, .btn, [role="button"], input[type="submit"], .button{
+  border-radius: 14px !important;
+  transition: transform .18s ease, filter .18s ease, box-shadow .18s ease !important;
+}
+button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
+.bg-purple-600, .hover\:bg-purple-700:hover, .text-purple-600, .hover\:text-purple-600:hover{
+  /* map old purple palette to logo vibe */
+}
+.bg-purple-600{ background: linear-gradient(135deg, var(--a1), var(--a2)) !important; }
+.hover\:bg-purple-700:hover{ filter: brightness(.96) !important; }
+.text-purple-600{ color: var(--a1) !important; }
+.hover\:text-purple-800:hover, .hover\:text-purple-800:hover{ color: var(--a2) !important; }
+.focus\:ring-purple-500:focus, .focus\:ring-purple-300:focus{ box-shadow: 0 0 0 5px var(--ring) !important; }
+
+/* scrollbars */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-thumb{ background: rgba(148,163,184,.28); border-radius: 999px; }
+::-webkit-scrollbar-track{ background: transparent; }
+
+/* compact mobile */
+@media (max-width: 480px){
+  body{ font-size:12px !important; }
+  .h-16{ height:52px !important; }
+  nav{ height:52px !important; }
+  .container{ padding-left:10px !important; padding-right:10px !important; }
+  .px-4{ padding-left:10px !important; padding-right:10px !important; }
+  .py-8{ padding-top:14px !important; padding-bottom:14px !important; }
+  .py-6{ padding-top:12px !important; padding-bottom:12px !important; }
+  .p-6{ padding:12px !important; }
+  .p-5{ padding:12px !important; }
+  .p-4{ padding:10px !important; }
+  .gap-4{ gap:10px !important; }
+  .gap-3{ gap:8px !important; }
+  .space-x-4 > :not([hidden]) ~ :not([hidden]){ margin-left:10px !important; }
+  .space-x-3 > :not([hidden]) ~ :not([hidden]){ margin-left:8px !important; }
+  .text-3xl{ font-size:18px !important; line-height:1.15 !important; }
+  .text-2xl{ font-size:16px !important; line-height:1.15 !important; }
+  .text-xl{ font-size:14px !important; }
+  .text-lg{ font-size:13px !important; }
+  .text-sm{ font-size:12px !important; }
+  .text-xs{ font-size:11px !important; }
+  .w-12{ width:40px !important; }
+  .h-12{ height:40px !important; }
+  .w-10{ width:34px !important; }
+  .h-10{ height:34px !important; }
+  .w-8{ width:28px !important; }
+  .h-8{ height:28px !important; }
+  button, .btn{ padding:8px 10px !important; font-size:12px !important; }
+  input, select, textarea{ padding:8px 10px !important; font-size:12px !important; border-radius: 12px !important; }
+  .rounded-xl{ border-radius: 16px !important; }
+  .rounded-lg{ border-radius: 14px !important; }
+  .overflow-x-auto{ -webkit-overflow-scrolling: touch; }
+  .whitespace-nowrap{ white-space: nowrap !important; }
+}
+
+/* modals: keep inside screen + scroll */
+.fixed.inset-0 > div, #createModal > div, #uploadModal > div{
+  max-height: 90vh;
+  overflow: auto;
+}
+</style>
 </head>
 <body class="bg-gray-50 min-h-screen">
-  <nav class="gradient-bg text-white h-16 flex items-center px-4">
-    <div class="container mx-auto flex justify-between items-center">
-      <div class="flex items-center space-x-3">
-        <a href="/messages.html" class="flex items-center space-x-2">
-          <i class="fas fa-graduation-cap text-2xl"></i>
-          <span class="text-xl font-bold">UniConnect</span>
-        </a>
-        <span class="hidden md:block text-sm opacity-80">Student Services Marketplace</span>
-      </div>
-
-      <div class="flex items-center space-x-4">
-        <a href="/search.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Search">
-          <i class="fas fa-search"></i>
-        </a>
-        <a href="/signals.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Campus Signals">
-          <i class="fas fa-bell"></i>
-        </a>
-        <a href="/groups.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Groups">
-          <i class="fas fa-users"></i>
-        </a>
-        <a href="/channels.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Channels">
-          <i class="fas fa-bullhorn"></i>
-        </a>
-        <div class="relative">
-          <img id="userAvatar" src="https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png"
-               class="w-8 h-8 rounded-full cursor-pointer" onclick="toggleUserMenu()">
-          <div id="userMenu" class="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg hidden z-50">
-            <a href="/profile.html" class="block px-4 py-3 text-gray-700 hover:bg-gray-100">
-              <i class="fas fa-user mr-2"></i> Profile
+<nav class="gradient-bg text-white h-16 flex items-center px-4">
+<div class="container mx-auto flex justify-between items-center">
+<div class="flex items-center space-x-3">
+<a class="flex items-center space-x-2" href="/messages.html">
+<i class="fas fa-graduation-cap text-2xl"></i>
+<span class="text-xl font-bold">UniConnect</span>
+</a>
+<span class="hidden md:block text-sm opacity-80">Student Services Marketplace</span>
+</div>
+<div class="flex items-center space-x-4">
+<a class="p-2 hover:bg-white/10 rounded-full transition" href="/search.html" title="Search">
+<i class="fas fa-search"></i>
+</a>
+<a class="p-2 hover:bg-white/10 rounded-full transition" href="/signals.html" title="Campus Signals">
+<i class="fas fa-bell"></i>
+</a>
+<a class="p-2 hover:bg-white/10 rounded-full transition" href="/groups.html" title="Groups">
+<i class="fas fa-users"></i>
+</a>
+<a class="p-2 hover:bg-white/10 rounded-full transition" href="/channels.html" title="Channels">
+<i class="fas fa-bullhorn"></i>
+</a>
+<div class="relative">
+<img class="w-8 h-8 rounded-full cursor-pointer" id="userAvatar" onclick="toggleUserMenu()" src="https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png"/>
+<div class="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg hidden z-50" id="userMenu">
+<a class="block px-4 py-3 text-gray-700 hover:bg-gray-100" href="/profile.html">
+<i class="fas fa-user mr-2"></i> Profile
             </a>
-            <a href="/services_orders.html" class="block px-4 py-3 text-gray-700 hover:bg-gray-100">
-              <i class="fas fa-clipboard-list mr-2"></i> My Orders
+<a class="block px-4 py-3 text-gray-700 hover:bg-gray-100" href="/services_orders.html">
+<i class="fas fa-clipboard-list mr-2"></i> My Orders
             </a>
-            <a href="#" onclick="logout()" class="block px-4 py-3 text-red-600 hover:bg-gray-100">
-              <i class="fas fa-sign-out-alt mr-2"></i> Chiqish
+<a class="block px-4 py-3 text-red-600 hover:bg-gray-100" href="#" onclick="logout()">
+<i class="fas fa-sign-out-alt mr-2"></i> Chiqish
             </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <main class="container mx-auto px-4 py-6">
-    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">Services Marketplace</h1>
-        <p class="text-gray-600">Talabalar o'z qo'l mehnatini, xizmatini va bilimini sotishi yoki sotib olishi mumkin.</p>
-      </div>
-      <div class="flex gap-2">
-        <button onclick="openCreateModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg">
-          <i class="fas fa-plus mr-2"></i> Add Service
+</div>
+</div>
+</div>
+</div>
+</nav>
+<main class="container mx-auto px-4 py-6">
+<div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+<div>
+<h1 class="text-2xl font-bold text-gray-800">Services Marketplace</h1>
+<p class="text-gray-600">Talabalar o'z qo'l mehnatini, xizmatini va bilimini sotishi yoki sotib olishi mumkin.</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg" onclick="openCreateModal()">
+<i class="fas fa-plus mr-2"></i> Add Service
         </button>
-        <a href="/services_orders.html" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 px-4 py-2 rounded-lg">
-          <i class="fas fa-clipboard-list mr-2"></i> My Orders
+<a class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 px-4 py-2 rounded-lg" href="/services_orders.html">
+<i class="fas fa-clipboard-list mr-2"></i> My Orders
         </a>
-      </div>
-    </div>
-
-    <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-        <div class="md:col-span-2">
-          <label class="text-sm text-gray-600">Search</label>
-          <input id="q" type="text" placeholder="e.g. IELTS, Logo, Math tutoring..."
-                 class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300">
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Category</label>
-          <select id="category" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2">
-            <option value="">All</option>
-            <option value="Tutoring">Tutoring</option>
-            <option value="Design">Design</option>
-            <option value="Translation">Translation</option>
-            <option value="Programming">Programming</option>
-            <option value="Writing">Writing</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Sort</label>
-          <select id="sort" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2">
-            <option value="new">Newest</option>
-            <option value="price_asc">Price ↑</option>
-            <option value="price_desc">Price ↓</option>
-          </select>
-        </div>
-        <div class="flex items-end">
-          <button onclick="loadServices(1)" class="w-full bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg">
-            <i class="fas fa-filter mr-2"></i> Apply
+</div>
+</div>
+<div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+<div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+<div class="md:col-span-2">
+<label class="text-sm text-gray-600">Search</label>
+<input class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300" id="q" placeholder="e.g. IELTS, Logo, Math tutoring..." type="text"/>
+</div>
+<div>
+<label class="text-sm text-gray-600">Category</label>
+<select class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2" id="category">
+<option value="">All</option>
+<option value="Tutoring">Tutoring</option>
+<option value="Design">Design</option>
+<option value="Translation">Translation</option>
+<option value="Programming">Programming</option>
+<option value="Writing">Writing</option>
+<option value="Other">Other</option>
+</select>
+</div>
+<div>
+<label class="text-sm text-gray-600">Sort</label>
+<select class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2" id="sort">
+<option value="new">Newest</option>
+<option value="price_asc">Price ↑</option>
+<option value="price_desc">Price ↓</option>
+</select>
+</div>
+<div class="flex items-end">
+<button class="w-full bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg" onclick="loadServices(1)">
+<i class="fas fa-filter mr-2"></i> Apply
           </button>
-        </div>
-      </div>
-      <div class="mt-3 flex items-center justify-between text-sm text-gray-500">
-        <div id="contextLine">Loading...</div>
-        <div class="flex items-center gap-2">
-          <button id="prevBtn" onclick="prevPage()" class="px-3 py-1 border rounded-lg disabled:opacity-40" disabled>Prev</button>
-          <button id="nextBtn" onclick="nextPage()" class="px-3 py-1 border rounded-lg disabled:opacity-40" disabled>Next</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="grid" class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-
-    <div id="empty" class="hidden mt-10 text-center text-gray-600">
-      <i class="fas fa-store text-4xl mb-3 text-gray-400"></i>
-      <div class="font-semibold">No services found</div>
-      <div class="text-sm">Try changing filters or add the first service.</div>
-    </div>
-  </main>
-
-  <!-- Create Modal -->
-  <div id="createModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl w-full max-w-2xl shadow-xl">
-      <div class="flex items-center justify-between px-5 py-4 border-b">
-        <h2 class="font-bold text-gray-800">Create Service</h2>
-        <button onclick="closeCreateModal()" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
-      </div>
-
-      <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="md:col-span-2">
-          <label class="text-sm text-gray-600">Title</label>
-          <input id="c_title" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="e.g. CV review (24h), Logo design, Math-2 tutoring"/>
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Category</label>
-          <select id="c_category" class="mt-1 w-full border rounded-lg px-3 py-2">
-            <option value="Tutoring">Tutoring</option>
-            <option value="Design">Design</option>
-            <option value="Translation">Translation</option>
-            <option value="Programming">Programming</option>
-            <option value="Writing">Writing</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Price Type</label>
-          <select id="c_priceType" class="mt-1 w-full border rounded-lg px-3 py-2">
-            <option value="fixed">Fixed</option>
-            <option value="hour">Hourly</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Price</label>
-          <input id="c_price" type="number" min="0" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="e.g. 50000"/>
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">SLA (hours)</label>
-          <input id="c_sla" type="number" min="1" value="24" class="mt-1 w-full border rounded-lg px-3 py-2"/>
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-sm text-gray-600">Tags (comma separated)</label>
-          <input id="c_tags" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="ielts, math, logo, cv, python"/>
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-sm text-gray-600">Description</label>
-          <textarea id="c_desc" rows="5" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="What you will deliver, requirements from buyer, timeline..."></textarea>
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-sm text-gray-600">Media (optional)</label>
-          <input id="c_media" type="file" class="mt-1 w-full"/>
-          <div class="text-xs text-gray-500 mt-1">Image/video/pdf allowed. Uses your existing Cloudinary pipeline.</div>
-        </div>
-      </div>
-
-      <div class="px-5 py-4 border-t flex justify-end gap-2">
-        <button onclick="closeCreateModal()" class="px-4 py-2 rounded-lg border">Cancel</button>
-        <button onclick="createService()" class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white">
-          <i class="fas fa-check mr-2"></i>Create
+</div>
+</div>
+<div class="mt-3 flex items-center justify-between text-sm text-gray-500">
+<div id="contextLine">Loading...</div>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1 border rounded-lg disabled:opacity-40" disabled="" id="prevBtn" onclick="prevPage()">Prev</button>
+<button class="px-3 py-1 border rounded-lg disabled:opacity-40" disabled="" id="nextBtn" onclick="nextPage()">Next</button>
+</div>
+</div>
+</div>
+<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="grid"></div>
+<div class="hidden mt-10 text-center text-gray-600" id="empty">
+<i class="fas fa-store text-4xl mb-3 text-gray-400"></i>
+<div class="font-semibold">No services found</div>
+<div class="text-sm">Try changing filters or add the first service.</div>
+</div>
+</main>
+<!-- Create Modal -->
+<div class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50" id="createModal">
+<div class="bg-white rounded-xl w-full max-w-2xl shadow-xl">
+<div class="flex items-center justify-between px-5 py-4 border-b">
+<h2 class="font-bold text-gray-800">Create Service</h2>
+<button class="text-gray-500 hover:text-gray-800" onclick="closeCreateModal()"><i class="fas fa-times"></i></button>
+</div>
+<div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="md:col-span-2">
+<label class="text-sm text-gray-600">Title</label>
+<input class="mt-1 w-full border rounded-lg px-3 py-2" id="c_title" placeholder="e.g. CV review (24h), Logo design, Math-2 tutoring">
+</input></div>
+<div>
+<label class="text-sm text-gray-600">Category</label>
+<select class="mt-1 w-full border rounded-lg px-3 py-2" id="c_category">
+<option value="Tutoring">Tutoring</option>
+<option value="Design">Design</option>
+<option value="Translation">Translation</option>
+<option value="Programming">Programming</option>
+<option value="Writing">Writing</option>
+<option value="Other">Other</option>
+</select>
+</div>
+<div>
+<label class="text-sm text-gray-600">Price Type</label>
+<select class="mt-1 w-full border rounded-lg px-3 py-2" id="c_priceType">
+<option value="fixed">Fixed</option>
+<option value="hour">Hourly</option>
+</select>
+</div>
+<div>
+<label class="text-sm text-gray-600">Price</label>
+<input class="mt-1 w-full border rounded-lg px-3 py-2" id="c_price" min="0" placeholder="e.g. 50000" type="number"/>
+</div>
+<div>
+<label class="text-sm text-gray-600">SLA (hours)</label>
+<input class="mt-1 w-full border rounded-lg px-3 py-2" id="c_sla" min="1" type="number" value="24"/>
+</div>
+<div class="md:col-span-2">
+<label class="text-sm text-gray-600">Tags (comma separated)</label>
+<input class="mt-1 w-full border rounded-lg px-3 py-2" id="c_tags" placeholder="ielts, math, logo, cv, python"/>
+</div>
+<div class="md:col-span-2">
+<label class="text-sm text-gray-600">Description</label>
+<textarea class="mt-1 w-full border rounded-lg px-3 py-2" id="c_desc" placeholder="What you will deliver, requirements from buyer, timeline..." rows="5"></textarea>
+</div>
+<div class="md:col-span-2">
+<label class="text-sm text-gray-600">Media (optional)</label>
+<input class="mt-1 w-full" id="c_media" type="file"/>
+<div class="text-xs text-gray-500 mt-1">Image/video/pdf allowed. Uses your existing Cloudinary pipeline.</div>
+</div>
+</div>
+<div class="px-5 py-4 border-t flex justify-end gap-2">
+<button class="px-4 py-2 rounded-lg border" onclick="closeCreateModal()">Cancel</button>
+<button class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white" onclick="createService()">
+<i class="fas fa-check mr-2"></i>Create
         </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
+</div>
+</div>
+</div>
+<script>
     const token = localStorage.getItem('token');
     let me = null;
     let page = 1;

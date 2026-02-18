@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HALLAYM edu — Student Dashboard — HALLAYM edu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{
+      --bg: #f2fbfa;
+      --card: rgba(255,255,255,.68);
+      --card2: rgba(255,255,255,.52);
+      --text: rgba(2,6,23,1);
+      --muted: rgba(15,23,42,.74);
+      --muted2: rgba(15,23,42,.58);
+      --border: rgba(148,163,184,.26);
+
+      --teal: rgba(20,184,166,1);
+      --gold: rgba(245,158,11,1);
+      --gold2: rgba(250,204,21,1);
+      --sky: rgba(56,189,248,1);
+      --danger: rgba(239,68,68,1);
+      --ok: rgba(16,185,129,1);
+
+      --shadow: 0 18px 60px rgba(2,6,23,.12);
+      --ring: 0 0 0 4px rgba(20,184,166,.22);
+      --grid: rgba(2,132,199,.08);
+    }
+    .dark{
+      --bg: rgba(2,6,23,1);
+      --card: rgba(2,6,23,.62);
+      --card2: rgba(2,6,23,.48);
+      --text: rgba(226,232,240,.92);
+      --muted: rgba(226,232,240,.78);
+      --muted2: rgba(226,232,240,.56);
+      --border: rgba(148,163,184,.16);
+
+      --teal: rgba(20,184,166,1);
+      --gold: rgba(245,158,11,1);
+      --gold2: rgba(250,204,21,1);
+      --sky: rgba(56,189,248,1);
+      --danger: rgba(248,113,113,1);
+      --ok: rgba(52,211,153,1);
+
+      --shadow: 0 22px 80px rgba(0,0,0,.48);
+      --ring: 0 0 0 4px rgba(245,158,11,.18);
+      --grid: rgba(148,163,184,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); text-rendering:optimizeLegibility}
+    a{color:inherit}
+    .bg{
+      position:fixed; inset:0; z-index:-2;
+      background:
+        radial-gradient(1200px 700px at 12% 14%, rgba(20,184,166,.30), transparent 62%),
+        radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.18), transparent 60%),
+        radial-gradient(1000px 720px at 50% 92%, rgba(34,211,238,.14), transparent 62%),
+        linear-gradient(180deg, var(--bg), var(--bg));
+    }
+    .gridbg{
+      position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 72%);
+      opacity:.85;
+    }
+
+    header{
+      position:sticky; top:0; z-index:50;
+      padding:14px 16px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: color-mix(in oklab, var(--card) 78%, transparent);
+      border-bottom:1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    }
+    .nav{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    }
+    .brand{display:flex; align-items:center; gap:10px}
+    .logoWrap{
+      width:44px; height:44px; border-radius:16px;
+      display:flex; align-items:center; justify-content:center;
+      background:
+        radial-gradient(120% 120% at 20% 20%, rgba(20,184,166,.35), rgba(2,6,23,.0) 60%),
+        radial-gradient(140% 140% at 80% 80%, rgba(245,158,11,.22), rgba(2,6,23,.0) 60%),
+        color-mix(in oklab, var(--card) 85%, transparent);
+      border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .logoSvg{ width:38px; height:38px; display:block; }
+    .pills{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .pill{font-size:12px; padding:7px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 78%, transparent); background: color-mix(in oklab, var(--card2) 92%, transparent)}
+    .badge{font-weight:900; letter-spacing:.6px}
+    .badge.student{color:color-mix(in oklab, var(--teal) 88%, white)}
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      color:var(--text);
+      padding:10px 12px; border-radius:12px; text-decoration:none; cursor:pointer;
+      box-shadow: 0 1px 0 rgba(0,0,0,.03);
+      transition: transform .08s ease, filter .12s ease, background .12s ease;
+      user-select:none;
+      font-weight:650;
+    }
+    .btn:hover{filter:brightness(1.02)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{
+      background: linear-gradient(135deg, var(--teal), var(--gold2), var(--gold));
+      color:#fff; border-color: transparent;
+      box-shadow: 0 18px 46px rgba(2,6,23,.14);
+    }
+    .btn.danger{
+      background: linear-gradient(135deg, rgba(239,68,68,1), rgba(248,113,113,1));
+      color:#fff; border-color: transparent;
+    }
+    .btn.ghost{background:transparent}
+    .btn.small{padding:8px 10px; border-radius:11px; font-size:13px; font-weight:800}
+
+    .container{max-width:1200px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      border:1px solid color-mix(in oklab, var(--border) 78%, transparent);
+      border-radius:18px; padding:16px;
+      box-shadow: 0 10px 34px rgba(2,6,23,.08);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .col-12{grid-column:span 12}
+    .col-8{grid-column:span 8}
+    .col-4{grid-column:span 4}
+    .col-6{grid-column:span 6}
+    @media (max-width:980px){ .col-8,.col-4,.col-6{grid-column:span 12} }
+
+    .muted{color:var(--muted);font-size:13px;line-height:1.55}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .divider{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:12px 0}
+    .tiny{font-size:12px;color:var(--muted)}
+    footer{padding:18px 16px;color:var(--muted);text-align:center}
+
+    .err{
+      border-radius:14px; padding:12px 14px; margin:14px 0; display:none;
+      border:1px solid #fed7aa; background: color-mix(in oklab, #ffedd5 65%, var(--card)); color:#9a3412;
+    }
+
+    .kpi{display:flex; gap:10px; flex-wrap:wrap}
+    .kpi .box{flex:1; min-width:190px; padding:12px; border-radius:16px; border:1px dashed color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent)}
+    .kpi .val{font-size:20px; font-weight:950; margin-top:4px}
+    .kpi .label{font-size:12px;color:var(--muted)}
+
+    .courseItem{
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:16px;
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      padding:12px;
+      display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
+      transition: transform .08s ease, filter .12s ease;
+    }
+    .courseItem:hover{filter:brightness(1.01)}
+    .courseItem:active{transform:translateY(1px)}
+    .courseItem .title{font-weight:950}
+    .courseItem .meta{margin-top:4px}
+    .progressRow{margin-top:10px}
+    .bar{height:12px;border-radius:999px;background:color-mix(in oklab, var(--border) 85%, transparent); overflow:hidden}
+    .bar > div{height:100%; width:0%; background: linear-gradient(135deg, var(--teal), var(--gold2), var(--gold)); transition: width .25s ease}
+    .tag{display:inline-flex; gap:8px; align-items:center; font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent); font-weight:900}
+    .tag.free{border-color:#86efac; background: color-mix(in oklab, #dcfce7 35%, var(--card))}
+    .tag.paid{border-color:#93c5fd; background: color-mix(in oklab, #dbeafe 35%, var(--card))}
+    .u-anim{
+      background: linear-gradient(90deg, var(--teal), var(--gold2), var(--gold));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      background-size: 220% 220%;
+      animation: shimmer 7s ease infinite;
+      font-weight: 950;
+      letter-spacing:.6px;
+    }
+    @keyframes shimmer{ 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+    code{background:color-mix(in oklab, var(--card) 92%, transparent);border:1px solid color-mix(in oklab, var(--border) 85%, transparent);border-radius:10px;padding:2px 7px}
+  
+    /* mobile drawer */
+    .mobileOnly{display:none}
+    .desktopOnly{display:flex}
+    .iconBtn{
+      width:42px;height:42px;border-radius:14px;
+      display:inline-flex;align-items:center;justify-content:center;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 88%, transparent);
+      backdrop-filter: blur(10px);
+      transition: transform .08s ease, filter .12s ease;
+      box-shadow: 0 6px 18px rgba(2,6,23,.08);
+      user-select:none;
+      font-weight:900;
+    }
+    .iconBtn:hover{filter:brightness(1.03)}
+    .iconBtn:active{transform:translateY(1px)}
+    .drawerBack{
+      position:fixed; inset:0; z-index:80;
+      background: rgba(2,6,23,.55);
+      display:none;
+    }
+    .drawer{
+      position:absolute; right:0; top:0; height:100%; width:min(340px, 92vw);
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      border-left:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      backdrop-filter: blur(14px);
+      padding:14px;
+      transform: translateX(12px);
+      opacity:0;
+      transition: transform .18s ease, opacity .18s ease;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .drawerBack.open{display:block}
+    .drawerBack.open .drawer{transform:translateX(0); opacity:1}
+    .drawerHead{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .drawerTitle{font-weight:950}
+    .drawerLinks{display:flex; flex-direction:column; gap:10px; margin-top:4px}
+    .drawerLinks .btn{width:100%; justify-content:flex-start}
+    .drawerHr{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:6px 0}
+    @media (max-width:720px){
+      .desktopOnly{display:none}
+      .mobileOnly{display:inline-flex}
+      header{padding:12px 12px}
+      .nav{flex-wrap:nowrap}
+    }
+    @media (prefers-reduced-motion: reduce){
+      *{scroll-behavior:auto !important}
+      .drawer,.btn,.courseItem,.item{transition:none !important}
+    }
+  </style>
+  <script>
+    (function(){
+      const key="theme";
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark ? "dark" : "light");
+      if(mode==="dark") document.documentElement.classList.add("dark");
+    })();
+  </script>
+</head>
+<body>
+  <div class="bg"></div><div class="gridbg"></div>
+
+  <header>
+    <div class="nav">
+      <div class="brand">
+        <div class="logoWrap" aria-hidden="true">
+  <svg viewBox="0 0 120 120" class="logoSvg">
+    <defs>
+      <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="rgba(245,158,11,1)"/>
+        <stop offset="0.5" stop-color="rgba(250,204,21,1)"/>
+        <stop offset="1" stop-color="rgba(245,158,11,1)"/>
+      </linearGradient>
+      <linearGradient id="gIce" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="rgba(125,211,252,1)"/>
+        <stop offset="0.45" stop-color="rgba(34,211,238,1)"/>
+        <stop offset="1" stop-color="rgba(167,243,208,1)"/>
+      </linearGradient>
+      <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="2.2" result="b"/>
+        <feMerge>
+          <feMergeNode in="b"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <circle cx="60" cy="60" r="54" fill="none" stroke="url(#gGold)" stroke-width="6" opacity="0.92"/>
+    <ellipse cx="60" cy="64" rx="42" ry="24" fill="rgba(2,6,23,.88)" stroke="url(#gGold)" stroke-width="4"/>
+    <path d="M20 44 L26 44 L28 38 L30 44 L36 44 L31 47 L33 53 L28 49 L23 53 L25 47 Z"
+          fill="rgba(250,204,21,.95)" filter="url(#softGlow)"/>
+    <text x="60" y="70" text-anchor="middle" font-size="22" font-family="Inter, ui-sans-serif" font-weight="800"
+          fill="url(#gIce)" style="letter-spacing:.5px">hallaym</text>
+  </svg>
+</div>
+        <div class="pills">
+          <span class="pill badge student"><a href="/index.html" class="flex items-center gap-3"><span class="u-anim">STUDENT</span></a></span>
+          <span id="mePill" class="pill" style="display:none"></span>
+        </div>
+      </div>
+      <div class="row desktopOnly">
+        <button class="btn ghost small" id="themeBtn">🌓 Tema</button>
+        <a class="btn ghost small" href="/courses.html">Kurslar</a>
+        <a class="btn ghost small" href="/tests.html">Testlar</a>
+        <a class="btn ghost small" href="/certificate.html">Sertifikat</a>
+        <a class="btn ghost small" href="/profile.html">Profil</a>
+        <button class="btn danger small" id="logoutBtn">Chiqish</button>
+      </div>
+      <button class="iconBtn mobileOnly" id="menuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false">☰</button>
+    </div>
+  </header>
+
+  <div id="drawerBack" class="drawerBack" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="drawer" role="document">
+      <div class="drawerHead"><div><div class="drawerTitle">Menyu</div><div class="tiny" id="drawerMe">—</div></div><button class="iconBtn" id="drawerClose" aria-label="Close">✕</button></div><div class="drawerHr"></div>
+      <div class="drawerLinks">
+        <button class="btn ghost" id="themeBtn2">🌓 Tema</button>
+        <a class="btn ghost" href="/courses.html">📚 Kurslar</a>
+        <a class="btn ghost" href="/tests.html">🧪 Testlar</a>
+        <a class="btn ghost" href="/certificate.html">🏅 Sertifikat</a>
+        <a class="btn ghost" href="/messages.html">💌 Xabarlar</a>
+        <a class="btn ghost" href="/channels.html">📣 Kanallar</a>
+        <a class="btn ghost" href="/groups.html">👥 Guruhlar</a>
+        <a class="btn ghost" href="/profile.html">👤 Profil</a>
+        <button class="btn danger" id="logoutBtn2">🚪 Chiqish</button>
+      </div>
+      <div class="drawerHr"></div>
+      <div class="tiny">Tip: menyu tashqarisini bosib yopasiz.</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="errBox" class="err"></div>
+
+    <div class="grid">
+      <div class="card col-12">
+        <h2 style="margin:0 0 6px 0;font-size:20px">Student boshqaruv paneli</h2>
+        <div class="muted">
+          Bu panel “Next action” falsafasi bilan ishlaydi: kurslar → darslar → test → sertifikat.
+        </div>
+      </div>
+
+      <div class="card col-8">
+        <h3 style="margin:0 0 10px 0">Hisob va KPI</h3>
+        <div class="kpi">
+          <div class="box">
+            <div class="label">Ism</div>
+            <div class="val" id="nameVal">—</div>
+          </div>
+          <div class="box">
+            <div class="label">Fakultet</div>
+            <div class="val" style="font-size:14px" id="facultyVal">—</div>
+          </div>
+          <div class="box">
+            <div class="label">Guruh</div>
+            <div class="val" style="font-size:14px" id="groupVal">—</div>
+          </div>
+          <div class="box">
+            <div class="label">Coin balans</div>
+            <div class="val" id="coinsVal">—</div>
+          </div>
+          <div class="box">
+            <div class="label">Qo‘shilgan kurslar</div>
+            <div class="val" id="joinedCount">0</div>
+          </div>
+          <div class="box">
+            <div class="label">Tugallangan kurslar</div>
+            <div class="val" id="doneCount">0</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <a class="btn primary" href="/courses.html">+ Kurs tanlash</a>
+          <a class="btn" href="/tests.html">Test ishlash</a>
+          <a class="btn" href="/certificate.html">Sertifikat</a>
+          <button class="btn" id="refreshBtn">Yangilash</button>
+        </div>
+
+        <div class="tiny" style="margin-top:10px">
+          API bo‘lsa: <code>/api/me</code>, <code>API/progress</code>, <code>API/courses</code> dan real ma’lumotlar chiqadi.
+          Aks holda localStorage demo ishlaydi.
+        </div>
+      </div>
+
+      <div class="card col-4">
+        <h3 style="margin:0 0 10px 0">Next action</h3>
+        <div class="muted" id="nextActionTxt">—</div>
+        <div class="divider"></div>
+        <div class="row">
+          <a class="btn primary" id="continueBtn" href="/courses.html">Davom ettirish</a>
+          <a class="btn" id="openCourseBtn" href="/courses.html">Kurs ochish</a>
+        </div>
+        <div class="tiny" style="margin-top:10px">
+          Davom ettirish: oxirgi ochilgan dars (lastLessonId) bo‘yicha avtomatik.
+        </div>
+      </div>
+
+      <div class="card col-12">
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div>
+            <h3 style="margin:0">Mening kurslarim</h3>
+            <div class="muted">Qo‘shilgan kurslar, progress, “Davom ettirish”.</div>
+          </div>
+          <div class="row">
+            <span class="tiny" id="modeTxt">—</span>
+          </div>
+        </div>
+
+        <div id="myCourses" style="margin-top:12px; display:flex; flex-direction:column; gap:10px">
+          <div class="muted">Yuklanmoqda...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer><span class="u-anim">HALLAYM</span> edu — Student Dashboard</footer>
+
+<script>
+  const API_BASE = "";
+  const $ = (id)=> document.getElementById(id);
+  function getToken(){ return localStorage.getItem("token") || ""; }
+
+  function setErr(msg){ $("errBox").textContent = msg; $("errBox").style.display="block"; }
+  function clearErr(){ $("errBox").style.display="none"; }
+
+  async function apiFetch(url, opts={}){
+    const token = getToken();
+    const headers = Object.assign({}, opts.headers || {});
+    if(token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + url, Object.assign({}, opts, { headers }));
+    let data = null;
+    const ct = res.headers.get("content-type") || "";
+    if(ct.includes("application/json")){
+      try{ data = await res.json(); }catch{ data = null; }
+    }else{
+      try{ data = await res.text(); }catch{ data = null; }
+    }
+    if(!res.ok){
+      const msg = (data && data.error) ? data.error : ("So'rov xatosi: " + res.status);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  $("themeBtn").addEventListener("click", ()=>{
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+  });
+
+  $("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token");
+    location.href="/login.html";
+  });
+
+  // DEMO storage shared with other pages
+  function demoCoursesKey(){ return "demoCourses_v2"; }
+  function readDemoCourses(){ try{ return JSON.parse(localStorage.getItem(demoCoursesKey()) || "[]"); }catch{ return []; } }
+  function joinedKey(uid){ return "joinedCourses_v1_" + (uid || "anon"); }
+  function readJoined(uid){ try{ return JSON.parse(localStorage.getItem(joinedKey(uid)) || "[]"); }catch{ return []; } }
+  function progressKey(uid, courseId){ return `progress_v1_${uid || "anon"}_${courseId}`; }
+  function readProgress(uid, courseId){ try{ return JSON.parse(localStorage.getItem(progressKey(uid, courseId)) || "{}"); }catch{ return {}; } }
+
+  function normalizeCourse(raw){
+    return {
+      id: raw._id || raw.id || raw.courseId,
+      title: raw.title || raw.name || "Nomsiz kurs",
+      description: raw.description || raw.desc || "",
+      type: (raw.type || (raw.isPaid ? "paid" : "free") || "free"),
+      price: Number(raw.price ?? raw.cost ?? 0),
+      status: raw.status || (raw.published ? "published" : "published"),
+      faculty: raw.faculty || raw.facultyName || "",
+      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
+      testId: raw.testId || raw.test?._id || raw.test || ""
+    };
+  }
+
+  async function apiMe(){
+    const token = getToken();
+    if(!token){ location.href="/login.html"; return null; }
+    try{
+      return await apiFetch("/api/me");
+    }catch(e){
+      localStorage.removeItem("token");
+      location.href="/login.html";
+      return null;
+    }
+  }
+
+  async function fetchCourses(){
+    try{
+      const data = await apiFetch("/api/courses");
+      const list = Array.isArray(data) ? data : (data.courses || []);
+      return { list: list.map(normalizeCourse), mode:"API" };
+    }catch(e){
+      return { list: readDemoCourses().map(normalizeCourse), mode:"DEMO(localStorage)" };
+    }
+  }
+
+  async function fetchProgress(courseId){
+    try{
+      const data = await apiFetch("/api/progress?courseId=" + encodeURIComponent(courseId));
+      const done = Array.isArray(data.doneLessonIds) ? data.doneLessonIds : (Array.isArray(data.done) ? data.done : []);
+      return { doneLessonIds: done.map(String), lastLessonId: String(data.lastLessonId || ""), totalLessons: Number(data.totalLessons || 0) };
+    }catch(e){
+      return null;
+    }
+  }
+
+  function calcPercent(p){
+    const total = Number(p.totalLessons || 0);
+    const done = Array.isArray(p.doneLessonIds) ? p.doneLessonIds.length : 0;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    return { total, done, pct };
+  }
+
+  function makeBar(pct){
+    return `<div class="bar"><div style="width:${pct}%"></div></div>`;
+  }
+
+  function setNextAction(next){
+    if(!next){
+      $("nextActionTxt").textContent = "Hozircha kurs yo‘q. Kurslar sahifasidan kurs tanlang va qo‘shiling.";
+      $("continueBtn").href = "/courses.html";
+      $("openCourseBtn").href = "/courses.html";
+      return;
+    }
+    $("nextActionTxt").innerHTML = `Davom ettirish: <b>${next.title}</b> • progress: <b>${next.pct}%</b>`;
+    $("continueBtn").href = "/joinedcourse.html?id=" + encodeURIComponent(next.courseId);
+    $("openCourseBtn").href = "/course.html?id=" + encodeURIComponent(next.courseId);
+  }
+
+  async function init(){
+    clearErr();
+    const me = await apiMe();
+    if(!me) return;
+
+    const role = String(me.role || "student").toLowerCase();
+    if(role !== "student"){
+      location.href = role==="teacher" ? "/teacher-dashboard.html" : "/admin-dashboard.html";
+      return;
+    }
+
+    const uid = me._id || me.id || me.username;
+    const name = me.fullname || me.name || me.username || "—";
+    $("mePill").textContent = `${name} • ${me.faculty || "—"} • ${me.group || "—"}`;
+    $("mePill").style.display = "inline-flex";
+
+    $("nameVal").textContent = name;
+    $("facultyVal").textContent = me.faculty || "—";
+    $("groupVal").textContent = me.group || "—";
+    $("coinsVal").textContent = String(Number(me.coins ?? me.coin ?? 0));
+
+    const { list: allCourses, mode } = await fetchCourses();
+    $("modeTxt").textContent = "Rejim: " + mode;
+
+    const joinedIds = readJoined(uid).map(String);
+    const my = allCourses.filter(c=> joinedIds.includes(String(c.id)));
+    $("joinedCount").textContent = String(my.length);
+
+    // Render my courses with progress
+    const wrap = $("myCourses");
+    wrap.innerHTML = "";
+    if(!my.length){
+      wrap.innerHTML = `<div class="muted">Siz hali kursga qo‘shilmagansiz. <a href="/courses.html"><b>Kurslar</b></a> sahifasiga o‘ting.</div>`;
+      setNextAction(null);
+      $("doneCount").textContent = "0";
+      return;
+    }
+
+    let doneCount = 0;
+    let bestNext = null; // highest priority: not completed + has lastLesson
+    for(const c of my){
+      // progress: try API; else localStorage
+      let p = await fetchProgress(c.id);
+      let pct = 0, done = 0, total = 0, lastLessonId = "";
+      if(p){
+        const calc = calcPercent(p);
+        pct = calc.pct; done = calc.done; total = calc.total; lastLessonId = p.lastLessonId;
+      }else{
+        const lp = readProgress(uid, c.id);
+        const doneIds = Array.isArray(lp.doneLessonIds) ? lp.doneLessonIds : [];
+        // total unknown => use doneIds as rough, keep pct 0/100 only
+        done = doneIds.length;
+        total = Math.max(done, Number(lp.totalLessons || 0));
+        pct = total ? Math.round((done/total)*100) : (done ? 100 : 0);
+        lastLessonId = String(lp.lastLessonId || "");
+      }
+
+      if(pct >= 100) doneCount++;
+
+      // next action selection:
+      if(!bestNext && pct < 100) bestNext = { courseId:c.id, title:c.title, pct };
+      else if(bestNext && bestNext.pct >= 100 && pct < 100) bestNext = { courseId:c.id, title:c.title, pct };
+
+      const item = document.createElement("div");
+      item.className = "courseItem";
+      item.innerHTML = `
+        <div style="flex:1; min-width:240px">
+          <div class="title">${c.title}</div>
+          <div class="tiny meta">${c.faculty || "—"} • Teacher: ${c.teacherName || "—"}</div>
+          <div class="row" style="margin-top:8px">
+            ${c.type==="paid" ? `<span class="tag paid">Pullik • ${Number(c.price||0)} coin</span>` : `<span class="tag free">Bepul</span>`}
+            <span class="tag">Progress: ${pct}%</span>
+          </div>
+          <div class="progressRow">${makeBar(pct)}</div>
+          <div class="tiny" style="margin-top:8px">Tugagan darslar: <b>${done}</b>${total ? ("/" + total) : ""}</div>
+        </div>
+        <div class="row" style="justify-content:flex-end">
+          <a class="btn small primary" href="/joinedcourse.html?id=${encodeURIComponent(c.id)}">Davom ettirish</a>
+          <a class="btn small" href="/course.html?id=${encodeURIComponent(c.id)}">Info</a>
+        </div>
+      `;
+      wrap.appendChild(item);
+    }
+
+    $("doneCount").textContent = String(doneCount);
+    setNextAction(bestNext);
+  }
+
+  $("refreshBtn").addEventListener("click", ()=> init().catch(e=> setErr(e.message || "Xatolik")));
+  init().catch(e=> setErr(e.message || "Xatolik"));
+</script>
+
+<script>
+  (function(){
+    const $ = (id)=>document.getElementById(id);
+    const back = $("drawerBack");
+    const drawer = back ? back.querySelector(".drawer") : null;
+    const openBtn = $("menuBtn");
+    const closeBtn = $("drawerClose");
+    const theme1 = $("themeBtn");
+    const theme2 = $("themeBtn2");
+    const logout1 = $("logoutBtn");
+    const logout2 = $("logoutBtn2");
+
+    function setExpanded(v){
+      if(openBtn) openBtn.setAttribute("aria-expanded", v ? "true" : "false");
+    }
+    function openDrawer(){
+      if(!back) return;
+      back.classList.add("open");
+      setExpanded(true);
+      document.body.style.overflow = "hidden";
+      // focus first interactive element
+      setTimeout(()=>{
+        const el = back.querySelector("button, a, input, select, textarea, [tabindex]:not([tabindex='-1'])");
+        if(el) el.focus();
+      }, 0);
+    }
+    function closeDrawer(){
+      if(!back) return;
+      back.classList.remove("open");
+      setExpanded(false);
+      document.body.style.overflow = "";
+      if(openBtn) openBtn.focus();
+    }
+
+    if(openBtn) openBtn.addEventListener("click", openDrawer);
+    if(closeBtn) closeBtn.addEventListener("click", closeDrawer);
+
+    // click outside drawer closes
+    if(back && drawer){
+      back.addEventListener("click", (e)=>{
+        if(e.target === back) closeDrawer();
+      });
+    }
+
+    // esc closes
+    document.addEventListener("keydown", (e)=>{
+      if(e.key === "Escape" && back && back.classList.contains("open")) closeDrawer();
+    });
+
+    // theme sync
+    function toggleTheme(){
+      document.documentElement.classList.toggle("dark");
+      localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+    }
+    if(theme1) theme1.addEventListener("click", toggleTheme);
+    if(theme2) theme2.addEventListener("click", toggleTheme);
+
+    // logout sync
+    function doLogout(){
+      localStorage.removeItem("token");
+      location.href = "/login.html";
+    }
+    if(logout1) logout1.addEventListener("click", doLogout);
+    if(logout2) logout2.addEventListener("click", doLogout);
+  })();
+</script>
+
+</body>
+</html>
