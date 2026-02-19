@@ -1694,12 +1694,27 @@ function isTeacher(userId) {
   }
 // For camera-less / mic-less devices: allow "watch-only" participation.
 // We try video+audio -> audio-only -> no local tracks.
-const videoConstraints = { width: 1280, height: 720 };
+// PERFORMANCE: default students to audio-only (video off) unless they are on stage or explicitly enable camera.
+function __isMeOnStage(){
+  try{
+    const me = String(myUserId() || currentUser?._id || '');
+    const st = groupCall?.stage || {};
+    const pinned = st.pinnedUserId ? String(st.pinnedUserId) : '';
+    const owner  = st.ownerTeacherId ? String(st.ownerTeacherId) : '';
+    const stageUserId = pinned || owner || '';
+    return !!(me && stageUserId && me === stageUserId);
+  }catch(_){ return false; }
+}
+function __videoConstraintsLow(){
+  return { width: { ideal: 640, max: 854 }, height: { ideal: 360, max: 480 }, frameRate: { ideal: 15, max: 20 } };
+}
 const audioConstraints = AUDIO_CONSTRAINTS;
 try {
-    const constraints = (callType === 'audio')
+    const roleNow = String(currentUser?.role||'').toLowerCase();
+const wantVideo = (callType !== 'audio') && (roleNow === 'teacher' || __isMeOnStage() || !groupCall.cameraOff);
+const constraints = (callType === 'audio')
         ? { audio: AUDIO_CONSTRAINTS, video: false }
-        : { audio: AUDIO_CONSTRAINTS, video: videoConstraints };
+        : { audio: AUDIO_CONSTRAINTS, video: (wantVideo ? __videoConstraintsLow() : false) };
 
     groupCall.localStream = await navigator.mediaDevices.getUserMedia(constraints);
     addVideoTile(String(myUserId() || 'local'), groupCall.localStream, true);
@@ -1772,6 +1787,13 @@ try {
                 tile.className = "relative rounded-2xl overflow-hidden bg-black shadow border border-white/10";
                 tile.innerHTML = `
                     <video id="vid_${userId}" autoplay playsinline ${isLocal ? 'muted' : ''} class="w-full h-full object-cover bg-black"></video>
+                    <audio id="aud_${userId}" autoplay ${isLocal ? 'muted' : ''} class="hidden"></audio>
+                    <div id="av_${userId}" class="absolute inset-0 flex items-center justify-center bg-black/30 text-white/70 hidden">
+                      <div class="text-center">
+                        <i class="fas fa-user-circle text-5xl opacity-70"></i>
+                        <div class="mt-2 text-xs font-semibold">${isLocal ? 'Siz' : getUserLabel(userId)}</div>
+                      </div>
+                    </div>
                     <div class="absolute left-2 bottom-2 px-2 py-1 rounded-lg bg-black/60 text-white text-xs font-semibold">
                       ${isLocal ? 'Siz' : getUserLabel(userId)}
                     </div>
@@ -1798,6 +1820,10 @@ try {
 const video = tile.querySelector('video');
             if (video && stream) {
                 video.srcObject = stream;
+            }
+            const aud = tile.querySelector('audio');
+            if (aud && stream) {
+                aud.srcObject = stream;
             }
 
             const container = getTileContainerFor(userId);
@@ -1828,6 +1854,33 @@ const video = tile.querySelector('video');
                     tile.style.height = '220px';
                 }
             }
+            // Audience mode: grid tiles are audio-only (video hidden), only stage video is shown to everyone.
+            try{
+                const st = groupCall?.stage || {};
+                const pinned = st.pinnedUserId ? String(st.pinnedUserId) : '';
+                const owner  = st.ownerTeacherId ? String(st.ownerTeacherId) : '';
+                const stageUserId = pinned || owner || '';
+                const isStage = stageUserId && String(userId) === String(stageUserId);
+                const av = document.getElementById(`av_${userId}`);
+                if (!isStage && container && container.id === 'studentsGrid') {
+                    tile.classList.add('aud-grid');
+                    if (video) video.classList.add('hidden');
+                    if (av) av.classList.remove('hidden');
+                } else {
+                    tile.classList.remove('aud-grid');
+                    if (video) video.classList.remove('hidden');
+                    if (av) av.classList.add('hidden');
+                }
+
+                // Teacher preview on click (shows only for owner teacher)
+                if (!isLocal) {
+                  tile.onclick = () => {
+                    if (!isMeStageOwnerTeacher()) return;
+                    openParticipantPreview(String(userId));
+                  };
+                }
+            }catch(_){}
+
 
             ensureStagePlaceholder();
         }
@@ -3041,7 +3094,7 @@ function toggleSpeaker() {
 
 function updateCallControlUI(){
             const role = String(currentUser?.role||'').toLowerCase();
-            const hideStudentToggles = (role === 'student');
+            const hideStudentToggles = false;
             const micOn = !groupCall.muted;
             const camOn = !groupCall.cameraOff;
             const spkOn = !groupCall.speakerMuted;
@@ -3094,8 +3147,6 @@ function updateCallControlUI(){
         }
 
 function toggleMute() {
-            const role = String(currentUser?.role||'').toLowerCase();
-            if (role === 'student') return notify("Talabalarda mikrofonni o'chirish ruxsat yo'q", 'info');
             if (OBSERVER_MODE) return notify('Observer mode: boshqaruv yo\'q', 'info');
 
             if (!groupCall.localStream) return;
@@ -3105,10 +3156,7 @@ function toggleMute() {
             btn.innerHTML = groupCall.muted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
             updateCallControlUI();
         }
-
         function toggleCamera() {
-            const role = String(currentUser?.role||'').toLowerCase();
-            if (role === 'student') return notify("Talabalarda kamerani o'chirish ruxsat yo'q", 'info');
             if (OBSERVER_MODE) return notify('Observer mode: boshqaruv yo\'q', 'info');
 
             if (!groupCall.localStream) return;
@@ -3556,6 +3604,28 @@ function toggleMute() {
 </div>
 
 
+
+<!-- Participant preview (teacher only) -->
+<div id="participantPreview" class="fixed inset-0 z-[60] hidden">
+  <div class="absolute inset-0 bg-black/70" onclick="closeParticipantPreview()"></div>
+  <div class="absolute left-1/2 top-1/2 w-[min(920px,94vw)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl overflow-hidden shadow-2xl">
+    <div class="p-3 flex items-center justify-between border-b border-white/10">
+      <div class="text-white font-semibold text-sm" id="ppTitle">Talaba</div>
+      <button class="px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white" onclick="closeParticipantPreview()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="p-3">
+      <video id="ppVideo" autoplay playsinline class="w-full rounded-xl bg-black" style="aspect-ratio:16/9"></video>
+      <div id="ppHint" class="mt-2 text-white/70 text-xs"></div>
+      <div class="mt-3 flex gap-2 justify-end">
+        <button id="ppReqBtn" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold hidden">
+          <i class="fas fa-hand mr-1"></i> Kamera so‘rash
+        </button>
+        <button class="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold" onclick="closeParticipantPreview()">Yopish</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script id="stageSuperFix">
 /**
  * STAGE SUPER FIX
@@ -3750,6 +3820,161 @@ function toggleMute() {
   try{
     setTimeout(()=>{ try{ renderGroupCallLayout(); }catch(_){} }, 50);
   }catch(_){}
+})();
+</script>
+
+
+<script id="audienceModeHelpers">
+(function(){
+  function meRole(){ return String(currentUser?.role||'').toLowerCase(); }
+  function stageUserId(){
+    const st = groupCall?.stage || {};
+    return String(st.pinnedUserId || st.ownerTeacherId || '');
+  }
+
+  window.openParticipantPreview = function(uid){
+    try{
+      const box = document.getElementById('participantPreview');
+      const v = document.getElementById('ppVideo');
+      const title = document.getElementById('ppTitle');
+      const hint = document.getElementById('ppHint');
+      const btn = document.getElementById('ppReqBtn');
+      if(!box||!v||!title||!hint||!btn) return;
+      uid = String(uid||'');
+      title.textContent = getUserLabel(uid);
+      const s = groupCall.remoteStreams.get(uid);
+      v.srcObject = s || null;
+      hint.textContent = '';
+      btn.classList.add('hidden');
+      btn.onclick = null;
+
+      const hasVideo = !!(s && s.getVideoTracks && s.getVideoTracks().length && s.getVideoTracks()[0].enabled);
+      if(!hasVideo){
+        hint.textContent = "Bu foydalanuvchida kamera yoqilmagan (yoki video jo‘natmayapti).";
+        btn.classList.remove('hidden');
+        btn.onclick = ()=> {
+          try{
+            socket?.emit('groupCallSignal', {
+              groupId: groupCall.groupId,
+              callId: groupCall.callId,
+              to: uid,
+              type: 'mediaRequest',
+              data: { action: 'enableVideo', from: String(myUserId()||currentUser?._id||'') }
+            });
+            hint.textContent = "So‘rov yuborildi: kamerani yoqish.";
+          }catch(_){}
+        };
+      } else {
+        hint.textContent = "Video mavjud. Yopish uchun tashqariga bosing.";
+      }
+      box.classList.remove('hidden');
+    }catch(e){}
+  };
+
+  window.closeParticipantPreview = function(){
+    try{
+      const box = document.getElementById('participantPreview');
+      const v = document.getElementById('ppVideo');
+      if(v) v.srcObject = null;
+      if(box) box.classList.add('hidden');
+    }catch(_){}
+  };
+
+  async function enableLocalVideo(){
+    if(OBSERVER_MODE) return;
+    try{
+      const has = groupCall.localStream?.getVideoTracks?.().some(t=>t.readyState==='live');
+      if(has){
+        groupCall.cameraOff = false;
+        groupCall.localStream.getVideoTracks().forEach(t=>t.enabled=true);
+        updateCallControlUI();
+        return;
+      }
+      const ns = await navigator.mediaDevices.getUserMedia({ video: __videoConstraintsLow(), audio: false });
+      const track = ns.getVideoTracks()[0];
+      if(!track) return;
+      if(!groupCall.localStream) groupCall.localStream = new MediaStream();
+      groupCall.localStream.addTrack(track);
+      // replace/add to every peer
+      for(const pc of groupCall.peers.values()){
+        const sender = pc.getSenders().find(s=>s.track && s.track.kind==='video') || pc.getSenders().find(s=>s.track==null && s.kind==='video');
+        // If we don't have a sender, just addTrack
+        try{
+          const vs = pc.getSenders().find(s=>s.track && s.track.kind==='video');
+          if(vs) await vs.replaceTrack(track);
+          else pc.addTrack(track, groupCall.localStream);
+        }catch(_){}
+      }
+      // refresh local tile
+      try{ addVideoTile(String(myUserId()||'local'), groupCall.localStream, true); }catch(_){}
+      groupCall.cameraOff = false;
+      updateCallControlUI();
+    }catch(e){
+      console.warn('enableLocalVideo failed', e);
+      notify('Kamerani yoqib bo‘lmadi', 'err');
+    }
+  }
+
+  async function disableLocalVideo(){
+    try{
+      groupCall.cameraOff = true;
+      const vt = groupCall.localStream?.getVideoTracks?.() || [];
+      vt.forEach(t=>{ try{ t.stop(); }catch(_){} try{ groupCall.localStream.removeTrack(t); }catch(_){} });
+      // replaceTrack(null) to peers to stop sending
+      for(const pc of groupCall.peers.values()){
+        const sender = pc.getSenders().find(s=>s.track && s.track.kind==='video');
+        if(sender) { try{ await sender.replaceTrack(null); }catch(_){} }
+      }
+      updateCallControlUI();
+      try{ addVideoTile(String(myUserId()||'local'), groupCall.localStream, true); }catch(_){}
+    }catch(_){}
+  }
+
+  // When pinned to stage, auto-enable video for that participant (best effort).
+  function handleStageAutoVideo(){
+    try{
+      if(!groupCall.active) return;
+      const me = String(myUserId()||currentUser?._id||'');
+      const su = stageUserId();
+      const isOn = !!(me && su && me===su);
+      if(isOn){
+        enableLocalVideo();
+      } else if(meRole()==='student'){
+        // keep students light by default when not on stage
+        disableLocalVideo();
+      }
+    }catch(_){}
+  }
+
+  // Hook stage events (existing stageSuperFix emits these)
+  try{
+    socket?.on?.('groupStagePinned', ()=>{ setTimeout(handleStageAutoVideo, 50); });
+    socket?.on?.('groupStageUnpinned', ()=>{ setTimeout(handleStageAutoVideo, 50); });
+    socket?.on?.('groupStageState', ()=>{ setTimeout(handleStageAutoVideo, 50); });
+  }catch(_){}
+
+  // Accept media requests from teacher (students can choose to comply)
+  const _origGroupSignal = null;
+  try{
+    // patch into existing groupCallSignal handler via another listener
+    socket?.on?.('groupCallSignal', async (payload)=>{
+      try{
+        if(!groupCall.active) return;
+        if(String(payload.groupId)!==String(groupCall.groupId)) return;
+        if(String(payload.callId)!==String(groupCall.callId)) return;
+        if(String(payload.type)!=='mediaRequest') return;
+
+        const act = payload.data?.action;
+        if(act==='enableVideo'){
+          // show quick confirm
+          if(meRole()==='teacher') return;
+          const ok = confirm("Ustoz kamerani yoqishni so‘radi. Yoqasizmi?");
+          if(ok) await enableLocalVideo();
+        }
+      }catch(_){}
+    });
+  }catch(_){}
+
 })();
 </script>
 

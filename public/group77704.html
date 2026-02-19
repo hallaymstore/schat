@@ -3753,5 +3753,213 @@ function toggleMute() {
 })();
 </script>
 
+
+<script id="ultraLiteAudienceMode">
+(function(){
+  const $ = (id)=>document.getElementById(id);
+  const str = (x)=> (x===null||x===undefined)?'':String(x);
+
+  function isMobile(){
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (window.matchMedia && matchMedia('(max-width: 760px)').matches);
+  }
+
+  function computeStageUserId(){
+    const st = window.groupCall?.stage || {};
+    const pinned = str(st.pinnedUserId);
+    const owner  = str(st.ownerTeacherId);
+
+    let fallbackTeacher = '';
+    try{
+      const entries = Array.from((window.groupCall?.participantInfos || new Map()).entries());
+      const hit = entries.find(([id, info]) => String(info?.role||'').toLowerCase()==='teacher');
+      fallbackTeacher = hit ? str(hit[0]) : '';
+    }catch(_){}
+    return pinned || owner || fallbackTeacher || '';
+  }
+
+  function ensurePreviewModal(){
+    if ($('studentPreviewModal')) return;
+    const m = document.createElement('div');
+    m.id = 'studentPreviewModal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(6px)';
+    m.innerHTML = `
+      <div style="width:min(92vw,520px);background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:18px;overflow:hidden;box-shadow:0 20px 70px rgba(0,0,0,.45)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;color:#fff;font-weight:800">
+          <div id="spmTitle">Preview</div>
+          <button id="spmClose" style="padding:8px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);color:#fff;font-weight:900;cursor:pointer">✕</button>
+        </div>
+        <div style="padding:12px">
+          <video id="spmVideo" autoplay playsinline style="width:100%;max-height:55vh;background:#000;border-radius:14px" ></video>
+          <audio id="spmAudio" autoplay style="display:none"></audio>
+          <div id="spmHint" style="margin-top:10px;color:rgba(255,255,255,.78);font-size:13px"></div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(m);
+    $('spmClose').onclick = ()=>{ hidePreview(); };
+    m.addEventListener('click',(e)=>{ if(e.target===m) hidePreview(); });
+  }
+
+  function showPreview(uid){
+    ensurePreviewModal();
+    window.groupCall = window.groupCall || {};
+    window.groupCall.previewUserId = str(uid);
+    const stream = window.groupCall.remoteStreams?.get?.(uid);
+    const v = $('spmVideo');
+    const a = $('spmAudio');
+    const title = $('spmTitle');
+    const hint = $('spmHint');
+    title.textContent = 'Preview: ' + (typeof window.getUserLabel==='function' ? window.getUserLabel(uid) : uid);
+
+    const hasVideo = !!(stream && stream.getVideoTracks && stream.getVideoTracks().length);
+    const hasAudio = !!(stream && stream.getAudioTracks && stream.getAudioTracks().length);
+
+    v.srcObject = null; a.srcObject = null;
+    if (hasVideo){
+      v.srcObject = stream;
+      try{ v.play(); }catch(_){}
+      hint.textContent = 'Talaba videosi preview (faqat o‘qituvchiga).';
+    } else if (hasAudio){
+      a.srcObject = stream;
+      try{ a.play(); }catch(_){}
+      hint.textContent = 'Talaba videosi yo‘q (audio-only).';
+    } else {
+      hint.textContent = 'Stream topilmadi.';
+    }
+    $('studentPreviewModal').style.display='flex';
+  }
+
+  function hidePreview(){
+    const m = $('studentPreviewModal');
+    if(!m) return;
+    try{
+      const v = $('spmVideo'); const a = $('spmAudio');
+      if(v){ v.pause(); v.srcObject=null; }
+      if(a){ a.pause(); a.srcObject=null; }
+    }catch(_){}
+    m.style.display='none';
+    try{ window.groupCall.previewUserId = null; }catch(_){}
+  }
+
+  // Adaptive ensureLocalStream for mobile teachers (biggest RAM saver)
+  const _origEnsureLocalStream = window.ensureLocalStream;
+  window.ensureLocalStream = async function(callType){
+    if (window.groupCall?.localStream) return window.groupCall.localStream;
+
+    const lowVideo = { width: { ideal: 640, max: 640 }, height: { ideal: 360, max: 360 }, frameRate: { ideal: 15, max: 15 } };
+    try{
+      const role = String(window.currentUser?.role || '').toLowerCase();
+      const useLow = isMobile() && callType !== 'audio' && role === 'teacher';
+      if(useLow){
+        const constraints = { audio: window.AUDIO_CONSTRAINTS || true, video: lowVideo };
+        window.groupCall = window.groupCall || {};
+        window.groupCall.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        if(typeof window.addVideoTile === 'function'){
+          const me = String((typeof window.myUserId==='function'?window.myUserId():window.currentUser?._id) || 'local');
+          window.addVideoTile(me, window.groupCall.localStream, true);
+        }
+        return window.groupCall.localStream;
+      }
+    }catch(_){}
+    return await _origEnsureLocalStream.apply(this, arguments);
+  };
+
+  // Override addVideoTile: ONLY stage gets remote video; grid is audio-only (no decode)
+  window.addVideoTile = function(userId, stream, isLocal=false){
+    const uid = str(userId);
+    const tileId = `tile_${uid}`;
+    let tile = document.getElementById(tileId);
+
+    const stageUserId = computeStageUserId();
+    const container = (typeof window.getTileContainerFor==='function') ? window.getTileContainerFor(uid) : $('studentsGrid');
+    const isStage = (container && container.id==='teacherStage' && stageUserId && uid===stageUserId);
+
+    const wantVideo = !!(isLocal || isStage);
+
+    if(!tile){
+      tile = document.createElement('div');
+      tile.id = tileId;
+      tile.dataset.uid = uid;
+      tile.className = "relative rounded-2xl overflow-hidden bg-black shadow border border-white/10";
+      tile.innerHTML = '';
+    }
+
+    const prevKind = tile.dataset.kind || '';
+    const nextKind = wantVideo ? 'video' : 'audio';
+    if(prevKind !== nextKind){
+      tile.dataset.kind = nextKind;
+      const label = (isLocal ? 'Siz' : (typeof window.getUserLabel==='function' ? window.getUserLabel(uid) : uid));
+
+      if(wantVideo){
+        tile.innerHTML = `
+          <video id="vid_${uid}" autoplay playsinline ${isLocal ? 'muted' : ''} class="w-full h-full object-cover bg-black"></video>
+          <div class="absolute left-2 bottom-2 px-2 py-1 rounded-lg bg-black/60 text-white text-xs font-semibold">${label}</div>
+        `;
+      }else{
+        tile.innerHTML = `
+          <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-900 to-black">
+            <div style="text-align:center">
+              <div style="width:64px;height:64px;border-radius:999px;background:rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">
+                <span style="color:#fff;font-weight:900;font-size:20px">${label.trim().slice(0,1).toUpperCase()}</span>
+              </div>
+              <div style="color:rgba(255,255,255,.85);font-weight:800;font-size:13px">${label}</div>
+              <div style="color:rgba(255,255,255,.55);font-size:12px;margin-top:4px">Audio</div>
+            </div>
+          </div>
+          <audio id="aud_${uid}" autoplay></audio>
+          <div class="absolute left-2 bottom-2 px-2 py-1 rounded-lg bg-black/60 text-white text-xs font-semibold">${label}</div>
+        `;
+
+        // Teacher preview (tap tile => modal with video if available)
+        tile.onclick = ()=>{
+          try{
+            const role = String(window.currentUser?.role||'').toLowerCase();
+            if(role !== 'teacher') return;
+            if(uid === stageUserId) return;
+            if(isLocal) return;
+            showPreview(uid);
+          }catch(_){}
+        };
+      }
+    }
+
+    if(stream){
+      if(wantVideo){
+        const v = tile.querySelector('video');
+        if(v){
+          if(v.srcObject !== stream) v.srcObject = stream;
+          try{ v.play(); }catch(_){}
+        }
+      }else{
+        const a = tile.querySelector('audio');
+        if(a){
+          if(a.srcObject !== stream) a.srcObject = stream;
+          try{ a.play(); }catch(_){}
+        }
+      }
+    }
+
+    if(container){
+      if(container.id==='teacherStage'){
+        if(isStage){
+          container.innerHTML = '';
+          container.appendChild(tile);
+          container.setAttribute('data-stage-user', stageUserId);
+          tile.style.width='100%'; tile.style.height='100%';
+          const v = tile.querySelector('video'); if(v){ v.style.width='100%'; v.style.height='100%'; }
+        }
+      }else{
+        if(!container.contains(tile)) container.appendChild(tile);
+        tile.style.height = '220px';
+      }
+    }
+
+    try{ if(typeof window.ensureStagePlaceholder==='function') window.ensureStagePlaceholder(); }catch(_){}
+  };
+
+  setTimeout(()=>{ try{ window.renderGroupCallLayout?.(); }catch(_){} }, 120);
+})();
+</script>
+
 </body>
 </html>
