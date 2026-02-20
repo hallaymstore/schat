@@ -1731,6 +1731,25 @@ async function resolveScopedFaculty(req, scopedUniversityRaw, requestedFacultyRa
   return { ok: true, faculty: ownCanonical, isAdmin: false };
 }
 
+function canUserModerateGroupByScope(userDoc, groupDoc) {
+  if (!userDoc || !groupDoc) return false;
+  const role = String(userDoc.role || '').toLowerCase();
+  const isAdmin = !!(userDoc.isAdmin || role === 'admin');
+  if (isAdmin) return true;
+  if (role !== 'organizer') return false;
+
+  const userUniversity = cleanText(userDoc.university, 180);
+  const userFaculty = cleanText(userDoc.faculty, 180);
+  const groupUniversity = cleanText(groupDoc.university, 180);
+  const groupFaculty = cleanText(groupDoc.faculty, 180);
+
+  if (!userUniversity || !groupUniversity) return false;
+  if (String(userUniversity).toLowerCase() !== String(groupUniversity).toLowerCase()) return false;
+  if (!userFaculty) return true;
+  if (!groupFaculty) return false;
+  return String(userFaculty).toLowerCase() === String(groupFaculty).toLowerCase();
+}
+
 // Admin realtime room helpers
 function adminEmit(event, payload) {
   io.to('admin').emit(event, payload);
@@ -1970,11 +1989,14 @@ io.on('connection', (socket) => {
       console.log('✅ User authenticated:', userId);
       
       // Join university room (for services/signals broadcasts)
-      const u = await User.findById(userId).select('university isAdmin role username').lean();
+      const u = await User.findById(userId).select('university faculty isAdmin role username').lean();
       if (u && u.university) {
         socket.university = u.university;
         socket.join('uni:' + u.university);
       }
+      socket.userUniversity = cleanText(u?.university, 180);
+      socket.userFaculty = cleanText(u?.faculty, 180);
+      socket.userRole = String(u?.role || '').toLowerCase();
 
       // Join user's personal room
       socket.join(userId);
@@ -2019,12 +2041,18 @@ io.on('connection', (socket) => {
       if (!socket.userId) return socket.emit('groupError', { error: 'Not authenticated' });
       if (!groupId) return;
 
-      // Security: only members (or public group) can join the socket room
-      const group = await Group.findById(groupId).select('isPublic members').lean();
+      // Security: only members/public group, or scoped organizer/admin can join
+      const group = await Group.findById(groupId).select('isPublic members university faculty').lean();
       if (!group) return socket.emit('groupError', { error: 'Group not found' });
 
       const isMember = (group.members || []).some(m => String(m) === String(socket.userId));
-      if (!isMember && !group.isPublic) return socket.emit('groupError', { error: 'Access denied' });
+      const canScopedModerate = canUserModerateGroupByScope({
+        role: socket.userRole,
+        isAdmin: socket.isAdmin,
+        university: socket.userUniversity || socket.university,
+        faculty: socket.userFaculty
+      }, group);
+      if (!isMember && !group.isPublic && !canScopedModerate) return socket.emit('groupError', { error: 'Access denied' });
 
       const room = getGroupRoomName(groupId);
       socket.join(room);
@@ -2194,10 +2222,16 @@ socket.on('lessonTransferControl', async (data) => {
       if (!groupId) return;
 
       // Ensure access
-      const group = await Group.findById(groupId).select('isPublic members').lean();
+      const group = await Group.findById(groupId).select('isPublic members university faculty').lean();
       if (!group) return socket.emit('groupCallError', { error: 'Group not found' });
       const isMember = (group.members || []).some(m => String(m) === String(socket.userId));
-      if (!isMember && !group.isPublic) return socket.emit('groupCallError', { error: 'Access denied' });
+      const canScopedModerate = canUserModerateGroupByScope({
+        role: socket.userRole,
+        isAdmin: socket.isAdmin,
+        university: socket.userUniversity || socket.university,
+        faculty: socket.userFaculty
+      }, group);
+      if (!isMember && !group.isPublic && !canScopedModerate) return socket.emit('groupCallError', { error: 'Access denied' });
 
       // If already active, just join
       let call = activeGroupCalls.get(groupId);
@@ -2311,6 +2345,19 @@ adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId),
       const call = activeGroupCalls.get(groupId);
       if (!call || String(call.callId) !== callId) {
         return socket.emit('groupCallError', { error: 'Call not active' });
+      }
+
+      const group = await Group.findById(groupId).select('isPublic members university faculty').lean();
+      if (!group) return socket.emit('groupCallError', { error: 'Group not found' });
+      const isMember = (group.members || []).some(m => String(m) === String(socket.userId));
+      const canScopedModerate = canUserModerateGroupByScope({
+        role: socket.userRole,
+        isAdmin: socket.isAdmin,
+        university: socket.userUniversity || socket.university,
+        faculty: socket.userFaculty
+      }, group);
+      if (!isMember && !group.isPublic && !canScopedModerate) {
+        return socket.emit('groupCallError', { error: 'Access denied' });
       }
 
       call.participants.add(socket.userId);
@@ -4932,16 +4979,21 @@ app.get('/api/groups', authenticateToken, async (req, res) => {
 app.get('/api/groups/:groupId/messages', authenticateToken, async (req, res) => {
   try {
     const { groupId } = req.params;
-    const me = await User.findById(req.userId).select('university').lean();
-    const group = await Group.findById(groupId).select('members isPublic creatorId university').lean();
+    const me = await User.findById(req.userId).select('university faculty role isAdmin').lean();
+    const group = await Group.findById(groupId).select('members isPublic creatorId university faculty').lean();
     if (!group) return res.status(404).json({ error: 'Group not found' });
-    if (group.university && me?.university && String(group.university) !== String(me.university)) {
-      return res.status(403).json({ error: 'This group belongs to another university' });
-    }
     const isMember = (group.members || []).some(m => String(m) === String(req.userId));
-    if (!group.isPublic && !isMember && String(group.creatorId) !== String(req.userId)) {
-      return res.status(403).json({ error: 'Not a group member' });
+    const canScopedModerate = canUserModerateGroupByScope(me, group);
+
+    if (!canScopedModerate) {
+      if (group.university && me?.university && String(group.university) !== String(me.university)) {
+        return res.status(403).json({ error: 'This group belongs to another university' });
+      }
+      if (!group.isPublic && !isMember && String(group.creatorId) !== String(req.userId)) {
+        return res.status(403).json({ error: 'Not a group member' });
+      }
     }
+
     const messages = await GroupMessage.find({ groupId })
       .sort({ createdAt: 1 })
       .populate('senderId', 'username nickname avatar');
@@ -5796,7 +5848,7 @@ app.get('/api/groups/all', authenticateToken, async (req, res) => {
 // Get group information
 app.get('/api/groups/:groupId', authenticateToken, async (req, res) => {
   try {
-    const me = await User.findById(req.userId).select('university').lean();
+    const me = await User.findById(req.userId).select('university faculty role isAdmin').lean();
     const group = await Group.findById(req.params.groupId)
       .populate('creatorId', 'username nickname avatar')
       .populate('members', 'username nickname avatar isOnline');
@@ -5805,13 +5857,15 @@ app.get('/api/groups/:groupId', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    if (group.university && me?.university && String(group.university) !== String(me.university)) {
-      return res.status(403).json({ error: 'This group belongs to another university' });
-    }
-    
     const isMember = group.members.some(member => member._id.equals(req.userId));
-    if (!isMember && !group.isPublic) {
-      return res.status(403).json({ error: 'Access denied' });
+    const canScopedModerate = canUserModerateGroupByScope(me, group);
+    if (!canScopedModerate) {
+      if (group.university && me?.university && String(group.university) !== String(me.university)) {
+        return res.status(403).json({ error: 'This group belongs to another university' });
+      }
+      if (!isMember && !group.isPublic) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
     }
     
     res.json({ success: true, group });
@@ -8005,6 +8059,247 @@ app.delete('/api/organizer/channels/:id', authenticateToken, requireOrganizerOrA
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Failed to delete channel' });
+  }
+});
+
+app.get('/api/organizer/group-calls', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+
+    const entries = Array.from(activeGroupCalls.entries()).map(([groupId, call]) => ({
+      groupId: String(groupId || ''),
+      call
+    }));
+    if (!entries.length) {
+      return res.json({
+        success: true,
+        university: scoped.university,
+        faculty: facultyScope.faculty || '',
+        count: 0,
+        calls: []
+      });
+    }
+
+    const groupObjectIds = entries
+      .map((x) => x.groupId)
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    const groupFilter = { _id: { $in: groupObjectIds }, university: scoped.university };
+    if (facultyScope.faculty) groupFilter.faculty = facultyScope.faculty;
+
+    const groups = await Group.find(groupFilter)
+      .select('name username university faculty studyType studyGroup')
+      .lean();
+    const groupMap = new Map((groups || []).map((g) => [String(g._id), g]));
+
+    const userIdSet = new Set();
+    entries.forEach((entry) => {
+      const call = entry.call || {};
+      if (call.startedBy) userIdSet.add(String(call.startedBy));
+      Array.from(call.participants || []).forEach((uid) => userIdSet.add(String(uid)));
+      const stage = call.stage || {};
+      if (stage.ownerTeacherId) userIdSet.add(String(stage.ownerTeacherId));
+      if (stage.pinnedUserId) userIdSet.add(String(stage.pinnedUserId));
+    });
+    const userIds = Array.from(userIdSet).filter((id) => mongoose.Types.ObjectId.isValid(id));
+    const users = userIds.length
+      ? await User.find({ _id: { $in: userIds } }).select('fullName username avatar role').lean()
+      : [];
+    const userMap = new Map((users || []).map((u) => [String(u._id), u]));
+
+    const now = Date.now();
+    const calls = entries.map((entry) => {
+      const group = groupMap.get(entry.groupId);
+      if (!group) return null;
+      const call = entry.call || {};
+      const startedBy = call.startedBy ? userMap.get(String(call.startedBy)) : null;
+      const participants = Array.from(call.participants || []).map((uid) => {
+        const u = userMap.get(String(uid));
+        return {
+          userId: String(uid),
+          fullName: u?.fullName || '',
+          username: u?.username || '',
+          avatar: u?.avatar || '',
+          role: u?.role || ''
+        };
+      });
+      const startedAt = call.startedAt ? new Date(call.startedAt) : null;
+      return {
+        groupId: entry.groupId,
+        callId: String(call.callId || ''),
+        callType: call.callType === 'audio' ? 'audio' : 'video',
+        title: String(call.title || 'Live dars'),
+        startedAt,
+        durationSec: startedAt ? Math.max(0, Math.floor((now - startedAt.getTime()) / 1000)) : 0,
+        participantsCount: participants.length,
+        participants,
+        stage: stagePayload(call),
+        startedBy: startedBy
+          ? {
+              _id: String(startedBy._id),
+              fullName: startedBy.fullName || '',
+              username: startedBy.username || '',
+              avatar: startedBy.avatar || '',
+              role: startedBy.role || ''
+            }
+          : null,
+        group: {
+          _id: String(group._id),
+          name: group.name || '',
+          username: group.username || '',
+          university: group.university || '',
+          faculty: group.faculty || '',
+          studyType: group.studyType || '',
+          studyGroup: group.studyGroup || ''
+        },
+        watchUrl: `/group.html?id=${encodeURIComponent(entry.groupId)}&observer=1&autoJoin=1`
+      };
+    }).filter(Boolean)
+      .sort((a, b) => new Date(b.startedAt || 0).getTime() - new Date(a.startedAt || 0).getTime());
+
+    res.json({
+      success: true,
+      university: scoped.university,
+      faculty: facultyScope.faculty || '',
+      count: calls.length,
+      calls
+    });
+  } catch (e) {
+    console.error('GET /api/organizer/group-calls error:', e);
+    res.status(500).json({ error: 'Failed to load active calls' });
+  }
+});
+
+app.get('/api/organizer/group-lessons', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+
+    const { page, limit, skip } = parsePaging(req);
+    const groupIdRaw = cleanText(req.query.groupId, 60);
+    const status = cleanText(req.query.status, 20).toLowerCase();
+    const q = cleanText(req.query.q, 120);
+    const onlyRecordedRaw = String(req.query.onlyRecorded || req.query.recorded || '').toLowerCase();
+    const onlyRecorded = onlyRecordedRaw === '1' || onlyRecordedRaw === 'true' || onlyRecordedRaw === 'yes';
+
+    const preLookupMatch = {};
+    if (groupIdRaw) {
+      if (!mongoose.Types.ObjectId.isValid(groupIdRaw)) return res.status(400).json({ error: 'Invalid groupId' });
+      preLookupMatch.groupId = new mongoose.Types.ObjectId(groupIdRaw);
+    }
+    if (status === 'live' || status === 'ended') preLookupMatch.status = status;
+    if (onlyRecorded) preLookupMatch.recordingUrl = { $exists: true, $ne: '' };
+
+    const scopeMatch = { 'group.university': scoped.university };
+    if (facultyScope.faculty) scopeMatch['group.faculty'] = facultyScope.faculty;
+
+    const makePipeline = (forCount = false) => {
+      const pipeline = [];
+      if (Object.keys(preLookupMatch).length) pipeline.push({ $match: preLookupMatch });
+      pipeline.push({
+        $lookup: {
+          from: 'groups',
+          localField: 'groupId',
+          foreignField: '_id',
+          as: 'group'
+        }
+      });
+      pipeline.push({ $unwind: '$group' });
+      pipeline.push({ $match: scopeMatch });
+
+      if (q) {
+        const re = new RegExp(escapeRegex(q), 'i');
+        pipeline.push({
+          $match: {
+            $or: [
+              { title: re },
+              { 'group.name': re },
+              { 'group.username': re }
+            ]
+          }
+        });
+      }
+
+      if (forCount) {
+        pipeline.push({ $count: 'total' });
+      } else {
+        pipeline.push({ $sort: { startedAt: -1 } });
+        pipeline.push({ $skip: skip });
+        pipeline.push({ $limit: limit });
+      }
+
+      return pipeline;
+    };
+
+    const [countRows, rows] = await Promise.all([
+      GroupLesson.aggregate(makePipeline(true)),
+      GroupLesson.aggregate(makePipeline(false))
+    ]);
+
+    const total = Number(countRows?.[0]?.total || 0);
+    const hostIds = Array.from(new Set((rows || []).map((x) => String(x.hostId || '')).filter((id) => mongoose.Types.ObjectId.isValid(id))));
+    const hosts = hostIds.length
+      ? await User.find({ _id: { $in: hostIds } }).select('fullName username avatar role').lean()
+      : [];
+    const hostMap = new Map((hosts || []).map((u) => [String(u._id), u]));
+
+    const items = (rows || []).map((x) => {
+      const host = hostMap.get(String(x.hostId || ''));
+      const recordingUrl = String(x.recordingUrl || '').trim();
+      return {
+        _id: String(x._id),
+        groupId: String(x.groupId),
+        callId: String(x.callId || ''),
+        title: x.title || '',
+        mode: x.mode || 'camera',
+        status: x.status || '',
+        startedAt: x.startedAt || null,
+        endedAt: x.endedAt || null,
+        recordingUrl,
+        hasRecording: !!recordingUrl,
+        recordingBytes: Number(x.recordingBytes || 0),
+        recordingDurationSec: Number(x.recordingDurationSec || 0),
+        group: x.group
+          ? {
+              _id: String(x.group._id),
+              name: x.group.name || '',
+              username: x.group.username || '',
+              university: x.group.university || '',
+              faculty: x.group.faculty || '',
+              studyType: x.group.studyType || '',
+              studyGroup: x.group.studyGroup || ''
+            }
+          : null,
+        host: host
+          ? {
+              _id: String(host._id),
+              fullName: host.fullName || '',
+              username: host.username || '',
+              avatar: host.avatar || '',
+              role: host.role || ''
+            }
+          : null
+      };
+    });
+
+    res.json({
+      success: true,
+      page,
+      limit,
+      total,
+      university: scoped.university,
+      faculty: facultyScope.faculty || '',
+      items
+    });
+  } catch (e) {
+    console.error('GET /api/organizer/group-lessons error:', e);
+    res.status(500).json({ error: 'Failed to load group lessons' });
   }
 });
 

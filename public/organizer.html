@@ -101,13 +101,15 @@
       </div>
     </section>
 
-    <section class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+    <section class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-2">
       <button class="tab tab-active glass rounded-xl px-3 py-2 text-sm" data-tab="overview">Overview</button>
       <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="studytypes">O‘quv turlari</button>
       <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="studygroups">O‘quv guruhlar</button>
       <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="programs">Yo‘nalishlar</button>
       <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="groups">Guruhlar</button>
       <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="channels">Kanallar</button>
+      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="videocalls">Video calllar</button>
+      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="videolessons">Videodarslar</button>
     </section>
 
     <section id="panel" class="mt-4 glass rounded-3xl p-5 sm:p-6"></section>
@@ -257,12 +259,24 @@
     }
 
     function setTab(tab) {
+      clearTabTimers();
       state.activeTab = tab;
       $$('.tab').forEach((btn) => {
         const active = btn.dataset.tab === tab;
         btn.classList.toggle('tab-active', active);
       });
       renderCurrent().catch((e) => toast(e.message || 'Render xatoligi', 'error'));
+    }
+
+    function clearTabTimers() {
+      if (renderVideoCalls._timer) {
+        clearInterval(renderVideoCalls._timer);
+        renderVideoCalls._timer = null;
+      }
+      if (renderVideoLessons._timer) {
+        clearTimeout(renderVideoLessons._timer);
+        renderVideoLessons._timer = null;
+      }
     }
 
     async function renderCurrent() {
@@ -272,6 +286,8 @@
       if (state.activeTab === 'programs') return renderPrograms();
       if (state.activeTab === 'groups') return renderGroups();
       if (state.activeTab === 'channels') return renderChannels();
+      if (state.activeTab === 'videocalls') return renderVideoCalls();
+      if (state.activeTab === 'videolessons') return renderVideoLessons();
     }
 
     async function renderOverview() {
@@ -834,6 +850,175 @@
       await loadList();
     }
 
+    async function renderVideoCalls() {
+      const panel = $('#panel');
+      panel.innerHTML = `
+        <div class="flex flex-wrap gap-2 mb-4">
+          <button id="callsRefreshBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">Yangilash</button>
+          <button id="callsAutoBtn" class="glass rounded-xl px-4 py-2 text-sm font-bold">Auto: OFF</button>
+          <div class="text-xs muted self-center">Faol video/voice darslar. "Kuzatish" observer rejimida ochiladi.</div>
+        </div>
+        <div id="callsList" class="muted text-sm">Yuklanmoqda...</div>
+      `;
+
+      const setAutoState = (on) => {
+        const btn = $('#callsAutoBtn');
+        if (!btn) return;
+        btn.textContent = on ? 'Auto: ON (7s)' : 'Auto: OFF';
+        btn.classList.toggle('btn-primary', on);
+        btn.classList.toggle('glass', !on);
+      };
+
+      const loadList = async () => {
+        const { res, j } = await api(buildUrl('/api/organizer/group-calls'));
+        const listEl = $('#callsList');
+        if (!res.ok) {
+          listEl.innerHTML = `<div class="text-rose-300 text-sm">${esc(j?.error || 'Xatolik')}</div>`;
+          return;
+        }
+        const list = Array.isArray(j.calls) ? j.calls : [];
+        if (!list.length) {
+          listEl.innerHTML = '<div class="muted text-sm">Hozir faol call yo‘q.</div>';
+          return;
+        }
+        listEl.innerHTML = list.map((item) => `
+          <div class="glass rounded-2xl p-4 mb-3">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="font-semibold">${esc(item.title || 'Live dars')}</div>
+                <div class="text-xs muted mt-1">${esc(item.group?.name || '-')} • @${esc(item.group?.username || '-')}</div>
+                <div class="text-xs muted mt-1">${esc(item.group?.faculty || '-')} • ${esc(item.group?.studyType || '-')} • ${esc(item.group?.studyGroup || '-')}</div>
+                <div class="text-xs muted mt-1">O‘qituvchi: ${esc(item.startedBy?.fullName || item.startedBy?.username || 'Noma‘lum')}</div>
+              </div>
+              <div class="text-xs px-3 py-1 rounded-lg ${item.callType === 'audio' ? 'bg-amber-300/30 text-amber-100' : 'bg-emerald-300/30 text-emerald-100'}">
+                ${item.callType === 'audio' ? 'VOICE' : 'VIDEO'}
+              </div>
+            </div>
+            <div class="mt-3 flex flex-wrap items-center gap-2 text-xs muted">
+              <span>Qatnashchilar: ${esc(item.participantsCount || 0)}</span>
+              <span>•</span>
+              <span>Davomiylik: ${esc(Math.max(0, Math.round(Number(item.durationSec || 0) / 60)))} daqiqa</span>
+            </div>
+            <div class="mt-3">
+              <a href="${esc(item.watchUrl || '#')}" target="_blank" rel="noopener" class="btn-primary inline-flex items-center rounded-xl px-4 py-2 text-sm">
+                <i class="fa-solid fa-play mr-2"></i>Kuzatish
+              </a>
+            </div>
+          </div>
+        `).join('');
+      };
+
+      $('#callsRefreshBtn').onclick = loadList;
+      $('#callsAutoBtn').onclick = () => {
+        const hasTimer = !!renderVideoCalls._timer;
+        if (hasTimer) {
+          clearInterval(renderVideoCalls._timer);
+          renderVideoCalls._timer = null;
+          setAutoState(false);
+          return;
+        }
+        renderVideoCalls._timer = setInterval(loadList, 7000);
+        setAutoState(true);
+        loadList();
+      };
+
+      setAutoState(false);
+      await loadList();
+    }
+
+    async function renderVideoLessons() {
+      const panel = $('#panel');
+      panel.innerHTML = `
+        <div class="flex flex-wrap gap-2 mb-4">
+          <input id="lessonSearch" class="field rounded-xl px-3 py-2 text-sm w-full sm:w-80" placeholder="Dars yoki guruh qidirish..." />
+          <label class="glass rounded-xl px-3 py-2 text-sm flex items-center gap-2">
+            <input id="lessonOnlyRecorded" type="checkbox" checked />
+            <span>Faqat yozib olingan</span>
+          </label>
+          <button id="lessonRefreshBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">Yangilash</button>
+        </div>
+        <div id="lessonList" class="muted text-sm">Yuklanmoqda...</div>
+      `;
+
+      const fmtDate = (v) => {
+        if (!v) return '-';
+        const d = new Date(v);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleString();
+      };
+      const fmtDuration = (sec) => {
+        const n = Math.max(0, Number(sec || 0));
+        if (!n) return '-';
+        const m = Math.floor(n / 60);
+        const s = n % 60;
+        return `${m}m ${s}s`;
+      };
+      const fmtSize = (bytes) => {
+        const n = Number(bytes || 0);
+        if (!n) return '-';
+        return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+      };
+
+      const loadList = async () => {
+        const q = $('#lessonSearch').value.trim();
+        const onlyRecorded = $('#lessonOnlyRecorded').checked ? '1' : '';
+        const { res, j } = await api(buildUrl('/api/organizer/group-lessons', { q, onlyRecorded, page: 1, limit: 50 }));
+        const listEl = $('#lessonList');
+        if (!res.ok) {
+          listEl.innerHTML = `<div class="text-rose-300 text-sm">${esc(j?.error || 'Xatolik')}</div>`;
+          return;
+        }
+        const list = Array.isArray(j.items) ? j.items : [];
+        if (!list.length) {
+          listEl.innerHTML = '<div class="muted text-sm">Videodars topilmadi.</div>';
+          return;
+        }
+        listEl.innerHTML = list.map((item) => `
+          <div class="glass rounded-2xl p-4 mb-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="font-semibold">${esc(item.title || 'Live dars')}</div>
+                <div class="text-xs muted mt-1">${esc(item.group?.name || '-')} • @${esc(item.group?.username || '-')}</div>
+                <div class="text-xs muted mt-1">${esc(item.group?.faculty || '-')} • ${esc(item.group?.studyType || '-')} • ${esc(item.group?.studyGroup || '-')}</div>
+                <div class="text-xs muted mt-1">O‘qituvchi: ${esc(item.host?.fullName || item.host?.username || 'Noma‘lum')}</div>
+                <div class="text-xs muted mt-1">Boshlangan: ${esc(fmtDate(item.startedAt))}</div>
+                <div class="text-xs muted mt-1">Davomiylik: ${esc(fmtDuration(item.recordingDurationSec))} • Hajm: ${esc(fmtSize(item.recordingBytes))}</div>
+              </div>
+              <div class="text-xs px-3 py-1 rounded-lg ${item.status === 'live' ? 'bg-red-300/30 text-red-100' : 'bg-cyan-300/30 text-cyan-100'}">
+                ${esc(String(item.status || 'ended').toUpperCase())}
+              </div>
+            </div>
+
+            ${item.hasRecording ? `
+              <div class="mt-3">
+                <video class="w-full rounded-xl border border-white/20" controls preload="metadata" src="${esc(item.recordingUrl)}"></video>
+              </div>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <a href="${esc(item.recordingUrl)}" target="_blank" rel="noopener" class="btn-primary rounded-xl px-4 py-2 text-sm inline-flex items-center">
+                  <i class="fa-solid fa-play mr-2"></i>Ko‘rish
+                </a>
+                <a href="${esc(item.recordingUrl)}" target="_blank" rel="noopener" download class="glass rounded-xl px-4 py-2 text-sm font-bold inline-flex items-center">
+                  <i class="fa-solid fa-download mr-2"></i>Yuklab olish
+                </a>
+                <a href="/group-lessons.html?groupId=${esc(item.groupId)}" target="_blank" rel="noopener" class="glass rounded-xl px-4 py-2 text-sm font-bold inline-flex items-center">
+                  <i class="fa-solid fa-book-open mr-2"></i>Darslar sahifasi
+                </a>
+              </div>
+            ` : '<div class="mt-3 text-xs muted">Bu dars uchun recording hali mavjud emas.</div>'}
+          </div>
+        `).join('');
+      };
+
+      $('#lessonRefreshBtn').onclick = loadList;
+      $('#lessonOnlyRecorded').onchange = loadList;
+      $('#lessonSearch').oninput = () => {
+        clearTimeout(renderVideoLessons._timer);
+        renderVideoLessons._timer = setTimeout(loadList, 220);
+      };
+
+      await loadList();
+    }
+
     async function init() {
       const ok = await ensureAuth();
       if (!ok) return;
@@ -854,6 +1039,7 @@
           if (isScopeAdmin() && !state.activeFaculty) {
             await loadFacultiesCache().catch(() => null);
           }
+          clearTabTimers();
           await renderCurrent();
           toast('Scope yangilandi', 'success');
         } catch (e) {
