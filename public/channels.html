@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
@@ -381,6 +381,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
 }
 </style>
 
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 <body class="min-h-screen">
 <!-- Mobile Drawer -->
@@ -628,7 +629,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                     <div>
                         <label class="block text-sm font-medium text-white/80 mb-2">Universitet</label>
                         <select name="university" 
-                                class="w-full px-4 py-3 border border-white/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                class="w-full px-4 py-3 border border-white/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
                                 <option value="">Universitet tanlang</option>
                             </select>
                     </div>
@@ -738,16 +739,27 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
         // Universitetlar ro‘yxatini admin kiritgan katalogdan yuklash
         async function loadUniversitiesCatalog() {
             try {
-                const res = await fetch('/api/catalog/universities');
-                const data = await res.json();
-                if (!data || !data.success) return;
-
-                const list = Array.isArray(data.universities) ? data.universities : [];
                 const select = document.querySelector('#createChannelForm select[name="university"]');
                 if (!select) return;
 
                 // Clear and repopulate
                 select.innerHTML = '<option value="">Universitet tanlang</option>';
+                const myUni = String(currentUser?.university || '').trim();
+                const myRole = String(currentUser?.role || '').toLowerCase();
+                const lockUni = !!(myUni && myRole !== 'admin');
+                if (lockUni) {
+                    const opt = document.createElement('option');
+                    opt.value = myUni;
+                    opt.textContent = myUni;
+                    select.appendChild(opt);
+                    select.value = myUni;
+                    return;
+                }
+
+                const res = await fetch('/api/catalog/universities');
+                const data = await res.json();
+                if (!data || !data.success) return;
+                const list = Array.isArray(data.universities) ? data.universities : [];
                 list.forEach(u => {
                     const name = (u && u.name) ? String(u.name) : '';
                     if (!name) return;
@@ -756,6 +768,9 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                     opt.textContent = name;
                     select.appendChild(opt);
                 });
+                if (myUni && list.some(x => String(x?.name || '') === myUni)) {
+                    select.value = myUni;
+                }
             } catch (e) {
                 console.warn('Universitetlar katalogi yuklanmadi:', e);
             }
@@ -1223,6 +1238,13 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
             
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
+            if (String(currentUser?.role || '').toLowerCase() !== 'admin' && currentUser?.university) {
+                data.university = currentUser.university;
+            }
+            if (!String(data.university || '').trim()) {
+                alert('Universitet tanlang.');
+                return;
+            }
             
             try {
                 const token = localStorage.getItem('token');
@@ -1340,5 +1362,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
   })();
 </script>
 
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
+

@@ -134,6 +134,14 @@ app.get('/schedule.html', (req, res) => {
   return sendFirstExisting(res, ['schedule.html','schedule_final.html']);
 });
 
+// External university platforms (local preview wrappers)
+app.get('/kstu.html', (req, res) => {
+  return sendFirstExisting(res, ['public/kstu.html', 'kstu.html']);
+});
+app.get('/hemis.html', (req, res) => {
+  return sendFirstExisting(res, ['public/hemis.html', 'hemis.html']);
+});
+
 // Group lessons (recordings list)
 app.get('/group-lessons.html', (req, res) => {
   return sendFirstExisting(res, ['group-lessons2.html','group-lessons2.fixed.html','group-lessons.html','group-lessons.fixed.html']);
@@ -218,10 +226,13 @@ const mongoConnectPromise = mongoose.connect(process.env.MONGODB_URI, {
   family: 4
 }).then(async () => {
   console.log('✅ MongoDB Connected');
+  await ensureUserContactIndexes();
   // Default bootstrap (safe because it runs after file load; models are defined synchronously)
   await ensureDefaultAdmin();
   await ensureDefaultCatalog();
   await ensureDefaultPrograms();
+  await ensureDefaultStudyTypes();
+  await ensureDefaultStudyGroups();
 }).catch(err => {
   console.error('❌ MongoDB Connection Error:', err);
   process.exit(1);
@@ -261,9 +272,10 @@ const UserSchema = new mongoose.Schema({
   bio: { type: String, default: '' },
   university: { type: String, required: true },
   faculty: { type: String, default: '' },
+  studyType: { type: String, required: true, default: 'Kunduzgi' },
   studyGroup: { type: String, required: true },
-  phone: { type: String, default: null, unique: true, sparse: true },
-  email: { type: String, default: null, unique: true, sparse: true },
+  phone: { type: String, default: undefined, trim: true },
+  email: { type: String, default: undefined, trim: true, lowercase: true },
   password: { type: String, required: true },
   avatar: { type: String, default: 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png' },
   coverBanner: { type: String, default: '' },
@@ -287,7 +299,7 @@ const UserSchema = new mongoose.Schema({
   mutedUntil: { type: Date, default: null },
   // ==================== COINS + PET (Robotcha) ====================
 isAdmin: { type: Boolean, default: false },
-  role: { type: String, enum: ['student','teacher','admin'], default: 'student' },
+  role: { type: String, enum: ['student','teacher','admin','organizer'], default: 'student' },
   teacherBalance: { type: Number, default: 0 },
 coins: { type: Number, default: 0 },
 pet: {
@@ -341,6 +353,14 @@ equipped: { type: Boolean, default: false },
 
   createdAt: { type: Date, default: Date.now }
 });
+UserSchema.index(
+  { phone: 1 },
+  { unique: true, partialFilterExpression: { phone: { $type: 'string', $ne: '' } } }
+);
+UserSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: 'string', $ne: '' } } }
+);
 const User = mongoose.model('User', UserSchema);
 
 // ==================== UNIVERSITY / FACULTY CATALOG ====================
@@ -362,6 +382,188 @@ const ProgramCatalogSchema = new mongoose.Schema({
 ProgramCatalogSchema.index({ university: 1, faculty: 1, code: 1, name: 1 }, { unique: true });
 
 const ProgramCatalog = mongoose.models.ProgramCatalog || mongoose.model('ProgramCatalog', ProgramCatalogSchema);
+
+// Study Type Catalog (university/faculty/study-type list)
+const StudyTypeCatalogSchema = new mongoose.Schema({
+  university: { type: String, required: true, index: true, trim: true },
+  faculty: { type: String, required: true, index: true, trim: true },
+  name: { type: String, required: true, trim: true }
+}, { timestamps: true });
+
+StudyTypeCatalogSchema.index({ university: 1, faculty: 1, name: 1 }, { unique: true });
+
+const StudyTypeCatalog = mongoose.models.StudyTypeCatalog || mongoose.model('StudyTypeCatalog', StudyTypeCatalogSchema);
+
+// Study Group Catalog (university/faculty/study-group list)
+const StudyGroupCatalogSchema = new mongoose.Schema({
+  university: { type: String, required: true, index: true, trim: true },
+  faculty: { type: String, required: true, index: true, trim: true },
+  studyType: { type: String, required: true, index: true, trim: true, default: 'Kunduzgi' },
+  name: { type: String, required: true, trim: true }
+}, { timestamps: true });
+
+StudyGroupCatalogSchema.index({ university: 1, faculty: 1, studyType: 1, name: 1 }, { unique: true });
+
+const StudyGroupCatalog = mongoose.models.StudyGroupCatalog || mongoose.model('StudyGroupCatalog', StudyGroupCatalogSchema);
+
+function escapeRegex(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function cleanText(value, maxLen = 200) {
+  const s = String(value ?? '').trim();
+  if (!s) return '';
+  return s.length > maxLen ? s.slice(0, maxLen) : s;
+}
+
+async function findUniversityDocInsensitive(nameRaw) {
+  const name = cleanText(nameRaw, 180);
+  if (!name) return null;
+  return UniversityCatalog.findOne({ name: new RegExp(`^${escapeRegex(name)}$`, 'i') }).lean();
+}
+
+function pickCanonicalFaculty(uniDoc, facultyRaw) {
+  const faculty = cleanText(facultyRaw, 180);
+  if (!faculty) return '';
+  const list = Array.isArray(uniDoc?.faculties) ? uniDoc.faculties : [];
+  const found = list.find((x) => String(x || '').trim().toLowerCase() === faculty.toLowerCase());
+  return found ? String(found).trim() : '';
+}
+
+async function pickCanonicalStudyType(universityRaw, facultyRaw, studyTypeRaw) {
+  const university = cleanText(universityRaw, 180);
+  const faculty = cleanText(facultyRaw, 180);
+  const studyType = cleanText(studyTypeRaw, 80);
+  if (!university || !faculty || !studyType) return '';
+  const doc = await StudyTypeCatalog.findOne({
+    university,
+    faculty,
+    name: new RegExp(`^${escapeRegex(studyType)}$`, 'i')
+  }).lean();
+  return doc ? String(doc.name || '').trim() : '';
+}
+
+async function pickCanonicalStudyGroup(universityRaw, facultyRaw, studyTypeRaw, studyGroupRaw) {
+  const university = cleanText(universityRaw, 180);
+  const faculty = cleanText(facultyRaw, 180);
+  const studyType = cleanText(studyTypeRaw, 80);
+  const studyGroup = cleanText(studyGroupRaw, 80);
+  if (!university || !faculty || !studyType || !studyGroup) return '';
+  const doc = await StudyGroupCatalog.findOne({
+    university,
+    faculty,
+    studyType,
+    name: new RegExp(`^${escapeRegex(studyGroup)}$`, 'i')
+  }).lean();
+  return doc ? String(doc.name || '').trim() : '';
+}
+
+async function normalizeAcademicIdentity(input = {}, opts = {}) {
+  const options = {
+    requireUniversity: true,
+    requireFaculty: true,
+    requireStudyType: true,
+    requireStudyGroup: true,
+    ...opts
+  };
+
+  const universityRaw = cleanText(input.university, 180);
+  const facultyRaw = cleanText(input.faculty, 180);
+  let studyType = cleanText(input.studyType, 80);
+  let studyGroup = cleanText(input.studyGroup, 80);
+
+  if (options.requireUniversity && !universityRaw) {
+    return { ok: false, error: 'University required' };
+  }
+  if (options.requireFaculty && !facultyRaw) {
+    return { ok: false, error: 'Faculty required' };
+  }
+  if (options.requireStudyType && !studyType) {
+    return { ok: false, error: 'studyType required' };
+  }
+  if (options.requireStudyGroup && !studyGroup) {
+    return { ok: false, error: 'studyGroup required' };
+  }
+
+  let university = universityRaw;
+  let faculty = facultyRaw;
+
+  if (universityRaw) {
+    const uniDoc = await findUniversityDocInsensitive(universityRaw);
+    if (!uniDoc) return { ok: false, error: 'Unknown university. Choose from the list.' };
+    university = String(uniDoc.name || '').trim();
+
+    if (facultyRaw) {
+      const canonicalFaculty = pickCanonicalFaculty(uniDoc, facultyRaw);
+      if (!canonicalFaculty) return { ok: false, error: 'Unknown faculty for selected university' };
+      faculty = canonicalFaculty;
+    } else if (options.requireFaculty) {
+      return { ok: false, error: 'Faculty required' };
+    } else {
+      faculty = '';
+    }
+  }
+
+  if (studyType) {
+    const canonicalStudyType = await pickCanonicalStudyType(university, faculty, studyType);
+    if (!canonicalStudyType) {
+      return { ok: false, error: 'Unknown study type for selected university and faculty' };
+    }
+    studyType = canonicalStudyType;
+  } else if (options.requireStudyType) {
+    return { ok: false, error: 'studyType required' };
+  }
+
+  if (studyGroup) {
+    const canonicalStudyGroup = await pickCanonicalStudyGroup(university, faculty, studyType, studyGroup);
+    if (!canonicalStudyGroup) {
+      return { ok: false, error: 'Unknown study group for selected university, faculty and study type' };
+    }
+    studyGroup = canonicalStudyGroup;
+  } else if (options.requireStudyGroup) {
+    return { ok: false, error: 'studyGroup required' };
+  }
+
+  return {
+    ok: true,
+    value: { university, faculty, studyType, studyGroup }
+  };
+}
+
+async function ensureUserContactIndexes() {
+  try {
+    // Convert null/empty contact fields to missing fields.
+    await User.updateMany({ email: null }, { $unset: { email: 1 } }).catch(() => {});
+    await User.updateMany({ email: '' }, { $unset: { email: 1 } }).catch(() => {});
+    await User.updateMany({ phone: null }, { $unset: { phone: 1 } }).catch(() => {});
+    await User.updateMany({ phone: '' }, { $unset: { phone: 1 } }).catch(() => {});
+
+    const existing = await User.collection.indexes().catch(() => []);
+
+    const ensureIndex = async (field) => {
+      const match = (existing || []).find((idx) => idx?.key && idx.key[field] === 1 && Object.keys(idx.key).length === 1);
+      const expectedPfe = { [field]: { $type: 'string', $ne: '' } };
+      const samePfe = !!match?.partialFilterExpression &&
+        JSON.stringify(match.partialFilterExpression) === JSON.stringify(expectedPfe);
+      const needsReplace = !match || !match.unique || !samePfe;
+
+      if (match && needsReplace) {
+        await User.collection.dropIndex(match.name).catch(() => {});
+      }
+      if (needsReplace) {
+        await User.collection.createIndex(
+          { [field]: 1 },
+          { name: `${field}_1`, unique: true, partialFilterExpression: expectedPfe }
+        );
+      }
+    };
+
+    await ensureIndex('email');
+    await ensureIndex('phone');
+  } catch (e) {
+    console.warn('ensureUserContactIndexes warning:', e?.message || e);
+  }
+}
 
 
 async function ensureDefaultCatalog() {
@@ -501,6 +703,98 @@ async function ensureDefaultPrograms() {
   }
 }
 
+async function ensureDefaultStudyTypes() {
+  const defaults = ['Kunduzgi', 'Kechki', 'Masofaviy'];
+
+  const universities = await UniversityCatalog.find({}).select('name faculties').lean().catch(() => []);
+  for (const uni of (universities || [])) {
+    const university = cleanText(uni?.name, 180);
+    const faculties = Array.isArray(uni?.faculties) ? uni.faculties : [];
+    for (const facRaw of faculties) {
+      const faculty = cleanText(facRaw, 180);
+      if (!university || !faculty) continue;
+      for (const name of defaults) {
+        await StudyTypeCatalog.updateOne(
+          { university, faculty, name },
+          { $setOnInsert: { university, faculty, name } },
+          { upsert: true }
+        );
+      }
+    }
+  }
+}
+
+async function ensureDefaultStudyGroups() {
+  // Seed minimal study groups and import existing user/group values into catalog.
+  const seeds = [
+    {
+      university: "Qarshi Davlat Texnika Universiteti",
+      faculty: "Iqtisodiyot va boshqaruv fakulteti",
+      studyType: "Kunduzgi",
+      groups: ["MMT-520-25"]
+    }
+  ];
+
+  await StudyGroupCatalog.updateMany(
+    { $or: [{ studyType: { $exists: false } }, { studyType: '' }] },
+    { $set: { studyType: 'Kunduzgi' } }
+  ).catch(() => {});
+
+  const upsertCanonical = async (universityRaw, facultyRaw, studyTypeRaw, nameRaw) => {
+    const universityInput = cleanText(universityRaw, 180);
+    const facultyInput = cleanText(facultyRaw, 180);
+    const studyTypeInput = cleanText(studyTypeRaw, 80) || 'Kunduzgi';
+    const name = cleanText(nameRaw, 80);
+    if (!universityInput || !facultyInput || !name) return;
+
+    const uniDoc = await findUniversityDocInsensitive(universityInput);
+    if (!uniDoc) return;
+    const university = cleanText(uniDoc.name, 180);
+    const faculty = pickCanonicalFaculty(uniDoc, facultyInput);
+    if (!faculty) return;
+    const studyType = await pickCanonicalStudyType(university, faculty, studyTypeInput);
+    if (!studyType) return;
+
+    const existing = await StudyGroupCatalog.findOne({
+      university,
+      faculty,
+      studyType,
+      name: new RegExp(`^${escapeRegex(name)}$`, 'i')
+    }).lean();
+    if (existing) return;
+
+    await StudyGroupCatalog.updateOne(
+      { university, faculty, studyType, name },
+      { $setOnInsert: { university, faculty, studyType, name } },
+      { upsert: true }
+    );
+  };
+
+  for (const seed of seeds) {
+    for (const groupName of (seed.groups || [])) {
+      await upsertCanonical(seed.university, seed.faculty, seed.studyType, groupName);
+    }
+  }
+
+  const [userRows, groupRows] = await Promise.all([
+    User.find({
+      university: { $exists: true, $ne: '' },
+      faculty: { $exists: true, $ne: '' },
+      studyGroup: { $exists: true, $ne: '' }
+    }).select('university faculty studyType studyGroup').lean().limit(20000).catch(() => []),
+    Group.find({
+      university: { $exists: true, $ne: '' },
+      faculty: { $exists: true, $ne: '' },
+      studyGroup: { $exists: true, $ne: '' }
+    }).select('university faculty studyType studyGroup').lean().limit(20000).catch(() => [])
+  ]);
+
+  const merged = [...(userRows || []), ...(groupRows || [])];
+  for (const row of merged) {
+    await upsertCanonical(row?.university, row?.faculty, row?.studyType, row?.studyGroup);
+  }
+}
+
 // ==================== NOTIFICATIONS ====================
 
 const NotificationSchema = new mongoose.Schema({
@@ -527,6 +821,8 @@ async function ensureDefaultAdmin() {
         username: DEFAULT_ADMIN_USERNAME,
         bio: 'SChat Administrator account',
         university: 'SChat',
+        faculty: 'Admin',
+        studyType: 'Kunduzgi',
         studyGroup: 'Admin',
         phone: '998000000000', // required & unique
         email: '',
@@ -544,6 +840,9 @@ async function ensureDefaultAdmin() {
     const updates = {};
     if (!existing.isAdmin) updates.isAdmin = true;
     if (existing.role !== 'admin') updates.role = 'admin';
+    if (!cleanText(existing.faculty, 180)) updates.faculty = 'Admin';
+    if (!cleanText(existing.studyType, 80)) updates.studyType = 'Kunduzgi';
+    if (!cleanText(existing.studyGroup, 80)) updates.studyGroup = 'Admin';
 
     const ok = await bcrypt.compare(DEFAULT_ADMIN_PASSWORD, existing.password).catch(() => false);
     if (!ok) updates.password = hashed;
@@ -567,6 +866,8 @@ async function ensureDefaultAdmin() {
             username: DEFAULT_ADMIN_USERNAME,
             bio: 'SChat Administrator account',
             university: 'SChat',
+            faculty: 'Admin',
+            studyType: 'Kunduzgi',
             studyGroup: 'Admin',
             phone: 'admin_phone_' + Date.now(),
             email: '',
@@ -625,6 +926,10 @@ const GroupSchema = new mongoose.Schema({
   name: { type: String, required: true },
   username: { type: String, required: true, unique: true },
   description: { type: String, default: '' },
+  university: { type: String, default: '', index: true },
+  faculty: { type: String, default: '', index: true },
+  studyType: { type: String, default: 'Kunduzgi', index: true },
+  studyGroup: { type: String, default: '', index: true },
   previewImage: { type: String, default: '' },
   creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -641,6 +946,15 @@ const GroupMessageSchema = new mongoose.Schema({
   text: { type: String, default: '' },
   mediaUrl: { type: String, default: '' },
   mediaType: { type: String, enum: ['image', 'video', 'audio', 'document', 'voice', 'file', ''], default: '' },
+  mediaName: { type: String, default: '' },
+  mediaSize: { type: Number, default: 0 },
+  mediaMime: { type: String, default: '' },
+  reactions: [{
+    emoji: { type: String, required: true },
+    users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+  }],
+  editedAt: { type: Date, default: null },
+  deletedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
 });
 const GroupMessage = mongoose.model('GroupMessage', GroupMessageSchema);
@@ -1316,6 +1630,105 @@ async function requireAdmin(req, res, next) {
   } catch (e) {
     return res.status(500).json({ error: 'Admin check failed' });
   }
+}
+
+async function requireOrganizerOrAdmin(req, res, next) {
+  try {
+    const u = await User.findById(req.userId).select('isAdmin role username university faculty studyType studyGroup').lean();
+    const rawRole = String(u?.role || '').toLowerCase();
+    const isAdmin = !!u?.isAdmin || rawRole === 'admin';
+    const role = isAdmin ? 'admin' : rawRole;
+    const ok = !!(isAdmin || role === 'organizer');
+    if (!ok) return res.status(403).json({ error: 'Organizer or admin required' });
+    req.scopeUser = {
+      _id: u?._id,
+      username: u?.username || '',
+      role,
+      isAdmin,
+      university: cleanText(u?.university, 180),
+      faculty: cleanText(u?.faculty, 180),
+      studyType: cleanText(u?.studyType, 80),
+      studyGroup: cleanText(u?.studyGroup, 80)
+    };
+    return next();
+  } catch (e) {
+    return res.status(500).json({ error: 'Role check failed' });
+  }
+}
+
+async function resolveScopedUniversity(req, requestedUniversity) {
+  const scope = req.scopeUser || {};
+  const role = String(scope.role || '').toLowerCase();
+  const isAdmin = !!(scope.isAdmin || role === 'admin');
+  const ownUniRaw = cleanText(scope.university, 180);
+  const requestedRaw = cleanText(requestedUniversity, 180);
+
+  if (requestedRaw) {
+    const requestedDoc = await findUniversityDocInsensitive(requestedRaw);
+    if (!requestedDoc) return { ok: false, error: 'Unknown university. Configure catalog first.' };
+    if (!isAdmin && ownUniRaw && String(requestedDoc.name || '') !== String(ownUniRaw)) {
+      return { ok: false, error: 'Organizer can manage only own university' };
+    }
+    return { ok: true, university: String(requestedDoc.name || '').trim() };
+  }
+
+  if (!isAdmin) {
+    if (!ownUniRaw) return { ok: false, error: 'University scope is missing on your profile' };
+    const ownDoc = await findUniversityDocInsensitive(ownUniRaw);
+    if (!ownDoc) return { ok: false, error: 'Unknown university. Configure catalog first.' };
+    return { ok: true, university: String(ownDoc.name || '').trim() };
+  }
+
+  // Admin fallback: if own profile university is not in catalog, pick first catalog university.
+  if (ownUniRaw) {
+    const ownDoc = await findUniversityDocInsensitive(ownUniRaw);
+    if (ownDoc) return { ok: true, university: String(ownDoc.name || '').trim() };
+  }
+
+  const firstUni = await UniversityCatalog.findOne({}).sort({ name: 1 }).lean();
+  if (!firstUni?.name) return { ok: false, error: 'No universities found in catalog' };
+  return { ok: true, university: String(firstUni.name || '').trim() };
+}
+
+function isScopedAdminUser(scope = {}) {
+  const role = String(scope.role || '').toLowerCase();
+  return !!(scope.isAdmin || role === 'admin');
+}
+
+async function resolveScopedFaculty(req, scopedUniversityRaw, requestedFacultyRaw, opts = {}) {
+  const options = { requireForAdmin: false, ...opts };
+  const scope = req.scopeUser || {};
+  const isAdmin = isScopedAdminUser(scope);
+  const scopedUniversity = cleanText(scopedUniversityRaw, 180);
+  const requestedFaculty = cleanText(requestedFacultyRaw, 180);
+
+  const uniDoc = scopedUniversity
+    ? await UniversityCatalog.findOne({ name: scopedUniversity }).lean().catch(() => null)
+    : null;
+
+  if (isAdmin) {
+    if (!requestedFaculty) {
+      if (options.requireForAdmin) return { ok: false, error: 'faculty required' };
+      return { ok: true, faculty: '', isAdmin: true };
+    }
+    const canonicalFaculty = pickCanonicalFaculty(uniDoc, requestedFaculty);
+    if (!canonicalFaculty) return { ok: false, error: 'Unknown faculty for selected university' };
+    return { ok: true, faculty: canonicalFaculty, isAdmin: true };
+  }
+
+  const ownFacultyRaw = cleanText(scope.faculty, 180);
+  if (!ownFacultyRaw) return { ok: false, error: 'Faculty scope is missing on your profile' };
+  const ownCanonical = pickCanonicalFaculty(uniDoc, ownFacultyRaw) || ownFacultyRaw;
+  if (!ownCanonical) return { ok: false, error: 'Faculty scope is missing on your profile' };
+
+  if (requestedFaculty) {
+    const requestedCanonical = pickCanonicalFaculty(uniDoc, requestedFaculty) || requestedFaculty;
+    if (String(requestedCanonical).toLowerCase() !== String(ownCanonical).toLowerCase()) {
+      return { ok: false, error: 'Organizer can manage only own faculty' };
+    }
+  }
+
+  return { ok: true, faculty: ownCanonical, isAdmin: false };
 }
 
 // Admin realtime room helpers
@@ -3261,7 +3674,7 @@ const SignalModeration = mongoose.model('SignalModeration', SignalModerationSche
 // Register User
 app.post('/api/register', async (req, res) => {
   try {
-    const { fullName, nickname, username, bio, university, faculty, studyGroup, phone, email, password, role } = req.body;
+    const { fullName, nickname, username, bio, university, faculty, studyType, studyGroup, phone, email, password, role } = req.body;
 
 // Required: fullName (ism familiya), username, password
 const _fullName = String(fullName || '').trim();
@@ -3288,16 +3701,24 @@ const emailVal = emailNorm ? emailNorm : null;
 const safeRole = (String(role || 'student')).toLowerCase();
 const finalRole = ['student','teacher'].includes(safeRole) ? safeRole : 'student';
 
-if (!String(university||'').trim()) return res.status(400).json({ error: 'University required' });
-    if (!String(studyGroup||'').trim()) return res.status(400).json({ error: 'studyGroup required' });
+    const academic = await normalizeAcademicIdentity({
+      university,
+      faculty,
+      studyType,
+      studyGroup
+    }, {
+      requireUniversity: true,
+      requireFaculty: true,
+      requireStudyType: true,
+      requireStudyGroup: true
+    });
+    if (!academic.ok) return res.status(400).json({ error: academic.error });
 
-    const uniDoc = await UniversityCatalog.findOne({ name: String(university).trim() }).lean();
-    if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
-    const fac = String(faculty||'').trim();
-    if (fac) {
-      const okFaculty = (uniDoc.faculties||[]).some(x => String(x).toLowerCase() === fac.toLowerCase());
-      if (!okFaculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
-    }
+    const canonicalUniversity = academic.value.university;
+    const canonicalFaculty = academic.value.faculty;
+    const canonicalStudyType = academic.value.studyType;
+    const canonicalStudyGroup = academic.value.studyGroup;
+
     const existingUser = await User.findOne({ username: _usernameRaw });
     if (existingUser) {
       return res.status(400).json({ error: 'Username already exists' });
@@ -3324,8 +3745,10 @@ const hashedPassword = await bcrypt.hash(_password, 10);
       nickname: _nickname,
       username: _usernameRaw,
       bio,
-      university,
-      studyGroup,
+      university: canonicalUniversity,
+      faculty: canonicalFaculty,
+      studyType: canonicalStudyType,
+      studyGroup: canonicalStudyGroup,
       role: finalRole,
       teacherBalance: 0,
       phone: phoneVal,
@@ -3547,6 +3970,12 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
+    const role = String(user.role || '').toLowerCase();
+    const isOrganizerOnly = role === 'organizer' && !user.isAdmin;
+    const prevUniversity = cleanText(user.university, 180);
+    const prevFaculty = cleanText(user.faculty, 180);
+    const prevStudyType = cleanText(user.studyType, 80);
+    const prevStudyGroup = cleanText(user.studyGroup, 80);
 
     const body = (req.body && typeof req.body === 'object') ? req.body : {};
     const pickStr = (v, max=200) => {
@@ -3560,15 +3989,25 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
     if (body.nickname !== undefined) updates.nickname = pickStr(body.nickname, 40);
     if (body.fullName !== undefined) updates.fullName = pickStr(body.fullName, 80);
     if (body.bio !== undefined) updates.bio = pickStr(body.bio, 500);
-    if (body.phone !== undefined) updates.phone = pickStr(body.phone, 30);
-    if (body.email !== undefined) updates.email = pickStr(body.email, 120);
+    if (body.phone !== undefined) {
+      const phoneVal = pickStr(body.phone, 30);
+      updates.phone = phoneVal || null;
+    }
+    if (body.email !== undefined) {
+      const emailVal = pickStr(body.email, 120).toLowerCase();
+      updates.email = emailVal || null;
+    }
 
     // Academic identity (used by schedule / groups)
-    if (body.university !== undefined) updates.university = pickStr(body.university, 120);
-    if (body.faculty !== undefined) updates.faculty = pickStr(body.faculty, 120);
-    if (body.studyGroup !== undefined || body.group !== undefined) {
-      // accept both keys for compatibility
-      updates.studyGroup = pickStr(body.studyGroup ?? body.group, 60);
+    // Organizer role is faculty-scoped by admin assignment and cannot self-change academic scope.
+    if (!isOrganizerOnly) {
+      if (body.university !== undefined) updates.university = pickStr(body.university, 120);
+      if (body.faculty !== undefined) updates.faculty = pickStr(body.faculty, 120);
+      if (body.studyType !== undefined) updates.studyType = pickStr(body.studyType, 80);
+      if (body.studyGroup !== undefined || body.group !== undefined) {
+        // accept both keys for compatibility
+        updates.studyGroup = pickStr(body.studyGroup ?? body.group, 60);
+      }
     }
 
     // Username change: enforce cooldown + uniqueness
@@ -3595,15 +4034,60 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
       if (k in updates) delete updates[k];
     }
 
+    const nextUniversity = (updates.university !== undefined) ? updates.university : pickStr(user.university, 120);
+    const nextFaculty = (updates.faculty !== undefined) ? updates.faculty : pickStr(user.faculty, 120);
+    const nextStudyType = (updates.studyType !== undefined) ? updates.studyType : pickStr(user.studyType, 80);
+    const nextStudyGroup = (updates.studyGroup !== undefined) ? updates.studyGroup : pickStr(user.studyGroup, 60);
+
+    const academic = await normalizeAcademicIdentity({
+      university: nextUniversity,
+      faculty: nextFaculty,
+      studyType: nextStudyType,
+      studyGroup: nextStudyGroup
+    }, {
+      requireUniversity: true,
+      requireFaculty: true,
+      requireStudyType: true,
+      requireStudyGroup: true
+    });
+    if (!academic.ok) return res.status(400).json({ error: academic.error });
+
+    updates.university = academic.value.university;
+    updates.faculty = academic.value.faculty;
+    updates.studyType = academic.value.studyType;
+    updates.studyGroup = academic.value.studyGroup;
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'phone') && updates.phone) {
+      const existingPhone = await User.findOne({ phone: updates.phone, _id: { $ne: user._id } }).select('_id').lean();
+      if (existingPhone) return res.status(409).json({ error: 'Phone number already registered' });
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'email') && updates.email) {
+      const existingEmail = await User.findOne({ email: updates.email, _id: { $ne: user._id } }).select('_id').lean();
+      if (existingEmail) return res.status(409).json({ error: 'Email already registered' });
+    }
+
     // Apply
     Object.assign(user, updates);
 
-    // Minimal validation: if university exists, faculty/group can be blank, but keep strings trimmed
-    user.university = pickStr(user.university, 120);
-    user.faculty = pickStr(user.faculty, 120);
-    user.studyGroup = pickStr(user.studyGroup, 60);
-
     await user.save();
+
+    const uniChanged = prevUniversity !== String(user.university || '').trim();
+    const facChanged = prevFaculty !== String(user.faculty || '').trim();
+    const typeChanged = prevStudyType !== String(user.studyType || '').trim();
+    const groupChanged = prevStudyGroup !== String(user.studyGroup || '').trim();
+    if (uniChanged || facChanged || typeChanged || groupChanged) {
+      const groupSet = {};
+      if (uniChanged) groupSet.university = String(user.university || '').trim();
+      if (facChanged) groupSet.faculty = String(user.faculty || '').trim();
+      if (typeChanged) groupSet.studyType = String(user.studyType || '').trim();
+      if (groupChanged) groupSet.studyGroup = String(user.studyGroup || '').trim();
+
+      await Group.updateMany({ creatorId: user._id }, { $set: groupSet }).catch(() => {});
+      if (uniChanged) {
+        await Channel.updateMany({ creatorId: user._id }, { $set: { university: String(user.university || '').trim() } }).catch(() => {});
+      }
+    }
 
     const safe = await User.findById(req.userId).select('-password').lean();
     if (safe) {
@@ -4366,14 +4850,53 @@ app.get('/api/calls/stats', authenticateToken, async (req, res) => {
 // Create Group
 app.post('/api/groups', authenticateToken, async (req, res) => {
   try {
-    const { name, username, description } = req.body;
-    
+    const { name, username, description, university, faculty, studyType, studyGroup, isPrivate } = req.body || {};
+
+    const creator = await User.findById(req.userId).select('university faculty studyType studyGroup role isAdmin').lean();
+    if (!creator) return res.status(404).json({ error: 'User not found' });
+
+    const creatorRole = String(creator.role || '').toLowerCase();
+    const isAdminActor = !!(creator.isAdmin || creatorRole === 'admin');
+
+    const requestedUniversity = isAdminActor
+      ? (cleanText(university, 180) || cleanText(creator.university, 180))
+      : cleanText(creator.university, 180);
+    const requestedFaculty = cleanText(faculty, 180) || cleanText(creator.faculty, 180);
+    const requestedStudyType = cleanText(studyType, 80) || cleanText(creator.studyType, 80);
+    const requestedStudyGroup = cleanText(studyGroup, 80) || cleanText(creator.studyGroup, 80);
+
+    const academic = await normalizeAcademicIdentity({
+      university: requestedUniversity,
+      faculty: requestedFaculty,
+      studyType: requestedStudyType,
+      studyGroup: requestedStudyGroup
+    }, {
+      requireUniversity: true,
+      requireFaculty: true,
+      requireStudyType: true,
+      requireStudyGroup: true
+    });
+    if (!academic.ok) return res.status(400).json({ error: academic.error });
+
+    const nameVal = cleanText(name, 120);
+    const usernameVal = normalizeHandle(username);
+    const descriptionVal = cleanText(description, 500);
+    if (!nameVal) return res.status(400).json({ error: 'Group name required' });
+    if (!usernameVal) return res.status(400).json({ error: 'Group username invalid' });
+    const existing = await Group.findOne({ username: usernameVal }).select('_id').lean();
+    if (existing) return res.status(409).json({ error: 'Group username already exists' });
+
     const group = new Group({
-      name,
-      username,
-      description,
+      name: nameVal,
+      username: usernameVal,
+      description: descriptionVal,
+      university: academic.value.university,
+      faculty: academic.value.faculty,
+      studyType: academic.value.studyType,
+      studyGroup: academic.value.studyGroup,
       creatorId: req.userId,
-      members: [req.userId]
+      members: [req.userId],
+      isPublic: !(String(isPrivate || '').toLowerCase() === 'true' || String(isPrivate || '').toLowerCase() === 'on' || String(isPrivate || '') === '1')
     });
     
     await group.save();
@@ -4390,7 +4913,11 @@ app.post('/api/groups', authenticateToken, async (req, res) => {
 // Get User Groups
 app.get('/api/groups', authenticateToken, async (req, res) => {
   try {
-    const groups = await Group.find({ members: req.userId })
+    const me = await User.findById(req.userId).select('university').lean();
+    const query = { members: req.userId };
+    if (me?.university) query.university = me.university;
+
+    const groups = await Group.find(query)
       .populate('creatorId', 'username nickname')
       .populate('members', 'username nickname avatar');
     
@@ -4405,6 +4932,16 @@ app.get('/api/groups', authenticateToken, async (req, res) => {
 app.get('/api/groups/:groupId/messages', authenticateToken, async (req, res) => {
   try {
     const { groupId } = req.params;
+    const me = await User.findById(req.userId).select('university').lean();
+    const group = await Group.findById(groupId).select('members isPublic creatorId university').lean();
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+    if (group.university && me?.university && String(group.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This group belongs to another university' });
+    }
+    const isMember = (group.members || []).some(m => String(m) === String(req.userId));
+    if (!group.isPublic && !isMember && String(group.creatorId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Not a group member' });
+    }
     const messages = await GroupMessage.find({ groupId })
       .sort({ createdAt: 1 })
       .populate('senderId', 'username nickname avatar');
@@ -4424,20 +4961,58 @@ app.post('/api/groups/:groupId/messages/file', authenticateToken, upload.single(
     if (denyIfMuted(req, res)) return;
     const { groupId } = req.params;
     const text = String(req.body?.text || '');
+    const me = await User.findById(req.userId).select('university').lean();
     if (!req.file) return res.status(400).json({ success:false, error: 'No file uploaded' });
 
     const group = await Group.findById(groupId);
     if (!group) return res.status(404).json({ success:false, error: 'Group not found' });
-    if (!group.members.includes(req.userId)) return res.status(403).json({ success:false, error: 'Not a group member' });
+    if (group.university && me?.university && String(group.university) !== String(me.university)) {
+      return res.status(403).json({ success:false, error: 'This group belongs to another university' });
+    }
+    if (!(group.members || []).some(m => String(m) === String(req.userId))) {
+      return res.status(403).json({ success:false, error: 'Not a group member' });
+    }
+
+    // Max 5MB for group chat uploads
+    const maxBytes = 5 * 1024 * 1024;
+    if (Number(req.file.size || 0) > maxBytes) {
+      try { require('fs').unlinkSync(req.file.path); } catch (_) {}
+      return res.status(400).json({ success:false, error: 'File size must be <= 5MB' });
+    }
+
+    const mime = String(req.file.mimetype || '').toLowerCase();
+    const allow = (
+      mime.startsWith('image/') ||
+      mime.startsWith('video/') ||
+      mime.startsWith('audio/') ||
+      mime === 'application/pdf' ||
+      mime.includes('msword') ||
+      mime.includes('officedocument') ||
+      mime.startsWith('text/')
+    );
+    if (!allow) {
+      try { require('fs').unlinkSync(req.file.path); } catch (_) {}
+      return res.status(400).json({ success:false, error: 'Unsupported file type' });
+    }
 
     const mediaType = getMediaType(req.file.mimetype);
     const result = await cloudinary.uploader.upload(req.file.path, { folder:'group_messages', resource_type:'auto' });
 
-    const msg = new GroupMessage({ groupId, senderId:req.userId, text, mediaUrl: result.secure_url, mediaType });
+    const msg = new GroupMessage({
+      groupId,
+      senderId: req.userId,
+      text,
+      mediaUrl: result.secure_url,
+      mediaType,
+      mediaName: req.file.originalname || '',
+      mediaSize: Number(req.file.size || 0),
+      mediaMime: req.file.mimetype || ''
+    });
     await msg.save();
 
     const populated = await GroupMessage.findById(msg._id).populate('senderId', 'username nickname avatar');
     io.to(`group_${groupId}`).emit('newGroupMessage', populated);
+    try { require('fs').unlinkSync(req.file.path); } catch (_) {}
 
     return res.json({ success:true, message: populated });
   } catch (e) {
@@ -4450,16 +5025,26 @@ app.post('/api/groups/:groupId/messages', authenticateToken, async (req, res) =>
 
     const { groupId } = req.params;
     const { text, mediaUrl, mediaType } = req.body;
+    const me = await User.findById(req.userId).select('university').lean();
     
     const group = await Group.findById(groupId);
-    if (!group.members.includes(req.userId)) {
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+    if (group.university && me?.university && String(group.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This group belongs to another university' });
+    }
+    if (!(group.members || []).some(m => String(m) === String(req.userId))) {
       return res.status(403).json({ error: 'Not a group member' });
+    }
+
+    const safeText = String(text || '').trim();
+    if (!safeText && !String(mediaUrl || '').trim()) {
+      return res.status(400).json({ error: 'Message cannot be empty' });
     }
     
     const message = new GroupMessage({
       groupId,
       senderId: req.userId,
-      text,
+      text: safeText,
       mediaUrl,
       mediaType
     });
@@ -4478,22 +5063,140 @@ app.post('/api/groups/:groupId/messages', authenticateToken, async (req, res) =>
   }
 });
 
+// Edit own group message
+app.put('/api/groups/:groupId/messages/:messageId', authenticateToken, async (req, res) => {
+  try {
+    if (denyIfMuted(req, res)) return;
+    const { groupId, messageId } = req.params;
+    const text = String(req.body?.text || '').trim();
+    if (!text) return res.status(400).json({ error: 'Text is required' });
+
+    const msg = await GroupMessage.findOne({ _id: messageId, groupId });
+    if (!msg) return res.status(404).json({ error: 'Message not found' });
+    if (String(msg.senderId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Only sender can edit this message' });
+    }
+    if (msg.deletedAt) return res.status(400).json({ error: 'Message already deleted' });
+
+    msg.text = text;
+    msg.editedAt = new Date();
+    await msg.save();
+
+    const populated = await GroupMessage.findById(msg._id).populate('senderId', 'username nickname avatar');
+    io.to(`group_${groupId}`).emit('groupMessageUpdated', populated);
+    return res.json({ success: true, message: populated });
+  } catch (e) {
+    console.error('Edit group message error:', e);
+    return res.status(500).json({ error: 'Failed to edit message' });
+  }
+});
+
+// Delete own group message (or creator/admin)
+app.delete('/api/groups/:groupId/messages/:messageId', authenticateToken, async (req, res) => {
+  try {
+    const { groupId, messageId } = req.params;
+    const msg = await GroupMessage.findOne({ _id: messageId, groupId });
+    if (!msg) return res.status(404).json({ error: 'Message not found' });
+
+    const g = await Group.findById(groupId).select('creatorId').lean();
+    const me = await User.findById(req.userId).select('isAdmin role').lean();
+    const canDelete = (
+      String(msg.senderId) === String(req.userId) ||
+      String(g?.creatorId || '') === String(req.userId) ||
+      !!(me?.isAdmin || String(me?.role || '').toLowerCase() === 'admin')
+    );
+    if (!canDelete) return res.status(403).json({ error: 'Not allowed to delete this message' });
+
+    await GroupMessage.deleteOne({ _id: msg._id });
+    io.to(`group_${groupId}`).emit('groupMessageDeleted', { _id: String(msg._id), groupId: String(groupId) });
+    return res.json({ success: true });
+  } catch (e) {
+    console.error('Delete group message error:', e);
+    return res.status(500).json({ error: 'Failed to delete message' });
+  }
+});
+
+// Toggle reaction on a group message
+app.post('/api/groups/:groupId/messages/:messageId/reactions', authenticateToken, async (req, res) => {
+  try {
+    if (denyIfMuted(req, res)) return;
+    const { groupId, messageId } = req.params;
+    const emoji = String(req.body?.emoji || '').trim();
+    if (!emoji || emoji.length > 8) return res.status(400).json({ error: 'Invalid emoji' });
+
+    const me = await User.findById(req.userId).select('university').lean();
+    const group = await Group.findById(groupId).select('members university').lean();
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+    if (group.university && me?.university && String(group.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This group belongs to another university' });
+    }
+    const isMember = (group.members || []).some(m => String(m) === String(req.userId));
+    if (!isMember) return res.status(403).json({ error: 'Not a group member' });
+
+    const msg = await GroupMessage.findOne({ _id: messageId, groupId });
+    if (!msg) return res.status(404).json({ error: 'Message not found' });
+
+    if (!Array.isArray(msg.reactions)) msg.reactions = [];
+    let row = msg.reactions.find(r => String(r.emoji) === emoji);
+    if (!row) {
+      row = { emoji, users: [] };
+      msg.reactions.push(row);
+    }
+
+    const uid = String(req.userId);
+    const has = (row.users || []).some(u => String(u) === uid);
+    if (has) {
+      row.users = (row.users || []).filter(u => String(u) !== uid);
+    } else {
+      row.users = [...(row.users || []), req.userId];
+    }
+    msg.reactions = msg.reactions.filter(r => Array.isArray(r.users) && r.users.length > 0);
+    await msg.save();
+
+    const populated = await GroupMessage.findById(msg._id).populate('senderId', 'username nickname avatar');
+    io.to(`group_${groupId}`).emit('groupMessageReaction', populated);
+    return res.json({ success: true, message: populated });
+  } catch (e) {
+    console.error('Group reaction error:', e);
+    return res.status(500).json({ error: 'Failed to react to message' });
+  }
+});
+
 // Create Channel
 app.post('/api/channels', authenticateToken, async (req, res) => {
   try {
-    const { name, username, description, category, university, isPublic } = req.body;
-    
-    const existingChannel = await Channel.findOne({ username });
+    const { name, username, description, category, university, isPublic } = req.body || {};
+
+    const actor = await User.findById(req.userId).select('university role isAdmin').lean();
+    if (!actor) return res.status(404).json({ error: 'User not found' });
+    const actorRole = String(actor.role || '').toLowerCase();
+    const isAdminActor = !!(actor.isAdmin || actorRole === 'admin');
+
+    const channelUniversity = isAdminActor
+      ? (cleanText(university, 180) || cleanText(actor.university, 180))
+      : cleanText(actor.university, 180);
+    if (!channelUniversity) return res.status(400).json({ error: 'University required in profile' });
+
+    const uniDoc = await findUniversityDocInsensitive(channelUniversity);
+    if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
+
+    const usernameVal = normalizeHandle(username);
+    if (!usernameVal) return res.status(400).json({ error: 'Channel username invalid' });
+
+    const existingChannel = await Channel.findOne({ username: usernameVal });
     if (existingChannel) {
       return res.status(400).json({ error: 'Channel username already exists' });
     }
-    
+
+    const nameVal = cleanText(name, 120);
+    if (!nameVal) return res.status(400).json({ error: 'Channel name required' });
+
     const channel = new Channel({
-      name,
-      username,
-      description,
-      category: category || 'other',
-      university: university || '',
+      name: nameVal,
+      username: usernameVal,
+      description: cleanText(description, 500),
+      category: cleanText(category, 60) || 'other',
+      university: uniDoc.name,
       isPublic: isPublic !== false,
       creatorId: req.userId,
       moderators: [req.userId],
@@ -4539,15 +5242,31 @@ app.put('/api/channels/:channelId([0-9a-fA-F]{24})', authenticateToken, async (r
 
     // If username changed, ensure uniqueness
     if (username && username !== channel.username) {
-      const exists = await Channel.findOne({ username });
+      const normalized = normalizeHandle(username);
+      if (!normalized) return res.status(400).json({ error: 'Channel username invalid' });
+      const exists = await Channel.findOne({ username: normalized });
       if (exists) return res.status(400).json({ error: 'Channel username already exists' });
-      channel.username = username;
+      channel.username = normalized;
     }
 
     if (typeof name === 'string' && name.trim()) channel.name = name.trim();
     if (typeof description === 'string') channel.description = description;
     if (typeof category === 'string' && category.trim()) channel.category = category.trim();
-    if (typeof university === 'string') channel.university = university.trim();
+    if (typeof university === 'string') {
+      const me = await User.findById(req.userId).select('university role isAdmin').lean();
+      const role = String(me?.role || '').toLowerCase();
+      const isAdminActor = !!(me?.isAdmin || role === 'admin');
+      if (isAdminActor) {
+        const uni = cleanText(university, 180);
+        if (uni) {
+          const uniDoc = await findUniversityDocInsensitive(uni);
+          if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
+          channel.university = uniDoc.name;
+        }
+      } else {
+        channel.university = cleanText(me?.university, 180);
+      }
+    }
     if (typeof isPublic === 'boolean') channel.isPublic = isPublic;
 
     await channel.save();
@@ -4638,9 +5357,15 @@ app.post('/api/channels/:channelId([0-9a-fA-F]{24})/posts/upload', authenticateT
   try {  if (denyIfMuted(req, res)) return;
 
     const { channelId } = req.params;
+    const me = await User.findById(req.userId).select('university role isAdmin').lean();
 
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ error: 'Channel not found' });
+    const role = String(me?.role || '').toLowerCase();
+    const isAdminActor = !!(me?.isAdmin || role === 'admin');
+    if (!isAdminActor && channel.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This channel belongs to another university' });
+    }
 
     const isCreator = channel.creatorId.equals(req.userId);
     const isModerator = channel.moderators.some(mod => mod.equals(req.userId));
@@ -4666,6 +5391,12 @@ app.post('/api/channels/:channelId([0-9a-fA-F]{24})/posts/upload', authenticateT
 app.get('/api/channels/:channelId([0-9a-fA-F]{24})/posts', authenticateToken, async (req, res) => {
   try {
     const { channelId } = req.params;
+    const me = await User.findById(req.userId).select('university').lean();
+    const channel = await Channel.findById(channelId).select('university').lean();
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+    if (channel.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This channel belongs to another university' });
+    }
     const posts = await ChannelPost.find({ channelId })
       .sort({ createdAt: -1 })
       .populate('channelId', 'name username');
@@ -4683,10 +5414,16 @@ app.post('/api/channels/:channelId([0-9a-fA-F]{24})/posts', authenticateToken, a
 
     const { channelId } = req.params;
     const { content, mediaUrl, mediaType, type } = req.body;
+    const me = await User.findById(req.userId).select('university role isAdmin').lean();
     
     const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found' });
+    }
+    const role = String(me?.role || '').toLowerCase();
+    const isAdminActor = !!(me?.isAdmin || role === 'admin');
+    if (!isAdminActor && channel.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This channel belongs to another university' });
     }
     
     const isCreator = channel.creatorId.equals(req.userId);
@@ -4785,13 +5522,17 @@ app.get('/api/stats/detailed', authenticateToken, async (req, res) => {
 app.post('/api/groups/:groupId/join', authenticateToken, async (req, res) => {
   try {
     const { groupId } = req.params;
-    
+    const me = await User.findById(req.userId).select('university').lean();
     const group = await Group.findById(groupId);
     if (!group) {
       return res.status(404).json({ error: 'Group not found' });
     }
-    
-    if (group.members.includes(req.userId)) {
+
+    if (group.university && me?.university && String(group.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'You can only join groups in your university' });
+    }
+
+    if ((group.members || []).some((m) => String(m) === String(req.userId))) {
       return res.status(400).json({ error: 'Already a member' });
     }
     
@@ -4833,13 +5574,17 @@ app.post('/api/groups/:groupId/leave', authenticateToken, async (req, res) => {
 app.post('/api/channels/:channelId([0-9a-fA-F]{24})/subscribe', authenticateToken, async (req, res) => {
   try {
     const { channelId } = req.params;
-    
+    const me = await User.findById(req.userId).select('university').lean();
     const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found' });
     }
-    
-    if (channel.subscribers.includes(req.userId)) {
+
+    if (channel.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'You can only subscribe to channels in your university' });
+    }
+
+    if ((channel.subscribers || []).some((s) => String(s) === String(req.userId))) {
       return res.status(400).json({ error: 'Already subscribed' });
     }
     
@@ -4863,12 +5608,16 @@ app.post('/api/channels/:channelId([0-9a-fA-F]{24})/subscribe', authenticateToke
 app.post('/api/channels/:channelId([0-9a-fA-F]{24})/unsubscribe', authenticateToken, async (req, res) => {
   try {
     const { channelId } = req.params;
-    
+    const me = await User.findById(req.userId).select('university').lean();
     const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found' });
     }
-    
+
+    if (channel.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This channel belongs to another university' });
+    }
+
     channel.subscribers = channel.subscribers.filter(subId => !subId.equals(req.userId));
     await channel.save();
     
@@ -4888,7 +5637,11 @@ app.post('/api/channels/:channelId([0-9a-fA-F]{24})/unsubscribe', authenticateTo
 // Get user's groups
 app.get('/api/groups/my', authenticateToken, async (req, res) => {
   try {
-    const groups = await Group.find({ creatorId: req.userId })
+    const me = await User.findById(req.userId).select('university').lean();
+    const query = { creatorId: req.userId };
+    if (me?.university) query.university = me.university;
+
+    const groups = await Group.find(query)
       .populate('members', 'username nickname avatar')
       .populate('creatorId', 'username nickname');
     
@@ -4909,14 +5662,20 @@ app.get('/api/groups/my', authenticateToken, async (req, res) => {
 // Get joined groups
 app.get('/api/groups/joined', authenticateToken, async (req, res) => {
   try {
-    const groups = await Group.find({ 
+    const me = await User.findById(req.userId).select('university').lean();
+    const query = {
       members: req.userId,
       creatorId: { $ne: req.userId }
+    };
+    if (me?.university) query.university = me.university;
+
+    const groups = await Group.find({ 
+      ...query
     })
     .populate('members', 'username nickname avatar')
     .populate('creatorId', 'username nickname');
-    
-    const totalGroups = await Group.countDocuments();
+
+    const totalGroups = await Group.countDocuments(me?.university ? { university: me.university } : {});
     
     res.json({ 
       success: true, 
@@ -4957,14 +5716,19 @@ app.get('/api/search/messages', authenticateToken, async (req, res) => {
 // Search Groups
 app.get('/api/search/groups', authenticateToken, async (req, res) => {
   try {
-    const { query } = req.query;
-    const groups = await Group.find({
+    const me = await User.findById(req.userId).select('university').lean();
+    const q = String(req.query.query || '').trim();
+    const re = new RegExp(escapeRegex(q), 'i');
+    const filter = {
       $or: [
-        { name: { $regex: query, $options: 'i' } },
-        { username: { $regex: query, $options: 'i' } },
-        { description: { $regex: query, $options: 'i' } }
+        { name: re },
+        { username: re },
+        { description: re }
       ]
-    }).populate('creatorId', 'username nickname').limit(20);
+    };
+    if (me?.university) filter.university = me.university;
+
+    const groups = await Group.find(filter).populate('creatorId', 'username nickname').limit(20);
     
     res.json({ success: true, groups });
   } catch (error) {
@@ -4976,14 +5740,19 @@ app.get('/api/search/groups', authenticateToken, async (req, res) => {
 // Search Channels
 app.get('/api/search/channels', authenticateToken, async (req, res) => {
   try {
-    const { query } = req.query;
-    const channels = await Channel.find({
+    const me = await User.findById(req.userId).select('university').lean();
+    const q = String(req.query.query || '').trim();
+    const re = new RegExp(escapeRegex(q), 'i');
+    const filter = {
       $or: [
-        { name: { $regex: query, $options: 'i' } },
-        { username: { $regex: query, $options: 'i' } },
-        { description: { $regex: query, $options: 'i' } }
+        { name: re },
+        { username: re },
+        { description: re }
       ]
-    }).populate('creatorId', 'username nickname').limit(20);
+    };
+    if (me?.university) filter.university = me.university;
+
+    const channels = await Channel.find(filter).populate('creatorId', 'username nickname').limit(20);
     
     res.json({ success: true, channels });
   } catch (error) {
@@ -4995,13 +5764,17 @@ app.get('/api/search/channels', authenticateToken, async (req, res) => {
 // Get all public groups
 app.get('/api/groups/all', authenticateToken, async (req, res) => {
   try {
-    const groups = await Group.find()
+    const me = await User.findById(req.userId).select('university').lean();
+    const query = me?.university ? { university: me.university } : {};
+
+    const groups = await Group.find(query)
       .populate('members', 'username nickname avatar')
       .populate('creatorId', 'username nickname')
       .limit(50);
-    
-    const totalGroups = await Group.countDocuments();
+
+    const totalGroups = await Group.countDocuments(query);
     const totalMembers = await Group.aggregate([
+      ...(me?.university ? [{ $match: { university: me.university } }] : []),
       { $project: { memberCount: { $size: "$members" } } },
       { $group: { _id: null, total: { $sum: "$memberCount" } } }
     ]);
@@ -5023,12 +5796,17 @@ app.get('/api/groups/all', authenticateToken, async (req, res) => {
 // Get group information
 app.get('/api/groups/:groupId', authenticateToken, async (req, res) => {
   try {
+    const me = await User.findById(req.userId).select('university').lean();
     const group = await Group.findById(req.params.groupId)
       .populate('creatorId', 'username nickname avatar')
       .populate('members', 'username nickname avatar isOnline');
     
     if (!group) {
       return res.status(404).json({ error: 'Group not found' });
+    }
+
+    if (group.university && me?.university && String(group.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This group belongs to another university' });
     }
     
     const isMember = group.members.some(member => member._id.equals(req.userId));
@@ -5055,14 +5833,20 @@ app.post('/api/groups/:groupId/invite', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Only group creator can invite users' });
     }
     
-    if (group.members.includes(userId)) {
+    if ((group.members || []).some((m) => String(m) === String(userId))) {
       return res.status(400).json({ error: 'User already in group' });
+    }
+
+    const invited = await User.findById(userId).select('university username nickname avatar').lean();
+    if (!invited) return res.status(404).json({ error: 'User not found' });
+    if (group.university && invited.university && String(group.university) !== String(invited.university)) {
+      return res.status(400).json({ error: 'Only users from same university can be invited' });
     }
     
     group.members.push(userId);
     await group.save();
     
-    const user = await User.findById(userId).select('username nickname avatar');
+    const user = invited;
     io.to(`group_${groupId}`).emit('groupMemberUpdate', {
       groupId,
       action: 'add',
@@ -5207,13 +5991,17 @@ app.get('/api/channels/by-username/:username', authenticateToken, async (req, re
   try {
     const uname = String(req.params.username || '').trim();
     if (!uname) return res.status(400).json({ error: 'Username is required' });
+    const me = await User.findById(req.userId).select('university').lean();
 
-    const channel = await Channel.findOne({ username: new RegExp('^' + uname + '$', 'i') })
+    const channel = await Channel.findOne({ username: new RegExp('^' + escapeRegex(uname) + '$', 'i') })
       .populate('creatorId', 'username nickname avatar')
       .populate('moderators', 'username nickname avatar')
       .populate('subscribers', 'username nickname avatar');
 
     if (!channel) return res.status(404).json({ error: 'Channel not found' });
+    if (channel.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This channel belongs to another university' });
+    }
 
     const isSubscribed = channel.subscribers.some(sub => sub._id.equals(req.userId));
 
@@ -5242,6 +6030,7 @@ app.get('/api/channels/by-username/:username', authenticateToken, async (req, re
 // Get channel by ID
 app.get('/api/channels/:channelId([0-9a-fA-F]{24})', authenticateToken, async (req, res) => {
   try {
+    const me = await User.findById(req.userId).select('university').lean();
     const channel = await Channel.findById(req.params.channelId)
       .populate('creatorId', 'username nickname avatar')
       .populate('moderators', 'username nickname avatar')
@@ -5249,6 +6038,9 @@ app.get('/api/channels/:channelId([0-9a-fA-F]{24})', authenticateToken, async (r
     
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found' });
+    }
+    if (channel.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This channel belongs to another university' });
     }
     
     const isSubscribed = channel.subscribers.some(sub => 
@@ -5282,6 +6074,12 @@ app.get('/api/channels/:channelId([0-9a-fA-F]{24})', authenticateToken, async (r
 app.get('/api/channels/:channelId([0-9a-fA-F]{24})/posts', authenticateToken, async (req, res) => {
   try {
     const { channelId } = req.params;
+    const me = await User.findById(req.userId).select('university').lean();
+    const channel = await Channel.findById(channelId).select('university').lean();
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+    if (channel.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This channel belongs to another university' });
+    }
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -5310,12 +6108,16 @@ app.get('/api/channels/:channelId([0-9a-fA-F]{24})/posts', authenticateToken, as
 app.get('/api/channels/:channelId([0-9a-fA-F]{24})/subscribers', authenticateToken, async (req, res) => {
   try {
     const { channelId } = req.params;
+    const me = await User.findById(req.userId).select('university').lean();
     
     const channel = await Channel.findById(channelId)
       .populate('subscribers', 'username nickname avatar isOnline');
     
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found' });
+    }
+    if (channel.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This channel belongs to another university' });
     }
     
     res.json({
@@ -5331,11 +6133,16 @@ app.get('/api/channels/:channelId([0-9a-fA-F]{24})/subscribers', authenticateTok
 // Get post by ID
 app.get('/api/posts/:postId', authenticateToken, async (req, res) => {
   try {
+    const me = await User.findById(req.userId).select('university').lean();
     const post = await ChannelPost.findById(req.params.postId)
       .populate('channelId', 'name username');
     
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
+    }
+    const channel = await Channel.findById(post.channelId?._id || post.channelId).select('university').lean();
+    if (channel?.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This post belongs to another university channel' });
     }
     res.json({ success: true, post });
   } catch (error) {
@@ -5348,10 +6155,15 @@ app.get('/api/posts/:postId', authenticateToken, async (req, res) => {
 app.post('/api/posts/:postId/like', authenticateToken, async (req, res) => {
   try {
     const { postId } = req.params;
+    const me = await User.findById(req.userId).select('university').lean();
     
     const post = await ChannelPost.findById(postId);
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
+    }
+    const channel = await Channel.findById(post.channelId).select('university').lean();
+    if (channel?.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This post belongs to another university channel' });
     }
     
     const alreadyLiked = post.likes.includes(req.userId);
@@ -5407,22 +6219,25 @@ app.get('/api/channels', authenticateToken, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
     const skip = (page - 1) * limit;
+    const me = await User.findById(req.userId).select('university').lean();
     
     const query = {};
+    if (me?.university) query.university = me.university;
     
     if (req.query.category && req.query.category !== 'all') {
       query.category = req.query.category;
     }
     
-    if (req.query.university) {
+    if (req.query.university && !query.university) {
       query.university = req.query.university;
     }
     
     if (req.query.search) {
+      const re = new RegExp(escapeRegex(String(req.query.search || '')), 'i');
       query.$or = [
-        { name: { $regex: req.query.search, $options: 'i' } },
-        { description: { $regex: req.query.search, $options: 'i' } },
-        { username: { $regex: req.query.search, $options: 'i' } }
+        { name: re },
+        { description: re },
+        { username: re }
       ];
     }
     
@@ -5475,18 +6290,22 @@ app.get('/api/channels', authenticateToken, async (req, res) => {
 // Get channel stats
 app.get('/api/channels/stats', authenticateToken, async (req, res) => {
   try {
-    const totalChannels = await Channel.countDocuments();
-    
-    const channels = await Channel.find({});
+    const me = await User.findById(req.userId).select('university').lean();
+    const scope = me?.university ? { university: me.university } : {};
+
+    const totalChannels = await Channel.countDocuments(scope);
+
+    const channels = await Channel.find(scope);
     let totalSubscribers = 0;
     channels.forEach(channel => {
       totalSubscribers += channel.subscribers.length;
     });
     
-    const myChannels = await Channel.countDocuments({ creatorId: req.userId });
+    const myChannels = await Channel.countDocuments({ creatorId: req.userId, ...scope });
     
     const subscribedChannels = await Channel.countDocuments({ 
-      subscribers: req.userId 
+      subscribers: req.userId,
+      ...scope
     });
     
     res.json({
@@ -5507,7 +6326,11 @@ app.get('/api/channels/stats', authenticateToken, async (req, res) => {
 // Get featured channels
 app.get('/api/channels/featured', authenticateToken, async (req, res) => {
   try {
+    const me = await User.findById(req.userId).select('university').lean();
+    const pipeline = [];
+    if (me?.university) pipeline.push({ $match: { university: me.university } });
     const channels = await Channel.aggregate([
+      ...pipeline,
       {
         $addFields: {
           subscriberCount: { $size: "$subscribers" }
@@ -5562,10 +6385,15 @@ app.get('/api/stats/universities', authenticateToken, async (req, res) => {
 app.post('/api/posts/:postId/save', authenticateToken, async (req, res) => {
   try {
     const { postId } = req.params;
+    const me = await User.findById(req.userId).select('university').lean();
     
     const post = await ChannelPost.findById(postId);
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
+    }
+    const channel = await Channel.findById(post.channelId).select('university').lean();
+    if (channel?.university && me?.university && String(channel.university) !== String(me.university)) {
+      return res.status(403).json({ error: 'This post belongs to another university channel' });
     }
     
     const saved = Math.random() > 0.5;
@@ -5901,6 +6729,52 @@ app.get('/api/catalog/faculties', async (req, res) => {
     res.status(500).json({ error: 'Failed to load faculties' });
   }
 });
+app.get('/api/catalog/study-types', async (req, res) => {
+  try {
+    const university = cleanText(req.query.university, 180);
+    const faculty = cleanText(req.query.faculty, 180);
+    const q = cleanText(req.query.q, 120);
+
+    if (!university || !faculty) {
+      return res.json({ success: true, studyTypes: [] });
+    }
+
+    const filter = { university, faculty };
+    if (q) filter.name = { $regex: escapeRegex(q), $options: 'i' };
+    const list = await StudyTypeCatalog.find(filter).sort({ name: 1 }).limit(500).lean();
+    res.json({
+      success: true,
+      studyTypes: list.map((x) => ({ _id: x._id, name: x.name, faculty: x.faculty }))
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load study types' });
+  }
+});
+app.get('/api/catalog/study-groups', async (req, res) => {
+  try {
+    const university = cleanText(req.query.university, 180);
+    const faculty = cleanText(req.query.faculty, 180);
+    const studyType = cleanText(req.query.studyType, 80);
+    const q = cleanText(req.query.q, 120);
+
+    if (!university || !faculty || !studyType) {
+      return res.json({ success: true, studyGroups: [] });
+    }
+
+    const filter = { university, faculty, studyType };
+    if (q) {
+      filter.name = { $regex: escapeRegex(q), $options: 'i' };
+    }
+
+    const list = await StudyGroupCatalog.find(filter).sort({ name: 1 }).limit(2000).lean();
+    res.json({
+      success: true,
+      studyGroups: list.map((x) => ({ _id: x._id, name: x.name, faculty: x.faculty, studyType: x.studyType }))
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load study groups' });
+  }
+});
 app.get('/api/catalog/programs', async (req, res) => {
   try {
     const university = String(req.query.university || '').trim();
@@ -5972,11 +6846,15 @@ app.patch('/api/admin/catalog/universities/:name', authenticateToken, requireAdm
     uni.name = newName;
     await uni.save();
 
-    // best-effort: update users + live sessions + program catalog
+    // best-effort: update users + groups/channels + live sessions + program catalog
     await Promise.all([
       User.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {}),
+      Group.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {}),
+      Channel.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {}),
       LiveSession.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {}),
-      ProgramCatalog.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {})
+      ProgramCatalog.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {}),
+      StudyTypeCatalog.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {}),
+      StudyGroupCatalog.updateMany({ university: oldName }, { $set: { university: newName } }).catch(() => {})
     ]);
 
     res.json({ success: true });
@@ -5991,6 +6869,9 @@ app.delete('/api/admin/catalog/universities/:name', authenticateToken, requireAd
     const name = decodeURIComponent(String(req.params.name || '')).trim();
     if (!name) return res.status(400).json({ error: 'name required' });
     await UniversityCatalog.deleteOne({ name });
+    await ProgramCatalog.deleteMany({ university: name }).catch(() => {});
+    await StudyTypeCatalog.deleteMany({ university: name }).catch(() => {});
+    await StudyGroupCatalog.deleteMany({ university: name }).catch(() => {});
     // Do NOT auto-delete users; keep their profile value as-is.
     res.json({ success: true });
   } catch (e) {
@@ -6017,9 +6898,48 @@ app.delete('/api/admin/catalog/faculties', authenticateToken, requireAdmin, asyn
     await UniversityCatalog.updateOne({ name: uni }, { $pull: { faculties: faculty } });
     // best-effort: remove programs under this faculty
     await ProgramCatalog.deleteMany({ university: uni, faculty }).catch(() => {});
+    await StudyTypeCatalog.deleteMany({ university: uni, faculty }).catch(() => {});
+    await StudyGroupCatalog.deleteMany({ university: uni, faculty }).catch(() => {});
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Failed to delete faculty' });
+  }
+});
+
+app.patch('/api/admin/catalog/faculties', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const uni = String(req.body.university || '').trim();
+    const oldFaculty = String(req.body.oldFaculty || req.body.from || '').trim();
+    const newFaculty = String(req.body.newFaculty || req.body.to || '').trim();
+    if (!uni || !oldFaculty || !newFaculty) {
+      return res.status(400).json({ error: 'university, oldFaculty, newFaculty required' });
+    }
+    if (oldFaculty === newFaculty) return res.json({ success: true });
+
+    const doc = await UniversityCatalog.findOne({ name: uni });
+    if (!doc) return res.status(404).json({ error: 'University not found' });
+
+    const faculties = Array.isArray(doc.faculties) ? doc.faculties.map((x) => String(x || '').trim()) : [];
+    const hasOld = faculties.some((f) => f.toLowerCase() === oldFaculty.toLowerCase());
+    if (!hasOld) return res.status(404).json({ error: 'Faculty not found' });
+    const hasNew = faculties.some((f) => f.toLowerCase() === newFaculty.toLowerCase());
+    if (hasNew) return res.status(409).json({ error: 'New faculty already exists' });
+
+    doc.faculties = faculties.map((f) => (f.toLowerCase() === oldFaculty.toLowerCase() ? newFaculty : f));
+    await doc.save();
+
+    await Promise.all([
+      User.updateMany({ university: uni, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {}),
+      Group.updateMany({ university: uni, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {}),
+      ProgramCatalog.updateMany({ university: uni, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {}),
+      StudyTypeCatalog.updateMany({ university: uni, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {}),
+      StudyGroupCatalog.updateMany({ university: uni, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {}),
+      LiveSession.updateMany({ university: uni, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {})
+    ]);
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to rename faculty' });
   }
 });
 
@@ -6045,12 +6965,18 @@ app.get('/api/admin/catalog/programs', authenticateToken, requireAdmin, async (r
 
 app.post('/api/admin/catalog/programs', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const university = String(req.body.university || '').trim();
-    const faculty = String(req.body.faculty || '').trim();
+    const universityRaw = String(req.body.university || '').trim();
+    const facultyRaw = String(req.body.faculty || '').trim();
     const code = String(req.body.code || '').trim();
     const name = String(req.body.name || '').trim();
-    if (!university || !faculty || !name) return res.status(400).json({ error: 'university, faculty, name required' });
-    const doc = await ProgramCatalog.create({ university, faculty, code, name });
+    if (!universityRaw || !facultyRaw || !name) return res.status(400).json({ error: 'university, faculty, name required' });
+
+    const uniDoc = await findUniversityDocInsensitive(universityRaw);
+    if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
+    const faculty = pickCanonicalFaculty(uniDoc, facultyRaw);
+    if (!faculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+
+    const doc = await ProgramCatalog.create({ university: uniDoc.name, faculty, code, name });
     res.status(201).json({ success: true, program: doc });
   } catch (e) {
     console.error('POST /api/admin/catalog/programs error:', e);
@@ -6062,11 +6988,23 @@ app.patch('/api/admin/catalog/programs/:id', authenticateToken, requireAdmin, as
   try {
     const id = String(req.params.id || '').trim();
     const patch = {};
-    ['university', 'faculty', 'code', 'name'].forEach((k) => {
-      if (req.body[k] !== undefined) patch[k] = String(req.body[k] || '').trim();
-    });
+    const current = await ProgramCatalog.findById(id).lean();
+    if (!current) return res.status(404).json({ error: 'Program not found' });
+
+    const nextUniversityRaw = req.body.university !== undefined ? String(req.body.university || '').trim() : String(current.university || '').trim();
+    const nextFacultyRaw = req.body.faculty !== undefined ? String(req.body.faculty || '').trim() : String(current.faculty || '').trim();
+
+    const uniDoc = await findUniversityDocInsensitive(nextUniversityRaw);
+    if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
+    const faculty = pickCanonicalFaculty(uniDoc, nextFacultyRaw);
+    if (!faculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+
+    patch.university = uniDoc.name;
+    patch.faculty = faculty;
+    if (req.body.code !== undefined) patch.code = String(req.body.code || '').trim();
+    if (req.body.name !== undefined) patch.name = String(req.body.name || '').trim();
+
     const doc = await ProgramCatalog.findByIdAndUpdate(id, { $set: patch }, { new: true });
-    if (!doc) return res.status(404).json({ error: 'Program not found' });
     res.json({ success: true, program: doc });
   } catch (e) {
     res.status(500).json({ error: 'Failed to update program' });
@@ -6080,6 +7018,993 @@ app.delete('/api/admin/catalog/programs/:id', authenticateToken, requireAdmin, a
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Failed to delete program' });
+  }
+});
+
+// Admin study-types CRUD
+app.get('/api/admin/catalog/study-types', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const universityRaw = cleanText(req.query.university, 180);
+    const facultyRaw = cleanText(req.query.faculty, 180);
+    const q = cleanText(req.query.q, 120);
+    const filter = {};
+
+    if (universityRaw) {
+      const uniDoc = await findUniversityDocInsensitive(universityRaw);
+      if (!uniDoc) return res.json({ success: true, studyTypes: [] });
+      filter.university = cleanText(uniDoc.name, 180);
+      if (facultyRaw) {
+        const canonicalFaculty = pickCanonicalFaculty(uniDoc, facultyRaw);
+        if (!canonicalFaculty) return res.json({ success: true, studyTypes: [] });
+        filter.faculty = canonicalFaculty;
+      }
+    } else if (facultyRaw) {
+      filter.faculty = facultyRaw;
+    }
+
+    if (q) filter.name = { $regex: escapeRegex(q), $options: 'i' };
+    const list = await StudyTypeCatalog.find(filter)
+      .sort({ university: 1, faculty: 1, name: 1 })
+      .limit(3000)
+      .lean();
+    res.json({ success: true, studyTypes: list });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load study types' });
+  }
+});
+
+app.post('/api/admin/catalog/study-types', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const universityRaw = cleanText(req.body?.university, 180);
+    const facultyRaw = cleanText(req.body?.faculty, 180);
+    const name = cleanText(req.body?.name || req.body?.studyType, 80);
+    if (!universityRaw || !facultyRaw || !name) {
+      return res.status(400).json({ error: 'university, faculty, name required' });
+    }
+
+    const uniDoc = await findUniversityDocInsensitive(universityRaw);
+    if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
+    const university = cleanText(uniDoc.name, 180);
+    const faculty = pickCanonicalFaculty(uniDoc, facultyRaw);
+    if (!faculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+
+    const exists = await StudyTypeCatalog.findOne({
+      university,
+      faculty,
+      name: new RegExp(`^${escapeRegex(name)}$`, 'i')
+    }).lean();
+    if (exists) return res.status(409).json({ error: 'Study type already exists' });
+
+    const created = await StudyTypeCatalog.create({ university, faculty, name });
+    res.status(201).json({ success: true, studyType: created });
+  } catch (e) {
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Study type already exists' });
+    res.status(500).json({ error: 'Failed to add study type' });
+  }
+});
+
+app.patch('/api/admin/catalog/study-types/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const id = cleanText(req.params.id, 60);
+    const existing = await StudyTypeCatalog.findById(id).lean();
+    if (!existing) return res.status(404).json({ error: 'Study type not found' });
+
+    const nextUniversityRaw = req.body?.university !== undefined
+      ? cleanText(req.body.university, 180)
+      : cleanText(existing.university, 180);
+    const nextFacultyRaw = req.body?.faculty !== undefined
+      ? cleanText(req.body.faculty, 180)
+      : cleanText(existing.faculty, 180);
+    const nextName = req.body?.name !== undefined
+      ? cleanText(req.body.name, 80)
+      : cleanText(existing.name, 80);
+    if (!nextUniversityRaw || !nextFacultyRaw || !nextName) {
+      return res.status(400).json({ error: 'university, faculty, name required' });
+    }
+
+    const uniDoc = await findUniversityDocInsensitive(nextUniversityRaw);
+    if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
+    const university = cleanText(uniDoc.name, 180);
+    const faculty = pickCanonicalFaculty(uniDoc, nextFacultyRaw);
+    if (!faculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+
+    const duplicate = await StudyTypeCatalog.findOne({
+      _id: { $ne: id },
+      university,
+      faculty,
+      name: new RegExp(`^${escapeRegex(nextName)}$`, 'i')
+    }).lean();
+    if (duplicate) return res.status(409).json({ error: 'Study type already exists' });
+
+    const updated = await StudyTypeCatalog.findByIdAndUpdate(
+      id,
+      { $set: { university, faculty, name: nextName } },
+      { new: true }
+    ).lean();
+
+    const oldUniversity = cleanText(existing.university, 180);
+    const oldFaculty = cleanText(existing.faculty, 180);
+    const oldName = cleanText(existing.name, 80);
+    if (oldUniversity !== university || oldFaculty !== faculty || oldName !== nextName) {
+      await Promise.all([
+        StudyGroupCatalog.updateMany(
+          { university: oldUniversity, faculty: oldFaculty, studyType: oldName },
+          { $set: { university, faculty, studyType: nextName } }
+        ).catch(() => {}),
+        User.updateMany(
+          { university: oldUniversity, faculty: oldFaculty, studyType: oldName },
+          { $set: { university, faculty, studyType: nextName } }
+        ).catch(() => {}),
+        Group.updateMany(
+          { university: oldUniversity, faculty: oldFaculty, studyType: oldName },
+          { $set: { university, faculty, studyType: nextName } }
+        ).catch(() => {})
+      ]);
+    }
+
+    res.json({ success: true, studyType: updated });
+  } catch (e) {
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Study type already exists' });
+    res.status(500).json({ error: 'Failed to update study type' });
+  }
+});
+
+app.delete('/api/admin/catalog/study-types/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const id = cleanText(req.params.id, 60);
+    const existing = await StudyTypeCatalog.findById(id).lean();
+    if (existing) {
+      await StudyGroupCatalog.deleteMany({
+        university: cleanText(existing.university, 180),
+        faculty: cleanText(existing.faculty, 180),
+        studyType: cleanText(existing.name, 80)
+      }).catch(() => {});
+    }
+    await StudyTypeCatalog.deleteOne({ _id: id });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete study type' });
+  }
+});
+
+// Admin study-groups CRUD
+app.get('/api/admin/catalog/study-groups', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const universityRaw = cleanText(req.query.university, 180);
+    const facultyRaw = cleanText(req.query.faculty, 180);
+    const studyTypeRaw = cleanText(req.query.studyType, 80);
+    const q = cleanText(req.query.q, 120);
+    const filter = {};
+
+    if (universityRaw) {
+      const uniDoc = await findUniversityDocInsensitive(universityRaw);
+      if (!uniDoc) return res.json({ success: true, studyGroups: [] });
+      filter.university = String(uniDoc.name || '').trim();
+
+      if (facultyRaw) {
+        const canonicalFaculty = pickCanonicalFaculty(uniDoc, facultyRaw);
+        if (!canonicalFaculty) return res.json({ success: true, studyGroups: [] });
+        filter.faculty = canonicalFaculty;
+      }
+      if (studyTypeRaw && filter.faculty) {
+        const canonicalStudyType = await pickCanonicalStudyType(filter.university, filter.faculty, studyTypeRaw);
+        if (!canonicalStudyType) return res.json({ success: true, studyGroups: [] });
+        filter.studyType = canonicalStudyType;
+      } else if (studyTypeRaw) {
+        filter.studyType = studyTypeRaw;
+      }
+    } else if (facultyRaw) {
+      filter.faculty = facultyRaw;
+      if (studyTypeRaw) filter.studyType = studyTypeRaw;
+    } else if (studyTypeRaw) {
+      filter.studyType = studyTypeRaw;
+    }
+
+    if (q) filter.name = { $regex: escapeRegex(q), $options: 'i' };
+
+    const list = await StudyGroupCatalog.find(filter)
+      .sort({ university: 1, faculty: 1, studyType: 1, name: 1 })
+      .limit(5000)
+      .lean();
+
+    res.json({ success: true, studyGroups: list });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load study groups' });
+  }
+});
+
+app.post('/api/admin/catalog/study-groups', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const universityRaw = cleanText(req.body?.university, 180);
+    const facultyRaw = cleanText(req.body?.faculty, 180);
+    const studyTypeRaw = cleanText(req.body?.studyType, 80);
+    const name = cleanText(req.body?.name || req.body?.studyGroup, 80);
+    if (!universityRaw || !facultyRaw || !studyTypeRaw || !name) {
+      return res.status(400).json({ error: 'university, faculty, studyType, name required' });
+    }
+
+    const uniDoc = await findUniversityDocInsensitive(universityRaw);
+    if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
+    const university = cleanText(uniDoc.name, 180);
+    const faculty = pickCanonicalFaculty(uniDoc, facultyRaw);
+    if (!faculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+    const studyType = await pickCanonicalStudyType(university, faculty, studyTypeRaw);
+    if (!studyType) return res.status(400).json({ error: 'Unknown study type for selected university and faculty' });
+
+    const exists = await StudyGroupCatalog.findOne({
+      university,
+      faculty,
+      studyType,
+      name: new RegExp(`^${escapeRegex(name)}$`, 'i')
+    }).lean();
+    if (exists) return res.status(409).json({ error: 'Study group already exists' });
+
+    const created = await StudyGroupCatalog.create({ university, faculty, studyType, name });
+    res.status(201).json({ success: true, studyGroup: created });
+  } catch (e) {
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Study group already exists' });
+    res.status(500).json({ error: 'Failed to add study group' });
+  }
+});
+
+app.patch('/api/admin/catalog/study-groups/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const id = cleanText(req.params.id, 60);
+    const existing = await StudyGroupCatalog.findById(id).lean();
+    if (!existing) return res.status(404).json({ error: 'Study group not found' });
+
+    const nextUniversityRaw = req.body?.university !== undefined
+      ? cleanText(req.body.university, 180)
+      : cleanText(existing.university, 180);
+    const nextFacultyRaw = req.body?.faculty !== undefined
+      ? cleanText(req.body.faculty, 180)
+      : cleanText(existing.faculty, 180);
+    const nextStudyTypeRaw = req.body?.studyType !== undefined
+      ? cleanText(req.body.studyType, 80)
+      : cleanText(existing.studyType, 80);
+    const nextName = req.body?.name !== undefined
+      ? cleanText(req.body.name, 80)
+      : cleanText(existing.name, 80);
+
+    if (!nextUniversityRaw || !nextFacultyRaw || !nextStudyTypeRaw || !nextName) {
+      return res.status(400).json({ error: 'university, faculty, studyType, name required' });
+    }
+
+    const uniDoc = await findUniversityDocInsensitive(nextUniversityRaw);
+    if (!uniDoc) return res.status(400).json({ error: 'Unknown university. Choose from the list.' });
+    const university = cleanText(uniDoc.name, 180);
+    const faculty = pickCanonicalFaculty(uniDoc, nextFacultyRaw);
+    if (!faculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+    const studyType = await pickCanonicalStudyType(university, faculty, nextStudyTypeRaw);
+    if (!studyType) return res.status(400).json({ error: 'Unknown study type for selected university and faculty' });
+
+    const duplicate = await StudyGroupCatalog.findOne({
+      _id: { $ne: id },
+      university,
+      faculty,
+      studyType,
+      name: new RegExp(`^${escapeRegex(nextName)}$`, 'i')
+    }).lean();
+    if (duplicate) return res.status(409).json({ error: 'Study group already exists' });
+
+    const updated = await StudyGroupCatalog.findByIdAndUpdate(
+      id,
+      { $set: { university, faculty, studyType, name: nextName } },
+      { new: true }
+    ).lean();
+
+    const oldUniversity = cleanText(existing.university, 180);
+    const oldFaculty = cleanText(existing.faculty, 180);
+    const oldStudyType = cleanText(existing.studyType, 80);
+    const oldName = cleanText(existing.name, 80);
+    if (oldUniversity !== university || oldFaculty !== faculty || oldStudyType !== studyType || oldName !== nextName) {
+      await Promise.all([
+        User.updateMany(
+          { university: oldUniversity, faculty: oldFaculty, studyType: oldStudyType, studyGroup: oldName },
+          { $set: { university, faculty, studyType, studyGroup: nextName } }
+        ).catch(() => {}),
+        Group.updateMany(
+          { university: oldUniversity, faculty: oldFaculty, studyType: oldStudyType, studyGroup: oldName },
+          { $set: { university, faculty, studyType, studyGroup: nextName } }
+        ).catch(() => {})
+      ]);
+    }
+
+    res.json({ success: true, studyGroup: updated });
+  } catch (e) {
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Study group already exists' });
+    res.status(500).json({ error: 'Failed to update study group' });
+  }
+});
+
+app.delete('/api/admin/catalog/study-groups/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const id = cleanText(req.params.id, 60);
+    await StudyGroupCatalog.deleteOne({ _id: id });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete study group' });
+  }
+});
+
+// Organizer (limited admin) routes: scoped by organizer university
+app.get('/api/organizer/me', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  const scoped = await resolveScopedUniversity(req, req.query.university);
+  if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+  const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query.faculty);
+  if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+  return res.json({
+    success: true,
+    scope: {
+      role: req.scopeUser?.role || 'organizer',
+      university: scoped.university,
+      faculty: facultyScope.faculty || '',
+      studyType: req.scopeUser?.studyType || '',
+      studyGroup: req.scopeUser?.studyGroup || ''
+    }
+  });
+});
+
+app.get('/api/organizer/overview', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const university = scoped.university;
+    const base = { university };
+    if (facultyScope.faculty) base.faculty = facultyScope.faculty;
+
+    const [users, groups, channels, programs, studyTypes, studyGroups] = await Promise.all([
+      User.countDocuments(base),
+      Group.countDocuments(base),
+      Channel.countDocuments(base),
+      ProgramCatalog.countDocuments(base),
+      StudyTypeCatalog.countDocuments(base),
+      StudyGroupCatalog.countDocuments(base)
+    ]);
+
+    res.json({
+      success: true,
+      overview: {
+        university,
+        faculty: facultyScope.faculty || '',
+        users,
+        groups,
+        channels,
+        programs,
+        studyTypes,
+        studyGroups
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load organizer overview' });
+  }
+});
+
+app.get('/api/organizer/catalog/faculties', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const doc = await UniversityCatalog.findOne({ name: scoped.university }).lean();
+    const all = Array.isArray(doc?.faculties) ? doc.faculties : [];
+    const faculties = facultyScope.isAdmin
+      ? all
+      : (facultyScope.faculty ? [facultyScope.faculty] : []);
+    res.json({ success: true, university: scoped.university, faculties });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load faculties' });
+  }
+});
+
+app.post('/api/organizer/catalog/faculties', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    if (!isScopedAdminUser(req.scopeUser)) {
+      return res.status(403).json({ error: 'Organizer can manage only own faculty data' });
+    }
+    const faculty = cleanText(req.body?.faculty, 180);
+    if (!faculty) return res.status(400).json({ error: 'faculty required' });
+    await UniversityCatalog.updateOne({ name: scoped.university }, { $addToSet: { faculties: faculty } }, { upsert: true });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to add faculty' });
+  }
+});
+
+app.patch('/api/organizer/catalog/faculties', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.body?.oldFaculty || req.body?.from);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    if (!facultyScope.isAdmin) return res.status(403).json({ error: 'Organizer can manage only own faculty data' });
+    const oldFaculty = cleanText(req.body?.oldFaculty || req.body?.from, 180);
+    const newFaculty = cleanText(req.body?.newFaculty || req.body?.to, 180);
+    if (!oldFaculty || !newFaculty) return res.status(400).json({ error: 'oldFaculty and newFaculty required' });
+    if (oldFaculty === newFaculty) return res.json({ success: true });
+
+    const doc = await UniversityCatalog.findOne({ name: scoped.university });
+    if (!doc) return res.status(404).json({ error: 'University not found' });
+    const faculties = Array.isArray(doc.faculties) ? doc.faculties.map((x) => String(x || '').trim()) : [];
+    const hasOld = faculties.some((f) => f.toLowerCase() === oldFaculty.toLowerCase());
+    if (!hasOld) return res.status(404).json({ error: 'Faculty not found' });
+    const hasNew = faculties.some((f) => f.toLowerCase() === newFaculty.toLowerCase());
+    if (hasNew) return res.status(409).json({ error: 'New faculty already exists' });
+
+    doc.faculties = faculties.map((f) => (f.toLowerCase() === oldFaculty.toLowerCase() ? newFaculty : f));
+    await doc.save();
+
+    await Promise.all([
+      User.updateMany({ university: scoped.university, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {}),
+      Group.updateMany({ university: scoped.university, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {}),
+      ProgramCatalog.updateMany({ university: scoped.university, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {}),
+      StudyTypeCatalog.updateMany({ university: scoped.university, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {}),
+      StudyGroupCatalog.updateMany({ university: scoped.university, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {}),
+      LiveSession.updateMany({ university: scoped.university, faculty: oldFaculty }, { $set: { faculty: newFaculty } }).catch(() => {})
+    ]);
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to rename faculty' });
+  }
+});
+
+app.delete('/api/organizer/catalog/faculties', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.body?.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    if (!facultyScope.isAdmin) return res.status(403).json({ error: 'Organizer can manage only own faculty data' });
+    const faculty = cleanText(req.body?.faculty, 180);
+    if (!faculty) return res.status(400).json({ error: 'faculty required' });
+    await UniversityCatalog.updateOne({ name: scoped.university }, { $pull: { faculties: faculty } });
+    await ProgramCatalog.deleteMany({ university: scoped.university, faculty }).catch(() => {});
+    await StudyTypeCatalog.deleteMany({ university: scoped.university, faculty }).catch(() => {});
+    await StudyGroupCatalog.deleteMany({ university: scoped.university, faculty }).catch(() => {});
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete faculty' });
+  }
+});
+
+app.get('/api/organizer/catalog/programs', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const q = cleanText(req.query.q, 180);
+    const filter = { university: scoped.university };
+    if (facultyScope.faculty) filter.faculty = facultyScope.faculty;
+    if (q) {
+      const re = new RegExp(escapeRegex(q), 'i');
+      filter.$or = [{ name: re }, { code: re }];
+    }
+    const list = await ProgramCatalog.find(filter).sort({ faculty: 1, name: 1 }).limit(2000).lean();
+    res.json({ success: true, programs: list, university: scoped.university });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load programs' });
+  }
+});
+
+app.post('/api/organizer/catalog/programs', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.body?.faculty, { requireForAdmin: true });
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const faculty = cleanText(facultyScope.faculty, 180);
+    const code = cleanText(req.body?.code, 80);
+    const name = cleanText(req.body?.name, 180);
+    if (!faculty || !name) return res.status(400).json({ error: 'faculty and name required' });
+
+    const uniDoc = await UniversityCatalog.findOne({ name: scoped.university }).lean();
+    const canonicalFaculty = pickCanonicalFaculty(uniDoc, faculty);
+    if (!canonicalFaculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+
+    const doc = await ProgramCatalog.create({ university: scoped.university, faculty: canonicalFaculty, code, name });
+    res.status(201).json({ success: true, program: doc });
+  } catch (e) {
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Program already exists' });
+    res.status(500).json({ error: 'Failed to add program' });
+  }
+});
+
+app.patch('/api/organizer/catalog/programs/:id', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const id = cleanText(req.params.id, 60);
+    const scoped = await resolveScopedUniversity(req, req.body?.university || req.query?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.body?.faculty || req.query?.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+
+    const existing = await ProgramCatalog.findById(id).lean();
+    if (!existing) return res.status(404).json({ error: 'Program not found' });
+    if (String(existing.university || '') !== String(scoped.university)) {
+      return res.status(403).json({ error: 'Program belongs to another university' });
+    }
+    if (!facultyScope.isAdmin && String(existing.faculty || '').toLowerCase() !== String(facultyScope.faculty || '').toLowerCase()) {
+      return res.status(403).json({ error: 'Program belongs to another faculty' });
+    }
+
+    const patch = {};
+    const uniDoc = await UniversityCatalog.findOne({ name: scoped.university }).lean();
+    if (facultyScope.isAdmin && req.body?.faculty !== undefined) {
+      const canonicalFaculty = pickCanonicalFaculty(uniDoc, req.body.faculty);
+      if (!canonicalFaculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+      patch.faculty = canonicalFaculty;
+    } else if (!facultyScope.isAdmin) {
+      const canonicalScopedFaculty = pickCanonicalFaculty(uniDoc, facultyScope.faculty) || facultyScope.faculty;
+      patch.faculty = canonicalScopedFaculty;
+    }
+    if (req.body?.code !== undefined) patch.code = cleanText(req.body.code, 80);
+    if (req.body?.name !== undefined) patch.name = cleanText(req.body.name, 180);
+    patch.university = scoped.university;
+
+    const doc = await ProgramCatalog.findByIdAndUpdate(id, { $set: patch }, { new: true });
+    res.json({ success: true, program: doc });
+  } catch (e) {
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Program already exists' });
+    res.status(500).json({ error: 'Failed to update program' });
+  }
+});
+
+app.delete('/api/organizer/catalog/programs/:id', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const id = cleanText(req.params.id, 60);
+    const scoped = await resolveScopedUniversity(req, req.query?.university || req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query?.faculty || req.body?.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const existing = await ProgramCatalog.findById(id).lean();
+    if (!existing) return res.status(404).json({ error: 'Program not found' });
+    if (String(existing.university || '') !== String(scoped.university)) {
+      return res.status(403).json({ error: 'Program belongs to another university' });
+    }
+    if (!facultyScope.isAdmin && String(existing.faculty || '').toLowerCase() !== String(facultyScope.faculty || '').toLowerCase()) {
+      return res.status(403).json({ error: 'Program belongs to another faculty' });
+    }
+    await ProgramCatalog.deleteOne({ _id: id });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete program' });
+  }
+});
+
+app.get('/api/organizer/catalog/study-types', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const uniDoc = await UniversityCatalog.findOne({ name: scoped.university }).lean();
+    const q = cleanText(req.query.q, 120);
+
+    const filter = { university: scoped.university };
+    if (facultyScope.faculty) {
+      const canonicalFaculty = pickCanonicalFaculty(uniDoc, facultyScope.faculty);
+      if (!canonicalFaculty) return res.json({ success: true, studyTypes: [], university: scoped.university });
+      filter.faculty = canonicalFaculty;
+    }
+    if (q) filter.name = { $regex: escapeRegex(q), $options: 'i' };
+
+    const list = await StudyTypeCatalog.find(filter).sort({ faculty: 1, name: 1 }).limit(3000).lean();
+    res.json({ success: true, studyTypes: list, university: scoped.university });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load study types' });
+  }
+});
+
+app.post('/api/organizer/catalog/study-types', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.body?.faculty, { requireForAdmin: true });
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const facultyRaw = cleanText(facultyScope.faculty, 180);
+    const name = cleanText(req.body?.name || req.body?.studyType, 80);
+    if (!facultyRaw || !name) return res.status(400).json({ error: 'faculty and name required' });
+
+    const uniDoc = await UniversityCatalog.findOne({ name: scoped.university }).lean();
+    const canonicalFaculty = pickCanonicalFaculty(uniDoc, facultyRaw);
+    if (!canonicalFaculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+
+    const exists = await StudyTypeCatalog.findOne({
+      university: scoped.university,
+      faculty: canonicalFaculty,
+      name: new RegExp(`^${escapeRegex(name)}$`, 'i')
+    }).lean();
+    if (exists) return res.status(409).json({ error: 'Study type already exists' });
+
+    const created = await StudyTypeCatalog.create({
+      university: scoped.university,
+      faculty: canonicalFaculty,
+      name
+    });
+    res.status(201).json({ success: true, studyType: created });
+  } catch (e) {
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Study type already exists' });
+    res.status(500).json({ error: 'Failed to add study type' });
+  }
+});
+
+app.patch('/api/organizer/catalog/study-types/:id', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const id = cleanText(req.params.id, 60);
+    const scoped = await resolveScopedUniversity(req, req.body?.university || req.query?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.body?.faculty || req.query?.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+
+    const existing = await StudyTypeCatalog.findById(id).lean();
+    if (!existing) return res.status(404).json({ error: 'Study type not found' });
+    if (String(existing.university || '') !== String(scoped.university)) {
+      return res.status(403).json({ error: 'Study type belongs to another university' });
+    }
+    if (!facultyScope.isAdmin && String(existing.faculty || '').toLowerCase() !== String(facultyScope.faculty || '').toLowerCase()) {
+      return res.status(403).json({ error: 'Study type belongs to another faculty' });
+    }
+
+    const uniDoc = await UniversityCatalog.findOne({ name: scoped.university }).lean();
+    const nextFacultyRaw = facultyScope.isAdmin
+      ? (req.body?.faculty !== undefined
+        ? cleanText(req.body.faculty, 180)
+        : cleanText(existing.faculty, 180))
+      : cleanText(facultyScope.faculty, 180);
+    const nextName = req.body?.name !== undefined
+      ? cleanText(req.body.name, 80)
+      : cleanText(existing.name, 80);
+    if (!nextFacultyRaw || !nextName) return res.status(400).json({ error: 'faculty and name required' });
+
+    const canonicalFaculty = pickCanonicalFaculty(uniDoc, nextFacultyRaw);
+    if (!canonicalFaculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+
+    const duplicate = await StudyTypeCatalog.findOne({
+      _id: { $ne: id },
+      university: scoped.university,
+      faculty: canonicalFaculty,
+      name: new RegExp(`^${escapeRegex(nextName)}$`, 'i')
+    }).lean();
+    if (duplicate) return res.status(409).json({ error: 'Study type already exists' });
+
+    const updated = await StudyTypeCatalog.findByIdAndUpdate(
+      id,
+      { $set: { university: scoped.university, faculty: canonicalFaculty, name: nextName } },
+      { new: true }
+    ).lean();
+
+    const oldFaculty = cleanText(existing.faculty, 180);
+    const oldName = cleanText(existing.name, 80);
+    if (oldFaculty !== canonicalFaculty || oldName !== nextName) {
+      await Promise.all([
+        StudyGroupCatalog.updateMany(
+          { university: scoped.university, faculty: oldFaculty, studyType: oldName },
+          { $set: { faculty: canonicalFaculty, studyType: nextName } }
+        ).catch(() => {}),
+        User.updateMany(
+          { university: scoped.university, faculty: oldFaculty, studyType: oldName },
+          { $set: { faculty: canonicalFaculty, studyType: nextName } }
+        ).catch(() => {}),
+        Group.updateMany(
+          { university: scoped.university, faculty: oldFaculty, studyType: oldName },
+          { $set: { faculty: canonicalFaculty, studyType: nextName } }
+        ).catch(() => {})
+      ]);
+    }
+
+    res.json({ success: true, studyType: updated });
+  } catch (e) {
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Study type already exists' });
+    res.status(500).json({ error: 'Failed to update study type' });
+  }
+});
+
+app.delete('/api/organizer/catalog/study-types/:id', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const id = cleanText(req.params.id, 60);
+    const scoped = await resolveScopedUniversity(req, req.query?.university || req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query?.faculty || req.body?.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const existing = await StudyTypeCatalog.findById(id).lean();
+    if (!existing) return res.status(404).json({ error: 'Study type not found' });
+    if (String(existing.university || '') !== String(scoped.university)) {
+      return res.status(403).json({ error: 'Study type belongs to another university' });
+    }
+    if (!facultyScope.isAdmin && String(existing.faculty || '').toLowerCase() !== String(facultyScope.faculty || '').toLowerCase()) {
+      return res.status(403).json({ error: 'Study type belongs to another faculty' });
+    }
+    await StudyGroupCatalog.deleteMany({
+      university: cleanText(existing.university, 180),
+      faculty: cleanText(existing.faculty, 180),
+      studyType: cleanText(existing.name, 80)
+    }).catch(() => {});
+    await StudyTypeCatalog.deleteOne({ _id: id });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete study type' });
+  }
+});
+
+app.get('/api/organizer/catalog/study-groups', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+
+    const uniDoc = await UniversityCatalog.findOne({ name: scoped.university }).lean();
+    const studyTypeRaw = cleanText(req.query.studyType, 80);
+    const q = cleanText(req.query.q, 120);
+
+    const filter = { university: scoped.university };
+    if (facultyScope.faculty) {
+      const canonicalFaculty = pickCanonicalFaculty(uniDoc, facultyScope.faculty);
+      if (!canonicalFaculty) return res.json({ success: true, studyGroups: [], university: scoped.university });
+      filter.faculty = canonicalFaculty;
+    }
+    if (studyTypeRaw) {
+      if (!filter.faculty) return res.json({ success: true, studyGroups: [], university: scoped.university });
+      const canonicalStudyType = await pickCanonicalStudyType(scoped.university, filter.faculty, studyTypeRaw);
+      if (!canonicalStudyType) return res.json({ success: true, studyGroups: [], university: scoped.university });
+      filter.studyType = canonicalStudyType;
+    }
+    if (q) filter.name = { $regex: escapeRegex(q), $options: 'i' };
+
+    const list = await StudyGroupCatalog.find(filter)
+      .sort({ faculty: 1, studyType: 1, name: 1 })
+      .limit(5000)
+      .lean();
+
+    res.json({ success: true, studyGroups: list, university: scoped.university });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load study groups' });
+  }
+});
+
+app.post('/api/organizer/catalog/study-groups', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.body?.faculty, { requireForAdmin: true });
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+
+    const facultyRaw = cleanText(facultyScope.faculty, 180);
+    const studyTypeRaw = cleanText(req.body?.studyType, 80);
+    const name = cleanText(req.body?.name || req.body?.studyGroup, 80);
+    if (!facultyRaw || !studyTypeRaw || !name) return res.status(400).json({ error: 'faculty, studyType and name required' });
+
+    const uniDoc = await UniversityCatalog.findOne({ name: scoped.university }).lean();
+    const canonicalFaculty = pickCanonicalFaculty(uniDoc, facultyRaw);
+    if (!canonicalFaculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+    const canonicalStudyType = await pickCanonicalStudyType(scoped.university, canonicalFaculty, studyTypeRaw);
+    if (!canonicalStudyType) return res.status(400).json({ error: 'Unknown study type for selected university and faculty' });
+
+    const exists = await StudyGroupCatalog.findOne({
+      university: scoped.university,
+      faculty: canonicalFaculty,
+      studyType: canonicalStudyType,
+      name: new RegExp(`^${escapeRegex(name)}$`, 'i')
+    }).lean();
+    if (exists) return res.status(409).json({ error: 'Study group already exists' });
+
+    const created = await StudyGroupCatalog.create({
+      university: scoped.university,
+      faculty: canonicalFaculty,
+      studyType: canonicalStudyType,
+      name
+    });
+
+    res.status(201).json({ success: true, studyGroup: created });
+  } catch (e) {
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Study group already exists' });
+    res.status(500).json({ error: 'Failed to add study group' });
+  }
+});
+
+app.patch('/api/organizer/catalog/study-groups/:id', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const id = cleanText(req.params.id, 60);
+    const scoped = await resolveScopedUniversity(req, req.body?.university || req.query?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.body?.faculty || req.query?.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+
+    const existing = await StudyGroupCatalog.findById(id).lean();
+    if (!existing) return res.status(404).json({ error: 'Study group not found' });
+    if (String(existing.university || '') !== String(scoped.university)) {
+      return res.status(403).json({ error: 'Study group belongs to another university' });
+    }
+    if (!facultyScope.isAdmin && String(existing.faculty || '').toLowerCase() !== String(facultyScope.faculty || '').toLowerCase()) {
+      return res.status(403).json({ error: 'Study group belongs to another faculty' });
+    }
+
+    const uniDoc = await UniversityCatalog.findOne({ name: scoped.university }).lean();
+    const nextFacultyRaw = facultyScope.isAdmin
+      ? (req.body?.faculty !== undefined
+        ? cleanText(req.body.faculty, 180)
+        : cleanText(existing.faculty, 180))
+      : cleanText(facultyScope.faculty, 180);
+    const nextStudyTypeRaw = req.body?.studyType !== undefined
+      ? cleanText(req.body.studyType, 80)
+      : cleanText(existing.studyType, 80);
+    const nextName = req.body?.name !== undefined
+      ? cleanText(req.body.name, 80)
+      : cleanText(existing.name, 80);
+    if (!nextFacultyRaw || !nextStudyTypeRaw || !nextName) return res.status(400).json({ error: 'faculty, studyType and name required' });
+
+    const canonicalFaculty = pickCanonicalFaculty(uniDoc, nextFacultyRaw);
+    if (!canonicalFaculty) return res.status(400).json({ error: 'Unknown faculty for selected university' });
+    const canonicalStudyType = await pickCanonicalStudyType(scoped.university, canonicalFaculty, nextStudyTypeRaw);
+    if (!canonicalStudyType) return res.status(400).json({ error: 'Unknown study type for selected university and faculty' });
+
+    const duplicate = await StudyGroupCatalog.findOne({
+      _id: { $ne: id },
+      university: scoped.university,
+      faculty: canonicalFaculty,
+      studyType: canonicalStudyType,
+      name: new RegExp(`^${escapeRegex(nextName)}$`, 'i')
+    }).lean();
+    if (duplicate) return res.status(409).json({ error: 'Study group already exists' });
+
+    const updated = await StudyGroupCatalog.findByIdAndUpdate(
+      id,
+      { $set: { university: scoped.university, faculty: canonicalFaculty, studyType: canonicalStudyType, name: nextName } },
+      { new: true }
+    ).lean();
+
+    const oldFaculty = cleanText(existing.faculty, 180);
+    const oldStudyType = cleanText(existing.studyType, 80);
+    const oldName = cleanText(existing.name, 80);
+    if (oldFaculty !== canonicalFaculty || oldStudyType !== canonicalStudyType || oldName !== nextName) {
+      await Promise.all([
+        User.updateMany(
+          { university: scoped.university, faculty: oldFaculty, studyType: oldStudyType, studyGroup: oldName },
+          { $set: { faculty: canonicalFaculty, studyType: canonicalStudyType, studyGroup: nextName } }
+        ).catch(() => {}),
+        Group.updateMany(
+          { university: scoped.university, faculty: oldFaculty, studyType: oldStudyType, studyGroup: oldName },
+          { $set: { faculty: canonicalFaculty, studyType: canonicalStudyType, studyGroup: nextName } }
+        ).catch(() => {})
+      ]);
+    }
+
+    res.json({ success: true, studyGroup: updated });
+  } catch (e) {
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Study group already exists' });
+    res.status(500).json({ error: 'Failed to update study group' });
+  }
+});
+
+app.delete('/api/organizer/catalog/study-groups/:id', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const id = cleanText(req.params.id, 60);
+    const scoped = await resolveScopedUniversity(req, req.query?.university || req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query?.faculty || req.body?.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+
+    const existing = await StudyGroupCatalog.findById(id).lean();
+    if (!existing) return res.status(404).json({ error: 'Study group not found' });
+    if (String(existing.university || '') !== String(scoped.university)) {
+      return res.status(403).json({ error: 'Study group belongs to another university' });
+    }
+    if (!facultyScope.isAdmin && String(existing.faculty || '').toLowerCase() !== String(facultyScope.faculty || '').toLowerCase()) {
+      return res.status(403).json({ error: 'Study group belongs to another faculty' });
+    }
+
+    await StudyGroupCatalog.deleteOne({ _id: id });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete study group' });
+  }
+});
+
+app.get('/api/organizer/groups', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const { page, limit, skip } = parsePaging(req);
+    const q = cleanText(req.query.q, 180);
+    const filter = { university: scoped.university };
+    if (facultyScope.faculty) filter.faculty = facultyScope.faculty;
+    if (q) {
+      const re = new RegExp(escapeRegex(q), 'i');
+      filter.$or = [{ name: re }, { username: re }, { description: re }];
+    }
+    const [total, groups] = await Promise.all([
+      Group.countDocuments(filter),
+      Group.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean()
+    ]);
+    res.json({ success: true, page, limit, total, groups, university: scoped.university });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load groups' });
+  }
+});
+
+app.delete('/api/organizer/groups/:id', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university || req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query?.faculty || req.body?.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const id = cleanText(req.params.id, 60);
+    const g = await Group.findById(id).lean();
+    if (!g) return res.status(404).json({ error: 'Group not found' });
+    if (String(g.university || '') !== String(scoped.university)) {
+      return res.status(403).json({ error: 'Group belongs to another university' });
+    }
+    if (!facultyScope.isAdmin && String(g.faculty || '').toLowerCase() !== String(facultyScope.faculty || '').toLowerCase()) {
+      return res.status(403).json({ error: 'Group belongs to another faculty' });
+    }
+
+    await Group.deleteOne({ _id: id });
+    await GroupMessage.deleteMany({ groupId: id });
+    await GroupLesson.deleteMany({ groupId: id }).catch(()=>null);
+    await GroupAttendance.deleteMany({ groupId: id }).catch(()=>null);
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete group' });
+  }
+});
+
+app.get('/api/organizer/channels', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const { page, limit, skip } = parsePaging(req);
+    const q = cleanText(req.query.q, 180);
+    const filter = { university: scoped.university };
+    if (facultyScope.faculty) filter.faculty = facultyScope.faculty;
+    if (q) {
+      const re = new RegExp(escapeRegex(q), 'i');
+      filter.$or = [{ name: re }, { username: re }, { description: re }];
+    }
+    const [total, channels] = await Promise.all([
+      Channel.countDocuments(filter),
+      Channel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean()
+    ]);
+    res.json({ success: true, page, limit, total, channels, university: scoped.university });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load channels' });
+  }
+});
+
+app.delete('/api/organizer/channels/:id', authenticateToken, requireOrganizerOrAdmin, async (req, res) => {
+  try {
+    const scoped = await resolveScopedUniversity(req, req.query.university || req.body?.university);
+    if (!scoped.ok) return res.status(400).json({ error: scoped.error });
+    const facultyScope = await resolveScopedFaculty(req, scoped.university, req.query?.faculty || req.body?.faculty);
+    if (!facultyScope.ok) return res.status(400).json({ error: facultyScope.error });
+    const id = cleanText(req.params.id, 60);
+    const ch = await Channel.findById(id).lean();
+    if (!ch) return res.status(404).json({ error: 'Channel not found' });
+    if (String(ch.university || '') !== String(scoped.university)) {
+      return res.status(403).json({ error: 'Channel belongs to another university' });
+    }
+    if (!facultyScope.isAdmin && String(ch.faculty || '').toLowerCase() !== String(facultyScope.faculty || '').toLowerCase()) {
+      return res.status(403).json({ error: 'Channel belongs to another faculty' });
+    }
+
+    const posts = await ChannelPost.find({ channelId: id }).select('_id').lean();
+    const postIds = (posts || []).map((p) => p._id);
+    if (postIds.length) await ChannelPostComment.deleteMany({ postId: { $in: postIds } });
+    await ChannelPost.deleteMany({ channelId: id });
+    await Channel.deleteOne({ _id: id });
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete channel' });
   }
 });
 
@@ -7549,7 +9474,7 @@ app.patch('/api/admin/users/:id/coins', authenticateToken, requireAdmin, async (
 });
 
 // Update user profile + moderation fields (ban/mute/role/verified/admin)
-// Body supports: { fullName, nickname, bio, university, faculty, studyGroup, phone, email, role, isAdmin, verified, coins, banned, banReason, mutedUntil }
+// Body supports: { fullName, nickname, bio, university, faculty, studyType, studyGroup, phone, email, role, isAdmin, verified, coins, banned, banReason, mutedUntil }
 // NOTE: Actions are audited.
 app.patch('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -7557,7 +9482,7 @@ app.patch('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, r
     const body = req.body || {};
 
     const allow = [
-      'fullName','nickname','avatar','bio','university','faculty','studyGroup','phone','email',
+      'fullName','nickname','avatar','bio','university','faculty','studyType','studyGroup','phone','email',
       'role','isAdmin','verified','coins',
       'banned','banReason','mutedUntil'
     ];
@@ -7572,10 +9497,12 @@ app.patch('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, r
     if (Object.prototype.hasOwnProperty.call($set, 'verified')) $set.verified = !!$set.verified;
     if (Object.prototype.hasOwnProperty.call($set, 'banned')) $set.banned = !!$set.banned;
     if (Object.prototype.hasOwnProperty.call($set, 'coins')) $set.coins = Number($set.coins || 0);
+    if (Object.prototype.hasOwnProperty.call($set, 'phone')) $set.phone = cleanText($set.phone, 30) || null;
+    if (Object.prototype.hasOwnProperty.call($set, 'email')) $set.email = cleanText($set.email, 120).toLowerCase() || null;
 
     if (Object.prototype.hasOwnProperty.call($set, 'role')) {
       const r = String($set.role || '').toLowerCase();
-      if (!['student','teacher','admin'].includes(r)) return res.status(400).json({ error: 'Invalid role' });
+      if (!['student','teacher','admin','organizer'].includes(r)) return res.status(400).json({ error: 'Invalid role' });
       $set.role = r;
     }
 
@@ -7590,8 +9517,46 @@ app.patch('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, r
     }
 
     // Prevent locking yourself out: the last admin can't be demoted/banned.
-    const target = await User.findById(id).select('_id username role isAdmin banned').lean();
+    const target = await User.findById(id).select('_id username role isAdmin banned university faculty studyType studyGroup').lean();
     if (!target) return res.status(404).json({ error: 'User not found' });
+
+    if (
+      Object.prototype.hasOwnProperty.call($set, 'university') ||
+      Object.prototype.hasOwnProperty.call($set, 'faculty') ||
+      Object.prototype.hasOwnProperty.call($set, 'studyType') ||
+      Object.prototype.hasOwnProperty.call($set, 'studyGroup')
+    ) {
+      const nextUniversity = Object.prototype.hasOwnProperty.call($set, 'university')
+        ? cleanText($set.university, 180)
+        : cleanText(target.university, 180);
+      const nextFaculty = Object.prototype.hasOwnProperty.call($set, 'faculty')
+        ? cleanText($set.faculty, 180)
+        : cleanText(target.faculty, 180);
+      const nextStudyType = Object.prototype.hasOwnProperty.call($set, 'studyType')
+        ? cleanText($set.studyType, 80)
+        : cleanText(target.studyType, 80);
+      const nextStudyGroup = Object.prototype.hasOwnProperty.call($set, 'studyGroup')
+        ? cleanText($set.studyGroup, 80)
+        : cleanText(target.studyGroup, 80);
+
+      const academic = await normalizeAcademicIdentity({
+        university: nextUniversity,
+        faculty: nextFaculty,
+        studyType: nextStudyType,
+        studyGroup: nextStudyGroup
+      }, {
+        requireUniversity: true,
+        requireFaculty: true,
+        requireStudyType: true,
+        requireStudyGroup: true
+      });
+      if (!academic.ok) return res.status(400).json({ error: academic.error });
+
+      $set.university = academic.value.university;
+      $set.faculty = academic.value.faculty;
+      $set.studyType = academic.value.studyType;
+      $set.studyGroup = academic.value.studyGroup;
+    }
 
     const isTargetAdmin = !!(target.isAdmin || target.role === 'admin');
     if (isTargetAdmin) {
@@ -8959,13 +10924,170 @@ app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) =>
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select('username fullName nickname email avatar university faculty studyGroup role isAdmin verified coins banned banReason mutedUntil isOnline status lastSeen createdAt')
+        .select('username fullName nickname email avatar university faculty studyType studyGroup role isAdmin verified coins banned banReason mutedUntil isOnline status lastSeen createdAt')
         .lean()
     ]);
     res.json({ success: true, page, limit, total, items, users: items });
   } catch (e) {
     console.error('admin users list error', e);
     res.status(500).json({ error: 'Failed to load users' });
+  }
+});
+
+// Organizer accounts (created only by admin)
+app.get('/api/admin/organizers', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const q = cleanText(req.query.q, 120);
+    const query = { role: 'organizer', isAdmin: { $ne: true } };
+    if (q) {
+      const re = new RegExp(escapeRegex(q), 'i');
+      query.$or = [
+        { username: re },
+        { fullName: re },
+        { nickname: re },
+        { university: re },
+        { faculty: re },
+        { studyType: re },
+        { studyGroup: re }
+      ];
+    }
+    const items = await User.find(query)
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .select('username fullName nickname email phone university faculty studyType studyGroup role createdAt')
+      .lean();
+    res.json({ success: true, organizers: items });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load organizers' });
+  }
+});
+
+app.post('/api/admin/organizers', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const fullName = cleanText(body.fullName, 80);
+    const nickname = cleanText(body.nickname, 40) || (fullName ? fullName.split(/\s+/)[0] : '');
+    const username = cleanText(body.username, 40).toLowerCase();
+    const password = String(body.password || '');
+    const phone = cleanText(body.phone, 30);
+    const email = cleanText(body.email, 120).toLowerCase();
+    const bio = cleanText(body.bio, 500);
+
+    if (!fullName) return res.status(400).json({ error: 'Full name required' });
+    if (!username) return res.status(400).json({ error: 'Username required' });
+    if (!/^[a-zA-Z0-9._]{3,24}$/.test(username)) {
+      return res.status(400).json({ error: 'Username format invalid (3-24, letters/numbers/._)' });
+    }
+    if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+    const academic = await normalizeAcademicIdentity({
+      university: body.university,
+      faculty: body.faculty
+    }, {
+      requireUniversity: true,
+      requireFaculty: true,
+      requireStudyType: false,
+      requireStudyGroup: false
+    });
+    if (!academic.ok) return res.status(400).json({ error: academic.error });
+
+    let canonicalStudyType = await pickCanonicalStudyType(
+      academic.value.university,
+      academic.value.faculty,
+      'Kunduzgi'
+    );
+    if (!canonicalStudyType) {
+      const firstType = await StudyTypeCatalog.findOne({
+        university: academic.value.university,
+        faculty: academic.value.faculty
+      }).sort({ name: 1 }).lean();
+      canonicalStudyType = cleanText(firstType?.name, 80) || 'Kunduzgi';
+      if (!firstType) {
+        await StudyTypeCatalog.updateOne(
+          { university: academic.value.university, faculty: academic.value.faculty, name: canonicalStudyType },
+          { $setOnInsert: { university: academic.value.university, faculty: academic.value.faculty, name: canonicalStudyType } },
+          { upsert: true }
+        ).catch(() => {});
+      }
+    }
+
+    let canonicalStudyGroup = '';
+    const firstGroup = await StudyGroupCatalog.findOne({
+      university: academic.value.university,
+      faculty: academic.value.faculty,
+      studyType: canonicalStudyType
+    }).sort({ name: 1 }).lean();
+    canonicalStudyGroup = cleanText(firstGroup?.name, 80);
+    if (!canonicalStudyGroup) {
+      let candidate = 'Organizer-Default';
+      let i = 2;
+      while (await StudyGroupCatalog.findOne({
+        university: academic.value.university,
+        faculty: academic.value.faculty,
+        studyType: canonicalStudyType,
+        name: new RegExp(`^${escapeRegex(candidate)}$`, 'i')
+      }).lean()) {
+        candidate = `Organizer-${i++}`;
+      }
+      canonicalStudyGroup = candidate;
+      await StudyGroupCatalog.updateOne(
+        {
+          university: academic.value.university,
+          faculty: academic.value.faculty,
+          studyType: canonicalStudyType,
+          name: canonicalStudyGroup
+        },
+        {
+          $setOnInsert: {
+            university: academic.value.university,
+            faculty: academic.value.faculty,
+            studyType: canonicalStudyType,
+            name: canonicalStudyGroup
+          }
+        },
+        { upsert: true }
+      ).catch(() => {});
+    }
+
+    const existingUsername = await User.findOne({ username }).select('_id').lean();
+    if (existingUsername) return res.status(409).json({ error: 'Username already exists' });
+    if (phone) {
+      const existingPhone = await User.findOne({ phone }).select('_id').lean();
+      if (existingPhone) return res.status(409).json({ error: 'Phone number already registered' });
+    }
+    if (email) {
+      const existingEmail = await User.findOne({ email }).select('_id').lean();
+      if (existingEmail) return res.status(409).json({ error: 'Email already registered' });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    const created = await User.create({
+      fullName,
+      nickname,
+      username,
+      bio,
+      university: academic.value.university,
+      faculty: academic.value.faculty,
+      studyType: canonicalStudyType,
+      studyGroup: canonicalStudyGroup,
+      ...(phone ? { phone } : {}),
+      ...(email ? { email } : {}),
+      password: hashed,
+      role: 'organizer',
+      isAdmin: false
+    });
+
+    await Stats.findOneAndUpdate({}, { $inc: { totalUsers: 1 } }).catch(() => null);
+    await audit(req, 'ORGANIZER_CREATE', 'user', String(created._id), { username: created.username });
+
+    const safe = await User.findById(created._id)
+      .select('username fullName nickname email phone university faculty studyType studyGroup role createdAt')
+      .lean();
+    res.status(201).json({ success: true, organizer: safe });
+  } catch (e) {
+    console.error('POST /api/admin/organizers error:', e);
+    if (String(e?.code) === '11000') return res.status(409).json({ error: 'Duplicate value (username/phone/email)' });
+    res.status(500).json({ error: 'Failed to create organizer' });
   }
 });
 

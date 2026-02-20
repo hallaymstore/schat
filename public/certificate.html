@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8" />
@@ -149,6 +149,7 @@
       if(mode==="dark") document.documentElement.classList.add("dark");
     })();
   </script>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 <body>
   <div class="bg"></div><div class="gridbg"></div>
@@ -562,11 +563,13 @@
     const w = window.open("", "_blank");
     if(!w){ setErr("Pop-up bloklangan. Browserda pop-up ruxsat bering."); return; }
     w.document.write(`
-      <html><head><title>Certificate PDF</title></head>
+      <html><head><title>Certificate PDF</title>  <link rel="stylesheet" href="/ui-glass-theme.css" />
+</head>
       <body style="margin:0;display:grid;place-items:center;background:#111">
         <img src="${png}" style="max-width:100%;height:auto"/>
         <script>setTimeout(()=>{window.print();}, 400);<\/script>
-      </body></html>
+        <script src="/ui-actions-menu.js" defer></script>
+</body></html>
     `);
     w.document.close();
   }
@@ -798,5 +801,7 @@
 
   init().catch(e=> setErr(e?.message || "Xatolik yuz berdi."));
 </script>
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
+

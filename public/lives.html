@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="uz">
 <head>
   <meta charset="utf-8"/>
@@ -100,6 +100,7 @@
     .two{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
     @media(max-width:720px){ .two{grid-template-columns:1fr} }
   </style>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 <body>
   <div class="topbar">
@@ -395,7 +396,7 @@
     document.getElementById("goDash").onclick = async ()=> {
       const me=await apiMe(); if(!me) return;
       const role = me.role || (me.isAdmin?'admin':'student') || 'student';
-      location.href = role==="teacher" ? "/teacher-dashboard.html" : (role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html");
+      location.href = role==="teacher" ? "/teacher-dashboard.html" : (role==="admin" ? "/admin-dashboard.html" : (role==="organizer" ? "/organizer.html" : "/student-dashboard.html"));
     };
 
     document.getElementById("list").addEventListener("click", async (e)=>{
@@ -411,5 +412,7 @@
 
     refresh().catch(err=>setErr(String(err.message||err)));
   </script>
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
+

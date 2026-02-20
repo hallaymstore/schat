@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8" />
@@ -302,6 +302,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       if(mode==="dark") document.documentElement.classList.add("dark");
     })();
   </script>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 <body>
   <div class="bg"></div><div class="gridbg"></div>
@@ -586,7 +587,7 @@ a,button,input,select,textarea{touch-action:manipulation}
 
     const role = String(me.role || "student").toLowerCase();
     if(role !== "student"){
-      location.href = role==="teacher" ? "/teacher-dashboard.html" : "/admin-dashboard.html";
+      location.href = role==="teacher" ? "/teacher-dashboard.html" : (role==="admin" ? "/admin-dashboard.html" : (role==="organizer" ? "/organizer.html" : "/student-dashboard.html"));
       return;
     }
 
@@ -738,5 +739,7 @@ a,button,input,select,textarea{touch-action:manipulation}
   })();
 </script>
 
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
+

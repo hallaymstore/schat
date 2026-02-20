@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="uz">
 <head>
   <meta charset="utf-8"/>
@@ -68,6 +68,7 @@
       background: rgba(255,255,255,.04); color:var(--txt); outline:none;
     }
   </style>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 <body>
   <div class="wrap">
@@ -306,5 +307,7 @@
 
     boot().catch(e=>setErr(String(e.message||e)));
   </script>
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="uz" class="scroll-smooth">
 <head>
   <meta charset="utf-8"/>
@@ -113,6 +113,7 @@
     })();
   </script>
   <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 
 <body class="min-h-screen text-slate-900 dark:text-slate-100">
@@ -329,7 +330,7 @@
       services: { title:'Xizmatlar', sub:'Services ro‘yxati va o‘chirish. (Order/Review bilan.)' },
       pms: { title:'Shaxsiy xabarlar', sub:'Private message’larni ko‘rish va o‘chirish (moderatsiya).' },
       realtime: { title:'Real-time', sub:'Online foydalanuvchilar va aktiv call/live ro‘yxati (real vaqt).' },
-      catalog: { title:'Universitet katalogi', sub:'Universitet/fakultet/yo‘nalish (program) ro‘yxatini boshqaring.' },
+      catalog: { title:'Universitet katalogi', sub:'Universitet/fakultet/o‘quv guruhlari/yo‘nalishlar ro‘yxatini boshqaring.' },
       broadcast: { title:'Admin xabarnoma', sub:'Universitet/fakultet/guruh bo‘yicha xabar yuboring (push + notification).' },
     };
 
@@ -561,7 +562,15 @@
           </td>
           <td class="p-3 text-xs muted2">${u.university||'—'}</td>
           <td class="p-3"><span class="font-extrabold">${u.coins||0}</span> <span class="text-xs muted2">coin</span></td>
-          <td class="p-3 text-xs">${u.isAdmin ? '<span class="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-500 font-extrabold">Admin</span>' : '<span class="px-2 py-1 rounded-lg bg-slate-500/15 text-slate-400 font-extrabold">User</span>'}</td>
+          <td class="p-3 text-xs">${(() => {
+            const rr = String((u.isAdmin ? 'admin' : (u.role || 'student')) || 'student').toLowerCase();
+            const roleClass = rr === 'admin'
+              ? 'bg-emerald-500/15 text-emerald-500'
+              : (rr === 'organizer'
+                ? 'bg-cyan-500/15 text-cyan-400'
+                : (rr === 'teacher' ? 'bg-amber-500/15 text-amber-400' : 'bg-slate-500/15 text-slate-400'));
+            return `<span class="px-2 py-1 rounded-lg ${roleClass} font-extrabold">${rr}</span>`;
+          })()}</td>
           <td class="p-3 text-right">
             <div class="flex justify-end gap-2">
               <button class="edit glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}"><i class="fa-solid fa-pen mr-2"></i>Tahrir</button>
@@ -572,16 +581,25 @@
         </tr>
       `).join('');
 
-      document.getElementById('content').innerHTML = tableWrap(`
-        <thead><tr class="text-left text-xs muted2">
-          <th class="p-3">User</th><th class="p-3">Universitet</th><th class="p-3">Coin</th><th class="p-3">Role</th><th class="p-3 text-right">Amal</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      `);
+      document.getElementById('content').innerHTML = `
+        <div class="mb-4 flex justify-end">
+          <button id="newOrganizerBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-xs font-extrabold glow-ring">
+            <i class="fa-solid fa-user-shield mr-2"></i>Organizer yaratish
+          </button>
+        </div>
+        ${tableWrap(`
+          <thead><tr class="text-left text-xs muted2">
+            <th class="p-3">User</th><th class="p-3">Universitet</th><th class="p-3">Coin</th><th class="p-3">Role</th><th class="p-3 text-right">Amal</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        `)}
+      `;
 
       document.querySelectorAll('.coin').forEach(b=> b.onclick = ()=> openCoinModal(b.dataset.id));
       document.querySelectorAll('.edit').forEach(b=> b.onclick = ()=> openEditUser(b.dataset.id));
       document.querySelectorAll('.del').forEach(b=> b.onclick = ()=> delUser(b.dataset.id, b.dataset.name));
+      const newOrganizerBtn = document.getElementById('newOrganizerBtn');
+      if(newOrganizerBtn) newOrganizerBtn.onclick = ()=> openCreateOrganizerModal();
 
       const hasMore = (page*limit) < total;
       pagerShow(total>limit, page);
@@ -623,6 +641,125 @@
           await loadList();
         }
       });
+    }
+
+    function openCreateOrganizerModal(){
+      modal.show({
+        title: "Organizer yaratish",
+        sub: "Login/parol faqat admin tomonidan beriladi. Organizer faqat tanlangan fakultetni boshqaradi.",
+        okText: "Yaratish",
+        bodyHTML: `
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Full name *</label>
+              <input id="orgFullName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: Azizbek Organizer"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Username *</label>
+              <input id="orgUsername" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="masalan: organizer_qdtu"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Password *</label>
+              <div class="flex gap-2 mt-2">
+                <input id="orgPassword" type="text" class="field w-full rounded-2xl px-4 py-3 text-sm" placeholder="kamida 6 belgi"/>
+                <button id="orgGenPass" type="button" class="glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold">Generate</button>
+              </div>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Universitet *</label>
+              <select id="orgUniversity" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2">
+                <option value="" selected disabled>Universitetni tanlang</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Fakultet *</label>
+              <select id="orgFaculty" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" disabled>
+                <option value="" selected disabled>Fakultetni tanlang</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Telefon (ixtiyoriy)</label>
+              <input id="orgPhone" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="+998..."/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Email (ixtiyoriy)</label>
+              <input id="orgEmail" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="name@example.com"/>
+            </div>
+          </div>
+        `,
+        onOk: async ()=>{
+          const payload = {
+            fullName: document.getElementById('orgFullName').value.trim(),
+            username: document.getElementById('orgUsername').value.trim(),
+            password: document.getElementById('orgPassword').value,
+            university: document.getElementById('orgUniversity').value.trim(),
+            faculty: document.getElementById('orgFaculty').value.trim(),
+            phone: document.getElementById('orgPhone').value.trim(),
+            email: document.getElementById('orgEmail').value.trim()
+          };
+          if(!payload.fullName || !payload.username || !payload.password || !payload.university || !payload.faculty){
+            return toast("Majburiy maydonlarni to‘ldiring.", 'error');
+          }
+
+          const {res, j} = await api('/api/admin/organizers', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) return toast(j?.error || "Organizer yaratilmadi", 'error');
+          toast(`Organizer yaratildi: @${j?.organizer?.username || payload.username}`, 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+
+      const genPass = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+        let out = '';
+        for(let i=0;i<10;i++) out += chars[Math.floor(Math.random()*chars.length)];
+        document.getElementById('orgPassword').value = out;
+      };
+
+      const loadOrgUniversities = async () => {
+        const sel = document.getElementById('orgUniversity');
+        sel.innerHTML = '<option value="" selected disabled>Universitetni tanlang</option>';
+        const r = await fetch('/api/catalog/universities');
+        const j = await r.json().catch(()=>({}));
+        (j.universities || []).forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u.name;
+          opt.textContent = u.name;
+          sel.appendChild(opt);
+        });
+      };
+
+      const loadOrgFaculties = async (uni) => {
+        const sel = document.getElementById('orgFaculty');
+        sel.innerHTML = '<option value="" selected disabled>Fakultetni tanlang</option>';
+        sel.disabled = true;
+        if(!uni) return;
+        const r = await fetch('/api/catalog/faculties?university='+encodeURIComponent(uni));
+        const j = await r.json().catch(()=>({}));
+        const list = Array.isArray(j.faculties) ? j.faculties : [];
+        list.forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        });
+        sel.disabled = list.length === 0;
+      };
+
+      setTimeout(async () => {
+        const uniSel = document.getElementById('orgUniversity');
+        const genBtn = document.getElementById('orgGenPass');
+        if(genBtn){
+          genBtn.onclick = genPass;
+          if(!document.getElementById('orgPassword').value) genPass();
+        }
+        await loadOrgUniversities().catch(()=>null);
+        uniSel.onchange = () => loadOrgFaculties(uniSel.value).catch(()=>null);
+      }, 0);
     }
 
     function openEditUser(userId){
@@ -680,6 +817,7 @@
               <select id="role" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2">
                 <option value="student" ${String(u.role||'student')==='student'?'selected':''}>student</option>
                 <option value="teacher" ${String(u.role||'')==='teacher'?'selected':''}>teacher</option>
+                <option value="organizer" ${String(u.role||'')==='organizer'?'selected':''}>organizer</option>
                 <option value="admin" ${String(u.role||'')==='admin'?'selected':''}>admin</option>
               </select>
             </div>
@@ -1667,7 +1805,7 @@ async function adminEndGroupCall(groupId){
     }
 
     // ==================== CATALOG (Universities/Faculties/Programs) ====================
-    let catState = { uni: '', faculty: '' };
+    let catState = { uni: '', faculty: '', studyType: '' };
 
     async function loadCatalog(q){
       // q: free-text university filter
@@ -1677,7 +1815,7 @@ async function adminEndGroupCall(groupId){
 
       const uniOptions = unis.map(u => `<option value="${escapeHtml(u.name)}" ${u.name===catState.uni?'selected':''}>${escapeHtml(u.name)}</option>`).join('');
       const body = `
-        <div class="grid lg:grid-cols-3 gap-4">
+        <div class="grid lg:grid-cols-5 gap-4">
           <div class="glass rounded-2xl p-4">
             <div class="font-black">Universitetlar</div>
             <div class="text-xs muted2 mt-1">Qo‘shish / o‘chirish / nomini almashtirish</div>
@@ -1705,6 +1843,33 @@ async function adminEndGroupCall(groupId){
           </div>
 
           <div class="glass rounded-2xl p-4">
+            <div class="font-black">O‘quv turlari</div>
+            <div class="text-xs muted2 mt-1">Tanlangan universitet + fakultet bo‘yicha</div>
+            <div class="mt-3 flex gap-2">
+              <input id="newStudyType" class="field rounded-xl px-3 py-2 text-sm flex-1" placeholder="Masalan: Kunduzgi"/>
+              <button id="addStudyTypeBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Qo‘shish</button>
+            </div>
+            <div class="mt-3">
+              <input id="typeQ" class="field w-full rounded-xl px-3 py-2 text-sm" placeholder="Qidirish (o‘quv turi)"/>
+            </div>
+            <div id="typeList" class="mt-3 text-sm"></div>
+          </div>
+
+          <div class="glass rounded-2xl p-4">
+            <div class="font-black">O‘quv guruhlari</div>
+            <div class="text-xs muted2 mt-1">Tanlangan universitet + fakultet + o‘quv turi bo‘yicha</div>
+            <div class="mt-2 text-xs muted2">Tanlangan tur: <span id="selectedTypeLabel" class="font-extrabold">${escapeHtml(catState.studyType || '—')}</span></div>
+            <div class="mt-3 flex gap-2">
+              <input id="newStudyGroup" class="field rounded-xl px-3 py-2 text-sm flex-1" placeholder="Masalan: MMT-520-25"/>
+              <button id="addStudyGroupBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Qo‘shish</button>
+            </div>
+            <div class="mt-3">
+              <input id="sgQ" class="field w-full rounded-xl px-3 py-2 text-sm" placeholder="Qidirish (o‘quv guruhi)"/>
+            </div>
+            <div id="sgList" class="mt-3 text-sm"></div>
+          </div>
+
+          <div class="glass rounded-2xl p-4">
             <div class="font-black">Yo‘nalishlar (Programs)</div>
             <div class="text-xs muted2 mt-1">Universitet + fakultet bo‘yicha</div>
             <div class="mt-3 grid grid-cols-2 gap-2">
@@ -1726,7 +1891,7 @@ async function adminEndGroupCall(groupId){
       // init selection
       const uniSel = document.getElementById('uniSel');
       if(!catState.uni) catState.uni = uniSel.value || '';
-      uniSel.onchange = () => { catState.uni = uniSel.value; catState.faculty=''; loadCatalog(document.getElementById('q').value.trim()); };
+      uniSel.onchange = () => { catState.uni = uniSel.value; catState.faculty=''; catState.studyType=''; loadCatalog(document.getElementById('q').value.trim()); };
 
       document.getElementById('addUniBtn').onclick = async () => {
         const name = document.getElementById('newUni').value.trim();
@@ -1771,6 +1936,7 @@ async function adminEndGroupCall(groupId){
             toast('O‘chirildi', 'success');
             catState.uni = '';
             catState.faculty='';
+            catState.studyType='';
             loadCatalog(document.getElementById('q').value.trim());
           }
         });
@@ -1778,6 +1944,10 @@ async function adminEndGroupCall(groupId){
 
       // Faculties list
       await renderFaculties();
+      // Study types list
+      await renderStudyTypes();
+      // Study groups list
+      await renderStudyGroups();
       // Programs list
       await renderPrograms();
 
@@ -1790,6 +1960,7 @@ async function adminEndGroupCall(groupId){
         toast('Fakultet qo‘shildi', 'success');
         document.getElementById('newFac').value='';
         await renderFaculties();
+        await renderStudyTypes();
       };
 
       document.getElementById('addProgBtn').onclick = async ()=>{
@@ -1806,7 +1977,44 @@ async function adminEndGroupCall(groupId){
         await renderPrograms();
       };
 
+      document.getElementById('addStudyGroupBtn').onclick = async ()=>{
+        if(!catState.uni) return toast('Universitet tanlang', 'error');
+        if(!catState.faculty) return toast('Fakultet tanlang (pastda)', 'error');
+        if(!catState.studyType) return toast('O‘quv turini tanlang (pastda)', 'error');
+        const name = document.getElementById('newStudyGroup').value.trim();
+        if(!name) return toast('O‘quv guruhi nomini kiriting', 'error');
+        const {res, j} = await api('/api/admin/catalog/study-groups', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ university: catState.uni, faculty: catState.faculty, studyType: catState.studyType, name })
+        });
+        if(!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        toast('O‘quv guruhi qo‘shildi', 'success');
+        document.getElementById('newStudyGroup').value = '';
+        await renderStudyGroups();
+      };
+
+      document.getElementById('addStudyTypeBtn').onclick = async ()=>{
+        if(!catState.uni) return toast('Universitet tanlang', 'error');
+        if(!catState.faculty) return toast('Fakultet tanlang (pastda)', 'error');
+        const name = document.getElementById('newStudyType').value.trim();
+        if(!name) return toast('O‘quv turi nomini kiriting', 'error');
+        const {res, j} = await api('/api/admin/catalog/study-types', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ university: catState.uni, faculty: catState.faculty, name })
+        });
+        if(!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        toast('O‘quv turi qo‘shildi', 'success');
+        document.getElementById('newStudyType').value = '';
+        await renderStudyTypes();
+        await renderStudyGroups();
+      };
+
       document.getElementById('progQ').oninput = ()=>{ clearTimeout(loadCatalog._t); loadCatalog._t = setTimeout(()=> renderPrograms(), 250); };
+      document.getElementById('newStudyType').addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('addStudyTypeBtn').click(); });
+      document.getElementById('typeQ').oninput = ()=>{ clearTimeout(loadCatalog._ty); loadCatalog._ty = setTimeout(()=> renderStudyTypes(), 250); };
+      document.getElementById('sgQ').oninput = ()=>{ clearTimeout(loadCatalog._sgt); loadCatalog._sgt = setTimeout(()=> renderStudyGroups(), 250); };
 
       async function renderFaculties(){
         const facListEl = document.getElementById('facList');
@@ -1819,11 +2027,38 @@ async function adminEndGroupCall(groupId){
           const active = f===catState.faculty;
           return `
             <div class="flex items-center justify-between gap-2 p-2 rounded-xl ${active?'bg-indigo-500/15 border border-indigo-400/30':'border border-white/10'}">
-              <button class="text-left flex-1 font-extrabold" data-fac="${escapeHtml(f)}">${escapeHtml(f)}</button>
-              <button class="delFac glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-fac="${escapeHtml(f)}"><i class="fa-solid fa-trash"></i></button>
+              <button class="pickFac text-left flex-1 font-extrabold" data-fac="${escapeHtml(f)}">${escapeHtml(f)}</button>
+              <div class="flex items-center gap-1">
+                <button class="renFac glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-fac="${escapeHtml(f)}"><i class="fa-solid fa-pen"></i></button>
+                <button class="delFac glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-fac="${escapeHtml(f)}"><i class="fa-solid fa-trash"></i></button>
+              </div>
             </div>`;
         }).join('');
-        facListEl.querySelectorAll('button[data-fac]').forEach(b=> b.onclick = ()=>{ catState.faculty=b.dataset.fac; renderFaculties(); renderPrograms(); });
+        facListEl.querySelectorAll('.pickFac').forEach(b=> b.onclick = ()=>{ catState.faculty=b.dataset.fac; catState.studyType=''; renderFaculties(); renderStudyTypes(); renderStudyGroups(); renderPrograms(); });
+        facListEl.querySelectorAll('.renFac').forEach(b=> b.onclick = async ()=>{
+          const oldFaculty = b.dataset.fac;
+          modal.show({
+            title:'Fakultet nomini almashtirish',
+            sub: `${catState.uni} / ${oldFaculty}`,
+            okText:'Saqlash',
+            bodyHTML:`<label class="text-xs font-extrabold muted">Yangi nom</label><input id="newFacultyName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(oldFaculty)}"/>`,
+            onOk: async ()=>{
+              const newFaculty = document.getElementById('newFacultyName').value.trim();
+              const {res, j} = await api('/api/admin/catalog/faculties', {
+                method:'PATCH',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ university: catState.uni, oldFaculty, newFaculty })
+              });
+              if(!res.ok) return toast(j?.error || 'Tahrirlanmadi', 'error');
+              toast('Yangilandi', 'success');
+              if(catState.faculty===oldFaculty) catState.faculty = newFaculty;
+              await renderFaculties();
+              await renderStudyTypes();
+              await renderStudyGroups();
+              await renderPrograms();
+            }
+          });
+        });
         facListEl.querySelectorAll('.delFac').forEach(b=> b.onclick = async ()=>{
           const faculty = b.dataset.fac;
           modal.show({
@@ -1835,9 +2070,174 @@ async function adminEndGroupCall(groupId){
               const {res, j} = await api('/api/admin/catalog/faculties', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ university: catState.uni, faculty }) });
               if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
               toast('O‘chirildi', 'success');
-              if(catState.faculty===faculty) catState.faculty='';
+              if(catState.faculty===faculty){ catState.faculty=''; catState.studyType=''; }
               await renderFaculties();
+              await renderStudyTypes();
+              await renderStudyGroups();
               await renderPrograms();
+            }
+          });
+        });
+      }
+
+      async function renderStudyTypes(){
+        const el = document.getElementById('typeList');
+        if(!el) return;
+        const selectedLabelEl = document.getElementById('selectedTypeLabel');
+        const setSelectedLabel = ()=>{
+          if(selectedLabelEl) selectedLabelEl.textContent = catState.studyType || '—';
+        };
+        if(!catState.uni || !catState.faculty){
+          el.innerHTML = '<div class="text-xs muted2">Universitet va fakultet tanlang.</div>';
+          catState.studyType = '';
+          setSelectedLabel();
+          return;
+        }
+
+        const q = (document.getElementById('typeQ')?.value || '').trim();
+        const {res, j} = await api(`/api/admin/catalog/study-types?university=${encodeURIComponent(catState.uni)}&faculty=${encodeURIComponent(catState.faculty)}&q=${encodeURIComponent(q)}`);
+        if(!res.ok){ el.innerHTML = '<div class="text-xs text-red-500">Xatolik</div>'; return; }
+        const list = Array.isArray(j.studyTypes) ? j.studyTypes : [];
+        if(!list.length){
+          catState.studyType = '';
+          el.innerHTML = '<div class="text-xs muted2">O‘quv turi topilmadi.</div>';
+          setSelectedLabel();
+          await renderStudyGroups();
+          return;
+        }
+        if(!catState.studyType || !list.some(t => (t.name||'') === catState.studyType)){
+          catState.studyType = String(list[0].name || '').trim();
+        }
+        setSelectedLabel();
+
+        el.innerHTML = list.map(item => {
+          const name = String(item?.name || '').trim();
+          const active = name === catState.studyType;
+          return `
+            <div class="typeRow flex items-center justify-between gap-2 p-2 rounded-xl cursor-pointer ${active?'bg-cyan-500/15 border border-cyan-400/30':'border border-white/10'}" data-name="${escapeHtml(name)}">
+              <button class="pickType text-left flex-1 font-extrabold" data-name="${escapeHtml(name)}">${escapeHtml(name)}</button>
+              <div class="flex items-center gap-1">
+                <button class="renType glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-id="${escapeHtml(item._id)}" data-name="${escapeHtml(name)}"><i class="fa-solid fa-pen"></i></button>
+                <button class="delType glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-id="${escapeHtml(item._id)}"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        el.querySelectorAll('.typeRow').forEach(row => row.onclick = (ev)=>{
+          if(ev.target.closest('.renType') || ev.target.closest('.delType')) return;
+          catState.studyType = row.dataset.name || '';
+          renderStudyTypes();
+          renderStudyGroups();
+        });
+        el.querySelectorAll('.pickType').forEach(b=> b.onclick = (ev)=>{ ev.stopPropagation(); catState.studyType = b.dataset.name || ''; renderStudyTypes(); renderStudyGroups(); });
+        el.querySelectorAll('.renType').forEach(b=> b.onclick = async ()=>{
+          const id = b.dataset.id;
+          const oldName = b.dataset.name || '';
+          modal.show({
+            title:'O‘quv turini tahrirlash',
+            sub: `${catState.uni} / ${catState.faculty}`,
+            okText:'Saqlash',
+            bodyHTML:`<label class="text-xs font-extrabold muted">Yangi nom</label><input id="newTypeName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(oldName)}"/>`,
+            onOk: async ()=>{
+              const name = document.getElementById('newTypeName').value.trim();
+              if(!name) return toast('Nomni kiriting', 'error');
+              const {res, j} = await api(`/api/admin/catalog/study-types/${encodeURIComponent(id)}`, {
+                method:'PATCH',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ university: catState.uni, faculty: catState.faculty, name })
+              });
+              if(!res.ok) return toast(j?.error || 'Tahrirlanmadi', 'error');
+              if(catState.studyType === oldName) catState.studyType = name;
+              toast('Yangilandi', 'success');
+              await renderStudyTypes();
+              await renderStudyGroups();
+            }
+          });
+        });
+        el.querySelectorAll('.delType').forEach(b=> b.onclick = async ()=>{
+          const id = b.dataset.id;
+          modal.show({
+            title:'O‘quv turini o‘chirish',
+            sub:'Bu turga bog‘liq o‘quv guruhlar ham katalogdan o‘chadi.',
+            okText:'O‘chirish',
+            bodyHTML:`<div class="text-sm muted2">ID: <span class="font-mono font-extrabold">${escapeHtml(id)}</span></div>`,
+            onOk: async ()=>{
+              const {res, j} = await api(`/api/admin/catalog/study-types/${encodeURIComponent(id)}`, { method:'DELETE' });
+              if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+              toast('O‘chirildi', 'success');
+              await renderStudyTypes();
+              await renderStudyGroups();
+            }
+          });
+        });
+      }
+
+      async function renderStudyGroups(){
+        const el = document.getElementById('sgList');
+        if(!el) return;
+        const selectedLabelEl = document.getElementById('selectedTypeLabel');
+        if(selectedLabelEl) selectedLabelEl.textContent = catState.studyType || '—';
+        if(!catState.uni || !catState.faculty || !catState.studyType){
+          el.innerHTML = '<div class="text-xs muted2">Universitet, fakultet va o‘quv turini tanlang.</div>';
+          return;
+        }
+        const q = (document.getElementById('sgQ')?.value || '').trim();
+        const {res, j} = await api(`/api/admin/catalog/study-groups?university=${encodeURIComponent(catState.uni)}&faculty=${encodeURIComponent(catState.faculty)}&studyType=${encodeURIComponent(catState.studyType)}&q=${encodeURIComponent(q)}`);
+        if(!res.ok){ el.innerHTML = '<div class="text-xs text-red-500">Xatolik</div>'; return; }
+        const list = Array.isArray(j.studyGroups) ? j.studyGroups : [];
+        if(!list.length){
+          el.innerHTML = '<div class="text-xs muted2">O‘quv guruhlari topilmadi.</div>';
+          return;
+        }
+        el.innerHTML = list.map(item => `
+          <div class="flex items-center justify-between gap-2 p-2 rounded-xl border border-white/10">
+            <div>
+              <div class="font-extrabold truncate">${escapeHtml(item.name || '-')}</div>
+              <div class="text-xs muted2">${escapeHtml(item.studyType || catState.studyType || '-')}</div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button class="renSg glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-id="${escapeHtml(item._id)}" data-name="${escapeHtml(item.name||'')}"><i class="fa-solid fa-pen"></i></button>
+              <button class="delSg glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-id="${escapeHtml(item._id)}"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+        `).join('');
+
+        el.querySelectorAll('.renSg').forEach(btn => btn.onclick = async ()=>{
+          const id = btn.dataset.id;
+          const oldName = btn.dataset.name || '';
+          modal.show({
+            title:'O‘quv guruhini tahrirlash',
+            sub: `${catState.uni} / ${catState.faculty}`,
+            okText:'Saqlash',
+            bodyHTML:`<label class="text-xs font-extrabold muted">Yangi nom</label><input id="newSgName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(oldName)}"/>`,
+            onOk: async ()=>{
+              const name = document.getElementById('newSgName').value.trim();
+              if(!name) return toast('Nomni kiriting', 'error');
+              const {res, j} = await api(`/api/admin/catalog/study-groups/${encodeURIComponent(id)}`, {
+                method:'PATCH',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ university: catState.uni, faculty: catState.faculty, studyType: catState.studyType, name })
+              });
+              if(!res.ok) return toast(j?.error || 'Tahrirlanmadi', 'error');
+              toast('Yangilandi', 'success');
+              await renderStudyGroups();
+            }
+          });
+        });
+
+        el.querySelectorAll('.delSg').forEach(btn => btn.onclick = async ()=>{
+          const id = btn.dataset.id;
+          modal.show({
+            title:'O‘quv guruhini o‘chirish',
+            sub:'Bu faqat katalogdan o‘chadi.',
+            okText:'O‘chirish',
+            bodyHTML:`<div class="text-sm muted2">ID: <span class="font-mono font-extrabold">${escapeHtml(id)}</span></div>`,
+            onOk: async ()=>{
+              const {res, j} = await api(`/api/admin/catalog/study-groups/${encodeURIComponent(id)}`, { method:'DELETE' });
+              if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+              toast('O‘chirildi', 'success');
+              await renderStudyGroups();
             }
           });
         });
@@ -1992,5 +2392,7 @@ async function adminEndGroupCall(groupId){
       }
     });
 </script>
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
+

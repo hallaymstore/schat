@@ -1,0 +1,881 @@
+﻿<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Organizer Panel | SChat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    :root{
+      --bg-1:#071426;
+      --bg-2:#04101d;
+      --glass:rgba(255,255,255,.08);
+      --line:rgba(255,255,255,.16);
+      --text:#e5e7eb;
+      --muted:rgba(229,231,235,.72);
+      --ok:#22c55e;
+      --bad:#ef4444;
+    }
+    body{
+      color:var(--text);
+      background:
+        radial-gradient(1200px 620px at 8% -8%, #0f3153 0%, transparent 60%),
+        radial-gradient(950px 540px at 90% 8%, #11364a 0%, transparent 62%),
+        linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    }
+    .glass{
+      background:var(--glass);
+      border:1px solid var(--line);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 24px 70px rgba(0,0,0,.22);
+    }
+    .field{
+      background:rgba(255,255,255,.09);
+      border:1px solid rgba(255,255,255,.2);
+      color:#fff;
+    }
+    .field::placeholder{ color:rgba(229,231,235,.52); }
+    .field:focus{ outline:none; border-color:rgba(56,189,248,.6); }
+    .muted{ color:var(--muted); }
+    .btn-primary{
+      background:linear-gradient(135deg,#0ea5e9,#14b8a6);
+      color:white;
+      font-weight:800;
+    }
+    .tab-active{
+      background:linear-gradient(135deg,#22d3ee,#14b8a6);
+      color:#05262f;
+      font-weight:900;
+      border-color:transparent;
+    }
+    .toast{
+      animation: toast-in .22s ease-out both;
+    }
+    @keyframes toast-in{
+      from{ opacity:0; transform:translateY(8px) scale(.98); }
+      to{ opacity:1; transform:translateY(0) scale(1); }
+    }
+  </style>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+</head>
+<body class="min-h-screen">
+  <main class="max-w-7xl mx-auto px-3 sm:px-5 py-5 sm:py-8">
+    <section class="glass rounded-3xl p-5 sm:p-6">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-black">Organizer Panel</h1>
+          <p class="muted text-sm mt-1">Faqat biriktirilgan fakultet bo‘yicha o‘quv turi, o‘quv guruh, yo‘nalish, guruh va kanallarni boshqarish.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="/profile.html" class="glass rounded-xl px-3 py-2 text-sm font-bold hover:bg-white/10">Profil</a>
+          <button id="logoutBtn" class="glass rounded-xl px-3 py-2 text-sm font-bold hover:bg-white/10">
+            <i class="fa-solid fa-right-from-bracket mr-2"></i>Chiqish
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div class="glass rounded-2xl p-4">
+          <div class="text-xs uppercase tracking-wide muted">Role</div>
+          <div id="roleLabel" class="text-xl font-black mt-1">-</div>
+        </div>
+        <div class="glass rounded-2xl p-4 sm:col-span-2">
+          <div class="text-xs uppercase tracking-wide muted">Scope universitet</div>
+          <div id="scopeLabel" class="text-xl font-black mt-1">-</div>
+        </div>
+        <div class="glass rounded-2xl p-4">
+          <div class="text-xs uppercase tracking-wide muted">Scope fakultet</div>
+          <div id="facultyLabel" class="text-xl font-black mt-1">-</div>
+        </div>
+      </div>
+
+      <div id="scopeBox" class="hidden mt-4 glass rounded-2xl p-4">
+        <div class="text-sm font-extrabold">Admin scope boshqaruvi</div>
+        <div class="text-xs muted mt-1">Admin boshqa universitet scope tanlashi mumkin.</div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <input id="scopeInput" class="field rounded-xl px-3 py-2 text-sm w-full sm:w-96" placeholder="Universitet nomi" />
+          <button id="scopeApplyBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">Qo‘llash</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+      <button class="tab tab-active glass rounded-xl px-3 py-2 text-sm" data-tab="overview">Overview</button>
+      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="studytypes">O‘quv turlari</button>
+      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="studygroups">O‘quv guruhlar</button>
+      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="programs">Yo‘nalishlar</button>
+      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="groups">Guruhlar</button>
+      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="channels">Kanallar</button>
+    </section>
+
+    <section id="panel" class="mt-4 glass rounded-3xl p-5 sm:p-6"></section>
+  </main>
+
+  <div id="toastHost" class="fixed right-3 bottom-3 z-[80] space-y-2"></div>
+
+  <script>
+    const state = {
+      token: '',
+      me: null,
+      activeTab: 'overview',
+      activeUniversity: '',
+      activeFaculty: '',
+      scopeRole: '',
+      faculties: []
+    };
+
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => Array.from(document.querySelectorAll(s));
+    const esc = (v) => String(v || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    function toast(message, type = 'info') {
+      const host = $('#toastHost');
+      if (!host) return;
+      const el = document.createElement('div');
+      const color = type === 'success' ? 'border-emerald-300/50' : (type === 'error' ? 'border-rose-300/50' : 'border-white/25');
+      el.className = `toast glass ${color} rounded-xl px-3 py-2 text-sm`;
+      el.textContent = message;
+      host.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(4px)';
+      }, 2200);
+      setTimeout(() => el.remove(), 2550);
+    }
+
+    function authHeaders(extra = {}) {
+      return { Authorization: `Bearer ${state.token}`, ...extra };
+    }
+
+    function isScopeAdmin() {
+      return state.scopeRole === 'admin' || !!state.me?.isAdmin;
+    }
+
+    function buildUrl(path, params = {}) {
+      const query = new URLSearchParams();
+      if (state.activeUniversity) query.set('university', state.activeUniversity);
+      if (!isScopeAdmin() && state.activeFaculty) query.set('faculty', state.activeFaculty);
+      Object.entries(params).forEach(([k, v]) => {
+        if (v === undefined || v === null) return;
+        const value = String(v).trim();
+        if (!value) return;
+        query.set(k, value);
+      });
+      const qs = query.toString();
+      return qs ? `${path}?${qs}` : path;
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        headers: authHeaders(options.headers || {})
+      });
+      const j = await res.json().catch(() => ({}));
+      return { res, j };
+    }
+
+    async function ensureAuth() {
+      state.token = localStorage.getItem('token') || '';
+      if (!state.token) {
+        window.location.href = '/login.html';
+        return false;
+      }
+
+      const meRes = await fetch('/api/me', { headers: authHeaders() });
+      if (!meRes.ok) {
+        localStorage.removeItem('token');
+        window.location.href = '/login.html';
+        return false;
+      }
+      const meData = await meRes.json().catch(() => null);
+      if (!meData || !meData.success) {
+        localStorage.removeItem('token');
+        window.location.href = '/login.html';
+        return false;
+      }
+      state.me = meData.user || meData;
+      const role = String(state.me?.role || '').toLowerCase();
+      const isAdmin = !!state.me?.isAdmin || role === 'admin';
+      if (!(role === 'organizer' || isAdmin)) {
+        window.location.href = '/student-dashboard.html';
+        return false;
+      }
+      return true;
+    }
+
+    async function loadScope(requestedUniversity = '') {
+      const url = requestedUniversity
+        ? `/api/organizer/me?university=${encodeURIComponent(requestedUniversity)}`
+        : '/api/organizer/me';
+      const { res, j } = await api(url);
+      if (!res.ok) throw new Error(j?.error || 'Scope yuklanmadi');
+
+      state.activeUniversity = String(j.scope?.university || '').trim();
+      state.activeFaculty = String(j.scope?.faculty || '').trim();
+      $('#scopeLabel').textContent = state.activeUniversity || '—';
+      const fallbackRole = state.me?.isAdmin ? 'admin' : String(state.me?.role || '');
+      const role = String(j.scope?.role || fallbackRole || '').toLowerCase();
+      state.scopeRole = role;
+      $('#roleLabel').textContent = role ? role.toUpperCase() : '-';
+      $('#facultyLabel').textContent = state.activeFaculty || '—';
+
+      if (!isScopeAdmin() && !state.activeFaculty) {
+        throw new Error('Organizer profilda fakultet biriktirilmagan');
+      }
+
+      if (isScopeAdmin()) {
+        $('#scopeBox').classList.remove('hidden');
+        $('#scopeInput').value = state.activeUniversity;
+      } else {
+        $('#scopeBox').classList.add('hidden');
+      }
+    }
+
+    async function loadFacultiesCache() {
+      if (!isScopeAdmin() && state.activeFaculty) {
+        state.faculties = [state.activeFaculty];
+        return state.faculties;
+      }
+      const { res, j } = await api(buildUrl('/api/organizer/catalog/faculties'));
+      if (!res.ok) {
+        state.faculties = [];
+        throw new Error(j?.error || 'Fakultetlar yuklanmadi');
+      }
+      state.faculties = Array.isArray(j.faculties) ? j.faculties : [];
+      if (!state.activeFaculty && state.faculties.length) {
+        state.activeFaculty = String(state.faculties[0] || '').trim();
+        $('#facultyLabel').textContent = state.activeFaculty || '—';
+      }
+      return state.faculties;
+    }
+
+    function setTab(tab) {
+      state.activeTab = tab;
+      $$('.tab').forEach((btn) => {
+        const active = btn.dataset.tab === tab;
+        btn.classList.toggle('tab-active', active);
+      });
+      renderCurrent().catch((e) => toast(e.message || 'Render xatoligi', 'error'));
+    }
+
+    async function renderCurrent() {
+      if (state.activeTab === 'overview') return renderOverview();
+      if (state.activeTab === 'studytypes') return renderStudyTypes();
+      if (state.activeTab === 'studygroups') return renderStudyGroups();
+      if (state.activeTab === 'programs') return renderPrograms();
+      if (state.activeTab === 'groups') return renderGroups();
+      if (state.activeTab === 'channels') return renderChannels();
+    }
+
+    async function renderOverview() {
+      const panel = $('#panel');
+      panel.innerHTML = '<div class="muted text-sm">Yuklanmoqda...</div>';
+      const { res, j } = await api(buildUrl('/api/organizer/overview'));
+      if (!res.ok) {
+        panel.innerHTML = `<div class="text-rose-300 text-sm">${esc(j?.error || 'Xatolik')}</div>`;
+        return;
+      }
+
+      const o = j.overview || {};
+      panel.innerHTML = `
+        <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+          <div class="glass rounded-2xl p-4"><div class="text-xs muted">Users</div><div class="text-2xl font-black mt-1">${esc(o.users || 0)}</div></div>
+          <div class="glass rounded-2xl p-4"><div class="text-xs muted">Groups</div><div class="text-2xl font-black mt-1">${esc(o.groups || 0)}</div></div>
+          <div class="glass rounded-2xl p-4"><div class="text-xs muted">Channels</div><div class="text-2xl font-black mt-1">${esc(o.channels || 0)}</div></div>
+          <div class="glass rounded-2xl p-4"><div class="text-xs muted">Programs</div><div class="text-2xl font-black mt-1">${esc(o.programs || 0)}</div></div>
+          <div class="glass rounded-2xl p-4"><div class="text-xs muted">Study Types</div><div class="text-2xl font-black mt-1">${esc(o.studyTypes || 0)}</div></div>
+          <div class="glass rounded-2xl p-4"><div class="text-xs muted">Study Groups</div><div class="text-2xl font-black mt-1">${esc(o.studyGroups || 0)}</div></div>
+        </div>
+        <div class="mt-4">
+          <button id="overviewRefresh" class="btn-primary rounded-xl px-4 py-2 text-sm">Yangilash</button>
+        </div>
+      `;
+      $('#overviewRefresh').onclick = () => renderOverview();
+    }
+
+    async function renderFaculties() {
+      const panel = $('#panel');
+      panel.innerHTML = '<div class="muted text-sm">Yuklanmoqda...</div>';
+      await loadFacultiesCache();
+
+      panel.innerHTML = `
+        <div class="flex flex-wrap gap-2 mb-4">
+          <input id="newFaculty" class="field rounded-xl px-3 py-2 text-sm w-full sm:w-96" placeholder="Yangi fakultet nomi" />
+          <button id="addFacultyBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">Qo‘shish</button>
+        </div>
+        <div id="facultyList"></div>
+      `;
+
+      const draw = () => {
+        const list = $('#facultyList');
+        if (!state.faculties.length) {
+          list.innerHTML = '<div class="muted text-sm">Fakultetlar yo‘q.</div>';
+          return;
+        }
+        list.innerHTML = state.faculties.map((f) => `
+          <div class="glass rounded-xl px-3 py-3 mb-2 flex items-center justify-between gap-2">
+            <div class="font-semibold">${esc(f)}</div>
+            <div class="flex gap-2">
+              <button class="renFac glass rounded-lg px-3 py-1 text-xs font-bold" data-name="${esc(f)}">Tahrirlash</button>
+              <button class="delFac glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-name="${esc(f)}">O‘chirish</button>
+            </div>
+          </div>
+        `).join('');
+
+        $$('.renFac').forEach((btn) => {
+          btn.onclick = async () => {
+            const oldFaculty = btn.dataset.name || '';
+            const newFaculty = prompt('Yangi fakultet nomi:', oldFaculty);
+            if (!newFaculty || newFaculty.trim() === oldFaculty) return;
+            const { res, j } = await api('/api/organizer/catalog/faculties', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ university: state.activeUniversity, oldFaculty, newFaculty: newFaculty.trim() })
+            });
+            if (!res.ok) return toast(j?.error || 'Tahrirlanmadi', 'error');
+            await loadFacultiesCache();
+            draw();
+            toast('Yangilandi', 'success');
+          };
+        });
+
+        $$('.delFac').forEach((btn) => {
+          btn.onclick = async () => {
+            const faculty = btn.dataset.name || '';
+            if (!confirm(`"${faculty}" fakultetini o‘chirasizmi?`)) return;
+            const { res, j } = await api('/api/organizer/catalog/faculties', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ university: state.activeUniversity, faculty })
+            });
+            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            await loadFacultiesCache();
+            draw();
+            toast('O‘chirildi', 'success');
+          };
+        });
+      };
+
+      $('#addFacultyBtn').onclick = async () => {
+        const faculty = $('#newFaculty').value.trim();
+        if (!faculty) return toast('Fakultet nomini kiriting', 'error');
+        const { res, j } = await api('/api/organizer/catalog/faculties', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ university: state.activeUniversity, faculty })
+        });
+        if (!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        $('#newFaculty').value = '';
+        await loadFacultiesCache();
+        draw();
+        toast('Qo‘shildi', 'success');
+      };
+
+      draw();
+    }
+
+    async function renderStudyTypes() {
+      const panel = $('#panel');
+      panel.innerHTML = '<div class="muted text-sm">Yuklanmoqda...</div>';
+      const faculty = String(state.activeFaculty || '').trim();
+      if (!faculty) {
+        panel.innerHTML = '<div class="text-rose-300 text-sm">Fakultet scope topilmadi.</div>';
+        return;
+      }
+
+      panel.innerHTML = `
+        <div class="text-xs muted mb-3">Fakultet: <span class="font-extrabold">${esc(faculty)}</span></div>
+        <div class="grid lg:grid-cols-4 gap-3 mb-4">
+          <input id="stNameCreate" class="field rounded-xl px-3 py-2 text-sm" placeholder="Masalan: Kunduzgi" />
+          <button id="stAddBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">O‘quv tur qo‘shish</button>
+          <input id="stSearch" class="field rounded-xl px-3 py-2 text-sm" placeholder="Qidirish..." />
+          <button id="stRefreshBtn" class="glass rounded-xl px-4 py-2 text-sm font-bold">Yangilash</button>
+        </div>
+        <div id="stList" class="muted text-sm">Yuklanmoqda...</div>
+      `;
+
+      const loadList = async () => {
+        const q = $('#stSearch').value.trim();
+        const { res, j } = await api(buildUrl('/api/organizer/catalog/study-types', { q }));
+        const listEl = $('#stList');
+        if (!res.ok) {
+          listEl.innerHTML = `<div class="text-rose-300 text-sm">${esc(j?.error || 'Xatolik')}</div>`;
+          return;
+        }
+        const list = Array.isArray(j.studyTypes) ? j.studyTypes : [];
+        if (!list.length) {
+          listEl.innerHTML = '<div class="muted text-sm">O‘quv turlari topilmadi.</div>';
+          return;
+        }
+
+        listEl.innerHTML = list.map((item) => `
+          <div class="glass rounded-xl p-3 mb-2 flex items-center justify-between gap-2">
+            <div class="font-semibold">${esc(item.name || '-')}</div>
+            <div class="flex gap-2">
+              <button class="stEdit glass rounded-lg px-3 py-1 text-xs font-bold" data-id="${esc(item._id)}" data-name="${esc(item.name || '')}">Tahrirlash</button>
+              <button class="stDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(item._id)}">O‘chirish</button>
+            </div>
+          </div>
+        `).join('');
+
+        $$('.stEdit').forEach((btn) => {
+          btn.onclick = async () => {
+            const id = btn.dataset.id || '';
+            const oldName = btn.dataset.name || '';
+            const name = prompt('O‘quv turi nomi:', oldName);
+            if (!name || name.trim() === oldName) return;
+            const { res, j } = await api('/api/organizer/catalog/study-types/' + encodeURIComponent(id), {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ university: state.activeUniversity, name: name.trim() })
+            });
+            if (!res.ok) return toast(j?.error || 'Tahrirlanmadi', 'error');
+            await loadList();
+            toast('Yangilandi', 'success');
+          };
+        });
+
+        $$('.stDel').forEach((btn) => {
+          btn.onclick = async () => {
+            const id = btn.dataset.id || '';
+            if (!confirm('O‘quv turini o‘chirasizmi? Shu turdagi o‘quv guruhlar ham o‘chadi.')) return;
+            const { res, j } = await api(buildUrl('/api/organizer/catalog/study-types/' + encodeURIComponent(id)), { method: 'DELETE' });
+            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            await loadList();
+            toast('O‘chirildi', 'success');
+          };
+        });
+      };
+
+      $('#stAddBtn').onclick = async () => {
+        const name = $('#stNameCreate').value.trim();
+        if (!name) return toast('O‘quv turi nomini kiriting', 'error');
+        const { res, j } = await api('/api/organizer/catalog/study-types', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ university: state.activeUniversity, name })
+        });
+        if (!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        $('#stNameCreate').value = '';
+        await loadList();
+        toast('Qo‘shildi', 'success');
+      };
+
+      $('#stRefreshBtn').onclick = loadList;
+      $('#stSearch').oninput = () => {
+        clearTimeout(renderStudyTypes._timer);
+        renderStudyTypes._timer = setTimeout(loadList, 180);
+      };
+
+      await loadList();
+    }
+
+    async function renderStudyGroups() {
+      const panel = $('#panel');
+      panel.innerHTML = '<div class="muted text-sm">Yuklanmoqda...</div>';
+      const faculty = String(state.activeFaculty || '').trim();
+      if (!faculty) {
+        panel.innerHTML = '<div class="text-rose-300 text-sm">Fakultet scope topilmadi.</div>';
+        return;
+      }
+
+      panel.innerHTML = `
+        <div class="text-xs muted mb-3">Fakultet: <span class="font-extrabold">${esc(faculty)}</span></div>
+        <div class="grid lg:grid-cols-4 gap-3 mb-4">
+          <select id="sgTypeCreate" class="field rounded-xl px-3 py-2 text-sm" disabled>
+            <option value="">Yuklanmoqda...</option>
+          </select>
+          <input id="sgNameCreate" class="field rounded-xl px-3 py-2 text-sm" placeholder="Masalan: MMT-520-25" />
+          <button id="sgAddBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">O‘quv guruh qo‘shish</button>
+          <button id="sgRefreshBtn" class="glass rounded-xl px-4 py-2 text-sm font-bold">Yangilash</button>
+        </div>
+        <div class="grid lg:grid-cols-3 gap-3 mb-4">
+          <select id="sgTypeFilter" class="field rounded-xl px-3 py-2 text-sm" disabled>
+            <option value="">Barcha o‘quv turlari</option>
+          </select>
+          <input id="sgSearch" class="field rounded-xl px-3 py-2 text-sm" placeholder="Qidirish..." />
+          <div class="text-xs muted flex items-center">Filtr faqat biriktirilgan fakultetga qo‘llanadi.</div>
+        </div>
+        <div id="sgList" class="muted text-sm">Yuklanmoqda...</div>
+      `;
+
+      const loadTypeOptions = async () => {
+        const createSel = $('#sgTypeCreate');
+        const filterSel = $('#sgTypeFilter');
+        createSel.innerHTML = '<option value="">Yuklanmoqda...</option>';
+        filterSel.innerHTML = '<option value="">Barcha o‘quv turlari</option>';
+        createSel.disabled = true;
+        filterSel.disabled = true;
+        const { res, j } = await api(buildUrl('/api/organizer/catalog/study-types'));
+        if (!res.ok) {
+          createSel.innerHTML = '<option value="">Topilmadi</option>';
+          return [];
+        }
+        const list = Array.isArray(j.studyTypes) ? j.studyTypes : [];
+        createSel.innerHTML = '<option value="">O‘quv turini tanlang</option>';
+        filterSel.innerHTML = '<option value="">Barcha o‘quv turlari</option>';
+        list.forEach((item) => {
+          const name = String(item?.name || '').trim();
+          if (!name) return;
+          const opt1 = document.createElement('option');
+          opt1.value = name;
+          opt1.textContent = name;
+          createSel.appendChild(opt1);
+          const opt2 = document.createElement('option');
+          opt2.value = name;
+          opt2.textContent = name;
+          filterSel.appendChild(opt2);
+        });
+        createSel.disabled = list.length === 0;
+        filterSel.disabled = list.length === 0;
+        if (list.length) createSel.value = String(list[0].name || '').trim();
+        return list;
+      };
+
+      const loadList = async () => {
+        const studyType = $('#sgTypeFilter').value.trim();
+        const q = $('#sgSearch').value.trim();
+        const { res, j } = await api(buildUrl('/api/organizer/catalog/study-groups', { studyType, q }));
+        const listEl = $('#sgList');
+        if (!res.ok) {
+          listEl.innerHTML = `<div class="text-rose-300 text-sm">${esc(j?.error || 'Xatolik')}</div>`;
+          return;
+        }
+        const list = Array.isArray(j.studyGroups) ? j.studyGroups : [];
+        if (!list.length) {
+          listEl.innerHTML = '<div class="muted text-sm">O‘quv guruhlar topilmadi.</div>';
+          return;
+        }
+        listEl.innerHTML = list.map((g) => `
+          <div class="glass rounded-xl p-3 mb-2 flex items-center justify-between gap-2">
+            <div>
+              <div class="font-semibold">${esc(g.name || '-')}</div>
+              <div class="text-xs muted">${esc(g.faculty || '-')} • ${esc(g.studyType || '-')}</div>
+            </div>
+            <div class="flex gap-2">
+              <button class="sgEdit glass rounded-lg px-3 py-1 text-xs font-bold"
+                data-id="${esc(g._id)}"
+                data-name="${esc(g.name || '')}"
+                data-faculty="${esc(g.faculty || '')}"
+                data-study-type="${esc(g.studyType || '')}">Tahrirlash</button>
+              <button class="sgDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(g._id)}">O‘chirish</button>
+            </div>
+          </div>
+        `).join('');
+
+        $$('.sgEdit').forEach((btn) => {
+          btn.onclick = async () => {
+            const id = btn.dataset.id || '';
+            const oldName = btn.dataset.name || '';
+            const oldStudyType = btn.dataset.studyType || '';
+            const name = prompt('O‘quv guruh nomi:', oldName);
+            if (!name) return;
+            const studyType = prompt('O‘quv turi:', oldStudyType) || oldStudyType;
+            const { res, j } = await api('/api/organizer/catalog/study-groups/' + encodeURIComponent(id), {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ university: state.activeUniversity, studyType, name: name.trim() })
+            });
+            if (!res.ok) return toast(j?.error || 'Tahrirlanmadi', 'error');
+            await loadList();
+            toast('Yangilandi', 'success');
+          };
+        });
+
+        $$('.sgDel').forEach((btn) => {
+          btn.onclick = async () => {
+            const id = btn.dataset.id || '';
+            if (!confirm('O‘quv guruhni o‘chirasizmi?')) return;
+            const { res, j } = await api(buildUrl('/api/organizer/catalog/study-groups/' + encodeURIComponent(id)), { method: 'DELETE' });
+            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            await loadList();
+            toast('O‘chirildi', 'success');
+          };
+        });
+      };
+
+      $('#sgAddBtn').onclick = async () => {
+        const studyType = $('#sgTypeCreate').value.trim();
+        const name = $('#sgNameCreate').value.trim();
+        if (!studyType || !name) return toast('O‘quv turi va nomni kiriting', 'error');
+        const { res, j } = await api('/api/organizer/catalog/study-groups', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ university: state.activeUniversity, studyType, name })
+        });
+        if (!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        $('#sgNameCreate').value = '';
+        await loadList();
+        toast('Qo‘shildi', 'success');
+      };
+
+      $('#sgRefreshBtn').onclick = loadList;
+      $('#sgTypeFilter').onchange = loadList;
+      $('#sgSearch').oninput = () => {
+        clearTimeout(renderStudyGroups._timer);
+        renderStudyGroups._timer = setTimeout(loadList, 180);
+      };
+
+      await loadTypeOptions().catch(() => null);
+      await loadList();
+    }
+
+    async function renderPrograms() {
+      const panel = $('#panel');
+      panel.innerHTML = '<div class="muted text-sm">Yuklanmoqda...</div>';
+      const faculty = String(state.activeFaculty || '').trim();
+      if (!faculty) {
+        panel.innerHTML = '<div class="text-rose-300 text-sm">Fakultet scope topilmadi.</div>';
+        return;
+      }
+
+      panel.innerHTML = `
+        <div class="text-xs muted mb-3">Fakultet: <span class="font-extrabold">${esc(faculty)}</span></div>
+        <div class="grid lg:grid-cols-3 gap-3 mb-4">
+          <input id="programCode" class="field rounded-xl px-3 py-2 text-sm" placeholder="Kod (ixtiyoriy)" />
+          <input id="programName" class="field rounded-xl px-3 py-2 text-sm" placeholder="Yo‘nalish nomi" />
+          <button id="addProgramBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">Qo‘shish</button>
+        </div>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <input id="programSearch" class="field rounded-xl px-3 py-2 text-sm w-full sm:w-80" placeholder="Qidirish..." />
+          <button id="refreshProgramsBtn" class="glass rounded-xl px-4 py-2 text-sm font-bold">Yangilash</button>
+        </div>
+        <div id="programList" class="muted text-sm">Yuklanmoqda...</div>
+      `;
+
+      const loadList = async () => {
+        const q = $('#programSearch').value.trim();
+        const { res, j } = await api(buildUrl('/api/organizer/catalog/programs', { q }));
+        const listEl = $('#programList');
+        if (!res.ok) {
+          listEl.innerHTML = `<div class="text-rose-300 text-sm">${esc(j?.error || 'Xatolik')}</div>`;
+          return;
+        }
+        const list = Array.isArray(j.programs) ? j.programs : [];
+        if (!list.length) {
+          listEl.innerHTML = '<div class="muted text-sm">Yo‘nalishlar topilmadi.</div>';
+          return;
+        }
+        listEl.innerHTML = list.map((p) => `
+          <div class="glass rounded-xl p-3 mb-2 flex items-center justify-between gap-2">
+            <div>
+              <div class="font-semibold">${esc(p.name || '-')}</div>
+              <div class="text-xs muted">${esc(p.code || 'kod yo‘q')} • ${esc(p.faculty || '-')}</div>
+            </div>
+            <div class="flex gap-2">
+              <button class="programEdit glass rounded-lg px-3 py-1 text-xs font-bold" data-id="${esc(p._id)}" data-name="${esc(p.name || '')}" data-code="${esc(p.code || '')}" data-faculty="${esc(p.faculty || '')}">Tahrirlash</button>
+              <button class="programDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(p._id)}">O‘chirish</button>
+            </div>
+          </div>
+        `).join('');
+
+        $$('.programDel').forEach((btn) => {
+          btn.onclick = async () => {
+            if (!confirm('Yo‘nalishni o‘chirasizmi?')) return;
+            const { res, j } = await api('/api/organizer/catalog/programs/' + encodeURIComponent(btn.dataset.id), { method: 'DELETE' });
+            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            await loadList();
+            toast('O‘chirildi', 'success');
+          };
+        });
+
+        $$('.programEdit').forEach((btn) => {
+          btn.onclick = async () => {
+            const id = btn.dataset.id || '';
+            const oldName = btn.dataset.name || '';
+            const oldCode = btn.dataset.code || '';
+            const name = prompt('Yo‘nalish nomi:', oldName);
+            if (!name) return;
+            const code = prompt('Kod (ixtiyoriy):', oldCode) ?? oldCode;
+            const { res, j } = await api('/api/organizer/catalog/programs/' + encodeURIComponent(id), {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ university: state.activeUniversity, code, name })
+            });
+            if (!res.ok) return toast(j?.error || 'Tahrirlanmadi', 'error');
+            await loadList();
+            toast('Yangilandi', 'success');
+          };
+        });
+      };
+
+      $('#addProgramBtn').onclick = async () => {
+        const code = $('#programCode').value.trim();
+        const name = $('#programName').value.trim();
+        if (!name) return toast('Yo‘nalish nomini kiriting', 'error');
+        const { res, j } = await api('/api/organizer/catalog/programs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ university: state.activeUniversity, code, name })
+        });
+        if (!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        $('#programCode').value = '';
+        $('#programName').value = '';
+        await loadList();
+        toast('Qo‘shildi', 'success');
+      };
+
+      $('#refreshProgramsBtn').onclick = loadList;
+      $('#programSearch').oninput = () => {
+        clearTimeout(renderPrograms._timer);
+        renderPrograms._timer = setTimeout(loadList, 180);
+      };
+
+      await loadList();
+    }
+
+    async function renderGroups() {
+      const panel = $('#panel');
+      panel.innerHTML = `
+        <div class="flex flex-wrap gap-2 mb-4">
+          <input id="groupSearch" class="field rounded-xl px-3 py-2 text-sm w-full sm:w-80" placeholder="Guruh qidirish..." />
+          <button id="groupRefreshBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">Yangilash</button>
+        </div>
+        <div id="groupList" class="muted text-sm">Yuklanmoqda...</div>
+      `;
+
+      const loadList = async () => {
+        const q = $('#groupSearch').value.trim();
+        const { res, j } = await api(buildUrl('/api/organizer/groups', { q, page: 1, limit: 100 }));
+        const listEl = $('#groupList');
+        if (!res.ok) {
+          listEl.innerHTML = `<div class="text-rose-300 text-sm">${esc(j?.error || 'Xatolik')}</div>`;
+          return;
+        }
+        const list = Array.isArray(j.groups) ? j.groups : [];
+        if (!list.length) {
+          listEl.innerHTML = '<div class="muted text-sm">Guruh topilmadi.</div>';
+          return;
+        }
+        listEl.innerHTML = list.map((g) => `
+          <div class="glass rounded-xl p-3 mb-2 flex items-center justify-between gap-2">
+            <div>
+              <div class="font-semibold">${esc(g.name || '-')}</div>
+              <div class="text-xs muted">@${esc(g.username || '-')} • ${esc(g.faculty || '-')} • ${esc(g.studyType || '-')} • ${esc(g.studyGroup || '-')}</div>
+            </div>
+            <button class="groupDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(g._id)}">O‘chirish</button>
+          </div>
+        `).join('');
+        $$('.groupDel').forEach((btn) => {
+          btn.onclick = async () => {
+            if (!confirm('Guruhni o‘chirasizmi?')) return;
+            const { res, j } = await api(buildUrl('/api/organizer/groups/' + encodeURIComponent(btn.dataset.id)), { method: 'DELETE' });
+            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            await loadList();
+            toast('O‘chirildi', 'success');
+          };
+        });
+      };
+
+      $('#groupRefreshBtn').onclick = loadList;
+      $('#groupSearch').oninput = () => {
+        clearTimeout(renderGroups._timer);
+        renderGroups._timer = setTimeout(loadList, 180);
+      };
+      await loadList();
+    }
+
+    async function renderChannels() {
+      const panel = $('#panel');
+      panel.innerHTML = `
+        <div class="flex flex-wrap gap-2 mb-4">
+          <input id="channelSearch" class="field rounded-xl px-3 py-2 text-sm w-full sm:w-80" placeholder="Kanal qidirish..." />
+          <button id="channelRefreshBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">Yangilash</button>
+        </div>
+        <div id="channelList" class="muted text-sm">Yuklanmoqda...</div>
+      `;
+
+      const loadList = async () => {
+        const q = $('#channelSearch').value.trim();
+        const { res, j } = await api(buildUrl('/api/organizer/channels', { q, page: 1, limit: 100 }));
+        const listEl = $('#channelList');
+        if (!res.ok) {
+          listEl.innerHTML = `<div class="text-rose-300 text-sm">${esc(j?.error || 'Xatolik')}</div>`;
+          return;
+        }
+        const list = Array.isArray(j.channels) ? j.channels : [];
+        if (!list.length) {
+          listEl.innerHTML = '<div class="muted text-sm">Kanal topilmadi.</div>';
+          return;
+        }
+        listEl.innerHTML = list.map((c) => `
+          <div class="glass rounded-xl p-3 mb-2 flex items-center justify-between gap-2">
+            <div>
+              <div class="font-semibold">${esc(c.name || '-')}</div>
+              <div class="text-xs muted">@${esc(c.username || '-')} • ${esc(c.category || '-')} • ${esc(c.university || '-')}</div>
+            </div>
+            <button class="channelDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(c._id)}">O‘chirish</button>
+          </div>
+        `).join('');
+
+        $$('.channelDel').forEach((btn) => {
+          btn.onclick = async () => {
+            if (!confirm('Kanalni o‘chirasizmi?')) return;
+            const { res, j } = await api(buildUrl('/api/organizer/channels/' + encodeURIComponent(btn.dataset.id)), { method: 'DELETE' });
+            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            await loadList();
+            toast('O‘chirildi', 'success');
+          };
+        });
+      };
+
+      $('#channelRefreshBtn').onclick = loadList;
+      $('#channelSearch').oninput = () => {
+        clearTimeout(renderChannels._timer);
+        renderChannels._timer = setTimeout(loadList, 180);
+      };
+      await loadList();
+    }
+
+    async function init() {
+      const ok = await ensureAuth();
+      if (!ok) return;
+      await loadScope();
+      if (isScopeAdmin() && !state.activeFaculty) {
+        await loadFacultiesCache().catch(() => null);
+      }
+
+      $$('.tab').forEach((btn) => {
+        btn.onclick = () => setTab(btn.dataset.tab);
+      });
+
+      $('#scopeApplyBtn').onclick = async () => {
+        const requested = $('#scopeInput').value.trim();
+        if (!requested) return toast('Universitet nomini kiriting', 'error');
+        try {
+          await loadScope(requested);
+          if (isScopeAdmin() && !state.activeFaculty) {
+            await loadFacultiesCache().catch(() => null);
+          }
+          await renderCurrent();
+          toast('Scope yangilandi', 'success');
+        } catch (e) {
+          toast(e.message || 'Scope o‘zgarmadi', 'error');
+        }
+      };
+
+      $('#logoutBtn').onclick = async () => {
+        try { await fetch('/api/logout', { method: 'POST', headers: authHeaders() }); } catch (_) {}
+        localStorage.removeItem('token');
+        window.location.href = '/login.html';
+      };
+
+      await renderCurrent();
+    }
+
+    init().catch((e) => {
+      console.error(e);
+      toast('Organizer panel yuklanmadi', 'error');
+    });
+  </script>
+  <script src="/ui-actions-menu.js" defer></script>
+</body>
+</html>
+

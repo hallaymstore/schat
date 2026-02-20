@@ -364,19 +364,23 @@
     opacity:.85;
   }
 
-  /* Upload overlay */
+  /* Upload progress widget (corner, non-blocking) */
   #uploadOverlay{
-    background: rgba(0,0,0,.45);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    position: fixed;
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    inset: auto;
+    width: min(360px, 92vw);
+    z-index: 99998;
+    pointer-events: none;
   }
   #uploadOverlayCard{
-    background: rgba(0,0,0,.38);
+    background: rgba(0,0,0,.72);
     border: 1px solid rgba(255,255,255,.18);
-    box-shadow: 0 30px 110px rgba(0,0,0,.55);
-    backdrop-filter: blur(26px);
-    -webkit-backdrop-filter: blur(26px);
-    border-radius: 24px;
+    box-shadow: 0 18px 45px rgba(0,0,0,.45);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-radius: 16px;
   }
   #uploadRing{
     position: relative;
@@ -395,8 +399,158 @@
   #uploadBar{
     transition: width .15s linear;
   }
+  #groupCallOverlay{
+    overflow: hidden;
+  }
+  #groupCallOverlayInner{
+    height: 100dvh;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #groupCallTopBar{
+    position: relative;
+    z-index: 80;
+    flex: 0 0 auto;
+  }
+  #groupCallVideoLayout{
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  }
+  #teacherStageWrap{
+    position: relative;
+    flex: 0 0 34%;
+    max-height: 34%;
+    min-height: 150px;
+    z-index: 30;
+    padding-bottom: 8px;
+    background: rgba(0,0,0,.24);
+    backdrop-filter: blur(6px);
+  }
+  #teacherStageWrap > .w-full{
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  #teacherStageWrap > .w-full > .p-2{
+    flex: 0 0 auto;
+  }
+  #teacherStage{
+    flex: 1 1 auto;
+    height: auto;
+    aspect-ratio: auto !important;
+    min-height: 0;
+  }
+  #teacherStage > .video-tile,
+  #teacherStage video{
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+  }
+  #studentsScrollArea{
+    margin-top: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    padding-right: 4px;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable both-edges;
+  }
+  #studentsGrid{
+    align-content: start;
+    padding-bottom: 12px;
+  }
+  #groupCallVideoLayout > #teacherStageWrap,
+  #groupCallVideoLayout > #studentsScrollArea{
+    min-height: 0;
+  }
+  @media (min-width: 1024px){
+    #groupCallVideoLayout{
+      display: grid;
+      grid-template-columns: minmax(320px, 40vw) minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
+      min-height: 0;
+    }
+    #teacherStageWrap{
+      flex: none;
+      height: 100%;
+      max-height: none;
+      min-height: 0;
+      margin: 0;
+      padding-bottom: 0;
+      top: auto;
+    }
+    #studentsScrollArea{
+      flex: none;
+      height: 100%;
+      max-height: 100%;
+      min-height: 0;
+      margin-top: 0;
+      padding-right: 6px;
+    }
+    #studentsGrid{
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+  #attendancePanel{
+    z-index: 95 !important;
+  }
+  #teacherStageWrap:fullscreen,
+  #teacherStageWrap:-webkit-full-screen{
+    max-height: none !important;
+    min-height: 0 !important;
+    width: 100vw;
+    height: 100dvh;
+    background: #000;
+    padding: 12px;
+  }
+  #teacherStageWrap:fullscreen #teacherStage,
+  #teacherStageWrap:-webkit-full-screen #teacherStage{
+    height: calc(100dvh - 24px);
+  }
+  #teacherStageWrap:fullscreen .rounded-2xl,
+  #teacherStageWrap:-webkit-full-screen .rounded-2xl{
+    height: 100%;
+  }
+  .msg-actions{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    margin-top:6px;
+    font-size:12px;
+    color:rgba(255,255,255,.8);
+  }
+  .msg-actions button{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.08);
+    border-radius:10px;
+    padding:3px 8px;
+    line-height:1;
+  }
+  .msg-actions .reaction-chip{
+    background: rgba(0,0,0,.25);
+  }
   @media(max-width:640px){
-    #uploadOverlayCard{ padding: 18px !important; }
+    #uploadOverlay{ right: 8px; left: 8px; width: auto; }
+    #uploadOverlayCard{ padding: 12px !important; }
+    #groupCallTopBar{ padding: 10px !important; }
+    #groupCallVideoLayout{ padding: 8px !important; }
+    #teacherStageWrap{ flex-basis: 35%; max-height: 35%; min-height: 120px; padding-bottom: 6px; }
+    #teacherStage{ height: 100%; min-height: 0; }
+    #studentsScrollArea{ margin-top: 6px; padding-right: 2px; }
   }
 </style>
 
@@ -468,6 +622,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 }
 
 </style>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 
 <script>
@@ -539,15 +694,15 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 <body class="bg-gray-50 min-h-screen">
 
 <!-- Upload Progress Overlay (Teacher Recording) -->
-<div id="uploadOverlay" class="fixed inset-0 hidden items-center justify-center z-[99998]">
-  <div id="uploadRing" class="w-[92%] max-w-md">
-    <div id="uploadOverlayCard" class="p-8 text-center">
-      <div class="hallaym-title text-xl mb-4">Video yuklanmoqda...</div>
+<div id="uploadOverlay" class="hidden z-[99998]">
+  <div id="uploadRing">
+    <div id="uploadOverlayCard" class="p-4 text-left">
+      <div class="hallaym-title text-sm mb-2">Video yuklanmoqda...</div>
       <div class="w-full bg-white/10 rounded-full h-3 overflow-hidden">
         <div id="uploadBar" class="h-full bg-gradient-to-r from-cyan-300 to-emerald-300" style="width:0%"></div>
       </div>
-      <div id="uploadPercent" class="mt-3 text-white/85 font-extrabold">0%</div>
-      <div id="uploadHint" class="mt-1 text-white/55 text-xs">Internet sekin bo‘lsa ham, tugagach avtomatik saqlanadi.</div>
+      <div id="uploadPercent" class="mt-2 text-white/85 font-extrabold text-sm">0%</div>
+      <div id="uploadHint" class="mt-1 text-white/55 text-[11px]">Chat ishlayveradi, yuklash fon rejimida davom etadi.</div>
     </div>
   </div>
 </div>
@@ -675,21 +830,36 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 </div>
             </div>
             
+            <!-- Membership Gate (first-time users) -->
+            <div id="joinPrompt" class="hidden border-t border-white/15 p-4 hallaym-surface">
+                <div class="flex items-center gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-sm font-extrabold text-white">Bu guruhga qo‘shilmagansiz</div>
+                        <div class="text-xs text-white/70">Xabar yozish va darsga kirish uchun avval guruhga qo‘shiling.</div>
+                    </div>
+                    <button id="joinGroupPrimary" onclick="joinGroup()" class="btn-primary text-white px-4 py-2 rounded-full font-extrabold hover:opacity-90 transition whitespace-nowrap">
+                        <i class="fas fa-user-plus mr-2"></i>Join Group
+                    </button>
+                </div>
+            </div>
+
             <!-- Message Input -->
             <div id="chatComposer" class="border-t border-white/15 p-4 hallaym-surface">
                 <div class="composer-row">
                     <button onclick="attachMedia()" class="p-2 bg-white/10 hover:bg-white/15 border border-white/15 rounded-full">
                         <i class="fas fa-paperclip text-white/80"></i>
                     </button>
-                    <input type="text" id="messageInput" 
+                    <input type="text" id="messageInput"
                            class="flex-1 field rounded-full px-4 py-2 focus:outline-none"
-                           placeholder="Type a message to the group..." 
+                           placeholder="Type a message to the group..."
                            onkeyup="handleEnter(event)">
-                    <button onclick="sendGroupMessage()" 
+                    <button id="sendMessageBtn" onclick="sendGroupMessage()"
                             class="btn-primary text-white px-4 py-2 rounded-full font-extrabold hover:opacity-90 transition whitespace-nowrap">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
+                <input id="groupFileInput" type="file" class="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" />
+                <div class="mt-2 text-[11px] text-white/60">Rasm/video/audio/file (max 5MB)</div>
             </div>
         </div>
         
@@ -789,6 +959,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 
         let currentGroup = null;
         let groupId = null;
+        let groupMessages = [];
         const __urlParams = new URLSearchParams(window.location.search);
         const OBSERVER_MODE = (__urlParams.get('observer') === '1' || __urlParams.get('asObserver') === '1');
         const AUTO_JOIN_CALL = (__urlParams.get('autoJoin') === '1');
@@ -802,6 +973,14 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             await loadGroupInfo();
             setupSocket();
             loadGroupMessages();
+            const fi = document.getElementById('groupFileInput');
+            if (fi) {
+                fi.addEventListener('change', async (e) => {
+                    const f = e.target?.files?.[0];
+                    if (f) await uploadGroupFile(f);
+                    e.target.value = '';
+                });
+            }
         });
         
         // Get group ID from URL
@@ -952,6 +1131,27 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             `).join('');
         }
         
+        function updateMembershipGate(isMember) {
+            const joinPrompt = document.getElementById('joinPrompt');
+            const chatComposer = document.getElementById('chatComposer');
+            const messageInput = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendMessageBtn');
+
+            if (!joinPrompt || !chatComposer) return;
+
+            if (isMember) {
+                joinPrompt.classList.add('hidden');
+                chatComposer.classList.remove('hidden');
+                if (messageInput) messageInput.disabled = false;
+                if (sendBtn) sendBtn.disabled = false;
+                return;
+            }
+
+            joinPrompt.classList.remove('hidden');
+            chatComposer.classList.add('hidden');
+            if (messageInput) messageInput.disabled = true;
+            if (sendBtn) sendBtn.disabled = true;
+        }
         // Setup group actions based on user role
         function setupGroupActions(group) {
             const container = document.getElementById('groupActions');
@@ -980,11 +1180,10 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             const divider = `<div class="h-px bg-black/10 dark:bg-white/10"></div>`;
 
             if (!isMember) {
+                updateMembershipGate(false);
                 container.innerHTML = `
-                  <div class="hidden sm:flex items-center space-x-2">
-                    <button onclick="joinGroup()" class="gradient-bg text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition">
-                      <i class="fas fa-user-plus mr-2"></i> Join Group
-                    </button>
+                  <div class="hidden sm:block text-xs text-white/70 px-3 py-2 rounded-xl bg-white/10 border border-white/15">
+                    Guruhga qo‘shilsangiz, chat va call funksiyalari ochiladi.
                   </div>
                   ${mobileWrapOpen}
                     ${mobileItem('fas fa-user-plus','Join Group','joinGroup()')}
@@ -992,6 +1191,8 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 `;
                 return;
             }
+
+            updateMembershipGate(true);
 
             if (isCreator) {
                 container.innerHTML = `
@@ -1099,9 +1300,20 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             
             // Listen for new group messages
             socket.on('newGroupMessage', (message) => {
-                if (message.groupId === groupId) {
-                    addGroupMessageToUI(message);
-                }
+                if (String(message.groupId) !== String(groupId)) return;
+                upsertMessage(message, { scrollToBottom: true });
+            });
+            socket.on('groupMessageUpdated', (message) => {
+                if (String(message.groupId) !== String(groupId)) return;
+                upsertMessage(message);
+            });
+            socket.on('groupMessageDeleted', (payload) => {
+                if (String(payload?.groupId) !== String(groupId)) return;
+                removeMessageById(payload?._id);
+            });
+            socket.on('groupMessageReaction', (message) => {
+                if (String(message.groupId) !== String(groupId)) return;
+                upsertMessage(message);
             });
             
             // Listen for member updates
@@ -1125,7 +1337,8 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 const data = await response.json();
                 
                 if (data.success) {
-                    renderGroupMessages(data.messages);
+                    groupMessages = Array.isArray(data.messages) ? data.messages : [];
+                    renderGroupMessages(groupMessages);
                 }
             } catch (error) {
                 console.error('Failed to load messages:', error);
@@ -1140,41 +1353,114 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         }
     
 // Render group messages
+        function escapeHtml(v){
+            return String(v ?? '')
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#39;');
+        }
+        function escapeAttr(v){
+            return escapeHtml(v).replace(/`/g, '&#96;');
+        }
+        function myIdStr(){ return String(currentUser?._id || currentUser?.id || __MY_ID_FROM_TOKEN || ''); }
+        function isMine(msg){
+            return String(msg?.senderId?._id || msg?.senderId || '') === myIdStr();
+        }
+        function formatReactions(msg){
+            const rows = Array.isArray(msg?.reactions) ? msg.reactions : [];
+            if (!rows.length) return '';
+            return rows.map(r => {
+                const count = Array.isArray(r.users) ? r.users.length : 0;
+                if (!count) return '';
+                return `<button class="reaction-chip" onclick="toggleReaction('${escapeAttr(msg._id)}','${escapeAttr(r.emoji)}')">${escapeHtml(r.emoji)} ${count}</button>`;
+            }).join('');
+        }
+        function renderMedia(msg){
+            if (!msg?.mediaUrl) return '';
+            const u = escapeAttr(msg.mediaUrl);
+            const t = String(msg.mediaType || '');
+            if (t === 'image') return `<img src="${u}" class="max-w-full rounded-lg cursor-pointer" style="max-height:300px;" onclick="viewMedia('${u}')">`;
+            if (t === 'video') return `<video src="${u}" controls class="max-w-full rounded-lg" style="max-height:300px;"></video>`;
+            if (t === 'audio' || t === 'voice') return `<audio src="${u}" controls class="w-full"></audio>`;
+            return `<a href="${u}" target="_blank" rel="noopener" class="underline text-blue-200 break-all">${escapeHtml(msg.mediaName || 'Open file')}</a>`;
+        }
+        function renderMessageItem(msg){
+            const mine = isMine(msg);
+            const sid = String(msg?.senderId?._id || msg?.senderId || '');
+            const avatar = escapeAttr(msg?.senderId?.avatar || '');
+            const nick = escapeHtml(msg?.senderId?.nickname || 'User');
+            const text = escapeHtml(msg?.text || '');
+            const mediaHtml = renderMedia(msg);
+            const edited = msg?.editedAt ? `<span class="text-[10px] opacity-70">(edited)</span>` : '';
+            const ownerActions = mine ? `
+              <button onclick="editOwnMessage('${escapeAttr(msg._id)}')"><i class="fas fa-pen"></i> Edit</button>
+              <button onclick="deleteOwnMessage('${escapeAttr(msg._id)}')"><i class="fas fa-trash"></i> Delete</button>
+            ` : '';
+            return `
+              <div class="message" data-id="${escapeAttr(msg._id)}">
+                <div class="flex items-start space-x-2">
+                  <img src="${avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${escapeAttr(sid)}')" title="Profil">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center space-x-2 mb-1">
+                      <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${escapeAttr(sid)}')" title="Profil">${nick}</span>
+                      <span class="text-xs text-gray-500">${formatTime(msg.createdAt)}</span>
+                      ${edited}
+                    </div>
+                    <div class="message-bubble ${mine ? 'sent' : 'received'} p-3">
+                      ${mediaHtml ? `<div class="mb-2">${mediaHtml}</div>` : ''}
+                      ${text ? `<p>${text}</p>` : ''}
+                    </div>
+                    <div class="msg-actions">
+                      <button onclick="toggleReaction('${escapeAttr(msg._id)}','👍')">👍</button>
+                      <button onclick="toggleReaction('${escapeAttr(msg._id)}','❤️')">❤️</button>
+                      <button onclick="toggleReaction('${escapeAttr(msg._id)}','🔥')">🔥</button>
+                      ${formatReactions(msg)}
+                      ${ownerActions}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+        }
         function renderGroupMessages(messages) {
             const container = document.getElementById('messagesContainer');
             
             if (!messages || messages.length === 0) {
+                container.innerHTML = `
+                  <div class="text-center mt-20">
+                    <i class="fas fa-comments text-4xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-500">Group Chat</h3>
+                    <p class="text-gray-400">Start the conversation!</p>
+                  </div>
+                `;
                 return;
             }
             
-            container.innerHTML = messages.map(msg => `
-                <div class="message">
-                    <div class="flex items-start space-x-2">
-                        <img src="${msg.senderId?.avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${msg.senderId?._id}')" title="Profil">
-                        <div class="flex-1">
-                            <div class="flex items-center space-x-2 mb-1">
-                                <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${msg.senderId?._id}')" title="Profil">${msg.senderId?.nickname}</span>
-                                <span class="text-xs text-gray-500">${formatTime(msg.createdAt)}</span>
-                            </div>
-                            <div class="message-bubble ${msg.senderId?._id === currentUser._id ? 'sent' : 'received'} p-3">
-                                ${msg.mediaUrl ? `
-                                    <div class="mb-2">
-                                        ${msg.mediaType === 'image' ? 
-                                            `<img src="${msg.mediaUrl}" class="max-w-full rounded-lg cursor-pointer" 
-                                                 style="max-height: 300px;" onclick="viewMedia('${msg.mediaUrl}')">` :
-                                            `<video src="${msg.mediaUrl}" controls class="max-w-full rounded-lg" style="max-height: 300px;"></video>`
-                                        }
-                                    </div>
-                                ` : ''}
-                                <p>${msg.text}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+            container.innerHTML = messages.map(renderMessageItem).join('');
             
             // Scroll to bottom
             container.scrollTop = container.scrollHeight;
+        }
+        function upsertMessage(message, opts = {}) {
+            if (!message || !message._id) return;
+            const id = String(message._id);
+            const idx = groupMessages.findIndex(m => String(m._id) === id);
+            if (idx >= 0) groupMessages[idx] = message;
+            else groupMessages.push(message);
+            groupMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            renderGroupMessages(groupMessages);
+            if (opts.scrollToBottom) {
+                const container = document.getElementById('messagesContainer');
+                if (container) container.scrollTop = container.scrollHeight;
+            }
+        }
+        function removeMessageById(messageId) {
+            const id = String(messageId || '');
+            if (!id) return;
+            groupMessages = groupMessages.filter(m => String(m._id) !== id);
+            renderGroupMessages(groupMessages);
         }
         
         // Send group message
@@ -1201,58 +1487,86 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 const data = await response.json();
                 if (data.success) {
                     input.value = '';
-                    addGroupMessageToUI(data.message);
-                    
-                    // Emit via socket
-                    if (socket) {
-                        socket.emit('groupMessage', {
-                            groupId: groupId,
-                            text: text
-                        });
-                    }
+                    upsertMessage(data.message, { scrollToBottom: true });
                 }
             } catch (error) {
                 console.error('Failed to send message:', error);
             }
         }
-        
-        // Add group message to UI
-        function addGroupMessageToUI(message) {
-            const container = document.getElementById('messagesContainer');
-            
-            // If empty container
-            if (container.innerHTML.includes('Start the conversation')) {
-                container.innerHTML = '';
+        async function uploadGroupFile(file){
+            if (!file) return;
+            const maxBytes = 5 * 1024 * 1024;
+            if (file.size > maxBytes) {
+                notify('Fayl 5MB dan katta bo‘lmasligi kerak', 'warn');
+                return;
             }
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            messageDiv.innerHTML = `
-                <div class="flex items-start space-x-2">
-                    <img src="${message.senderId?.avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${message.senderId?._id}')" title="Profil">
-                    <div class="flex-1">
-                        <div class="flex items-center space-x-2 mb-1">
-                            <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${message.senderId?._id}')" title="Profil">${message.senderId?.nickname}</span>
-                            <span class="text-xs text-gray-500">${formatTime(message.createdAt)}</span>
-                        </div>
-                        <div class="message-bubble ${message.senderId?._id === currentUser._id ? 'sent' : 'received'} p-3">
-                            ${message.mediaUrl ? `
-                                <div class="mb-2">
-                                    ${message.mediaType === 'image' ? 
-                                        `<img src="${message.mediaUrl}" class="max-w-full rounded-lg cursor-pointer" 
-                                             style="max-height: 300px;" onclick="viewMedia('${message.mediaUrl}')">` :
-                                        `<video src="${message.mediaUrl}" controls class="max-w-full rounded-lg" style="max-height: 300px;"></video>`
-                                    }
-                                </div>
-                            ` : ''}
-                            <p>${message.text}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
+            try{
+                const fd = new FormData();
+                fd.append('file', file);
+                const token = localStorage.getItem('token') || '';
+                const res = await fetch(`/api/groups/${groupId}/messages/file`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: fd
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data?.error || 'Upload failed');
+                upsertMessage(data.message, { scrollToBottom: true });
+            }catch(e){
+                console.error('uploadGroupFile failed', e);
+                notify(e.message || 'Fayl yuborilmadi', 'err');
+            }
+        }
+        async function editOwnMessage(messageId){
+            const row = groupMessages.find(m => String(m._id) === String(messageId));
+            if (!row) return;
+            const next = prompt('Xabarni tahrirlang:', row.text || '');
+            if (next === null) return;
+            const text = String(next || '').trim();
+            if (!text) return notify('Bo‘sh xabarni saqlab bo‘lmaydi', 'warn');
+            try{
+                const token = localStorage.getItem('token') || '';
+                const res = await fetch(`/api/groups/${groupId}/messages/${messageId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+                    body: JSON.stringify({ text })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data?.error || 'Edit failed');
+                upsertMessage(data.message);
+            }catch(e){
+                notify(e.message || 'Tahrirlashda xatolik', 'err');
+            }
+        }
+        async function deleteOwnMessage(messageId){
+            if (!confirm('Xabarni o‘chirishni tasdiqlaysizmi?')) return;
+            try{
+                const token = localStorage.getItem('token') || '';
+                const res = await fetch(`/api/groups/${groupId}/messages/${messageId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization':`Bearer ${token}` }
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.success) throw new Error(data?.error || 'Delete failed');
+                removeMessageById(messageId);
+            }catch(e){
+                notify(e.message || 'O‘chirishda xatolik', 'err');
+            }
+        }
+        async function toggleReaction(messageId, emoji){
+            try{
+                const token = localStorage.getItem('token') || '';
+                const res = await fetch(`/api/groups/${groupId}/messages/${messageId}/reactions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+                    body: JSON.stringify({ emoji })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data?.error || 'Reaction failed');
+                upsertMessage(data.message);
+            }catch(e){
+                notify(e.message || 'Reaction xatosi', 'err');
+            }
         }
         
         // Join group
@@ -1268,6 +1582,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 if (data.success) {
                     alert('Successfully joined the group!');
                     loadGroupInfo(); // Reload group info
+                    loadGroupMessages();
                 } else {
                     alert(data.error || 'Failed to join group');
                 }
@@ -1358,7 +1673,10 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         
         // Attach media
         function attachMedia() {
-            alert('Media upload would be implemented');
+            const input = document.getElementById('groupFileInput');
+            if (!input) return;
+            input.value = '';
+            input.click();
         }
         
         // View media in modal
@@ -1825,17 +2143,21 @@ const video = tile.querySelector('video');
                             container.appendChild(tile);
                         }
                     }
-                    tile.style.height = '220px';
+                    tile.style.height = studentTileHeightPx() + 'px';
                 }
             }
 
             ensureStagePlaceholder();
         }
 
-        function removeVideoTile(userId) {
-            const tile = document.getElementById(`tile_${userId}`);
-            if (tile) tile.remove();
-            ensureStagePlaceholder();
+        function studentTileHeightPx() {
+            try {
+                const h = window.innerHeight || 800;
+                if (window.matchMedia('(max-width: 640px)').matches) return Math.max(104, Math.min(148, Math.round(h * 0.16)));
+                return Math.max(124, Math.min(182, Math.round(h * 0.19)));
+            } catch(_) {
+                return 140;
+            }
         }
 
         function renderGroupCallLayout() {
@@ -1962,7 +2284,7 @@ const video = tile.querySelector('video');
                 const uid = tile.id.replace('tile_', '');
                 if (stageUserId && String(uid) === String(stageUserId)) return;
                 if (!sGrid.contains(tile)) sGrid.appendChild(tile);
-                tile.style.height = '220px';
+                tile.style.height = studentTileHeightPx() + 'px';
             });
         }
 
@@ -1975,19 +2297,22 @@ const video = tile.querySelector('video');
             } catch(e) { return false; }
         }
 function updateGroupGridLayout() {
-            const grid = document.getElementById('groupVideosGrid');
+            const grid = document.getElementById('studentsGrid');
             if (!grid) return;
             const count = grid.children.length || 0;
 
             // Simple responsive columns based on participant count
             let cols = 1;
-            if (count <= 1) cols = 1;
-            else if (count === 2) cols = 2;
-            else if (count <= 4) cols = 2;
-            else if (count <= 6) cols = 3;
-            else if (count <= 9) cols = 3;
-            else cols = 4;
-
+            if (window.matchMedia('(min-width: 1024px)').matches) {
+                cols = (count <= 1) ? 1 : 2;
+            } else if (window.matchMedia('(max-width: 640px)').matches) {
+                cols = (count <= 1) ? 1 : 2;
+            } else {
+                if (count <= 1) cols = 1;
+                else if (count <= 4) cols = 2;
+                else if (count <= 8) cols = 3;
+                else cols = 3;
+            }
             grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
         }
 
@@ -1995,6 +2320,8 @@ function removeVideoTile(userId) {
             const tile = document.getElementById(`tile_${userId}`);
             if (tile) tile.remove();
             updateGroupGridLayout();
+            try { renderGroupCallLayout(); } catch(_) {}
+            ensureStagePlaceholder();
         }
 
         async function createPeer(remoteUserId) {
@@ -2231,7 +2558,7 @@ function removeVideoTile(userId) {
                         ctx.fillText("Video yo'q", 20, 40);
                     }
 
-                    const vids = Array.from(document.querySelectorAll('#groupVideosGrid video'))
+                    const vids = Array.from(document.querySelectorAll('#studentsGrid video'))
                         .filter(v => v && v !== mainEl && v.readyState >= 2);
 
                     const areaH = H - mainH;
@@ -2273,7 +2600,6 @@ function removeVideoTile(userId) {
             const isMeTeacher = String(currentUser?.role || '').toLowerCase() === 'teacher';
             const hasLesson = !!groupCall.lessonId;
             const isVideo = (groupCall.callType !== 'audio');
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
             // Desktop buttons
             const btnScreen = document.getElementById('btnScreen');
@@ -2296,7 +2622,7 @@ function removeVideoTile(userId) {
             if (mRec) mRec.classList.toggle('hidden', !showTeacher);
             if (mAtt) mAtt.classList.toggle('hidden', !showTeacher);
 
-            const showSwitch = (isVideo && isMobile && groupCall.active);
+            const showSwitch = (isVideo && groupCall.active && !OBSERVER_MODE);
             if (btnSw) btnSw.classList.toggle('hidden', !showSwitch);
             if (mSw) mSw.classList.toggle('hidden', !showSwitch);
         
@@ -2955,13 +3281,13 @@ if (typeof MediaRecorder === 'undefined') {
                 try{
                     if (bar) bar.style.width = '0%';
                     if (pct) pct.textContent = '0%';
-                    if (overlay) { overlay.classList.remove('hidden'); overlay.classList.add('flex'); }
+                    if (overlay) { overlay.classList.remove('hidden'); }
                 }catch(_){}
             };
             const hideOverlay = () => {
                 if (!isTeacher) return;
                 try{
-                    if (overlay) { overlay.classList.add('hidden'); overlay.classList.remove('flex'); }
+                    if (overlay) { overlay.classList.add('hidden'); }
                 }catch(_){}
             };
 
@@ -3038,10 +3364,54 @@ function toggleSpeaker() {
             updateCallControlUI();
         }
 
+function __teacherFsElement(){
+            return document.fullscreenElement || document.webkitFullscreenElement || null;
+        }
+
+function updateTeacherFullscreenButtonState(){
+            const wrap = document.getElementById('teacherStageWrap');
+            const fsEl = __teacherFsElement();
+            const isFull = !!(wrap && fsEl && (fsEl === wrap || wrap.contains(fsEl)));
+
+            if (wrap) wrap.classList.toggle('fullscreen-active', isFull);
+
+            const setIcon = (id, iconHtml) => {
+                const b = document.getElementById(id);
+                if (!b) return;
+                const i = b.querySelector('i');
+                if (i) i.outerHTML = iconHtml;
+            };
+            const icon = isFull ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
+            const iconW = isFull ? '<i class="fas fa-compress w-5 text-center"></i>' : '<i class="fas fa-expand w-5 text-center"></i>';
+            setIcon('btnTeacherFullscreen', icon);
+            setIcon('btnTeacherFullscreenInline', icon);
+            setIcon('mBtnTeacherFullscreen', iconW);
+        }
+
+async function toggleTeacherFullscreen(){
+            const wrap = document.getElementById('teacherStageWrap');
+            if (!wrap) return;
+            try{
+                const fsEl = __teacherFsElement();
+                if (fsEl) {
+                    if (document.exitFullscreen) await document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                } else {
+                    if (wrap.requestFullscreen) await wrap.requestFullscreen();
+                    else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen();
+                }
+            } catch (e) {
+                console.warn('toggleTeacherFullscreen', e);
+            }
+            updateTeacherFullscreenButtonState();
+        }
+
+document.addEventListener('fullscreenchange', updateTeacherFullscreenButtonState);
+document.addEventListener('webkitfullscreenchange', updateTeacherFullscreenButtonState);
+
 
 function updateCallControlUI(){
-            const role = String(currentUser?.role||'').toLowerCase();
-            const hideStudentToggles = (role === 'student');
+            const hideMediaToggles = !!OBSERVER_MODE;
             const micOn = !groupCall.muted;
             const camOn = !groupCall.cameraOff;
             const spkOn = !groupCall.speakerMuted;
@@ -3055,8 +3425,8 @@ function updateCallControlUI(){
                 b.classList.toggle('ctrl-off', !on);
                 b.setAttribute('aria-pressed', String(!!on));
             };
-            // Students must not have UI to turn off camera/mic
-            if (hideStudentToggles) {
+            // Observer mode has receive-only call controls
+            if (hideMediaToggles) {
                 ['btnMute','btnCam','mBtnMute','mBtnCam'].forEach(id=>{ const b=document.getElementById(id); if(b) b.classList.add('hidden'); });
             } else {
                 ['btnMute','btnCam','mBtnMute','mBtnCam'].forEach(id=>{ const b=document.getElementById(id); if(b) b.classList.remove('hidden'); });
@@ -3091,11 +3461,10 @@ function updateCallControlUI(){
                 const i = scrBtn.querySelector('i');
                 if (i) i.className = scrOn ? 'fas fa-display w-5 text-center' : 'fas fa-desktop w-5 text-center';
             }
+            updateTeacherFullscreenButtonState();
         }
 
 function toggleMute() {
-            const role = String(currentUser?.role||'').toLowerCase();
-            if (role === 'student') return notify("Talabalarda mikrofonni o'chirish ruxsat yo'q", 'info');
             if (OBSERVER_MODE) return notify('Observer mode: boshqaruv yo\'q', 'info');
 
             if (!groupCall.localStream) return;
@@ -3107,8 +3476,6 @@ function toggleMute() {
         }
 
         function toggleCamera() {
-            const role = String(currentUser?.role||'').toLowerCase();
-            if (role === 'student') return notify("Talabalarda kamerani o'chirish ruxsat yo'q", 'info');
             if (OBSERVER_MODE) return notify('Observer mode: boshqaruv yo\'q', 'info');
 
             if (!groupCall.localStream) return;
@@ -3240,10 +3607,31 @@ function toggleMute() {
             }
             groupCall.localStream = null;
 
-            // clear tiles
-            const grid = document.getElementById('groupVideosGrid');
-            if (grid) grid.innerHTML = '';
+            // stop attendance polling and hide panel
+            try { stopAttendanceLoop(); } catch(_) {}
+            const ap = document.getElementById('attendancePanel');
+            if (ap) ap.classList.add('hidden');
+
+            // exit fullscreen if active
+            try {
+                const fsEl = __teacherFsElement();
+                if (fsEl) {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                }
+            } catch(_) {}
+
+            // clear tiles (new stage + students layout)
+            const sGrid = document.getElementById('studentsGrid');
+            if (sGrid) sGrid.innerHTML = '';
+            const tStage = document.getElementById('teacherStage');
+            if (tStage) {
+                tStage.innerHTML = '';
+                try { tStage.removeAttribute('data-stage-user'); } catch(_) {}
+            }
+            ensureStagePlaceholder();
             hideGroupOverlay();
+            updateTeacherFullscreenButtonState();
         }
 
         function setupGroupCallSocketHandlers() {
@@ -3285,6 +3673,7 @@ function toggleMute() {
                 if (data.stage) { groupCall.stage = { ownerTeacherId: data.stage.ownerTeacherId || null, pinnedUserId: data.stage.pinnedUserId || null }; }
                 updateTeacherControls();
                 renderGroupCallLayout();
+                updateCallControlUI();
                 groupCall.starterId = currentUser?._id; // we started
                 setGroupCallStatus('Connected (starter)');
                 // Auto recording for teacher (starts with lesson)
@@ -3309,6 +3698,7 @@ function toggleMute() {
                 if (data.stage) { groupCall.stage = { ownerTeacherId: data.stage.ownerTeacherId || null, pinnedUserId: data.stage.pinnedUserId || null }; }
                 updateTeacherControls();
                 renderGroupCallLayout();
+                updateCallControlUI();
                 groupCall.starterId = null; // unknown in this event
                 setGroupCallStatus('Connected');
                 // Auto recording for teacher when joining an ongoing lesson
@@ -3415,10 +3805,10 @@ function toggleMute() {
 
 <!-- ==================== GROUP CALL OVERLAY ==================== -->
 <div id="groupCallOverlay" class="fixed inset-0 bg-black/80 hidden z-50">
-  <div class="absolute inset-0 flex flex-col">
+  <div id="groupCallOverlayInner" class="absolute inset-0 flex flex-col">
     
     <!-- Top bar -->
-    <div class="flex items-center justify-between p-4 bg-black/60 gap-2">
+    <div id="groupCallTopBar" class="flex items-center justify-between p-4 bg-black/60 gap-2">
       <div class="text-white min-w-0">
         <div class="font-semibold truncate" id="groupCallTitle">Group Call</div>
         <div class="mt-2 hidden" id="lessonTitleWrap">
@@ -3441,6 +3831,9 @@ function toggleMute() {
         </button>
         <button id="btnSwitchCam" onclick="switchCamera()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Old/Orqa kamera">
           <i class="fas fa-rotate"></i>
+        </button>
+        <button id="btnTeacherFullscreen" onclick="toggleTeacherFullscreen()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="O‘qituvchi ekranini to‘liq ko‘rish">
+          <i class="fas fa-expand"></i>
         </button>
         <button id="btnScreen" onclick="startScreenWithCam()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Ekran + kamera (o‘qituvchi)">
           <i class="fas fa-desktop"></i>
@@ -3474,6 +3867,9 @@ function toggleMute() {
           <button id="mBtnSwitchCam" onclick="switchCamera(); closeCallMoreMenu()" class="hidden w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
             <i class="fas fa-rotate w-5 text-center"></i><span>Kamera almashtirish</span>
           </button>
+          <button id="mBtnTeacherFullscreen" onclick="toggleTeacherFullscreen(); closeCallMoreMenu()" class="w-full text-left px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3">
+            <i class="fas fa-expand w-5 text-center"></i><span>Teacher fullscreen</span>
+          </button>
 
           <div class="h-px bg-white/10"></div>
 
@@ -3498,16 +3894,23 @@ function toggleMute() {
 
 
     <!-- Videos (Teacher stage + Students grid) -->
-    <div class="flex-1 overflow-y-auto p-4 relative">
-      <div class="w-full rounded-2xl overflow-hidden border border-white/10 bg-black/30">
-        <div class="p-2 text-white/80 text-xs flex items-center justify-between">
-          <div><i class="fas fa-chalkboard-teacher"></i> O‘qituvchi</div>
-          <div id="teacherStageMeta" class="opacity-70"></div>
+    <div id="groupCallVideoLayout" class="flex-1 min-h-0 p-4 relative flex flex-col overflow-hidden">
+      <div id="teacherStageWrap" class="sticky top-0 z-20 pb-2 bg-black/60 backdrop-blur-sm">
+        <div class="w-full rounded-2xl overflow-hidden border border-white/10 bg-black/30">
+          <div class="p-2 text-white/80 text-xs flex items-center justify-between">
+            <div><i class="fas fa-chalkboard-teacher"></i> O‘qituvchi / 1-stage</div>
+            <div class="flex items-center gap-2">
+              <button id="btnTeacherFullscreenInline" onclick="toggleTeacherFullscreen()" class="px-2 py-1 rounded-lg bg-white/10 text-white hover:bg-white/20 border border-white/15" title="To‘liq ekran">
+                <i class="fas fa-expand"></i>
+              </button>
+              <div id="teacherStageMeta" class="opacity-70"></div>
+            </div>
+          </div>
+          <div id="teacherStage" class="w-full" style="aspect-ratio: 16/9; position:relative;"></div>
         </div>
-        <div id="teacherStage" class="w-full" style="aspect-ratio: 16/9; position:relative;"></div>
       </div>
 
-      <div class="mt-3">
+      <div id="studentsScrollArea" class="mt-3 flex-1 min-h-0 overflow-y-auto pr-1">
         <div class="p-1 text-white/80 text-xs flex items-center justify-between">
           <div><i class="fas fa-users"></i> Talabalar</div>
           <div id="studentsMeta" class="opacity-70"></div>
@@ -3691,7 +4094,7 @@ function toggleMute() {
 
     // Grid sizing
     Array.from(sGrid.children).forEach(el=>{
-      try{ el.style.height = '220px'; }catch(_){}
+      try{ el.style.height = (typeof studentTileHeightPx === 'function' ? studentTileHeightPx() : 160) + 'px'; }catch(_){}
     });
 
     ensureStagePlaceholderSafe();
@@ -3753,5 +4156,8 @@ function toggleMute() {
 })();
 </script>
 
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
+
+

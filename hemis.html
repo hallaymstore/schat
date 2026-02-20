@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HEMIS Web Preview | UniConnect</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <style>
+    body{
+      min-height:100vh;
+      background:
+        radial-gradient(1100px 620px at 16% 14%, rgba(20,184,166,.28), transparent 62%),
+        radial-gradient(980px 650px at 86% 18%, rgba(59,130,246,.24), transparent 62%),
+        linear-gradient(180deg, #0c3f48 0%, #062a30 100%) !important;
+    }
+    .platform-frame-wrap{
+      position:relative;
+      height: min(78vh, 860px);
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.35);
+    }
+    .platform-frame{
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #020617;
+    }
+    .frame-overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      background: rgba(2,6,23,.74);
+      text-align:center;
+      color:#e2e8f0;
+    }
+    .auth-modal{ background: rgba(2,6,23,.82); backdrop-filter: blur(12px); }
+    @media(max-width:640px){
+      .platform-frame-wrap{ height: min(74vh, 680px); border-radius: 14px; }
+      .mini-btn{ font-size: 12px; padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body class="text-slate-100">
+  <main class="max-w-7xl mx-auto px-4 py-5 sm:py-6">
+    <section class="glass rounded-2xl p-3 sm:p-5 border border-white/15">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 class="text-xl sm:text-2xl font-black tracking-wide">
+            <i class="fa-solid fa-university mr-2 text-teal-300"></i>HEMIS Platforma Preview
+          </h1>
+          <p class="text-xs sm:text-sm text-white/80 mt-1">
+            Manba: <span class="font-bold">my.hemis.uz</span>
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button id="btnReloadPreview" class="mini-btn px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm">
+            <i class="fa-solid fa-rotate"></i> Yangilash
+          </button>
+          <button id="btnOpenExternal" class="mini-btn px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm">
+            <i class="fa-solid fa-up-right-from-square"></i> Tashqi ochish
+          </button>
+          <button id="btnResetSession" class="mini-btn px-3 py-2 rounded-xl bg-red-500/30 hover:bg-red-500/40 text-sm">
+            <i class="fa-solid fa-user-pen"></i> Loginni almashtirish
+          </button>
+        </div>
+      </div>
+
+      <div id="previewStatus" class="mt-3 text-xs sm:text-sm px-3 py-2 rounded-xl bg-white/10 border border-white/10">
+        Tayyorlanmoqda...
+      </div>
+
+      <div class="mt-3 platform-frame-wrap">
+        <iframe id="platformFrame" name="platformFrame" class="platform-frame" allow="autoplay; clipboard-read; clipboard-write"></iframe>
+        <div id="frameBlocked" class="frame-overlay hidden">
+          <div>
+            <div class="text-lg font-bold mb-2"><i class="fa-solid fa-triangle-exclamation text-amber-300"></i> Preview cheklangan bo‘lishi mumkin</div>
+            <p class="text-sm text-white/80">
+              Ba'zi brauzerlarda tashqi sayt iframe ichida bloklanadi.
+            </p>
+            <div class="mt-3 flex items-center justify-center gap-2 flex-wrap">
+              <button id="btnOpenExternalFromOverlay" class="px-3 py-2 rounded-xl bg-teal-600/80 hover:bg-teal-600 text-white text-sm">
+                <i class="fa-solid fa-up-right-from-square"></i> Tashqi ochish
+              </button>
+              <button id="btnOpenSameTabFromOverlay" class="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm">
+                Shu oynada ochish
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="loginModal" class="auth-modal fixed inset-0 z-[120] hidden items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl border border-white/15 bg-slate-950/75 p-4 sm:p-5">
+      <div class="text-lg font-extrabold">HEMIS preview sozlamasi</div>
+      <p class="text-xs text-white/75 mt-1">
+        HEMIS loginida captcha bor. Shu sabab iframe ichida to‘liq auto-login doimiy ishlamaydi.
+      </p>
+      <div class="mt-4 space-y-3">
+        <label class="block">
+          <span class="text-xs text-white/80">Login (ixtiyoriy)</span>
+          <input id="authUsername" type="text" autocomplete="username" class="mt-1 w-full rounded-xl px-3 py-2 bg-white/10 border border-white/15 text-white" placeholder="HEMIS logini" />
+        </label>
+        <label class="block">
+          <span class="text-xs text-white/80">Parol (ixtiyoriy)</span>
+          <input id="authPassword" type="password" autocomplete="current-password" class="mt-1 w-full rounded-xl px-3 py-2 bg-white/10 border border-white/15 text-white" placeholder="Parol" />
+        </label>
+        <label class="flex items-center gap-2 text-xs text-white/80">
+          <input id="skipPromptCheckbox" type="checkbox" class="accent-teal-400" checked />
+          Keyingi kirishda bu oynani qayta ko‘rsatma
+        </label>
+      </div>
+      <div class="mt-4 flex items-center justify-end gap-2">
+        <button id="btnSaveAuth" class="px-4 py-2 rounded-xl bg-teal-500/80 hover:bg-teal-500 text-white font-semibold">
+          Davom etish
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const CFG = {
+        storageKey: 'platform_preview_hemis_v1',
+        platformName: 'HEMIS',
+        previewUrl: 'https://my.hemis.uz',
+        entryUrl: 'https://my.hemis.uz/login'
+      };
+
+      const frame = document.getElementById('platformFrame');
+      const blocked = document.getElementById('frameBlocked');
+      const modal = document.getElementById('loginModal');
+      const statusEl = document.getElementById('previewStatus');
+      const userEl = document.getElementById('authUsername');
+      const passEl = document.getElementById('authPassword');
+      const skipPromptCheckbox = document.getElementById('skipPromptCheckbox');
+      const btnSaveAuth = document.getElementById('btnSaveAuth');
+      const btnResetSession = document.getElementById('btnResetSession');
+      const btnOpenExternal = document.getElementById('btnOpenExternal');
+      const btnReloadPreview = document.getElementById('btnReloadPreview');
+      const btnOpenExternalFromOverlay = document.getElementById('btnOpenExternalFromOverlay');
+      const btnOpenSameTabFromOverlay = document.getElementById('btnOpenSameTabFromOverlay');
+      let blockedTimer = null;
+
+      function setStatus(msg, isWarn) {
+        statusEl.textContent = msg;
+        statusEl.className = 'mt-3 text-xs sm:text-sm px-3 py-2 rounded-xl border ' +
+          (isWarn ? 'bg-amber-500/20 border-amber-300/30 text-amber-100' : 'bg-white/10 border-white/10 text-white');
+      }
+
+      function readSaved() {
+        try {
+          const raw = JSON.parse(localStorage.getItem(CFG.storageKey) || 'null');
+          if (!raw || typeof raw !== 'object') return null;
+          const legacySkip = (typeof raw.skipPrompt === 'boolean')
+            ? raw.skipPrompt
+            : !!(raw.savedAt || raw.username || raw.password);
+          return {
+            username: String(raw.username || '').trim(),
+            password: String(raw.password || ''),
+            skipPrompt: legacySkip,
+            savedAt: Number(raw.savedAt || Date.now())
+          };
+        }
+        catch (_) { return null; }
+      }
+
+      function saveAuth(username, password, skipPrompt) {
+        localStorage.setItem(CFG.storageKey, JSON.stringify({
+          username: String(username || '').trim(),
+          password: String(password || ''),
+          skipPrompt: !!skipPrompt,
+          savedAt: Date.now()
+        }));
+      }
+
+      function showModal() {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setStatus('Login ma\'lumotlarini kiriting. Bu bir marta so‘raladi.', false);
+      }
+
+      function hideModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      function markBlocked() {
+        blocked.classList.remove('hidden');
+        setStatus('Iframe preview bloklangan bo‘lishi mumkin. Tashqi ochish tugmasini bosing.', true);
+      }
+
+      function clearBlocked() {
+        blocked.classList.add('hidden');
+      }
+
+      function openExternal(sameTab) {
+        if (sameTab) {
+          window.location.href = CFG.previewUrl;
+          return;
+        }
+        const win = window.open(CFG.previewUrl, '_blank', 'noopener,noreferrer');
+        if (!win) {
+          window.location.href = CFG.previewUrl;
+        }
+      }
+
+      function loadPreview() {
+        clearBlocked();
+        if (blockedTimer) clearTimeout(blockedTimer);
+        frame.src = CFG.entryUrl || CFG.previewUrl;
+        setStatus(`${CFG.platformName} platformasi yuklanmoqda...`, false);
+
+        blockedTimer = setTimeout(() => {
+          markBlocked();
+        }, 6500);
+      }
+
+      btnSaveAuth.addEventListener('click', () => {
+        const username = (userEl.value || '').trim();
+        const password = passEl.value || '';
+        const skipPrompt = !!(skipPromptCheckbox && skipPromptCheckbox.checked);
+        saveAuth(username, password, skipPrompt);
+        hideModal();
+        loadPreview();
+      });
+
+      btnResetSession.addEventListener('click', () => {
+        localStorage.removeItem(CFG.storageKey);
+        userEl.value = '';
+        passEl.value = '';
+        if (skipPromptCheckbox) skipPromptCheckbox.checked = true;
+        showModal();
+      });
+
+      btnOpenExternal.addEventListener('click', () => {
+        openExternal(false);
+      });
+      if (btnOpenExternalFromOverlay) btnOpenExternalFromOverlay.addEventListener('click', () => openExternal(false));
+      if (btnOpenSameTabFromOverlay) btnOpenSameTabFromOverlay.addEventListener('click', () => openExternal(true));
+
+      btnReloadPreview.addEventListener('click', () => {
+        loadPreview();
+      });
+
+      frame.addEventListener('load', () => {
+        if (blockedTimer) clearTimeout(blockedTimer);
+        clearBlocked();
+        setStatus(`${CFG.platformName} sahifasi ochildi. Login sahifasi chiqsa captcha kodni qo‘lda kiriting.`, false);
+      });
+
+      frame.addEventListener('error', () => {
+        markBlocked();
+      });
+
+      const saved = readSaved();
+      if (saved) {
+        userEl.value = saved.username || '';
+        passEl.value = saved.password || '';
+        if (skipPromptCheckbox) skipPromptCheckbox.checked = !!saved.skipPrompt;
+      }
+
+      if (saved && saved.skipPrompt) {
+        hideModal();
+        loadPreview();
+      } else {
+        showModal();
+      }
+    })();
+  </script>
+  <script src="/ui-actions-menu.js" defer></script>
+</body>
+</html>

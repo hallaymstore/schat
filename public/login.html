@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="uz" class="scroll-smooth">
 <head>
   <meta charset="utf-8" />
@@ -237,6 +237,7 @@
       if(mode==='dark') document.documentElement.classList.add('dark');
     })();
   </script>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 
 <body class="min-h-screen text-slate-900 dark:text-slate-100">
@@ -493,7 +494,7 @@
           const role = (j && j.user && j.user.role) ? String(j.user.role).toLowerCase() : 'student';
           const target = role === 'teacher'
             ? '/teacher-dashboard.html'
-            : (role === 'admin' ? '/admin-dashboard.html' : '/student-dashboard.html');
+            : (role === 'admin' ? '/admin-dashboard.html' : (role === 'organizer' ? '/organizer.html' : '/student-dashboard.html'));
           window.location.href = target;
         }catch(e){
           // fallback
@@ -652,12 +653,14 @@
           const res = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${token}` } });
           if(!res.ok) return localStorage.removeItem('token');
           const data = await res.json().catch(()=>null);
-          if(data && data.success){ const role = (data.user && data.user.role) ? String(data.user.role).toLowerCase() : 'student'; const target = role==='teacher' ? '/teacher-dashboard.html' : (role==='admin' ? '/admin-dashboard.html' : '/student-dashboard.html'); window.location.href = target; }
+          if(data && data.success){ const role = (data.user && data.user.role) ? String(data.user.role).toLowerCase() : 'student'; const target = role==='teacher' ? '/teacher-dashboard.html' : (role==='admin' ? '/admin-dashboard.html' : (role==='organizer' ? '/organizer.html' : '/student-dashboard.html')); window.location.href = target; }
           else localStorage.removeItem('token');
         }catch(_){}
       }
       document.addEventListener('DOMContentLoaded', checkAuth);
     })();
   </script>
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
+

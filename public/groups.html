@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
@@ -101,9 +101,65 @@
   -webkit-backdrop-filter: blur(18px);
 }
     .muted{color:var(--muted)}
-    .btn-primary{background:linear-gradient(135deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1)); border:1px solid rgba(245,158,11,.20); box-shadow:0 18px 46px rgba(0,0,0,.25)}
-    .btn-primary:hover{filter:brightness(1.05)}
-    .btn-ghost:hover{background:rgba(148,163,184,.12)}
+  .btn-primary{background:linear-gradient(135deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1)); border:1px solid rgba(245,158,11,.20); box-shadow:0 18px 46px rgba(0,0,0,.25)}
+  .btn-primary:hover{filter:brightness(1.05)}
+  .btn-ghost:hover{background:rgba(148,163,184,.12)}
+  #createModal{
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    align-items: flex-start;
+  }
+  #createModalCard{
+    margin: 10px auto;
+    max-height: calc(100dvh - 20px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #createModalPanel{
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    padding: 24px;
+  }
+  #createModalHeader{
+    flex: 0 0 auto;
+    margin-bottom: 16px;
+  }
+  #createModalBody{
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+    scrollbar-gutter: stable;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  #createModalBody::-webkit-scrollbar{ width: 8px; }
+  #createModalBody::-webkit-scrollbar-thumb{ background: rgba(148,163,184,.45); border-radius: 999px; }
+  #groupQuickMenuPanel button{
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: rgba(226,232,240,.92);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  #groupQuickMenuPanel button:hover{ background: rgba(255,255,255,.12); }
+  @media (min-width: 640px){
+    #createModal{
+      align-items: center;
+    }
+    #createModalCard{
+      max-height: min(92dvh, 900px);
+      margin: 0;
+    }
+    #createModalPanel{ padding: 28px; }
+  }
   </style>
 
 <style id="mobileSafe">
@@ -250,6 +306,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 }
 
 </style>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 <body class="h-full text-slate-900 dark:text-slate-100">
 <!-- Mobile Drawer -->
@@ -265,6 +322,19 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 <a href="/groups.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-users w-5 text-center"></i><span>Groups</span></a>
 <a href="/channels.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-broadcast-tower w-5 text-center"></i><span>Channels</span></a>
 <a href="/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-user w-5 text-center"></i><span>Profile</span></a>
+      <div class="h-px bg-white/15 my-1"></div>
+      <button type="button" onclick="openGroupTabFromMenu('my')" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
+        <i class="fas fa-user-friends w-5 text-center"></i><span>Mening guruhlarim</span>
+      </button>
+      <button type="button" onclick="openGroupTabFromMenu('joined')" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
+        <i class="fas fa-people-group w-5 text-center"></i><span>Qo‘shilgan guruhlar</span>
+      </button>
+      <button type="button" onclick="openGroupTabFromMenu('all')" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
+        <i class="fas fa-globe w-5 text-center"></i><span>Barcha guruhlar</span>
+      </button>
+      <button type="button" onclick="openCreateModalFromMenu()" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-500/30 hover:bg-emerald-500/40 border border-emerald-200/30 text-white font-semibold text-left">
+        <i class="fas fa-plus-circle w-5 text-center"></i><span>Yangi guruh yaratish</span>
+      </button>
     </div>
   </aside>
 </div>
@@ -287,7 +357,46 @@ button,a{ -webkit-tap-highlight-color: transparent; }
     w.classList.add('hidden');
     document.body.style.overflow='';
   }
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMobileMenu(); });
+  function toggleGroupQuickMenu(){
+    const p = document.getElementById('groupQuickMenuPanel');
+    if(!p) return;
+    p.classList.toggle('hidden');
+  }
+  function closeGroupQuickMenu(){
+    const p = document.getElementById('groupQuickMenuPanel');
+    if(!p) return;
+    p.classList.add('hidden');
+  }
+  function openGroupTabFromMenu(tab){
+    closeGroupQuickMenu();
+    closeMobileMenu();
+    const block = document.getElementById('groupsTabsBlock');
+    if (block) {
+      try { block.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(_) {}
+    }
+    try {
+      if (typeof switchGroupTab === 'function') switchGroupTab(tab);
+    } catch(_) {}
+  }
+  function openCreateModalFromMenu(){
+    closeGroupQuickMenu();
+    closeMobileMenu();
+    try { if (typeof openCreateModal === 'function') openCreateModal(); } catch(_) {}
+  }
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape'){
+      closeGroupQuickMenu();
+      closeMobileMenu();
+    }
+  });
+  document.addEventListener('click', (e)=>{
+    const panel = document.getElementById('groupQuickMenuPanel');
+    const btn = document.getElementById('groupQuickMenuBtn');
+    if(!panel || !btn) return;
+    if(panel.classList.contains('hidden')) return;
+    if(panel.contains(e.target) || btn.contains(e.target)) return;
+    closeGroupQuickMenu();
+  });
 </script>
 
 <div id="drawerOverlay" aria-hidden="true"></div>
@@ -341,6 +450,18 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         </nav>
         <div class="flex items-center gap-2">
           <button id="menuBtn" class="btn-ghost glass rounded-xl px-3 py-2 text-sm font-semibold muted md:hidden" aria-label="Menu" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i></button>
+          <div class="relative">
+            <button id="groupQuickMenuBtn" type="button" class="btn-ghost glass rounded-xl px-3 py-2 text-sm font-semibold muted" onclick="toggleGroupQuickMenu()" aria-label="Group menu">
+              <i class="fa-solid fa-layer-group"></i><span class="ml-2 hidden sm:inline">Guruh menyu</span>
+            </button>
+            <div id="groupQuickMenuPanel" class="hidden absolute right-0 mt-2 w-64 rounded-2xl glass border border-white/20 p-2 z-[90]">
+              <button type="button" onclick="openGroupTabFromMenu('my')"><i class="fas fa-user-friends mr-2"></i>Mening guruhlarim</button>
+              <button type="button" onclick="openGroupTabFromMenu('joined')"><i class="fas fa-people-group mr-2"></i>Qo‘shilgan guruhlar</button>
+              <button type="button" onclick="openGroupTabFromMenu('all')"><i class="fas fa-globe mr-2"></i>Barcha guruhlar</button>
+              <div class="h-px bg-white/15 my-2"></div>
+              <button type="button" onclick="openCreateModalFromMenu()"><i class="fas fa-plus-circle mr-2"></i>Yangi guruh yaratish</button>
+            </div>
+          </div>
           <button id="themeToggle" class="btn-ghost glass rounded-xl px-3 py-2 text-sm font-semibold muted">
             <i id="themeIcon" class="fa-solid fa-moon"></i>
             <span class="ml-2" id="themeLabel">Tungi</span>
@@ -365,16 +486,26 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             <p class="muted2">Kursdoshlar bilan guruhlarga qo‘shiling yoki yangi guruh yarating</p>
         </div>
         
-        <!-- Create Group Button -->
-        <div class="flex justify-center mb-8">
+        <!-- Create Group Button (moved to menu) -->
+        <div id="createGroupMainButton" class="hidden flex justify-center mb-8">
             <button onclick="openCreateModal()" 
                     class="btn-primary text-white px-6 py-3 rounded-2xl font-semibold hover:opacity-90 transition flex items-center">
                 <i class="fas fa-plus mr-2"></i> Yangi guruh yaratish
             </button>
         </div>
         
-        <!-- Groups Tabs -->
-<div class="glass rounded-2xl p-2 mb-6 flex overflow-x-auto gap-1">
+        <div class="glass rounded-2xl p-4 mb-6 flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-xs muted2">Ko‘rinish</div>
+            <div id="currentGroupTabLabel" class="font-bold text-base sm:text-lg text-teal-200">Mening guruhlarim</div>
+          </div>
+          <button type="button" onclick="toggleGroupQuickMenu()" class="btn-primary text-white px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap">
+            <i class="fas fa-sliders mr-2"></i>Menyu
+          </button>
+        </div>
+
+        <!-- Groups Tabs (moved to menu) -->
+<div id="groupsTabsBlock" class="hidden glass rounded-2xl p-2 mb-6 flex overflow-x-auto gap-1">
   <button type="button" class="group-tab px-4 py-2 rounded-xl font-semibold btn-ghost whitespace-nowrap" data-tab="my" aria-pressed="false">
     <i class="fas fa-user-friends mr-2"></i> Mening guruhlarim
   </button>
@@ -421,17 +552,18 @@ button,a{ -webkit-tap-highlight-color: transparent; }
     </div>
 
     <!-- Create Group Modal -->
-    <div id="createModal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="glass rounded-3xl w-full max-w-md shadow-glass border border-white/20">
-            <div class="p-6 sm:p-7">
-                <div class="flex justify-between items-center mb-6">
+    <div id="createModal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-start sm:items-center justify-center p-4 backdrop-blur-sm">
+        <div id="createModalCard" class="glass rounded-3xl w-full max-w-md shadow-glass border border-white/20">
+            <div id="createModalPanel">
+                <div id="createModalHeader" class="flex justify-between items-center">
                     <h3 class="text-xl font-bold">Yangi guruh yaratish</h3>
                     <button onclick="closeCreateModal()" class="p-2 rounded-2xl btn-ghost">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 
-                <form id="createGroupForm" class="space-y-4">
+                <div id="createModalBody">
+                <form id="createGroupForm" class="space-y-4 pb-2">
                     <div>
                         <label class="block text-sm font-medium muted mb-2">Guruh nomi *</label>
                         <input type="text" name="name" required 
@@ -457,13 +589,39 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium muted mb-2">Universitet</label>
+                        <label class="block text-sm font-medium muted mb-2">Universitet *</label>
                         <select id="universitySelect" name="university"
-                                class="w-full px-4 py-3 field rounded-2xl focus:outline-none">
-                            <option value="">All Universities</option>
+                                class="w-full px-4 py-3 field rounded-2xl focus:outline-none" required>
+                            <option value="" selected disabled>Universitetni tanlang</option>
                             <!-- options injected by /api/catalog/universities -->
                         </select>
                         <div id="uniHint" class="mt-2 text-xs text-white/60">Universitetlar admin katalogidan olinadi.</div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium muted mb-2">Fakultet *</label>
+                        <select id="facultySelect" name="faculty"
+                                class="w-full px-4 py-3 field rounded-2xl focus:outline-none" required>
+                            <option value="" selected disabled>Fakultetni tanlang</option>
+                        </select>
+                        <div id="facHint" class="mt-2 text-xs text-white/60">Avval universitet tanlang.</div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium muted mb-2">O‘quv turi *</label>
+                        <select id="studyTypeSelect" name="studyType"
+                                class="w-full px-4 py-3 field rounded-2xl focus:outline-none" required disabled>
+                            <option value="" selected disabled>O‘quv turini tanlang</option>
+                        </select>
+                        <div id="typeHint" class="mt-2 text-xs text-white/60">Avval fakultet tanlang.</div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium muted mb-2">O‘quv guruhi *</label>
+                        <select id="studyGroupInput" name="studyGroup" required
+                                class="w-full px-4 py-3 field rounded-2xl focus:outline-none" disabled>
+                            <option value="" selected disabled>O‘quv guruhini tanlang</option>
+                        </select>
                     </div>
                     
                     <div>
@@ -480,14 +638,135 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                         </button>
                     </div>
                 </form>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         let currentGroupTab = 'my';
-
+        let meProfile = null;
         let allowedUniversities = [];
+        let allowedFaculties = [];
+        let allowedStudyTypes = [];
+        let allowedStudyGroups = [];
+
+        async function loadMeProfile(){
+            try{
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/me', { headers:{ 'Authorization': `Bearer ${token}` } });
+                const data = await res.json().catch(()=>null);
+                if(data && data.success){
+                    meProfile = data.user || data;
+                }
+            }catch(e){
+                meProfile = null;
+            }
+        }
+
+        async function loadFacultyCatalog(university, selectedFaculty='', selectedStudyType='', selectedStudyGroup=''){
+            const sel = document.getElementById('facultySelect');
+            const hint = document.getElementById('facHint');
+            if(!sel) return;
+            sel.innerHTML = '<option value="" selected disabled>Fakultetni tanlang</option>';
+            allowedFaculties = [];
+            allowedStudyTypes = [];
+            allowedStudyGroups = [];
+            await loadStudyTypeCatalog('', '', '', '');
+            const uni = String(university || '').trim();
+            if(!uni){
+                if(hint) hint.textContent = 'Avval universitet tanlang.';
+                return;
+            }
+            try{
+                const r = await fetch('/api/catalog/faculties?university='+encodeURIComponent(uni));
+                const j = await r.json().catch(()=>null);
+                const list = (j && j.success && Array.isArray(j.faculties)) ? j.faculties : [];
+                allowedFaculties = list.map(x => String(x || '').trim()).filter(Boolean);
+                for(const fac of allowedFaculties){
+                    const opt = document.createElement('option');
+                    opt.value = fac;
+                    opt.textContent = fac;
+                    if(selectedFaculty && fac === selectedFaculty) opt.selected = true;
+                    sel.appendChild(opt);
+                }
+                if(selectedFaculty && allowedFaculties.includes(selectedFaculty)) sel.value = selectedFaculty;
+                if(hint) hint.textContent = allowedFaculties.length ? `Katalog: ${allowedFaculties.length} ta fakultet` : 'Bu universitet uchun fakultet topilmadi.';
+                sel.onchange = () => loadStudyTypeCatalog(uni, sel.value, '', '');
+                await loadStudyTypeCatalog(uni, sel.value, selectedStudyType || '', selectedStudyGroup || '');
+            }catch(e){
+                if(hint) hint.textContent = 'Fakultetlar yuklanmadi (server xatolik).';
+            }
+        }
+
+        async function loadStudyTypeCatalog(university, faculty, selectedStudyType='', selectedStudyGroup=''){
+            const sel = document.getElementById('studyTypeSelect');
+            const hint = document.getElementById('typeHint');
+            if(!sel) return;
+            sel.innerHTML = '<option value="" selected disabled>O‘quv turini tanlang</option>';
+            sel.disabled = true;
+            allowedStudyTypes = [];
+            await loadStudyGroupCatalog('', '', '', '');
+
+            const uni = String(university || '').trim();
+            const fac = String(faculty || '').trim();
+            if(!uni || !fac){
+                if(hint) hint.textContent = 'Avval fakultet tanlang.';
+                return;
+            }
+            try{
+                const r = await fetch('/api/catalog/study-types?university='+encodeURIComponent(uni)+'&faculty='+encodeURIComponent(fac));
+                const j = await r.json().catch(()=>null);
+                const list = (j && j.success && Array.isArray(j.studyTypes)) ? j.studyTypes : [];
+                allowedStudyTypes = list.map(item => String(item?.name || '').trim()).filter(Boolean);
+                for(const name of allowedStudyTypes){
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    if(selectedStudyType && name === selectedStudyType) opt.selected = true;
+                    sel.appendChild(opt);
+                }
+                if(selectedStudyType && allowedStudyTypes.includes(selectedStudyType)) sel.value = selectedStudyType;
+                sel.disabled = allowedStudyTypes.length === 0;
+                if(hint) hint.textContent = allowedStudyTypes.length ? `Katalog: ${allowedStudyTypes.length} ta o‘quv turi` : 'Bu fakultet uchun o‘quv turi topilmadi.';
+                sel.onchange = () => loadStudyGroupCatalog(uni, fac, sel.value, '');
+                await loadStudyGroupCatalog(uni, fac, sel.value, selectedStudyGroup || '');
+            }catch(e){
+                if(hint) hint.textContent = 'O‘quv turlari yuklanmadi (server xatolik).';
+            }
+        }
+
+        async function loadStudyGroupCatalog(university, faculty, studyType, selectedStudyGroup=''){
+            const sel = document.getElementById('studyGroupInput');
+            if(!sel) return;
+            sel.innerHTML = '<option value="" selected disabled>O‘quv guruhini tanlang</option>';
+            sel.disabled = true;
+            allowedStudyGroups = [];
+
+            const uni = String(university || '').trim();
+            const fac = String(faculty || '').trim();
+            const type = String(studyType || '').trim();
+            if(!uni || !fac || !type) return;
+
+            try{
+                const r = await fetch('/api/catalog/study-groups?university='+encodeURIComponent(uni)+'&faculty='+encodeURIComponent(fac)+'&studyType='+encodeURIComponent(type));
+                const j = await r.json().catch(()=>null);
+                const list = (j && j.success && Array.isArray(j.studyGroups)) ? j.studyGroups : [];
+                allowedStudyGroups = list.map(item => String(item?.name || '').trim()).filter(Boolean);
+                for(const name of allowedStudyGroups){
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    if(selectedStudyGroup && name === selectedStudyGroup) opt.selected = true;
+                    sel.appendChild(opt);
+                }
+                if(selectedStudyGroup && allowedStudyGroups.includes(selectedStudyGroup)) sel.value = selectedStudyGroup;
+                sel.disabled = allowedStudyGroups.length === 0;
+            }catch(e){
+                sel.disabled = true;
+            }
+        }
+
         async function loadUniversityCatalog(){
             try{
                 const res = await fetch('/api/catalog/universities');
@@ -496,14 +775,36 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 allowedUniversities = list.map(u => (u && u.name ? String(u.name) : '')).filter(Boolean);
                 const sel = document.getElementById('universitySelect');
                 if(!sel) return;
-                // keep first option (All Universities)
-                sel.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
-                for(const name of allowedUniversities){
+                sel.innerHTML = '<option value="" selected disabled>Universitetni tanlang</option>';
+
+                const myUniversity = String(meProfile?.university || '').trim();
+                const meRole = String(meProfile?.role || '').toLowerCase();
+                const lockUni = !!(myUniversity && meRole !== 'admin');
+                if (lockUni) {
+                    const matched = allowedUniversities.find(x => x.toLowerCase() === myUniversity.toLowerCase()) || myUniversity;
                     const opt = document.createElement('option');
-                    opt.value = name;
-                    opt.textContent = name;
+                    opt.value = matched;
+                    opt.textContent = matched;
                     sel.appendChild(opt);
+                    sel.value = matched;
+                } else {
+                    for(const name of allowedUniversities){
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name;
+                        sel.appendChild(opt);
+                    }
+                    if (myUniversity && allowedUniversities.includes(myUniversity)) {
+                        sel.value = myUniversity;
+                    }
                 }
+
+                const defaultFaculty = String(meProfile?.faculty || '').trim();
+                const defaultStudyType = String(meProfile?.studyType || '').trim();
+                const defaultStudyGroup = String(meProfile?.studyGroup || '').trim();
+                await loadFacultyCatalog(sel.value, defaultFaculty, defaultStudyType, defaultStudyGroup);
+
+                sel.onchange = () => loadFacultyCatalog(sel.value, '', '');
                 const hint = document.getElementById('uniHint');
                 if(hint) hint.textContent = allowedUniversities.length ? `Katalog: ${allowedUniversities.length} ta universitet` : 'Universitet katalogi bo‘sh.';
             }catch(e){
@@ -620,14 +921,30 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                         
                         <p class="muted mb-4">${group.description || 'No description provided.'}</p>
                         
-                        <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
-                            <div class="flex items-center">
-                                <i class="fas fa-university mr-1"></i>
-                                <span>${group.university || 'All Universities'}</span>
+                        <div class="text-sm text-gray-500 mb-4 space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <i class="fas fa-university mr-1"></i>
+                                    <span>${group.university || 'Universitet belgilanmagan'}</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-users mr-1"></i>
+                                    <span>${group.memberCount || group.members?.length || 0} members</span>
+                                </div>
                             </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-users mr-1"></i>
-                                <span>${group.memberCount || group.members?.length || 0} members</span>
+                            <div class="flex items-center justify-between text-xs">
+                                <div class="flex items-center">
+                                    <i class="fas fa-layer-group mr-1"></i>
+                                    <span>${group.faculty || 'Fakultet belgilanmagan'}</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-school mr-1"></i>
+                                    <span>${group.studyType || 'O‘quv turi belgilanmagan'}</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-graduation-cap mr-1"></i>
+                                    <span>${group.studyGroup || 'Guruh belgilanmagan'}</span>
+                                </div>
                             </div>
                         </div>
                         
@@ -703,6 +1020,13 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         // Switch group tab (HALLAYM 1v1)
 function switchGroupTab(tab){
   currentGroupTab = tab;
+  const tabLabelMap = {
+    my: 'Mening guruhlarim',
+    joined: 'Qo‘shilgan guruhlar',
+    all: 'Barcha guruhlar'
+  };
+  const labelEl = document.getElementById('currentGroupTabLabel');
+  if (labelEl) labelEl.textContent = tabLabelMap[tab] || tabLabelMap.my;
 
   document.querySelectorAll('.group-tab').forEach(btn=>{
     const on = btn.dataset.tab === tab;
@@ -720,8 +1044,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.querySelectorAll('.group-tab').forEach(btn=>{
     btn.addEventListener('click', ()=> switchGroupTab(btn.dataset.tab));
   });
-  // preload catalog for create modal
-  loadUniversityCatalog();
 });
         
         // Open group
@@ -763,12 +1085,20 @@ document.addEventListener('DOMContentLoaded', ()=>{
         
         // Open create modal
         function openCreateModal() {
-            document.getElementById('createModal').classList.remove('hidden');
+            const m = document.getElementById('createModal');
+            if (!m) return;
+            try { closeGroupQuickMenu(); } catch(_) {}
+            m.classList.remove('hidden');
+            m.scrollTop = 0;
+            document.body.style.overflow = 'hidden';
         }
         
         // Close create modal
         function closeCreateModal() {
-            document.getElementById('createModal').classList.add('hidden');
+            const m = document.getElementById('createModal');
+            if (!m) return;
+            m.classList.add('hidden');
+            document.body.style.overflow = '';
         }
         
         // Create group form submission
@@ -781,12 +1111,40 @@ document.addEventListener('DOMContentLoaded', ()=>{
             
             // Enforce admin university catalog (no "Stanford" etc)
             const chosenUni = String(data.university || '').trim();
-            if (chosenUni && Array.isArray(allowedUniversities) && allowedUniversities.length) {
-                const ok = allowedUniversities.includes(chosenUni);
-                if (!ok) {
-                    alert('Universitet ro‘yxatda yo‘q. Admin paneldagi katalogdan tanlang.');
-                    return;
-                }
+            const chosenFac = String(data.faculty || '').trim();
+            const chosenType = String(data.studyType || '').trim();
+            const chosenGroup = String(data.studyGroup || '').trim();
+            if (!chosenUni) {
+                alert('Universitet tanlang.');
+                return;
+            }
+            if (Array.isArray(allowedUniversities) && allowedUniversities.length && !allowedUniversities.includes(chosenUni)) {
+                alert('Universitet ro‘yxatda yo‘q. Admin paneldagi katalogdan tanlang.');
+                return;
+            }
+            if (!chosenFac) {
+                alert('Fakultet tanlang.');
+                return;
+            }
+            if (Array.isArray(allowedFaculties) && allowedFaculties.length && !allowedFaculties.includes(chosenFac)) {
+                alert('Fakultet ro‘yxatda yo‘q. Katalogdan tanlang.');
+                return;
+            }
+            if (!chosenType) {
+                alert('O‘quv turini tanlang.');
+                return;
+            }
+            if (Array.isArray(allowedStudyTypes) && allowedStudyTypes.length && !allowedStudyTypes.includes(chosenType)) {
+                alert('O‘quv turi ro‘yxatda yo‘q. Katalogdan tanlang.');
+                return;
+            }
+            if (!chosenGroup) {
+                alert('O‘quv guruhini tanlang.');
+                return;
+            }
+            if (Array.isArray(allowedStudyGroups) && allowedStudyGroups.length && !allowedStudyGroups.includes(chosenGroup)) {
+                alert('O‘quv guruhi ro‘yxatda yo‘q. Katalogdan tanlang.');
+                return;
             }
 try {
                 const token = localStorage.getItem('token');
@@ -816,8 +1174,10 @@ try {
         });
         
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+            await loadMeProfile();
+            await loadUniversityCatalog();
             switchGroupTab('my');
         });
     </script>
@@ -854,5 +1214,7 @@ try {
 })();
 </script>
 
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
+

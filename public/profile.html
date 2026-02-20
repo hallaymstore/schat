@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="uz" class="scroll-smooth">
 <head>
   <meta charset="utf-8"/>
@@ -305,6 +305,7 @@
   }
 </style>
 
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 
 <body class="min-h-screen text-slate-900 dark:text-slate-100">
@@ -1027,15 +1028,17 @@
   // ===== Profile editing =====
   function openEdit(){
     const u = viewed || {};
+    const currentStudyType = (u.studyType || '').trim();
+    const currentStudyGroup = (u.studyGroup || u.group || '').trim();
     document.getElementById('editFullName').value = u.fullName || u.fullname || '';
     document.getElementById('editNick').value = u.nickname || '';
     document.getElementById('editBio').value = u.bio || '';
-    document.getElementById('editGroup').value = u.studyGroup || u.group || '';
+    document.getElementById('editGroup').innerHTML = '<option value="">— Tanlang —</option>';
 
     // load catalog and select current values
-    loadUniversities(u.university || '').then(() => {
+    loadUniversities(u.university || '').then(async () => {
       document.getElementById('editUniversity').value = u.university || '';
-      return loadFaculties(u.university || '', u.faculty || '');
+      await loadFaculties(u.university || '', u.faculty || '', currentStudyType, currentStudyGroup);
     }).catch(()=>{});
 
     const msg = document.getElementById('editMsg');
@@ -1065,12 +1068,13 @@
     }catch(e){
       // fallback: keep current text
     }
-    sel.onchange = () => loadFaculties(sel.value, '');
+    sel.onchange = () => loadFaculties(sel.value, '', '', '');
   }
 
-  async function loadFaculties(university, selected){
-    const sel = document.getElementById('editFaculty');
-    sel.innerHTML = '<option value="">— Tanlang —</option>';
+  async function loadFaculties(university, selectedFaculty, selectedStudyType, selectedStudyGroup){
+    const facultySel = document.getElementById('editFaculty');
+    facultySel.innerHTML = '<option value="">— Tanlang —</option>';
+    await loadStudyTypes('', '', '', '');
     if(!university) return;
     try{
       const r = await fetch('/api/catalog/faculties?university='+encodeURIComponent(university));
@@ -1079,10 +1083,70 @@
         const opt = document.createElement('option');
         opt.value = name;
         opt.textContent = name;
-        if (selected && name === selected) opt.selected = true;
-        sel.appendChild(opt);
+        if (selectedFaculty && name === selectedFaculty) opt.selected = true;
+        facultySel.appendChild(opt);
       });
+      if (selectedFaculty) facultySel.value = selectedFaculty;
     }catch(e){}
+    facultySel.onchange = () => loadStudyTypes(university, facultySel.value, '', '');
+    await loadStudyTypes(university, facultySel.value, selectedStudyType || '', selectedStudyGroup || '');
+  }
+
+  async function loadStudyTypes(university, faculty, selectedStudyType, selectedStudyGroup){
+    const typeSel = document.getElementById('editStudyType');
+    typeSel.innerHTML = '<option value="">— Tanlang —</option>';
+    await loadStudyGroups('', '', '', '');
+    if(!university || !faculty){
+      typeSel.disabled = true;
+      return;
+    }
+    try{
+      const r = await fetch('/api/catalog/study-types?university='+encodeURIComponent(university)+'&faculty='+encodeURIComponent(faculty));
+      const j = await r.json();
+      const list = Array.isArray(j.studyTypes) ? j.studyTypes : [];
+      list.forEach(item=>{
+        const name = String(item?.name || '').trim();
+        if(!name) return;
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        if(selectedStudyType && name === selectedStudyType) opt.selected = true;
+        typeSel.appendChild(opt);
+      });
+      if(selectedStudyType) typeSel.value = selectedStudyType;
+      typeSel.disabled = list.length === 0;
+    }catch(e){
+      typeSel.disabled = true;
+    }
+    typeSel.onchange = () => loadStudyGroups(university, faculty, typeSel.value, '');
+    await loadStudyGroups(university, faculty, typeSel.value, selectedStudyGroup || '');
+  }
+
+  async function loadStudyGroups(university, faculty, studyType, selectedStudyGroup){
+    const groupSel = document.getElementById('editGroup');
+    groupSel.innerHTML = '<option value="">— Tanlang —</option>';
+    if(!university || !faculty || !studyType){
+      groupSel.disabled = true;
+      return;
+    }
+    try{
+      const r = await fetch('/api/catalog/study-groups?university='+encodeURIComponent(university)+'&faculty='+encodeURIComponent(faculty)+'&studyType='+encodeURIComponent(studyType));
+      const j = await r.json();
+      const list = Array.isArray(j.studyGroups) ? j.studyGroups : [];
+      list.forEach(item=>{
+        const name = String(item?.name || '').trim();
+        if(!name) return;
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        if(selectedStudyGroup && name === selectedStudyGroup) opt.selected = true;
+        groupSel.appendChild(opt);
+      });
+      if(selectedStudyGroup) groupSel.value = selectedStudyGroup;
+      groupSel.disabled = list.length === 0;
+    }catch(e){
+      groupSel.disabled = true;
+    }
   }
 
   function showEditMsg(text, type){
@@ -1101,7 +1165,25 @@
       const bio = document.getElementById('editBio').value.trim();
       const university = document.getElementById('editUniversity').value.trim();
       const faculty = document.getElementById('editFaculty').value.trim();
+      const studyType = document.getElementById('editStudyType').value.trim();
       const studyGroup = document.getElementById('editGroup').value.trim();
+
+      if(!university){
+        showEditMsg('Universitetni tanlang.');
+        return;
+      }
+      if(!faculty){
+        showEditMsg('Fakultetni tanlang.');
+        return;
+      }
+      if(!studyType){
+        showEditMsg('O‘quv turini tanlang.');
+        return;
+      }
+      if(!studyGroup){
+        showEditMsg('O‘quv guruhini tanlang.');
+        return;
+      }
 
       // 1) Upload avatar / cover first if chosen
       const av = document.getElementById('editAvatarFile').files[0];
@@ -1114,7 +1196,7 @@
       const r = await fetch('/api/profile', {
         method:'PUT',
         headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
-        body: JSON.stringify({ fullName, nickname, bio, university, faculty, studyGroup })
+        body: JSON.stringify({ fullName, nickname, bio, university, faculty, studyType, studyGroup })
       });
 
       const j = await r.json().catch(()=> ({}));
@@ -1182,10 +1264,16 @@
             <div class="text-xs muted2 font-extrabold mb-1">Fakultet</div>
             <select id="editFaculty" class="w-full glass rounded-2xl px-4 py-3 text-sm outline-none"></select>
           </label>
+          <label class="block">
+            <div class="text-xs muted2 font-extrabold mb-1">O‘quv turi</div>
+            <select id="editStudyType" class="w-full glass rounded-2xl px-4 py-3 text-sm outline-none"></select>
+          </label>
 
           <label class="block md:col-span-2">
             <div class="text-xs muted2 font-extrabold mb-1">Guruh (yo‘nalish)</div>
-            <input id="editGroup" class="w-full glass rounded-2xl px-4 py-3 text-sm outline-none" placeholder="Masalan: MMT-520-25"/>
+            <select id="editGroup" class="w-full glass rounded-2xl px-4 py-3 text-sm outline-none">
+              <option value="">— Tanlang —</option>
+            </select>
           </label>
 
           <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1210,5 +1298,7 @@
     </div>
   </div>
 
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
+

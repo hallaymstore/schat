@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 
 <html lang="en">
 <head>
@@ -352,6 +352,7 @@ button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
   overflow: auto;
 }
 </style>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
 </head>
 <body class="bg-gray-50 min-h-screen">
 <div class="px-4 md:px-8 pt-6">
@@ -928,5 +929,6 @@ button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
     btn.addEventListener('click', ()=> apply(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
   })();
 </script>
+  <script src="/ui-actions-menu.js" defer></script>
 </body>
 </html>
