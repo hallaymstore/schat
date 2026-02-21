@@ -2153,8 +2153,14 @@ function tuneLocalTrack(track) {
 }
 
 function shouldPreferH264Sdp() {
-    const n = getNetworkHints();
-    return !!(n.isMobile || n.low || n.legacyAndroid);
+    try {
+        const ua = String(navigator.userAgent || '').toLowerCase();
+        const isiOS = /iphone|ipad|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        // iOS WebKit often behaves better with H264; Android/Desktop should keep default codec order.
+        return !!isiOS;
+    } catch(_) {
+        return false;
+    }
 }
 
 function preferCodecInSdp(sdp, codecPrefix) {
@@ -2257,20 +2263,26 @@ function safePlayVideo(videoEl, { forceMuteFallback = true } = {}) {
 }
 
 let _resumeAudioBound = false;
+function attemptResumeRemoteAudio() {
+    if (groupCall.speakerMuted) return;
+    try {
+        document.querySelectorAll('#teacherStage video, #studentsGrid video').forEach((v) => {
+            if (!v) return;
+            if ((v.id && v.id.startsWith('vid_local')) || (groupCall.localStream && v.srcObject === groupCall.localStream)) return;
+            try {
+                v.muted = false;
+                v.defaultMuted = false;
+                v.volume = 1;
+            } catch(_) {}
+            safePlayVideo(v, { forceMuteFallback: false });
+        });
+    } catch(_) {}
+}
 function bindResumeAudioOnGesture() {
     if (_resumeAudioBound) return;
     _resumeAudioBound = true;
     const resume = () => {
-        if (groupCall.speakerMuted) return;
-        try {
-            document.querySelectorAll('#teacherStage video, #studentsGrid video').forEach((v) => {
-                if (!v) return;
-                if ((v.id && v.id.startsWith('vid_local')) || (groupCall.localStream && v.srcObject === groupCall.localStream)) return;
-                v.muted = false;
-                v.volume = 1;
-                safePlayVideo(v, { forceMuteFallback: false });
-            });
-        } catch(_) {}
+        attemptResumeRemoteAudio();
     };
     ['click','touchend','keydown'].forEach((ev) => {
         try { document.addEventListener(ev, resume, { passive: true }); } catch(_) {}
@@ -2326,6 +2338,23 @@ function schedulePeerRecovery(remoteUserId, delayMs = 1400, opts = {}) {
 
         groupCall.reconnectTimers.set(uid, t);
     } catch(_) {}
+}
+
+function runNegotiationWatchdog(delayMs = 2600) {
+    setTimeout(() => {
+        try {
+            if (!groupCall.active) return;
+            for (const [uid, pc] of groupCall.peers.entries()) {
+                if (!uid || !pc) continue;
+                const rs = groupCall.remoteStreams.get(String(uid));
+                const hasLiveTrack = !!(rs && (rs.getTracks?.() || []).some((t) => t && t.readyState === 'live'));
+                const cs = String(pc.connectionState || '').toLowerCase();
+                if (!hasLiveTrack || cs === 'new' || cs === 'connecting' || cs === 'disconnected' || cs === 'failed') {
+                    schedulePeerRecovery(uid, 120, { forceOffer: true });
+                }
+            }
+        } catch(_) {}
+    }, Math.max(900, Number(delayMs || 2600)));
 }
 
 async function publishLocalVideoTrack(constraints = null) {
@@ -2536,21 +2565,32 @@ try {
 } catch (err) {
     console.warn('ensureLocalStream getUserMedia failed:', err);
 
-    // If video failed, retry audio-only (common on devices with no camera permission/camera)
+    // If mic permission/constraint fails, keep video working (critical mobile fallback).
     if (callType !== 'audio') {
         try {
-            groupCall.localStream = await safeGetUserMedia({ audio: AUDIO_CONSTRAINTS, video: false });
-            try { (groupCall.localStream.getAudioTracks() || []).forEach(tuneLocalTrack); } catch(_) {}
+            groupCall.localStream = await safeGetUserMedia({ video: videoConstraints, audio: false });
+            try { (groupCall.localStream.getVideoTracks() || []).forEach(tuneLocalTrack); } catch(_) {}
             addVideoTile(String(myUserId() || 'local'), groupCall.localStream, true);
-            try {
-                if (net.veryLow || (net.low && device.lowEnd)) {
-                    notify("Lite rejim: kamera vaqtincha o'chdi, o'qituvchi videosi ustuvor.", 'warn');
-                }
-            } catch(_) {}
+            try { notify("Mikrofon ruxsati yo'q: video-only rejimda davom etyapti.", 'warn'); } catch(_) {}
             return groupCall.localStream;
-        } catch (err2) {
-            console.warn('ensureLocalStream audio-only failed:', err2);
+        } catch (errV) {
+            console.warn('ensureLocalStream video-only failed:', errV);
         }
+    }
+
+    // If video failed, retry audio-only (common on devices with no camera permission/camera)
+    try {
+        groupCall.localStream = await safeGetUserMedia({ audio: AUDIO_CONSTRAINTS, video: false });
+        try { (groupCall.localStream.getAudioTracks() || []).forEach(tuneLocalTrack); } catch(_) {}
+        addVideoTile(String(myUserId() || 'local'), groupCall.localStream, true);
+        try {
+            if (net.veryLow || (net.low && device.lowEnd)) {
+                notify("Lite rejim: kamera vaqtincha o'chdi, o'qituvchi videosi ustuvor.", 'warn');
+            }
+        } catch(_) {}
+        return groupCall.localStream;
+    } catch (err2) {
+        console.warn('ensureLocalStream audio-only failed:', err2);
     }
 
     // Final fallback: no local tracks (recv-only mode)
@@ -2912,6 +2952,7 @@ function removeVideoTile(userId) {
                 const stream = buildRemoteStream(uid, event);
                 groupCall.remoteStreams.set(uid, stream);
                 addVideoTile(uid, stream, false);
+                setTimeout(() => { try { attemptResumeRemoteAudio(); } catch(_) {} }, 180);
                 try {
                     const tr = event?.track;
                     if (tr) {
@@ -2919,6 +2960,7 @@ function removeVideoTile(userId) {
                             const s = buildRemoteStream(uid, event);
                             groupCall.remoteStreams.set(uid, s);
                             addVideoTile(uid, s, false);
+                            setTimeout(() => { try { attemptResumeRemoteAudio(); } catch(_) {} }, 120);
                         };
                         tr.onended = () => {
                             if (groupCall.active) schedulePeerRecovery(uid, 1200);
@@ -2980,6 +3022,13 @@ function removeVideoTile(userId) {
         async function handleOffer(from, offer) {
             const pc = await createPeer(from);
             if (!pc) return;
+            const meId = String(myUserId() || '');
+            const polite = !meId || shouldInitiateOffer(meId, from);
+            const hasCollision = pc.signalingState !== 'stable';
+            if (hasCollision) {
+                if (!polite) return; // ignore glare on impolite side
+                try { await pc.setLocalDescription({ type: 'rollback' }); } catch(_) {}
+            }
             await pc.setRemoteDescription(toRtcSessionDescription(offer));
             let answer = await pc.createAnswer();
             answer = patchSdpForCompatibility(answer);
@@ -4375,7 +4424,7 @@ function toggleMute() {
             socket.on('groupCallStarted', async (data) => {
                 if (String(data.groupId) !== String(groupId)) return;
                 try { localStorage.removeItem('schat:pendingGroupCall'); } catch(_) {}
-                const meId = String(myUserId() || '');
+                const meId = String(myUserId() || data?.selfUserId || '');
                 groupCall.active = true;
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
@@ -4394,16 +4443,17 @@ function toggleMute() {
                 // Create offers to existing participants
                 const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
                 for (const uid of participants) {
-                    if (shouldInitiateOffer(meId, uid)) {
+                    if (!meId || shouldInitiateOffer(meId, uid)) {
                         await sendOffer(uid);
                     }
                 }
+                runNegotiationWatchdog(1800);
             });
 
             socket.on('groupCallJoined', async (data) => {
                 if (String(data.groupId) !== String(groupId)) return;
                 try { localStorage.removeItem('schat:pendingGroupCall'); } catch(_) {}
-                const meId = String(myUserId() || '');
+                const meId = String(myUserId() || data?.selfUserId || '');
                 groupCall.active = true;
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
@@ -4422,10 +4472,11 @@ function toggleMute() {
 
                 const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
                 for (const uid of participants) {
-                    if (shouldInitiateOffer(meId, uid)) {
+                    if (!meId || shouldInitiateOffer(meId, uid)) {
                         await sendOffer(uid);
                     }
                 }
+                runNegotiationWatchdog(1800);
             });
 
             socket.on('groupCallUserJoined', async (data) => {
@@ -4444,6 +4495,7 @@ function toggleMute() {
                 if (shouldInitiateOffer(meId, uid)) {
                     await sendOffer(uid);
                 }
+                runNegotiationWatchdog(1500);
             });
 
             socket.on('groupCallUserLeft', (data) => {

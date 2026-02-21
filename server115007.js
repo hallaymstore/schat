@@ -65,9 +65,12 @@ app.get('/api/rtc-config', (req, res) => {
 
     const turnUrlRaw = String(
       process.env.TURN_URL ||
+      process.env.TURN_URLS ||
       process.env.TURN_SERVER ||
       process.env.EXPRESS_TURN_URL ||
       process.env.EXPRESSTURN_URL ||
+      process.env.EXPRESS_TURN_URI ||
+      process.env.EXPRESSTURN_URI ||
       process.env.TURN_URI ||
       ''
     ).trim();
@@ -76,6 +79,8 @@ app.get('/api/rtc-config', (req, res) => {
       process.env.TURN_USER ||
       process.env.EXPRESS_TURN_USERNAME ||
       process.env.EXPRESSTURN_USERNAME ||
+      process.env.EXPRESS_TURN_USER ||
+      process.env.EXPRESSTURN_USER ||
       ''
     ).trim();
     const turnCredential = String(
@@ -85,6 +90,8 @@ app.get('/api/rtc-config', (req, res) => {
       process.env.EXPRESS_TURN_PASSWORD ||
       process.env.EXPRESSTURN_CREDENTIAL ||
       process.env.EXPRESSTURN_PASSWORD ||
+      process.env.EXPRESS_TURN_PASS ||
+      process.env.EXPRESSTURN_PASS ||
       ''
     ).trim();
     const disablePublicTurn = String(process.env.DISABLE_PUBLIC_TURN || '').trim() === '1';
@@ -95,17 +102,48 @@ app.get('/api/rtc-config', (req, res) => {
       'turns:openrelay.metered.ca:443?transport=tcp'
     ];
 
-    const urls = turnUrlRaw
-      ? turnUrlRaw.split(',').map(s => s.trim()).filter(Boolean)
-      : (!disablePublicTurn ? fallbackTurnUrls : []);
-    const username = turnUsername || (!turnUrlRaw && !disablePublicTurn ? 'openrelayproject' : '');
-    const credential = turnCredential || (!turnUrlRaw && !disablePublicTurn ? 'openrelayproject' : '');
+    const splitUrls = (raw) => String(raw || '')
+      .split(/[\s,;]+/g)
+      .map((s) => String(s || '').trim())
+      .filter(Boolean);
 
-    if (urls.length && username && credential) {
+    const parseEmbeddedCred = (url) => {
+      const src = String(url || '').trim();
+      const m = src.match(/^(turns?:)(?:\/\/)?([^:@\/\s]+):([^@\/\s]+)@(.+)$/i);
+      if (!m) return { url: src.replace(/^turns?:\/\//i, (x) => x.replace('//', '')), username: '', credential: '' };
+      return {
+        url: `${m[1]}${m[4]}`.replace(/^turns?:\/\//i, (x) => x.replace('//', '')),
+        username: decodeURIComponent(String(m[2] || '')),
+        credential: decodeURIComponent(String(m[3] || ''))
+      };
+    };
+
+    let embeddedUsername = '';
+    let embeddedCredential = '';
+    const customUrls = splitUrls(turnUrlRaw).map((u) => {
+      const parsed = parseEmbeddedCred(u);
+      if (!embeddedUsername && parsed.username) embeddedUsername = parsed.username;
+      if (!embeddedCredential && parsed.credential) embeddedCredential = parsed.credential;
+      return parsed.url;
+    }).filter(Boolean);
+
+    const customUser = turnUsername || embeddedUsername;
+    const customPass = turnCredential || embeddedCredential;
+
+    if (customUrls.length) {
+      if (customUser && customPass) {
+        iceServers.push({ urls: customUrls, username: customUser, credential: customPass });
+      } else {
+        // Some TURN deployments allow auth-less relay or short-lived token in URL.
+        iceServers.push({ urls: customUrls });
+      }
+    }
+
+    if (!disablePublicTurn) {
       iceServers.push({
-        urls,
-        username,
-        credential
+        urls: fallbackTurnUrls,
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
       });
     }
 
@@ -3174,6 +3212,7 @@ socket.on('lessonTransferControl', async (data) => {
         callType: call.callType,
         title: call.title,
         startedBy: call.startedBy,
+        selfUserId: String(socket.userId),
         participants: Array.from(call.participants),
         participantInfos,
         lessonId,
@@ -3254,6 +3293,7 @@ adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId),
         callId,
         callType: call.callType,
         startedBy: call.startedBy,
+        selfUserId: String(socket.userId),
         participants: Array.from(call.participants),
         participantInfos,
         lessonId,
