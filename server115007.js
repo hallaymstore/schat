@@ -63,9 +63,30 @@ app.get('/api/rtc-config', (req, res) => {
       { urls: stunUrls }
     ];
 
-    const turnUrlRaw = String(process.env.TURN_URL || process.env.TURN_SERVER || '').trim();
-    const turnUsername = String(process.env.TURN_USERNAME || process.env.TURN_USER || '').trim();
-    const turnCredential = String(process.env.TURN_CREDENTIAL || process.env.TURN_PASSWORD || '').trim();
+    const turnUrlRaw = String(
+      process.env.TURN_URL ||
+      process.env.TURN_SERVER ||
+      process.env.EXPRESS_TURN_URL ||
+      process.env.EXPRESSTURN_URL ||
+      process.env.TURN_URI ||
+      ''
+    ).trim();
+    const turnUsername = String(
+      process.env.TURN_USERNAME ||
+      process.env.TURN_USER ||
+      process.env.EXPRESS_TURN_USERNAME ||
+      process.env.EXPRESSTURN_USERNAME ||
+      ''
+    ).trim();
+    const turnCredential = String(
+      process.env.TURN_CREDENTIAL ||
+      process.env.TURN_PASSWORD ||
+      process.env.EXPRESS_TURN_CREDENTIAL ||
+      process.env.EXPRESS_TURN_PASSWORD ||
+      process.env.EXPRESSTURN_CREDENTIAL ||
+      process.env.EXPRESSTURN_PASSWORD ||
+      ''
+    ).trim();
     const disablePublicTurn = String(process.env.DISABLE_PUBLIC_TURN || '').trim() === '1';
     const fallbackTurnUrls = [
       'turn:openrelay.metered.ca:80',
@@ -362,6 +383,13 @@ equipped: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
   }],
   activeCompanionId: { type: String, default: '' },   // companions subdoc _id (string)
+  petScene: {
+    robotMotion: { type: String, default: 'float' },      // float|dance|guard|spin|hop
+    companionMotion: { type: String, default: 'hop' },    // hop|orbit|pulse|idle
+    stageTheme: { type: String, default: 'aurora' },      // aurora|night|sunset|mint
+    robotFx: { type: String, default: 'auto' },           // auto|on|off
+    updatedAt: { type: Date, default: Date.now }
+  },
 
   createdAt: { type: Date, default: Date.now }
 });
@@ -1338,6 +1366,26 @@ function invConsume(arr, id) {
 }
 
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+
+function normalizePetScene(raw = {}) {
+  const allowedRobotMotion = new Set(['float', 'dance', 'guard', 'spin', 'hop']);
+  const allowedCompanionMotion = new Set(['hop', 'orbit', 'pulse', 'idle']);
+  const allowedStageTheme = new Set(['aurora', 'night', 'sunset', 'mint']);
+  const allowedRobotFx = new Set(['auto', 'on', 'off']);
+
+  const robotMotion = String(raw.robotMotion || '').trim().toLowerCase();
+  const companionMotion = String(raw.companionMotion || '').trim().toLowerCase();
+  const stageTheme = String(raw.stageTheme || '').trim().toLowerCase();
+  const robotFx = String(raw.robotFx || '').trim().toLowerCase();
+
+  return {
+    robotMotion: allowedRobotMotion.has(robotMotion) ? robotMotion : 'float',
+    companionMotion: allowedCompanionMotion.has(companionMotion) ? companionMotion : 'hop',
+    stageTheme: allowedStageTheme.has(stageTheme) ? stageTheme : 'aurora',
+    robotFx: allowedRobotFx.has(robotFx) ? robotFx : 'auto',
+    updatedAt: new Date()
+  };
+}
 
 // Initialize Stats
 async function initializeStats() {
@@ -3125,6 +3173,7 @@ socket.on('lessonTransferControl', async (data) => {
         callId: call.callId,
         callType: call.callType,
         title: call.title,
+        startedBy: call.startedBy,
         participants: Array.from(call.participants),
         participantInfos,
         lessonId,
@@ -3137,6 +3186,7 @@ socket.on('lessonTransferControl', async (data) => {
         callId: call.callId,
         callType: call.callType,
         title: call.title,
+        startedBy: call.startedBy,
         userId: socket.userId,
         participants: Array.from(call.participants),
         participantInfos,
@@ -3203,6 +3253,7 @@ adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId),
         groupId,
         callId,
         callType: call.callType,
+        startedBy: call.startedBy,
         participants: Array.from(call.participants),
         participantInfos,
         lessonId,
@@ -3212,6 +3263,7 @@ adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId),
 io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
         groupId,
         callId,
+        startedBy: call.startedBy,
         userId: socket.userId,
         participants: Array.from(call.participants),
         participantInfos
@@ -5615,6 +5667,7 @@ app.get('/api/user/:userId', authenticateToken, async (req, res) => {
         equipped: !!c.equipped
       })),
       activeCompanionId: user.activeCompanionId || '',
+      petScene: normalizePetScene(user.petScene || {}),
 };
 
     res.json({ success: true, user: publicUser });
@@ -5682,7 +5735,18 @@ app.get('/api/user/by-username/:username', authenticateToken, async (req, res) =
         xp: r.xp,
         mood: r.mood,
         equipped: !!r.equipped
-      }))
+      })),
+      companions: (user.companions || []).map(c => ({
+        _id: c._id,
+        typeId: c.typeId,
+        name: c.name,
+        emoji: c.emoji,
+        rarity: c.rarity,
+        moodBoost: c.moodBoost,
+        equipped: !!c.equipped
+      })),
+      activeCompanionId: user.activeCompanionId || '',
+      petScene: normalizePetScene(user.petScene || {})
     };
 
     return res.json({ success: true, user: publicUser });
@@ -10554,9 +10618,11 @@ app.get('/api/pet/me', authenticateToken, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
     ensureInventoryArrays(user);
+    ensureRobots(user);
+    if (!user.petScene) user.petScene = normalizePetScene({});
     if (!user.pet) user.pet = { name: 'Robotcha', color: '#6366f1', outfitColor: '#ec4899', hunger: 60, xp: 0, level: 1 };
-    await user.save();
-        ensureCompanions(user);
+    ensureCompanions(user);
+    await user.save({ validateBeforeSave: false });
     const activeCompanion = (user.companions || []).find(c => c._id && String(c._id) === String(user.activeCompanionId)) || (user.companions || []).find(c => c.equipped) || (user.companions || [])[0] || null;
 res.json({
       success: true,
@@ -10565,6 +10631,7 @@ res.json({
       inventory: user.inventory,
       companions: user.companions || [],
       activeCompanion,
+      petScene: normalizePetScene(user.petScene || {}),
       market: PET_MARKET,
       isAdmin: !!user.isAdmin
     });
@@ -10572,6 +10639,33 @@ res.json({
     console.error('pet/me error', e);
     res.status(500).json({ error: 'Failed to load pet' });
   }
+});
+
+// Save / load profile robot scene preferences (motion/theme/fx)
+app.get('/api/pet/scene', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('petScene').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ success: true, scene: normalizePetScene(user.petScene || {}) });
+  } catch (e) {
+    console.error('pet/scene get error', e);
+    res.status(500).json({ error: 'Failed to load scene' });
+  }
+});
+
+app.post('/api/pet/scene', authenticateToken, async (req, res) => {
+  try {
+    const scene = normalizePetScene(req.body || {});
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.petScene = scene;
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, scene: normalizePetScene(user.petScene || {}) });
+  } catch (e) {
+    console.error('pet/scene save error', e);
+    res.status(500).json({ error: 'Failed to save scene' });
+  }
+});
 
 
 // ==================== ROBOT COLLECTION API ====================
@@ -10604,7 +10698,7 @@ app.get('/api/robots/me', authenticateToken, async (req, res) => {
 // Robot sotib olish (coins)
 app.post('/api/robots/buy', authenticateToken, async (req, res) => {
   try {
-    const { robotTypeId } = req.body;
+    const robotTypeId = String(req.body?.robotTypeId || req.body?.typeId || req.body?.id || '').trim();
     const item = ROBOT_CATALOG.find(x => x.id === robotTypeId);
     if (!item) return res.status(400).json({ error: 'Robot not found' });
 
@@ -10808,8 +10902,6 @@ app.post('/api/robots/play', authenticateToken, async (req, res) => {
     console.error('robots/play error', e);
     res.status(500).json({ error: 'Failed to play robot' });
   }
-});
-
 });
 
 // Buy item from pet market (coins)
@@ -14305,8 +14397,10 @@ app.post('/api/robots/customize', authenticateToken, async (req, res) => {
     const { robotId, name, baseColor, outfitColor } = req.body || {};
     if (!robotId) return res.status(400).json({ error: 'robotId required' });
 
-    ensureRobots(req.user);
-    const r = req.user.robots.find(x => String(x._id) === String(robotId));
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    ensureRobots(user);
+    const r = user.robots.find(x => String(x._id) === String(robotId));
     if (!r) return res.status(400).json({ error: 'Robot not found' });
 
     const colorOk = (v) => !v || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(v).trim());
@@ -14318,10 +14412,10 @@ app.post('/api/robots/customize', authenticateToken, async (req, res) => {
     if (baseColor) r.baseColor = baseColor.trim();
     if (outfitColor) r.outfitColor = outfitColor.trim();
 
-    ensureRobots(req.user);
-    await req.user.save();
+    ensureRobots(user);
+    await user.save({ validateBeforeSave: false });
 
-    res.json({ success: true, robot: r, pet: req.user.pet });
+    res.json({ success: true, robot: r, pet: user.pet });
   } catch (e) {
     console.error('robots/customize error', e);
     res.status(500).json({ error: 'Failed to customize robot' });
@@ -14334,7 +14428,9 @@ app.post('/api/companions/feed', authenticateToken, async (req, res) => {
     const { companionId, foodId } = req.body || {};
     if (!companionId) return res.status(400).json({ error: 'companionId required' });
 
-    const u = req.user;
+    const u = await User.findById(req.userId);
+    if (!u) return res.status(404).json({ error: 'User not found' });
+    ensureCompanions(u);
     const c = (u.companions || []).find(x => String(x._id) === String(companionId));
     if (!c) return res.status(400).json({ error: 'Companion not found' });
 
@@ -14355,7 +14451,7 @@ app.post('/api/companions/feed', authenticateToken, async (req, res) => {
       c.xp = 0;
     }
 
-    await u.save();
+    await u.save({ validateBeforeSave: false });
     res.json({ success: true, companion: c, companions: u.companions, activeCompanionId: u.activeCompanionId });
   } catch (e) {
     console.error('companions/feed error', e);
@@ -14369,7 +14465,9 @@ app.post('/api/companions/customize', authenticateToken, async (req, res) => {
     const { companionId, name, color, accessoryColor } = req.body || {};
     if (!companionId) return res.status(400).json({ error: 'companionId required' });
 
-    const u = req.user;
+    const u = await User.findById(req.userId);
+    if (!u) return res.status(404).json({ error: 'User not found' });
+    ensureCompanions(u);
     const c = (u.companions || []).find(x => String(x._id) === String(companionId));
     if (!c) return res.status(400).json({ error: 'Companion not found' });
 
@@ -14382,7 +14480,7 @@ app.post('/api/companions/customize', authenticateToken, async (req, res) => {
     if (color) c.color = color.trim();
     if (accessoryColor) c.accessoryColor = accessoryColor.trim();
 
-    await u.save();
+    await u.save({ validateBeforeSave: false });
     res.json({ success: true, companion: c, companions: u.companions });
   } catch (e) {
     console.error('companions/customize error', e);

@@ -138,6 +138,101 @@
     .r-pixel .jitter{ animation: floaty 4.2s ease-in-out infinite; }
     .r-lux .aura{ animation: aura 8s linear infinite; }
 
+    /* Advanced stage/motion modes */
+    .stage.theme-night{
+      background:
+        radial-gradient(900px 550px at 18% 8%, rgba(30,41,59,.48), transparent 58%),
+        radial-gradient(900px 550px at 82% 12%, rgba(14,116,144,.30), transparent 62%),
+        linear-gradient(180deg, rgba(2,6,23,.44), rgba(15,23,42,.22));
+    }
+    .stage.theme-sunset{
+      background:
+        radial-gradient(900px 550px at 18% 8%, rgba(251,146,60,.30), transparent 58%),
+        radial-gradient(900px 550px at 82% 12%, rgba(244,63,94,.28), transparent 62%),
+        linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0));
+    }
+    .stage.theme-mint{
+      background:
+        radial-gradient(900px 550px at 18% 8%, rgba(16,185,129,.26), transparent 58%),
+        radial-gradient(900px 550px at 82% 12%, rgba(34,211,238,.24), transparent 62%),
+        linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0));
+    }
+    .stage.theme-aurora{
+      background:
+        radial-gradient(900px 550px at 15% 0%, rgba(20,184,166,.22), transparent 55%),
+        radial-gradient(900px 550px at 85% 10%, rgba(245,158,11,.18), transparent 60%),
+        radial-gradient(900px 550px at 50% 105%, rgba(34,211,238,.16), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0));
+    }
+    .dark .stage.theme-aurora{
+      background:
+        radial-gradient(900px 550px at 15% 0%, rgba(99,102,241,.22), transparent 55%),
+        radial-gradient(900px 550px at 85% 10%, rgba(236,72,153,.20), transparent 60%),
+        radial-gradient(900px 550px at 50% 105%, rgba(34,211,238,.16), transparent 55%),
+        linear-gradient(180deg, rgba(15,23,42,.32), rgba(2,6,23,.0));
+    }
+
+    @keyframes rDance{
+      0%,100%{ transform:translate(-50%,-50%) rotate(-3deg) scale(1); }
+      25%{ transform:translate(-50%,-52%) rotate(2deg) scale(1.02); }
+      50%{ transform:translate(-50%,-48%) rotate(-1deg) scale(1.01); }
+      75%{ transform:translate(-50%,-51%) rotate(2deg) scale(1.02); }
+    }
+    @keyframes rSpin{
+      0%{ transform:translate(-50%,-50%) rotate(0deg); }
+      100%{ transform:translate(-50%,-50%) rotate(360deg); }
+    }
+    @keyframes rGuard{
+      0%,100%{ transform:translate(-50%,-50%) translateX(-6px); }
+      50%{ transform:translate(-50%,-50%) translateX(6px); }
+    }
+    @keyframes rHop{
+      0%,100%{ transform:translate(-50%,-50%) translateY(0); }
+      50%{ transform:translate(-50%,-55%) translateY(-10px); }
+    }
+    .robot-wrap.motion-float{ animation: floaty 7s ease-in-out infinite; }
+    .robot-wrap.motion-dance{ animation: rDance 1.8s ease-in-out infinite; }
+    .robot-wrap.motion-spin{ animation: rSpin 4.8s linear infinite; }
+    .robot-wrap.motion-guard{ animation: rGuard 2.8s ease-in-out infinite; }
+    .robot-wrap.motion-hop{ animation: rHop 1.4s ease-in-out infinite; }
+    .robot-wrap.fx-off .aura,
+    .robot-wrap.fx-off .stars,
+    .robot-wrap.fx-off .shine,
+    .robot-wrap.fx-off .laser-beam{ opacity: .05 !important; animation: none !important; }
+    .robot-wrap.fx-on .aura{ opacity: 1 !important; }
+    .robot-wrap.fx-on .stars{ opacity: 1 !important; }
+
+    @keyframes cOrbit{
+      0%{ transform:translate(0,0) rotate(0deg); }
+      25%{ transform:translate(-10px,-6px) rotate(5deg); }
+      50%{ transform:translate(0,-12px) rotate(0deg); }
+      75%{ transform:translate(10px,-6px) rotate(-5deg); }
+      100%{ transform:translate(0,0) rotate(0deg); }
+    }
+    @keyframes cPulse{
+      0%,100%{ transform:scale(1); }
+      50%{ transform:scale(1.1); }
+    }
+    .companion.motion-hop{ animation: hop 1.6s ease-in-out infinite; }
+    .companion.motion-orbit{ animation: cOrbit 3.8s ease-in-out infinite; }
+    .companion.motion-pulse{ animation: cPulse 1.2s ease-in-out infinite; }
+    .companion.motion-idle{ animation: none; }
+
+    .scene-chip{
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid rgba(148,163,184,.24);
+      background: rgba(148,163,184,.12);
+      line-height: 1;
+    }
+    .scene-chip.active{
+      border-color: rgba(16,185,129,.42);
+      background: rgba(16,185,129,.18);
+      box-shadow: 0 0 0 3px rgba(16,185,129,.12);
+    }
+
     /* Companion bubble */
     .companion{
       position:absolute;
@@ -483,6 +578,55 @@
             <div id="companionBubble" class="companion hidden">🐾</div>
           </div>
 
+          <div id="trialBanner" class="mt-3 hidden"></div>
+
+          <div id="sceneControls" class="mt-4 glass rounded-2xl p-4 hidden">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div class="text-sm font-black">Robot sahna boshqaruvi</div>
+                <div class="text-xs muted2 mt-0.5">Harakat, effekt va sahna fonini tanlab saqlang.</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="sceneResetBtn" class="glass rounded-xl px-3 py-2 text-xs font-extrabold btn-ghost glow-ring">
+                  <i class="fa-solid fa-rotate-left mr-1"></i>Reset
+                </button>
+                <button id="sceneSaveBtn" class="glass rounded-xl px-3 py-2 text-xs font-extrabold btn-primary text-white glow-ring">
+                  <i class="fa-solid fa-floppy-disk mr-1"></i>Saqlash
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <div class="text-[11px] muted2 font-extrabold mb-2">Robot harakati</div>
+              <div id="robotMotionChips" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <div class="mt-3">
+              <div class="text-[11px] muted2 font-extrabold mb-2">Hamroh harakati</div>
+              <div id="companionMotionChips" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <div class="mt-3 grid sm:grid-cols-2 gap-3">
+              <label class="block">
+                <div class="text-[11px] muted2 font-extrabold mb-1">Sahna temasi</div>
+                <select id="sceneThemeSel" class="w-full glass rounded-2xl px-3 py-2 text-xs outline-none">
+                  <option value="aurora">Aurora</option>
+                  <option value="night">Night</option>
+                  <option value="sunset">Sunset</option>
+                  <option value="mint">Mint</option>
+                </select>
+              </label>
+              <label class="block">
+                <div class="text-[11px] muted2 font-extrabold mb-1">Robot effektlari</div>
+                <select id="sceneFxSel" class="w-full glass rounded-2xl px-3 py-2 text-xs outline-none">
+                  <option value="auto">Auto</option>
+                  <option value="on">Doim ON</option>
+                  <option value="off">OFF</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
           <div class="mt-4 grid sm:grid-cols-3 gap-3">
             <div class="glass rounded-2xl p-4">
               <div class="text-xs muted2 font-extrabold">Daraja</div>
@@ -529,6 +673,48 @@
           </div>
 
           <div id="companionsGrid" class="mt-4 grid md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Robot Studio -->
+        <div id="robotStudioCard" class="glass rounded-3xl p-6 g-border animate-pop hidden">
+          <div class="text-lg font-black">Robot Studio</div>
+          <div class="text-xs muted2 mt-1">Robot va hamroh ko‘rinishini saqlang: nom, rang va aksessuar.</div>
+
+          <div class="mt-4 grid md:grid-cols-2 gap-4">
+            <label class="block">
+              <div class="text-xs muted2 font-extrabold mb-1">Robot nomi</div>
+              <input id="studioRobotName" class="w-full glass rounded-2xl px-4 py-2 text-sm outline-none" maxlength="40" placeholder="Masalan: Neon Ustoz"/>
+            </label>
+            <label class="block">
+              <div class="text-xs muted2 font-extrabold mb-1">Robot tana rangi</div>
+              <input id="studioRobotColor" type="color" class="w-full h-10 glass rounded-2xl px-2 py-1"/>
+            </label>
+            <label class="block">
+              <div class="text-xs muted2 font-extrabold mb-1">Robot kiyim rangi</div>
+              <input id="studioRobotOutfit" type="color" class="w-full h-10 glass rounded-2xl px-2 py-1"/>
+            </label>
+            <label class="block">
+              <div class="text-xs muted2 font-extrabold mb-1">Hamroh nomi</div>
+              <input id="studioCompanionName" class="w-full glass rounded-2xl px-4 py-2 text-sm outline-none" maxlength="30" placeholder="Masalan: Fox do‘stim"/>
+            </label>
+            <label class="block">
+              <div class="text-xs muted2 font-extrabold mb-1">Hamroh rangi</div>
+              <input id="studioCompanionColor" type="color" class="w-full h-10 glass rounded-2xl px-2 py-1"/>
+            </label>
+            <label class="block">
+              <div class="text-xs muted2 font-extrabold mb-1">Aksessuar rangi</div>
+              <input id="studioCompanionAccessory" type="color" class="w-full h-10 glass rounded-2xl px-2 py-1"/>
+            </label>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <button id="studioApplyBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
+              <i class="fa-solid fa-eye mr-2"></i>Preview
+            </button>
+            <button id="studioSaveBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-primary text-white glow-ring">
+              <i class="fa-solid fa-floppy-disk mr-2"></i>Saqlash
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -605,6 +791,24 @@
   let catalog = [];
   let upgrades = {};
   let glassesOff = false;
+  let sceneState = { robotMotion:'float', companionMotion:'hop', stageTheme:'aurora', robotFx:'auto' };
+  let stageModeBound = false;
+  let studioBound = false;
+  let trialState = null;
+
+  const ROBOT_MOTION_OPTS = [
+    { id:'float', label:'Float', icon:'fa-water' },
+    { id:'dance', label:'Dance', icon:'fa-music' },
+    { id:'guard', label:'Guard', icon:'fa-shield-halved' },
+    { id:'spin', label:'Spin', icon:'fa-rotate' },
+    { id:'hop', label:'Hop', icon:'fa-person-running' }
+  ];
+  const COMP_MOTION_OPTS = [
+    { id:'hop', label:'Hop', icon:'fa-person-running' },
+    { id:'orbit', label:'Orbit', icon:'fa-satellite' },
+    { id:'pulse', label:'Pulse', icon:'fa-heart-pulse' },
+    { id:'idle', label:'Idle', icon:'fa-pause' }
+  ];
 
   document.getElementById('logoutBtn').addEventListener('click', ()=>{
     localStorage.removeItem('token');
@@ -616,6 +820,103 @@
     const j = await res.json().catch(()=>null);
     if(!res.ok) throw new Error(j?.error || `Xatolik: ${res.status}`);
     return j;
+  }
+
+  function normalizeScene(raw){
+    const allowedRobot = new Set(['float','dance','guard','spin','hop']);
+    const allowedComp = new Set(['hop','orbit','pulse','idle']);
+    const allowedTheme = new Set(['aurora','night','sunset','mint']);
+    const allowedFx = new Set(['auto','on','off']);
+    const r = String(raw?.robotMotion || '').toLowerCase().trim();
+    const c = String(raw?.companionMotion || '').toLowerCase().trim();
+    const t = String(raw?.stageTheme || '').toLowerCase().trim();
+    const f = String(raw?.robotFx || '').toLowerCase().trim();
+    return {
+      robotMotion: allowedRobot.has(r) ? r : 'float',
+      companionMotion: allowedComp.has(c) ? c : 'hop',
+      stageTheme: allowedTheme.has(t) ? t : 'aurora',
+      robotFx: allowedFx.has(f) ? f : 'auto'
+    };
+  }
+
+  function sceneStorageKey(){
+    const uid = String(me?._id || viewed?._id || 'me');
+    return `schat:scene:${uid}`;
+  }
+  function readLocalScene(){
+    try{
+      const raw = localStorage.getItem(sceneStorageKey());
+      if(!raw) return null;
+      return normalizeScene(JSON.parse(raw));
+    }catch(_){ return null; }
+  }
+  function writeLocalScene(scene){
+    try{ localStorage.setItem(sceneStorageKey(), JSON.stringify(normalizeScene(scene))); }catch(_){}
+  }
+
+  async function loadSceneState(){
+    if(isOwner){
+      try{
+        const j = await apiJson('/api/pet/scene', { headers: authHeaders(false) });
+        sceneState = normalizeScene(j?.scene || me?.petScene || readLocalScene() || {});
+        writeLocalScene(sceneState);
+        return;
+      }catch(_){}
+      sceneState = normalizeScene(me?.petScene || readLocalScene() || {});
+      return;
+    }
+    sceneState = normalizeScene(viewed?.petScene || {});
+  }
+
+  async function saveSceneState(){
+    if(!isOwner) return;
+    const body = normalizeScene(sceneState);
+    try{
+      await apiJson('/api/pet/scene', {
+        method:'POST',
+        headers: authHeaders(true),
+        body: JSON.stringify(body)
+      });
+      writeLocalScene(body);
+      if(me) me.petScene = body;
+      if(viewed && String(viewed._id||'') === String(me?._id||'')) viewed.petScene = body;
+      toast('Robot sahnasi saqlandi', 'success');
+    }catch(e){
+      writeLocalScene(body);
+      toast('Server saqlamadi, lokal rejimda saqlandi', 'error');
+    }
+  }
+
+  function loadTrialState(){
+    trialState = null;
+    try{
+      const raw = localStorage.getItem('schat:petmarket-trial');
+      if(!raw) return;
+      const t = JSON.parse(raw);
+      const age = Date.now() - Number(t?.ts || 0);
+      if (!t || !t.kind || !t.id || age > (2 * 24 * 60 * 60 * 1000)) {
+        localStorage.removeItem('schat:petmarket-trial');
+        return;
+      }
+      trialState = {
+        kind: String(t.kind || '').toLowerCase(),
+        id: String(t.id || '').trim(),
+        name: String(t.name || '').trim(),
+        price: Number(t.price || 0),
+        emoji: String(t.emoji || ''),
+        rarity: String(t.rarity || ''),
+        moodBoost: Number(t.moodBoost || 0),
+        source: String(t.source || ''),
+        ts: Number(t.ts || Date.now())
+      };
+    }catch(_){
+      try{ localStorage.removeItem('schat:petmarket-trial'); }catch(_){}
+    }
+  }
+
+  function clearTrialState(){
+    trialState = null;
+    try{ localStorage.removeItem('schat:petmarket-trial'); }catch(_){}
   }
 
   async function loadMe(){
@@ -750,14 +1051,16 @@
     const typeId = robot?.typeId || 'starter';
     const body = robot?.baseColor || '#6366f1';
     const outfit = robot?.outfitColor || '#ec4899';
+    const motion = String(sceneState?.robotMotion || 'float');
+    const fx = String(sceneState?.robotFx || 'auto');
 
-    wrapper.className = `robot-wrap r-${typeId}` + (typeId==='shade' && glassesOff ? ' glasses-off' : '');
+    wrapper.className = `robot-wrap r-${typeId} motion-${motion} fx-${fx}` + (typeId==='shade' && glassesOff ? ' glasses-off' : '');
     wrapper.innerHTML = robotSVG({ body, outfit, typeId });
 
     // Laser animation if laser robot
     const beam = wrapper.querySelector('.laser-beam');
     if(beam){
-      beam.style.animation = 'laser 2.6s ease-in-out infinite';
+      beam.style.animation = (motion === 'guard' ? 'laser 1.6s ease-in-out infinite' : 'laser 2.6s ease-in-out infinite');
     }
   }
 
@@ -766,7 +1069,120 @@
     bubble.classList.remove('hidden');
     bubble.textContent = comp.emoji || '🐾';
     document.getElementById('companionName').textContent = comp.name || 'Hamroh';
-    bubble.classList.toggle('hop', (comp.typeId||'').includes('bunny'));
+    bubble.classList.remove('hop', 'motion-hop', 'motion-orbit', 'motion-pulse', 'motion-idle');
+    const cm = String(sceneState?.companionMotion || ((comp.typeId||'').includes('bunny') ? 'hop' : 'idle'));
+    bubble.classList.add('motion-' + cm);
+    bubble.style.color = comp.color || '';
+    bubble.style.textShadow = comp.accessoryColor ? `0 0 12px ${comp.accessoryColor}` : '';
+  }
+
+  function applyStageTheme(){
+    const stage = document.querySelector('.stage');
+    if(!stage) return;
+    stage.classList.remove('theme-aurora','theme-night','theme-sunset','theme-mint');
+    stage.classList.add('theme-' + String(sceneState?.stageTheme || 'aurora'));
+  }
+
+  function renderSceneChips(){
+    const rm = document.getElementById('robotMotionChips');
+    const cm = document.getElementById('companionMotionChips');
+    if(!rm || !cm) return;
+    rm.innerHTML = ROBOT_MOTION_OPTS.map(o => `
+      <button type="button" data-rmotion="${o.id}" class="scene-chip ${sceneState.robotMotion===o.id?'active':''}">
+        <i class="fa-solid ${o.icon} mr-1"></i>${o.label}
+      </button>
+    `).join('');
+    cm.innerHTML = COMP_MOTION_OPTS.map(o => `
+      <button type="button" data-cmotion="${o.id}" class="scene-chip ${sceneState.companionMotion===o.id?'active':''}">
+        <i class="fa-solid ${o.icon} mr-1"></i>${o.label}
+      </button>
+    `).join('');
+  }
+
+  function bindSceneControls(){
+    if(stageModeBound) return;
+    stageModeBound = true;
+
+    document.getElementById('robotMotionChips')?.addEventListener('click', (e)=>{
+      const b = e.target.closest('[data-rmotion]');
+      if(!b) return;
+      sceneState.robotMotion = String(b.getAttribute('data-rmotion') || 'float');
+      renderSceneChips();
+      paint();
+    });
+    document.getElementById('companionMotionChips')?.addEventListener('click', (e)=>{
+      const b = e.target.closest('[data-cmotion]');
+      if(!b) return;
+      sceneState.companionMotion = String(b.getAttribute('data-cmotion') || 'hop');
+      renderSceneChips();
+      paint();
+    });
+
+    document.getElementById('sceneThemeSel')?.addEventListener('change', (e)=>{
+      sceneState.stageTheme = String(e.target.value || 'aurora');
+      paint();
+    });
+    document.getElementById('sceneFxSel')?.addEventListener('change', (e)=>{
+      sceneState.robotFx = String(e.target.value || 'auto');
+      paint();
+    });
+    document.getElementById('sceneSaveBtn')?.addEventListener('click', ()=> saveSceneState());
+    document.getElementById('sceneResetBtn')?.addEventListener('click', ()=>{
+      sceneState = normalizeScene({});
+      paint();
+      toast('Sahna default holatga qaytdi', 'success');
+    });
+  }
+
+  function renderTrialBanner(){
+    const box = document.getElementById('trialBanner');
+    if(!box) return;
+    if(!isOwner || !trialState){
+      box.classList.add('hidden');
+      box.innerHTML = '';
+      return;
+    }
+    const alreadyOwnedRobot = trialState.kind === 'robot' && (me?.robots||[]).some(r => String(r.typeId||'') === String(trialState.id||''));
+    const alreadyOwnedComp = trialState.kind === 'companion' && (me?.companions||[]).some(c => String(c.typeId||'') === String(trialState.id||''));
+    const owned = alreadyOwnedRobot || alreadyOwnedComp;
+    const title = trialState.kind === 'robot' ? 'Robot trial rejimi' : 'Hayvoncha trial rejimi';
+    const subtitle = `${trialState.name || trialState.id} • ${trialState.price || 0} coin`;
+
+    box.classList.remove('hidden');
+    box.innerHTML = `
+      <div class="glass rounded-2xl p-3 border border-emerald-300/35">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <div>
+            <div class="text-sm font-black">${escapeHtml(title)}</div>
+            <div class="text-xs muted2">${escapeHtml(subtitle)}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            ${owned ? `<span class="scene-chip active">Sizda bor</span>` : `<button id="trialBuyBtn" class="glass rounded-xl px-3 py-2 text-xs font-extrabold btn-primary text-white glow-ring"><i class="fa-solid fa-bag-shopping mr-1"></i>Hozir sotib olish</button>`}
+            <button id="trialClearBtn" class="glass rounded-xl px-3 py-2 text-xs font-extrabold btn-ghost glow-ring"><i class="fa-solid fa-xmark mr-1"></i>Yopish</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const clearBtn = document.getElementById('trialClearBtn');
+    if(clearBtn) clearBtn.onclick = ()=>{ clearTrialState(); paint(); };
+    const buyBtn = document.getElementById('trialBuyBtn');
+    if(buyBtn){
+      buyBtn.onclick = async ()=>{
+        try{
+          if(trialState.kind === 'robot'){
+            await apiJson('/api/robots/buy', { method:'POST', headers: authHeaders(true), body: JSON.stringify({ robotTypeId: trialState.id }) });
+            toast('Robot sotib olindi', 'success');
+          } else if (trialState.kind === 'companion'){
+            await apiJson('/api/shop/buy', { method:'POST', headers: authHeaders(true), body: JSON.stringify({ itemId: trialState.id }) });
+            toast('Hayvoncha sotib olindi', 'success');
+          }
+          clearTrialState();
+          await refreshSelfAndRepaint();
+        }catch(e){
+          toast(e.message || 'Xarid muvaffaqiyatsiz', 'error');
+        }
+      };
+    }
   }
 
   function renderRobotsGrid(u){
@@ -872,8 +1288,11 @@
         const typeId = b.getAttribute('data-petplay') || '';
         // local-only micro animation
         const bubble = document.getElementById('companionBubble');
-        bubble.classList.add('hop');
-        setTimeout(()=>bubble.classList.remove('hop'), 1800);
+        bubble.classList.add('motion-pulse');
+        setTimeout(()=>{
+          bubble.classList.remove('motion-pulse');
+          bubble.classList.add('motion-' + String(sceneState?.companionMotion || 'hop'));
+        }, 900);
         toast('Hamroh xursand bo‘ldi!', 'success');
       });
     });
@@ -894,32 +1313,161 @@
     setTimeout(()=>{ s.style.opacity='0'; setTimeout(()=>s.remove(), 250); }, 650);
   }
 
+  function setStudioValues(activeRobot, activeCompanion){
+    if(!isOwner) return;
+    document.getElementById('studioRobotName').value = activeRobot?.name || '';
+    document.getElementById('studioRobotColor').value = activeRobot?.baseColor || '#6366f1';
+    document.getElementById('studioRobotOutfit').value = activeRobot?.outfitColor || '#ec4899';
+    document.getElementById('studioCompanionName').value = activeCompanion?.name || '';
+    document.getElementById('studioCompanionColor').value = activeCompanion?.color || '#14b8a6';
+    document.getElementById('studioCompanionAccessory').value = activeCompanion?.accessoryColor || '#f59e0b';
+  }
+
+  async function saveStudioData(activeRobot, activeCompanion){
+    if(!isOwner) return;
+    try{
+      if(activeRobot?._id){
+        await apiJson('/api/robots/customize', {
+          method:'POST',
+          headers: authHeaders(true),
+          body: JSON.stringify({
+            robotId: activeRobot._id,
+            name: document.getElementById('studioRobotName').value.trim(),
+            baseColor: document.getElementById('studioRobotColor').value,
+            outfitColor: document.getElementById('studioRobotOutfit').value
+          })
+        });
+      }
+      if(activeCompanion?._id){
+        await apiJson('/api/companions/customize', {
+          method:'POST',
+          headers: authHeaders(true),
+          body: JSON.stringify({
+            companionId: activeCompanion._id,
+            name: document.getElementById('studioCompanionName').value.trim(),
+            color: document.getElementById('studioCompanionColor').value,
+            accessoryColor: document.getElementById('studioCompanionAccessory').value
+          })
+        });
+      }
+      toast('Robot Studio saqlandi', 'success');
+      await refreshSelfAndRepaint();
+    }catch(e){
+      toast(e.message || 'Studio saqlanmadi', 'error');
+    }
+  }
+
   async function refreshSelfAndRepaint(){
     await loadMe();
     // if viewing self, keep it in sync
     if(isOwner) viewed = me;
+    if(isOwner) await loadSceneState();
     paint();
+  }
+
+  function getCurrentActiveRobot(){
+    const robots = viewed?.robots || [];
+    return viewed?.activeRobot || robots.find(r => String(r._id) === String(viewed?.activeRobotId)) || robots.find(r=>r.equipped) || robots[0] || null;
+  }
+  function getCurrentActiveCompanion(){
+    const comps = viewed?.companions || [];
+    return viewed?.activeCompanion || comps.find(c => String(c._id)===String(viewed?.activeCompanionId)) || comps.find(c=>c.equipped) || comps[0] || null;
   }
 
   function paint(){
     setProfileUI(viewed);
+    applyStageTheme();
 
-    const activeRobot = viewed.activeRobot || (viewed.robots||[]).find(r => String(r._id) === String(viewed.activeRobotId)) || (viewed.robots||[]).find(r=>r.equipped) || (viewed.robots||[])[0] || null;
+    const ownedRobots = viewed.robots || [];
+    const ownedCompanions = viewed.companions || [];
+    const activeRobot = getCurrentActiveRobot();
+    const activeCompanion = getCurrentActiveCompanion();
+
+    let stageRobot = activeRobot;
+    let stageCompanion = activeCompanion;
+
+    if(isOwner && trialState){
+      if(trialState.kind === 'robot'){
+        const owned = ownedRobots.some(r => String(r.typeId||'') === String(trialState.id||''));
+        if(!owned){
+          const it = (catalog || []).find(x => String(x.id||'') === String(trialState.id||''));
+          if(it){
+            stageRobot = {
+              _id: `trial_${it.id}`,
+              typeId: it.id,
+              name: it.name || trialState.name || 'Trial Robot',
+              baseColor: '#6366f1',
+              outfitColor: '#ec4899',
+              level: 1,
+              cuteness: it.baseCuteness || 60
+            };
+          }
+        }
+      } else if (trialState.kind === 'companion'){
+        const owned = ownedCompanions.some(c => String(c.typeId||'') === String(trialState.id||''));
+        if(!owned){
+          stageCompanion = {
+            _id: `trial_${trialState.id}`,
+            typeId: trialState.id,
+            name: trialState.name || 'Trial Companion',
+            emoji: trialState.emoji || '🐾',
+            rarity: trialState.rarity || 'trial',
+            moodBoost: trialState.moodBoost || 0
+          };
+        }
+      }
+    }
+
     const wrap = document.getElementById('robotWrap');
-    if(activeRobot){
-      applyRobot(wrap, activeRobot);
-      document.getElementById('level').textContent = activeRobot.level || 1;
-      document.getElementById('cuteness').textContent = activeRobot.cuteness || 50;
-      document.getElementById('robotSub').textContent = `${activeRobot.name || 'Robotcha'} — tur: ${activeRobot.typeId || 'starter'}`;
+    if(stageRobot){
+      applyRobot(wrap, stageRobot);
+      document.getElementById('level').textContent = stageRobot.level || 1;
+      document.getElementById('cuteness').textContent = stageRobot.cuteness || 50;
+      document.getElementById('robotSub').textContent = `${stageRobot.name || 'Robotcha'} — tur: ${stageRobot.typeId || 'starter'}`;
     } else {
       wrap.innerHTML = '';
     }
 
-    const activeCompanion = viewed.activeCompanion || (viewed.companions||[]).find(c => String(c._id)===String(viewed.activeCompanionId)) || (viewed.companions||[]).find(c=>c.equipped) || (viewed.companions||[])[0] || null;
-    applyCompanion(document.getElementById('companionBubble'), activeCompanion);
+    applyCompanion(document.getElementById('companionBubble'), stageCompanion);
 
     renderRobotsGrid(viewed);
     renderCompanionsGrid(viewed);
+    renderTrialBanner();
+
+    const sceneBox = document.getElementById('sceneControls');
+    const studioBox = document.getElementById('robotStudioCard');
+    sceneBox.classList.toggle('hidden', !isOwner);
+    studioBox.classList.toggle('hidden', !isOwner);
+    if(isOwner){
+      const themeSel = document.getElementById('sceneThemeSel');
+      const fxSel = document.getElementById('sceneFxSel');
+      if(themeSel) themeSel.value = sceneState.stageTheme || 'aurora';
+      if(fxSel) fxSel.value = sceneState.robotFx || 'auto';
+      renderSceneChips();
+      bindSceneControls();
+      setStudioValues(activeRobot, activeCompanion);
+
+      if(!studioBound){
+        studioBound = true;
+        document.getElementById('studioApplyBtn')?.addEventListener('click', ()=>{
+          const curRobot = getCurrentActiveRobot();
+          const rn = document.getElementById('studioRobotName').value.trim();
+          const rc = document.getElementById('studioRobotColor').value;
+          const ro = document.getElementById('studioRobotOutfit').value;
+          if(curRobot){
+            applyRobot(document.getElementById('robotWrap'), {
+              ...curRobot,
+              name: rn || curRobot.name,
+              baseColor: rc || curRobot.baseColor,
+              outfitColor: ro || curRobot.outfitColor
+            });
+          }
+          sparkle();
+          toast('Preview yangilandi', 'success');
+        });
+        document.getElementById('studioSaveBtn')?.addEventListener('click', ()=> saveStudioData(getCurrentActiveRobot(), getCurrentActiveCompanion()));
+      }
+    }
 
     // Special buttons
     const playBtn = document.getElementById('playBtn');
@@ -1007,6 +1555,8 @@
       await loadViewed();
 
       isOwner = (viewed?._id && me?._id && String(viewed._id) === String(me._id));
+      loadTrialState();
+      await loadSceneState();
       // owner tools
       document.getElementById('openShopBtn').classList.toggle('hidden', !isOwner);
       document.getElementById('openShopBtn').onclick = openRobotShop;

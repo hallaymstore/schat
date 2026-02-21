@@ -995,20 +995,23 @@ button,a{ -webkit-tap-highlight-color: transparent; }
     <script>
         let socket = null;
         let currentUser = null;
+        let __MY_ID_FROM_SOCKET = '';
         // Robust my userId (so stage owner logic works even if currentUser is not loaded yet)
         const __MY_ID_FROM_TOKEN = (function(){
             try{
                 const t = localStorage.getItem('token') || '';
                 const parts = t.split('.');
                 if(parts.length < 2) return '';
-                const json = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+                const raw = parts[1].replace(/-/g,'+').replace(/_/g,'/');
+                const padded = raw + '='.repeat((4 - (raw.length % 4)) % 4);
+                const json = JSON.parse(atob(padded));
                 return String(json.userId || json.id || json._id || '');
             }catch(e){ return ''; }
         })();
         function myUserId(){
             try{
-                return String(currentUser?._id || currentUser?.id || __MY_ID_FROM_TOKEN || '');
-            }catch(e){ return String(__MY_ID_FROM_TOKEN || ''); }
+                return String(currentUser?._id || currentUser?.id || __MY_ID_FROM_TOKEN || __MY_ID_FROM_SOCKET || '');
+            }catch(e){ return String(__MY_ID_FROM_TOKEN || __MY_ID_FROM_SOCKET || ''); }
         }
 
         let currentGroup = null;
@@ -1116,7 +1119,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         async function loadCurrentUser() {
             try {
                 const response = await fetch('/api/me', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` }
                 });
                 const data = await response.json();
                 if (data.success) {
@@ -1231,8 +1234,9 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         // Setup group actions based on user role
         function setupGroupActions(group) {
             const container = document.getElementById('groupActions');
-            const isCreator = currentUser._id === group.creatorId?._id;
-            const isMember = group.members?.some(m => m._id === currentUser._id);
+            const meId = String(myUserId() || '');
+            const isCreator = meId && String(group?.creatorId?._id || '') === meId;
+            const isMember = Array.isArray(group?.members) && group.members.some(m => String(m?._id || '') === meId);
 
             if (!container) return;
 
@@ -1394,9 +1398,19 @@ function setupSocket() {
                 transports: ['websocket', 'polling'],
                 reconnection: true
             });
-            
-            socket.emit('authenticate', token);
-            socket.emit('joinGroup', groupId);
+
+            const authenticateAndJoin = () => {
+                try { socket.emit('authenticate', token || ''); } catch(_) {}
+            };
+            socket.on('connect', authenticateAndJoin);
+            socket.on('authenticated', (data) => {
+                try { __MY_ID_FROM_SOCKET = String(data?.userId || __MY_ID_FROM_SOCKET || ''); } catch(_) {}
+                try { socket.emit('joinGroup', groupId); } catch(_) {}
+            });
+            socket.on('authenticationError', () => {
+                try { __MY_ID_FROM_SOCKET = ''; } catch(_) {}
+            });
+            authenticateAndJoin();
             
             // Listen for new group messages
             socket.on('newGroupMessage', (message) => {
@@ -1814,7 +1828,7 @@ function setupSocket() {
                     // Filter out users already in group
                     const existingMembers = currentGroup.members.map(m => m._id);
                     const filteredUsers = data.users.filter(user => 
-                        !existingMembers.includes(user._id) && user._id !== currentUser._id
+                        !existingMembers.includes(user._id) && String(user._id || '') !== String(myUserId() || '')
                     );
                     
                     if (filteredUsers.length > 0) {
@@ -2478,7 +2492,10 @@ function isTeacher(userId) {
 
         function shouldInitiateOffer(localId, remoteId) {
             // deterministic tie-breaker to avoid offer glare
-            return String(localId) < String(remoteId);
+            const l = String(localId || '').trim();
+            const r = String(remoteId || '').trim();
+            if (!l || !r) return false;
+            return l < r;
         }
 
         async function ensureLocalStream(callType) {
@@ -2507,20 +2524,13 @@ const videoConstraints = getAdaptiveVideoConstraints();
 const audioConstraints = AUDIO_CONSTRAINTS;
 const net = getNetworkHints();
 const device = getDeviceRuntimeProfile();
-const isTeacherRole = String(currentUser?.role || '').toLowerCase() === 'teacher';
-const preferAudioOnlyForStudent = (callType !== 'audio') && !isTeacherRole && (net.veryLow || (net.low && device.lowEnd));
 try {
     const constraints = (callType === 'audio')
         ? { audio: AUDIO_CONSTRAINTS, video: false }
-        : (preferAudioOnlyForStudent
-            ? { audio: AUDIO_CONSTRAINTS, video: false }
-            : { audio: AUDIO_CONSTRAINTS, video: videoConstraints });
+        : { audio: AUDIO_CONSTRAINTS, video: videoConstraints };
 
     groupCall.localStream = await safeGetUserMedia(constraints);
     try { (groupCall.localStream.getTracks() || []).forEach(tuneLocalTrack); } catch(_) {}
-    if (preferAudioOnlyForStudent) {
-        try { notify("Past internet rejimi: kamera o'chirildi, o'qituvchi videosi ustuvor.", 'warn'); } catch(_) {}
-    }
     addVideoTile(String(myUserId() || 'local'), groupCall.localStream, true);
     return groupCall.localStream;
 } catch (err) {
@@ -2532,6 +2542,11 @@ try {
             groupCall.localStream = await safeGetUserMedia({ audio: AUDIO_CONSTRAINTS, video: false });
             try { (groupCall.localStream.getAudioTracks() || []).forEach(tuneLocalTrack); } catch(_) {}
             addVideoTile(String(myUserId() || 'local'), groupCall.localStream, true);
+            try {
+                if (net.veryLow || (net.low && device.lowEnd)) {
+                    notify("Lite rejim: kamera vaqtincha o'chdi, o'qituvchi videosi ustuvor.", 'warn');
+                }
+            } catch(_) {}
             return groupCall.localStream;
         } catch (err2) {
             console.warn('ensureLocalStream audio-only failed:', err2);
@@ -2789,7 +2804,7 @@ const video = tile.querySelector('video');
                         if (!canControl) b.style.opacity = '0.6';
                         meta.appendChild(b);
                     } else if (ownerId) {
-                        meta.textContent = (String(ownerId) === String(currentUser?._id)) ? 'Siz (asosiy)' : 'Asosiy o‘qituvchi';
+                        meta.textContent = (String(ownerId) === String(myUserId() || '')) ? 'Siz (asosiy)' : 'Asosiy o‘qituvchi';
                     }
                 }
             } catch(_) {}
@@ -3060,7 +3075,10 @@ function removeVideoTile(userId) {
 
             await ensureLocalStream(groupCall.callType);
             groupCall.cameraOff = !((groupCall.localStream?.getVideoTracks?.() || []).some((t) => t && t.readyState === 'live' && t.enabled));
-            try { if (currentUser && currentUser._id) groupCall.participantInfos.set(String(currentUser._id), { role: String(currentUser.role||'').toLowerCase() }); } catch(_) {}
+            try {
+                const meId = String(myUserId() || '');
+                if (meId) groupCall.participantInfos.set(meId, { role: String(currentUser?.role || '').toLowerCase() });
+            } catch(_) {}
             socket.emit('groupCallJoin', { groupId: gid, callId });
         }
 
@@ -3460,7 +3478,7 @@ function removeVideoTile(userId) {
         groupCall.localStream = out;
 
         // Update local preview (teacher sees what's being sent)
-        addVideoTile(currentUser?._id, out, true);
+        addVideoTile(String(myUserId() || 'local'), out, true);
         renderGroupCallLayout();
 
         for (const [uid, pc] of groupCall.peers.entries()) {
@@ -3529,7 +3547,7 @@ function removeVideoTile(userId) {
         groupCall._prevLocalStream = null;
 
         // Update preview back to camera
-        addVideoTile(currentUser?._id, prev, true);
+        addVideoTile(String(myUserId() || 'local'), prev, true);
         renderGroupCallLayout();
 
         // Replace tracks for existing peers
@@ -4225,7 +4243,7 @@ function toggleMute() {
                 else groupCall.localStream = new MediaStream([newTrack]);
 
                 // Re-attach to local preview
-                const lv = document.getElementById('localVideo') || document.getElementById(`vid_${String(currentUser?._id || 'local')}`);
+                const lv = document.getElementById('localVideo') || document.getElementById(`vid_${String(myUserId() || 'local')}`);
                 if (lv) { lv.srcObject = groupCall.localStream; try{ await lv.play(); }catch(_){} }
 
                 // Replace in all peer connections
@@ -4263,7 +4281,7 @@ function toggleMute() {
                 return;
             }
             // If starter -> end call for everyone; else leave
-            if (groupCall.starterId && currentUser && String(groupCall.starterId) === String(currentUser._id)) {
+            if (groupCall.starterId && String(groupCall.starterId) === String(myUserId() || '')) {
                 socket.emit('groupCallEnd', { groupId: groupCall.groupId, callId: groupCall.callId });
             } else {
                 socket.emit('groupCallLeave', { groupId: groupCall.groupId, callId: groupCall.callId });
@@ -4357,6 +4375,7 @@ function toggleMute() {
             socket.on('groupCallStarted', async (data) => {
                 if (String(data.groupId) !== String(groupId)) return;
                 try { localStorage.removeItem('schat:pendingGroupCall'); } catch(_) {}
+                const meId = String(myUserId() || '');
                 groupCall.active = true;
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
@@ -4366,16 +4385,16 @@ function toggleMute() {
                 renderGroupCallLayout();
                 updateCallControlUI();
                 startStageHealthMonitor();
-                groupCall.starterId = currentUser?._id; // we started
+                groupCall.starterId = String(data?.startedBy || meId || '');
                 setGroupCallStatus('Connected (starter)');
                 // Auto recording for teacher (starts with lesson)
                 try{ await autoStartRecordingIfNeeded(); }catch(_){ }
                 try{ if(data.title) document.getElementById('groupCallTitle').textContent = data.title; }catch(_){}
 
                 // Create offers to existing participants
-                const participants = (data.participants || []).filter(u => String(u) !== String(currentUser?._id));
+                const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
                 for (const uid of participants) {
-                    if (shouldInitiateOffer(currentUser?._id, uid)) {
+                    if (shouldInitiateOffer(meId, uid)) {
                         await sendOffer(uid);
                     }
                 }
@@ -4384,6 +4403,7 @@ function toggleMute() {
             socket.on('groupCallJoined', async (data) => {
                 if (String(data.groupId) !== String(groupId)) return;
                 try { localStorage.removeItem('schat:pendingGroupCall'); } catch(_) {}
+                const meId = String(myUserId() || '');
                 groupCall.active = true;
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
@@ -4393,16 +4413,16 @@ function toggleMute() {
                 renderGroupCallLayout();
                 updateCallControlUI();
                 startStageHealthMonitor();
-                groupCall.starterId = null; // unknown in this event
+                groupCall.starterId = String(data?.startedBy || '');
                 setGroupCallStatus('Connected');
                 // Auto recording for teacher when joining an ongoing lesson
                 try{ await autoStartRecordingIfNeeded(); }catch(_){ }
 
                 try{ if(data.title) document.getElementById('groupCallTitle').textContent = data.title; }catch(_){}
 
-                const participants = (data.participants || []).filter(u => String(u) !== String(currentUser?._id));
+                const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
                 for (const uid of participants) {
-                    if (shouldInitiateOffer(currentUser?._id, uid)) {
+                    if (shouldInitiateOffer(meId, uid)) {
                         await sendOffer(uid);
                     }
                 }
@@ -4417,10 +4437,11 @@ function toggleMute() {
                 renderGroupCallLayout();
 
                 const uid = String(data.userId);
-                if (String(uid) === String(currentUser?._id)) return;
+                const meId = String(myUserId() || '');
+                if (!uid || uid === meId) return;
 
                 // Initiate offer only if tie-breaker says so
-                if (shouldInitiateOffer(currentUser?._id, uid)) {
+                if (shouldInitiateOffer(meId, uid)) {
                     await sendOffer(uid);
                 }
             });
@@ -4674,7 +4695,7 @@ function toggleMute() {
     }catch(_){}
     // fallback: currentUser role for self
     try{
-      if(str(uid)===str(currentUser?._id) && String(currentUser?.role||'').toLowerCase()==='teacher') return true;
+      if(str(uid)===str(myUserId()) && String(currentUser?.role||'').toLowerCase()==='teacher') return true;
     }catch(_){}
     return false;
   }

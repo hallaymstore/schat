@@ -169,6 +169,9 @@
           <button data-tab="outfits" class="tab chip rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring">
             <i class="fa-solid fa-shirt mr-2"></i>Kiyim
           </button>
+          <button data-tab="robots" class="tab chip rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring">
+            <i class="fa-solid fa-robot mr-2"></i>Robotlar
+          </button>
           <button data-tab="companions" class="tab chip rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring">
             <i class="fa-solid fa-paw mr-2"></i>Hayvonchalar
           </button>
@@ -193,6 +196,23 @@
       <aside class="glass rounded-3xl p-6 g-border animate-pop">
         <div class="text-sm font-extrabold">Tezkor ma’lumot</div>
         <div class="mt-3 space-y-3">
+          <div class="glass rounded-2xl p-4">
+            <div class="text-xs font-extrabold muted">Live sinov maydoni</div>
+            <div id="trialPreviewStage" class="mt-2 rounded-2xl border border-white/20 p-4 min-h-[120px] flex items-center justify-center gap-4"
+                 style="background:radial-gradient(90% 80% at 30% 0%, rgba(34,211,238,.22), transparent 60%), radial-gradient(80% 80% at 85% 100%, rgba(245,158,11,.18), transparent 62%), rgba(2,6,23,.35);">
+              <div id="trialPreviewRobot" class="text-4xl">🤖</div>
+              <div id="trialPreviewCompanion" class="text-3xl">🐾</div>
+            </div>
+            <div id="trialPreviewText" class="mt-2 text-xs muted2">Mahsulot kartasidan <b>Sinab ko‘rish</b> tugmasini bosing.</div>
+            <div class="mt-3 flex gap-2">
+              <button id="trialSaveBtn" class="glass rounded-xl px-3 py-2 text-xs font-extrabold btn-primary text-white glow-ring">
+                <i class="fa-solid fa-eye mr-1"></i>Profilda sinash
+              </button>
+              <button id="trialClearBtn" class="glass rounded-xl px-3 py-2 text-xs font-extrabold btn-ghost glow-ring">
+                <i class="fa-solid fa-trash mr-1"></i>Tozalash
+              </button>
+            </div>
+          </div>
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Qanday ishlaydi?</div>
             <div class="mt-1 text-sm muted2">
@@ -249,39 +269,96 @@
     };
 
     let market = null;
+    let robotCatalog = [];
+    let ownedRobotTypeIds = new Set();
+    let ownedCompanionTypeIds = new Set();
+    let currentCoins = 0;
+    let currentTrial = null;
     let tab = 'foods';
 
     const tabMeta = {
       foods: { title:'Ovqatlar', sub:'Ochlikni tez to‘ldirish uchun', icon:'fa-burger' },
       paints: { title:'Bo‘yoqlar', sub:'Robot va kiyim rangini o‘zgartiring', icon:'fa-palette' },
-      outfits: { title:'Kiyimlar', sub:'Kiyim rangini yangilang', icon:'fa-shirt' }
-    ,
-      companions: { title: 'Hayvonchalar', sub: 'Profil uchun yoqimtoy hamrohlar' }
+      outfits: { title:'Kiyimlar', sub:'Kiyim rangini yangilang', icon:'fa-shirt' },
+      robots: { title: 'Robotlar', sub: 'Animatsiyali robotlar kolleksiyasi', icon:'fa-robot' },
+      companions: { title: 'Hayvonchalar', sub: 'Profil uchun yoqimtoy hamrohlar', icon:'fa-paw' }
     };
 
     async function load(){
       if(!token()){ window.location.href='/login.html'; return; }
-      const res = await fetch('/api/pet/me', { headers: { 'Authorization': `Bearer ${token()}` } }).catch(()=>null);
-      if(!res || !res.ok){ localStorage.removeItem('token'); window.location.href='/login.html'; return; }
-      const j = await res.json().catch(()=>null);
-      market = j.market;
-      document.getElementById('coins').textContent = j.coins || 0;
+      const headers = { 'Authorization': `Bearer ${token()}` };
+      const [petRes, robotsMeRes, robotsCatRes] = await Promise.all([
+        fetch('/api/pet/me', { headers }).catch(()=>null),
+        fetch('/api/robots/me', { headers }).catch(()=>null),
+        fetch('/api/robots/catalog', { headers }).catch(()=>null)
+      ]);
+      if(!petRes || !petRes.ok){ localStorage.removeItem('token'); window.location.href='/login.html'; return; }
+      const j = await petRes.json().catch(()=>null);
+      market = j.market || {};
+      currentCoins = Number(j.coins || 0);
+      document.getElementById('coins').textContent = currentCoins;
+      ownedCompanionTypeIds = new Set((j.companions || []).map(x => String(x.typeId || '')));
+
+      if(robotsMeRes && robotsMeRes.ok){
+        const rj = await robotsMeRes.json().catch(()=>null);
+        ownedRobotTypeIds = new Set((rj?.robots || []).map(x => String(x.typeId || '')));
+      } else {
+        ownedRobotTypeIds = new Set();
+      }
+      if(robotsCatRes && robotsCatRes.ok){
+        const cj = await robotsCatRes.json().catch(()=>null);
+        robotCatalog = Array.isArray(cj?.catalog) ? cj.catalog : [];
+      } else {
+        robotCatalog = [];
+      }
+      try{
+        const raw = localStorage.getItem('schat:petmarket-trial');
+        if(raw){
+          const t = JSON.parse(raw);
+          const age = Date.now() - Number(t?.ts || 0);
+          if (t && t.kind && t.id && age < (2 * 24 * 60 * 60 * 1000)) currentTrial = t;
+          else localStorage.removeItem('schat:petmarket-trial');
+        }
+      }catch(_){}
+      renderTrialPreview();
       render();
     }
 
     function cardTemplate(item, type){
+      const robotIcon = {
+        starter:'🤖', laser:'🔴', shade:'🕶️', pixel:'🧩', neo:'✨', astro:'🚀', mochi:'🍡', lux:'💎'
+      };
+      const owned = (type === 'robots')
+        ? ownedRobotTypeIds.has(String(item.id || ''))
+        : (type === 'companions')
+          ? ownedCompanionTypeIds.has(String(item.id || ''))
+          : false;
+      const disabledBuy = owned || currentCoins < Number(item.price || 0);
+
       const extra = type==='foods'
         ? `<div class="mt-3 text-xs muted2">Ochlik +<span class="font-extrabold">${item.hungerPlus||10}</span></div>`
-        : (item.color ? `<div class="mt-3 flex items-center gap-2 text-xs muted2">
-              <span class="w-4 h-4 rounded-full border border-white/30" style="background:${item.color}"></span>
-              <span class="font-extrabold">${item.color}</span>
-            </div>` : '');
+        : (type === 'robots'
+          ? `<div class="mt-3 text-xs muted2">Rarity: <span class="font-extrabold">${item.rarity||'common'}</span> • Cuteness: <span class="font-extrabold">${item.baseCuteness || 50}</span></div>`
+          : (type === 'companions'
+            ? `<div class="mt-3 text-xs muted2">Rarity: <span class="font-extrabold">${item.rarity||'common'}</span> • Mood +${item.moodBoost||0}</div>`
+            : (item.color ? `<div class="mt-3 flex items-center gap-2 text-xs muted2">
+                  <span class="w-4 h-4 rounded-full border border-white/30" style="background:${item.color}"></span>
+                  <span class="font-extrabold">${item.color}</span>
+                </div>` : '')
+          )
+        );
 
       const badge = type==='foods'
         ? `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold"><i class="fa-solid fa-heart-pulse mr-1"></i>Hunger</span>`
         : (type==='paints'
           ? `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold"><i class="fa-solid fa-droplet mr-1"></i>Paint</span>`
-          : `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold"><i class="fa-solid fa-shirt mr-1"></i>Outfit</span>`);
+          : (type==='outfits'
+            ? `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold"><i class="fa-solid fa-shirt mr-1"></i>Outfit</span>`
+            : (type==='robots'
+              ? `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold">${robotIcon[item.id] || '🤖'} Robot</span>`
+              : `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold">${item.emoji || '🐾'} Pet</span>`
+            )
+          ));
 
       return `
         <div class="glass rounded-3xl p-5 g-border">
@@ -295,13 +372,21 @@
 
           ${extra}
 
-          <div class="mt-4 flex items-center justify-between gap-3">
+          <div class="mt-4 flex items-center justify-between gap-2">
             <div class="text-sm font-extrabold">
               <i class="fa-solid fa-coins mr-2"></i>${item.price} coin
             </div>
-            <button class="buy btn-primary text-white rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-id="${item.id}">
-              Xarid qilish
-            </button>
+            <div class="flex items-center gap-2">
+              ${(type === 'robots' || type === 'companions')
+                ? `<button class="try btn-ghost glass rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-kind="${type==='robots'?'robot':'companion'}" data-id="${item.id}" data-name="${item.name}" data-price="${item.price || 0}" data-emoji="${item.emoji || ''}" data-rarity="${item.rarity || ''}" data-mood="${item.moodBoost || 0}">
+                    Sinab ko‘rish
+                  </button>`
+                : ''
+              }
+              <button class="buy ${disabledBuy ? 'chip' : 'btn-primary text-white'} rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-id="${item.id}" data-type="${type}" ${disabledBuy ? 'disabled' : ''}>
+                ${owned ? 'Sizda bor' : (disabledBuy ? 'Coin yetarli emas' : 'Xarid qilish')}
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -318,32 +403,81 @@
         b.style.border = active ? '1px solid rgba(99,102,241,.35)' : '1px solid rgba(148,163,184,.18)';
       });
 
-      const list = (market && market[tab]) ? market[tab] : [];
+      const list = (tab === 'robots')
+        ? (robotCatalog || [])
+        : ((market && market[tab]) ? market[tab] : []);
       const box = document.getElementById('items');
       box.innerHTML = list.length ? list.map(it=>cardTemplate(it, tab)).join('') : `<div class="text-sm muted2">Bo‘sh.</div>`;
 
       box.querySelectorAll('.buy').forEach(btn=>{
-        btn.addEventListener('click', ()=> buy(btn.dataset.id));
+        btn.addEventListener('click', ()=> buy(btn.dataset.id, btn.dataset.type || tab));
+      });
+      box.querySelectorAll('.try').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          currentTrial = {
+            kind: String(btn.dataset.kind || ''),
+            id: String(btn.dataset.id || ''),
+            name: String(btn.dataset.name || ''),
+            price: Number(btn.dataset.price || 0),
+            emoji: String(btn.dataset.emoji || ''),
+            rarity: String(btn.dataset.rarity || ''),
+            moodBoost: Number(btn.dataset.mood || 0),
+            ts: Date.now(),
+            source: 'petmarket'
+          };
+          renderTrialPreview();
+          toast('Sinov rejimi tanlandi', 'success');
+        });
       });
     }
 
-    async function buy(itemId){
+    function renderTrialPreview(){
+      const robotEl = document.getElementById('trialPreviewRobot');
+      const petEl = document.getElementById('trialPreviewCompanion');
+      const txt = document.getElementById('trialPreviewText');
+      if(!robotEl || !petEl || !txt) return;
+
+      if(!currentTrial){
+        robotEl.textContent = '🤖';
+        petEl.textContent = '🐾';
+        robotEl.style.animation = '';
+        petEl.style.animation = '';
+        txt.innerHTML = 'Mahsulot kartasidan <b>Sinab ko‘rish</b> tugmasini bosing.';
+        return;
+      }
+
+      if(currentTrial.kind === 'robot'){
+        const icon = ({ starter:'🤖', laser:'🔴', shade:'🕶️', pixel:'🧩', neo:'✨', astro:'🚀', mochi:'🍡', lux:'💎' })[currentTrial.id] || '🤖';
+        robotEl.textContent = icon;
+        petEl.textContent = '🐾';
+        robotEl.style.animation = 'hop 1.4s ease-in-out infinite';
+        petEl.style.animation = '';
+        txt.innerHTML = `<b>${currentTrial.name}</b> sinovda. Profilda stage ko‘rinishida ko‘rasiz.`;
+      } else if (currentTrial.kind === 'companion'){
+        robotEl.textContent = '🤖';
+        petEl.textContent = currentTrial.emoji || '🐾';
+        robotEl.style.animation = '';
+        petEl.style.animation = 'hop 1.2s ease-in-out infinite';
+        txt.innerHTML = `<b>${currentTrial.name}</b> hamroh sinovda. Profilda jonli ko‘rinish beriladi.`;
+      }
+    }
+
+    async function buy(itemId, typeHint = ''){
       const btns = [...document.querySelectorAll(`.buy[data-id="${itemId}"]`)];
       btns.forEach(b=>{ b.disabled=true; b.textContent='...'; b.classList.add('opacity-70'); });
 
       try{
-        const res = await fetch('/api/shop/buy', {
+        const type = String(typeHint || '');
+        const isRobot = type === 'robots' || (tab === 'robots');
+        const res = await fetch(isRobot ? '/api/robots/buy' : '/api/shop/buy', {
           method:'POST',
           headers: { 'Authorization': `Bearer ${token()}`, 'Content-Type':'application/json' },
-          body: JSON.stringify({ itemId })
+          body: JSON.stringify(isRobot ? { robotTypeId: itemId } : { itemId })
         });
         const j = await res.json().catch(()=>null);
         if(!res.ok) return toast(j?.error || "Xarid muvaffaqiyatsiz", 'error');
         toast("Xarid qilindi. Inventarga tushdi!", 'success');
-        // refresh coins
-        const me = await fetch('/api/pet/me', { headers: { 'Authorization': `Bearer ${token()}` } });
-        const mj = await me.json().catch(()=>null);
-        if(me.ok) document.getElementById('coins').textContent = mj.coins || 0;
+        await load();
       } finally {
         btns.forEach(b=>{ b.disabled=false; b.textContent='Xarid qilish'; b.classList.remove('opacity-70'); });
       }
@@ -356,6 +490,27 @@
       });
     });
 
+    document.getElementById('trialSaveBtn')?.addEventListener('click', ()=>{
+      if(!currentTrial){
+        toast('Avval sinov uchun robot yoki hayvoncha tanlang', 'error');
+        return;
+      }
+      try{
+        localStorage.setItem('schat:petmarket-trial', JSON.stringify({
+          ...currentTrial,
+          ts: Date.now(),
+          source: 'petmarket'
+        }));
+      }catch(_){}
+      window.location.href = '/profile.html?trial=1';
+    });
+    document.getElementById('trialClearBtn')?.addEventListener('click', ()=>{
+      currentTrial = null;
+      try{ localStorage.removeItem('schat:petmarket-trial'); }catch(_){}
+      renderTrialPreview();
+    });
+
+    renderTrialPreview();
     load();
   </script>
   <script src="/ui-actions-menu.js" defer></script>
