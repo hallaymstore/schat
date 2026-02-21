@@ -184,7 +184,7 @@
         <div class="muted">
           Sertifikat ikki rejimda:
           <b>Course completion</b> (progress 100%) va (ixtiyoriy) <b>Test passed</b> sharti.
-          API bo‘lsa server tekshiradi, bo‘lmasa demo tekshiruv ishlaydi.
+          Barcha yakuniy tekshiruvlar server tomonidan tasdiqlanadi.
         </div>
 
         <div class="divider"></div>
@@ -206,6 +206,14 @@
             <div class="label">Sertifikat ID</div>
             <div class="value mono" id="certIdVal">—</div>
           </div>
+          <div class="box">
+            <div class="label">Maxfiy kalit</div>
+            <div class="value mono" id="secureKeyVal">—</div>
+          </div>
+          <div class="box">
+            <div class="label">Imzo holati</div>
+            <div class="value mono" id="signatureVal">—</div>
+          </div>
         </div>
 
         <div class="divider"></div>
@@ -217,19 +225,19 @@
           </label>
           <label style="flex:1;min-width:220px">
             <div class="tiny">Imzo (matn ko‘rinishida)</div>
-            <input id="signInp" class="input" placeholder="Masalan: Dekan / LMS Admin" value="QDTU LMS" />
+            <input id="signInp" class="input" placeholder="Masalan: Dekan / LMS Admin" value="HALLAYM edu" />
           </label>
         </div>
 
         <div class="row" style="margin-top:10px">
           <label style="flex:1;min-width:220px">
             <div class="tiny">QR Verify URL (ixtiyoriy)</div>
-            <input id="verifyUrlInp" class="input" placeholder="Masalan: https://lms.example/verify?id=..." />
+            <input id="verifyUrlInp" class="input" placeholder="Masalan: https://verify.example/..." />
           </label>
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          Agar verify URL kiritilmasa, avtomatik: <code>/certificate.html?verify=ID</code> ishlatiladi.
+          Verify manzil kiritilmasa avtomatik yaratiladi.
         </div>
 
         <div class="divider"></div>
@@ -244,8 +252,7 @@
 
         <h3 style="margin:0 0 8px 0">Verify</h3>
         <div class="muted">
-          Sertifikatni tekshirish: URL orqali yoki sertifikat ID orqali.
-          <b>verify</b> rejimi: <code>?verify=CERT_ID</code>
+          Sertifikatni tekshirish: URL yoki sertifikat ID orqali.
         </div>
 
         <div class="row" style="margin-top:10px">
@@ -254,12 +261,16 @@
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          API bo‘lsa: <code>GET /api/certificates/verify?id=</code>.
-          Demo bo‘lsa localStorage: <code>cert_store_v1</code>.
+          Tekshiruv yakunida sertifikatning imzo holati ham ko‘rsatiladi.
         </div>
       </div>
 
       <div class="card col-5">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="tiny">QR tekshiruv</div>
+          <a id="qrLink" class="tiny" href="#" target="_blank" rel="noopener" style="display:none">QR ni alohida ochish</a>
+        </div>
+        <img id="qrImg" alt="QR code" style="display:none;width:180px;height:180px;object-fit:contain;border-radius:12px;border:1px solid color-mix(in oklab, var(--border) 85%, transparent);margin-bottom:10px"/>
         <div class="preview">
           <div class="previewHeader">
             <div style="font-weight:950">Preview</div>
@@ -285,6 +296,21 @@
   function setOk(msg){ $("okBox").textContent=msg; $("okBox").style.display="block"; $("errBox").style.display="none"; $("warnBox").style.display="none"; }
   function setWarn(msg){ $("warnBox").textContent=msg; $("warnBox").style.display="block"; $("errBox").style.display="none"; }
   function clearMsg(){ $("errBox").style.display="none"; $("okBox").style.display="none"; $("warnBox").style.display="none"; }
+  function setSigStatus(text){ $("signatureVal").textContent = text || "—"; }
+  function setSecureKey(text){ $("secureKeyVal").textContent = text || "—"; }
+  function renderQrImage(url){
+    const img = $("qrImg");
+    const link = $("qrLink");
+    if(!url){
+      img.style.display = "none";
+      link.style.display = "none";
+      return;
+    }
+    img.src = url;
+    img.style.display = "block";
+    link.href = url;
+    link.style.display = "inline-flex";
+  }
 
   async function apiFetch(url, opts={}){
     const token = getToken();
@@ -333,17 +359,6 @@
     return `${y}${m}${day}-${rnd}`;
   }
 
-  function esc(str){ return String(str??""); }
-
-  // demo store
-  function storeKey(){ return "cert_store_v1"; }
-  function readStore(){ try{ return JSON.parse(localStorage.getItem(storeKey()) || "{}"); }catch{ return {}; } }
-  function writeStore(obj){ localStorage.setItem(storeKey(), JSON.stringify(obj)); }
-
-  // progress fallback (shared with joinedcourse/student dashboard)
-  function progressKey(uid, courseId){ return `progress_v1_${uid || "anon"}_${courseId}`; }
-  function readProgress(uid, courseId){ try{ return JSON.parse(localStorage.getItem(progressKey(uid, courseId)) || "{}"); }catch{ return {}; } }
-
   async function apiMe(){
     const token = getToken();
     if(!token){ location.href="/login.html"; return null; }
@@ -372,12 +387,6 @@
         const c = list.map(normalizeCourse).find(x=>String(x.id)===String(courseId));
         if(c) return c;
       }catch(_){}
-      // demo fallback (from courses page)
-      try{
-        const demo = JSON.parse(localStorage.getItem("demoCourses_v2") || "[]");
-        const c = demo.map(normalizeCourse).find(x=>String(x.id)===String(courseId));
-        if(c) return c;
-      }catch(_){}
       throw new Error("Kurs topilmadi.");
     }
   }
@@ -396,17 +405,6 @@
         return null;
       }
     }
-  }
-
-  function checkEligibilityDemo(me, courseId, course){
-    const uid = me._id || me.id || me.username;
-    const p = readProgress(uid, courseId);
-    const doneLessonIds = Array.isArray(p.doneLessonIds) ? p.doneLessonIds : [];
-    const totalLessons = Number(p.totalLessons || 0);
-    const pct = totalLessons ? Math.round((doneLessonIds.length/totalLessons)*100) : (doneLessonIds.length ? 100 : 0);
-    const testPassed = !!p.testPassed; // may be set by backend in real scenario
-    // demo policy: allow if pct==100 (testPassed optional)
-    return { eligible: pct>=100, pct, testPassed };
   }
 
   // QR generator (mini, simplified): uses external-free simple pattern (NOT full QR spec)
@@ -551,8 +549,10 @@
     // footer
     ctx.textAlign="center";
     ctx.fillStyle="rgba(15,23,42,.55)";
+    ctx.font="700 15px ui-monospace, Menlo, Consolas, monospace";
+    ctx.fillText(`Kalit: ${payload.secureKey || "—"}`, W/2, H-98);
     ctx.font="600 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Qarshi Davlat Texnika Universiteti • QDTU LMS", W/2, H-72);
+    ctx.fillText("Qarshi Davlat Texnika Universiteti • HALLAYM edu", W/2, H-72);
   }
 
   function downloadPDF(){
@@ -568,7 +568,7 @@
       <body style="margin:0;display:grid;place-items:center;background:#111">
         <img src="${png}" style="max-width:100%;height:auto"/>
         <script>setTimeout(()=>{window.print();}, 400);<\/script>
-        <script src="/ui-actions-menu.js" defer></script>
+        <script src="/ui-actions-menu.js" defer><\/script>
 </body></html>
     `);
     w.document.close();
@@ -578,27 +578,17 @@
   async function verifyById(id){
     clearMsg();
     if(!id){ return setErr("CERT_ID kiriting."); }
-    // API try
-    try{
-      const data = await apiFetch("/api/certificates/verify?id=" + encodeURIComponent(id));
-      if(data && (data.ok || data.valid)){
-        const info = data.certificate || data.data || data;
-        setOk("✅ Sertifikat tasdiqlandi (API).");
-        return info;
-      }
-      setErr("Sertifikat topilmadi (API).");
-      return null;
-    }catch(e){
-      // demo
-      const store = readStore();
-      const info = store[String(id)];
-      if(info){
-        setOk("✅ Sertifikat tasdiqlandi (demo/localStorage).");
-        return info;
-      }
+    const data = await apiFetch("/api/certificates/verify?id=" + encodeURIComponent(id));
+    if(!(data && data.ok && data.certificate)){
       setErr("Sertifikat topilmadi.");
       return null;
     }
+    if(data.valid === false){
+      setWarn("Sertifikat topildi, lekin imzo tekshiruvi muvaffaqiyatsiz.");
+    }else{
+      setOk("✅ Sertifikat tasdiqlandi.");
+    }
+    return { info: data.certificate, valid: data.valid !== false };
   }
 
   // main state
@@ -623,30 +613,47 @@
     }catch(e){ return iso; }
   }
 
+  function certRecordToPayload(info, fallbackId=""){
+    const certId = info?.certId || info?.serial || fallbackId || randomId();
+    const issuedAt = info?.dateISO || info?.issuedAt || todayISO();
+    return {
+      certId,
+      verifyUrl: info?.verifyUrl || (location.origin ? (location.origin + "/certificate.html?verify=" + encodeURIComponent(certId)) : ("/certificate.html?verify=" + encodeURIComponent(certId))),
+      fullName: info?.fullName || $("fullNameVal").textContent || "—",
+      fg: info?.fg || info?.facultyGroup || $("fgVal").textContent || "—",
+      courseTitle: info?.courseTitle || info?.title || state.course?.title || "—",
+      teacherName: info?.teacherName || info?.issuedByTeacher || state.course?.teacherName || "—",
+      dateISO: issuedAt,
+      dateHuman: humanDate(issuedAt),
+      signature: info?.signature || $("signInp").value || "HALLAYM edu",
+      secureKey: info?.secureKey || "",
+      qrCodeUrl: info?.qrCodeUrl || "",
+      platformName: info?.issuedByPlatform || "HALLAYM edu"
+    };
+  }
+
+  function syncCertMeta(payload, signatureValid = null){
+    $("certIdVal").textContent = payload.certId || "—";
+    setSecureKey(payload.secureKey || "—");
+    if(signatureValid === true) setSigStatus("Tasdiqlandi");
+    else if(signatureValid === false) setSigStatus("Mos kelmadi");
+    else setSigStatus(payload.signature ? "Mavjud" : "—");
+    renderQrImage(payload.qrCodeUrl || "");
+  }
+
   async function eligibilityCheck(){
     clearMsg();
     const courseId = state.courseId;
-    if(!courseId){ return setErr("Course ID topilmadi. certificate.html?type=course&sourceId=COURSE_ID bilan kiring."); }
+    if(!courseId){ return setErr("Kurs ID topilmadi. Kurs sahifasidan qayta kiring."); }
 
-    // API check first
     const api = await checkEligibilityAPI(courseId);
-    if(api){
-      state.eligible = !!api.ok;
-      if(state.eligible) setOk("✅ Eligibility tasdiqlandi (API).");
-      else setErr("❌ Eligibility rad etildi (API).");
-      $("renderBtn").disabled = !state.eligible;
-      $("pdfBtn").disabled = true;
-      return;
-    }
-
-    // demo fallback
-    const demo = checkEligibilityDemo(state.me, courseId, state.course);
-    if(demo.eligible){
-      setOk(`✅ Eligibility (demo): progress ${demo.pct}%` + (demo.testPassed ? " • test passed" : ""));
-      state.eligible = true;
-    }else{
-      setErr(`❌ Eligibility (demo): progress ${demo.pct}% (100% bo‘lishi kerak)`);
+    if(!api){
       state.eligible = false;
+      setErr("Server bilan bog‘lanib bo‘lmadi. Qayta urinib ko‘ring.");
+    }else{
+      state.eligible = !!api.ok;
+      if(state.eligible) setOk("✅ Sertifikat olish shartlari bajarilgan.");
+      else setErr("❌ Sertifikat olish shartlari hali bajarilmagan.");
     }
     $("renderBtn").disabled = !state.eligible;
     $("pdfBtn").disabled = true;
@@ -658,7 +665,7 @@
     const courseTitle = state.course?.title || "—";
     const teacherName = state.course?.teacherName || "—";
     const dateISO = $("dateInp").value || todayISO();
-    const signature = ($("signInp").value || "QDTU LMS").trim();
+    const signature = ($("signInp").value || "HALLAYM edu").trim();
     const certId = state.certId || randomId();
     state.certId = certId;
     $("certIdVal").textContent = certId;
@@ -667,48 +674,7 @@
     const verifyUrl = verifyUrlUser || (location.origin ? (location.origin + "/certificate.html?verify=" + encodeURIComponent(certId)) : ("/certificate.html?verify=" + encodeURIComponent(certId)));
     const dateHuman = humanDate(dateISO);
 
-    return { certId, verifyUrl, fullName, fg, courseTitle, teacherName, dateISO, dateHuman, signature };
-  }
-
-  function persistCertificate(payload){
-    // API attempt
-    (async ()=>{
-      try{
-        await apiFetch("/api/certificates", {
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({
-            certId: payload.certId,
-            courseId: state.courseId,
-            verifyUrl: payload.verifyUrl,
-            fullName: payload.fullName,
-            facultyGroup: payload.fg,
-            courseTitle: payload.courseTitle,
-            teacherName: payload.teacherName,
-            dateISO: payload.dateISO,
-            signature: payload.signature
-          })
-        });
-        setOk("✅ Sertifikat saqlandi (API).");
-      }catch(e){
-        // demo store
-        const store = readStore();
-        store[String(payload.certId)] = {
-          certId: payload.certId,
-          courseId: state.courseId,
-          verifyUrl: payload.verifyUrl,
-          fullName: payload.fullName,
-          fg: payload.fg,
-          courseTitle: payload.courseTitle,
-          teacherName: payload.teacherName,
-          dateISO: payload.dateISO,
-          signature: payload.signature,
-          createdAt: Date.now()
-        };
-        writeStore(store);
-        setWarn("API topilmadi. Sertifikat demo/localStorage ga saqlandi (verify ishlaydi).");
-      }
-    })();
+    return { certId, verifyUrl, fullName, fg, courseTitle, teacherName, dateISO, dateHuman, signature, secureKey:"", qrCodeUrl:"", platformName:"HALLAYM edu" };
   }
 
   $("checkBtn").addEventListener("click", eligibilityCheck);
@@ -716,12 +682,35 @@
   $("renderBtn").addEventListener("click", ()=>{
     clearMsg();
     if(!state.eligible){ return setErr("Avval eligibility tekshiring."); }
-    const payload = buildPayload();
-    state.payload = payload;
-    drawCertificate(payload);
-    persistCertificate(payload);
-    $("pdfBtn").disabled = false;
-    setOk("🎨 Sertifikat chizildi. PDF uchun yuklab oling yoki print qiling.");
+    (async ()=>{
+      try{
+        const draft = buildPayload();
+        const res = await apiFetch("/api/certificates", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({
+            certId: draft.certId,
+            courseId: state.courseId,
+            verifyUrl: draft.verifyUrl,
+            fullName: draft.fullName,
+            facultyGroup: draft.fg,
+            courseTitle: draft.courseTitle,
+            teacherName: draft.teacherName,
+            dateISO: draft.dateISO,
+            signature: draft.signature
+          })
+        });
+        const payload = certRecordToPayload(res?.certificate || {}, draft.certId);
+        state.payload = payload;
+        state.certId = payload.certId;
+        drawCertificate(payload);
+        syncCertMeta(payload, true);
+        $("pdfBtn").disabled = false;
+        setOk("🎨 Sertifikat tayyorlandi.");
+      }catch(e){
+        setErr(e?.message || "Sertifikat yaratishda xatolik.");
+      }
+    })();
   });
 
   $("pdfBtn").addEventListener("click", ()=>{
@@ -730,21 +719,11 @@
 
   $("verifyBtn").addEventListener("click", async ()=>{
     const id = ($("verifyInp").value || "").trim();
-    const info = await verifyById(id);
-    if(info){
-      // draw verified certificate preview
-      const payload = {
-        certId: info.certId || id,
-        verifyUrl: info.verifyUrl || (location.origin ? location.origin + "/certificate.html?verify=" + encodeURIComponent(id) : "/certificate.html?verify=" + encodeURIComponent(id)),
-        fullName: info.fullName || "—",
-        fg: info.fg || info.facultyGroup || "—",
-        courseTitle: info.courseTitle || "—",
-        teacherName: info.teacherName || "—",
-        dateISO: info.dateISO || todayISO(),
-        dateHuman: humanDate(info.dateISO || todayISO()),
-        signature: info.signature || "QDTU LMS"
-      };
+    const checked = await verifyById(id);
+    if(checked){
+      const payload = certRecordToPayload(checked.info, id);
       drawCertificate(payload);
+      syncCertMeta(payload, checked.valid);
       $("pdfBtn").disabled = false;
     }
   });
@@ -753,13 +732,19 @@
     const verify = qs("verify");
     if(verify){
       $("verifyInp").value = verify;
-      await $("verifyBtn").click();
+      const checked = await verifyById(verify);
+      if(checked){
+        const payload = certRecordToPayload(checked.info, verify);
+        drawCertificate(payload);
+        syncCertMeta(payload, checked.valid);
+        $("pdfBtn").disabled = false;
+      }
       return;
     }
 
     const type = qs("type") || "course";
     const sourceId = qs("sourceId") || qs("courseId") || "";
-    if(type !== "course"){ setWarn("Hozircha faqat course sertifikati qo‘llab-quvvatlanadi."); }
+    if(type !== "course"){ setWarn("Hozircha faqat kurs sertifikati qo‘llab-quvvatlanadi."); }
 
     const me = await apiMe();
     if(!me) return;
@@ -779,9 +764,12 @@
     $("fgVal").textContent = fg;
 
     $("dateInp").value = todayISO();
+    setSecureKey("—");
+    setSigStatus("—");
+    renderQrImage("");
 
     if(!sourceId){
-      setErr("Course ID topilmadi. certificate.html?type=course&sourceId=COURSE_ID bilan kiring.");
+      setErr("Kurs ID topilmadi. Kurs sahifasidan qayta kiring.");
       return;
     }
     state.courseId = sourceId;
@@ -793,10 +781,10 @@
     // pre-create id
     state.certId = randomId();
     $("certIdVal").textContent = state.certId;
-    $("verifyUrlInp").placeholder = (location.origin ? (location.origin + "/certificate.html?verify=" + encodeURIComponent(state.certId)) : ("/certificate.html?verify=" + encodeURIComponent(state.certId)));
+    $("verifyUrlInp").placeholder = "Tekshiruv havolasi avtomatik yaratiladi";
 
     // auto check eligibility softly
-    setWarn("Avval eligibility tekshiring. Progress 100% bo‘lsa sertifikat yaratish mumkin.");
+    setWarn("Avval shartlarni tekshiring, so‘ng sertifikatni yarating.");
   }
 
   init().catch(e=> setErr(e?.message || "Xatolik yuz berdi."));

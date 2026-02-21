@@ -375,6 +375,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         <a class="btn ghost small" href="/courses.html">Kurslar</a>
         <a class="btn ghost small" href="/tests.html">Testlar</a>
         <a class="btn ghost small" href="/certificate.html">Sertifikat</a>
+        <a class="btn ghost small" href="/mini-games.html">Mini o'yinlar</a>
         <a class="btn ghost small" href="/profile.html">Profile</a>
         <button class="btn danger small" id="logoutBtn">Chiqish</button>
       </div>
@@ -390,6 +391,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         <a class="btn ghost" href="/courses.html">📚 Kurslar</a>
         <a class="btn ghost" href="/tests.html">🧪 Testlar</a>
         <a class="btn ghost" href="/certificate.html">🏅 Sertifikat</a>
+        <a class="btn ghost" href="/mini-games.html">🎮 Mini o'yinlar</a>
         <a class="btn ghost" href="/profile.html">💌 Xabarlar</a>
         <a class="btn ghost" href="/profile.html">📣 Kanallar</a>
         <a class="btn ghost" href="/groups.html">👥 Guruhlar</a>
@@ -409,7 +411,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       <div class="card col-8">
         <h2 style="margin:0 0 6px 0;font-size:20px">HALLAYM edu — Teacher Dashboard</h2>
         <div class="muted">
-          Kurslar, testlar, live sessionlar — barchasi bitta panelda. API bo‘lmasa demo localStorage ishlaydi.
+          Kurslar, testlar, live sessionlar va yozib olingan darslardan kurs yaratish boshqaruvi bitta panelda.
         </div>
 
         <div class="divider"></div>
@@ -442,12 +444,15 @@ a,button,input,select,textarea{touch-action:manipulation}
         <div class="row">
           <button class="btn primary" id="newCourseBtn">+ Yangi kurs</button>
           <button class="btn primary" id="newLiveBtn">+ Live yaratish</button>
+          <button class="btn" id="importLessonBtn">+ Yozuvdan kurs</button>
           <a class="btn" href="/tests.html">Testlarni boshqarish</a>
+          <a class="btn" href="/mini-games.html">Mini o'yinlar</a>
+          <button class="btn" id="claimDailyMissionBtn">Kunlik bonus</button>
           <button class="btn" id="refreshBtn">Yangilash</button>
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          Kurs CRUD: <code>GET/POST/PUT/DELETE /api/courses</code>, Live CRUD: <code>/api/lives</code> (fallback: localStorage).
+          O'qituvchi kurs/livelarni boshqaradi, yozib olingan darslarni kursga aylantiradi.
         </div>
       </div>
 
@@ -553,7 +558,7 @@ a,button,input,select,textarea{touch-action:manipulation}
             </select>
           </div>
           <div class="col-4">
-            <div class="tiny">Narx (coin)</div>
+            <div class="tiny">Narx (so'm)</div>
             <input id="c_price" class="input" type="number" min="0" value="0" />
           </div>
           <div class="col-4">
@@ -617,7 +622,7 @@ a,button,input,select,textarea{touch-action:manipulation}
             </select>
           </div>
           <div class="col-4">
-            <div class="tiny">Narx (coin)</div>
+            <div class="tiny">Narx (so'm)</div>
             <input id="l_price" class="input" type="number" min="0" value="0" />
           </div>
           <div class="col-4">
@@ -811,7 +816,7 @@ a,button,input,select,textarea{touch-action:manipulation}
   }
 
   function render(){
-    $("modeTxt").textContent = "Rejim: " + state.mode;
+    $("modeTxt").textContent = "Ma'lumot manbasi: " + state.mode;
 
     // KPI
     $("courseCount").textContent = String(state.courses.length);
@@ -844,7 +849,7 @@ a,button,input,select,textarea{touch-action:manipulation}
           <div class="muted" style="margin-top:6px">${(c.description||"").slice(0,140)}${(c.description||"").length>140?"…":""}</div>
           <div class="meta">
             <span class="tag">${c.faculty || "—"}</span>
-            <span class="tag ${c.type==="paid" ? "paid" : "free"}">${c.type==="paid" ? ("Pullik • "+Number(c.price||0)+" coin") : "Bepul"}</span>
+            <span class="tag ${c.type==="paid" ? "paid" : "free"}">${c.type==="paid" ? ("Pullik • "+Number(c.price||0)+" so'm") : "Bepul"}</span>
             <span class="tag ${c.status==="published" ? "pub" : "draft"}">${c.status}</span>
             <span class="tag">Guruh: ${(c.groups||[]).length ? c.groups.join(", ") : "ochiq"}</span>
             <span class="tag">Dars: ${(c.lessons||[]).length}</span>
@@ -876,7 +881,7 @@ a,button,input,select,textarea{touch-action:manipulation}
           <div class="muted" style="margin-top:6px">${(l.description||"").slice(0,140)}${(l.description||"").length>140?"…":""}</div>
           <div class="meta">
             ${statusTag}
-            <span class="tag ${l.type==="paid" ? "paid" : "free"}">${l.type==="paid" ? ("Pullik • "+Number(l.price||0)+" coin") : "Bepul"}</span>
+            <span class="tag ${l.type==="paid" ? "paid" : "free"}">${l.type==="paid" ? ("Pullik • "+Number(l.price||0)+" so'm") : "Bepul"}</span>
             <span class="tag">Join: ${l.joinUrl || "-"}</span>
           </div>
           <div class="row" style="margin-top:10px; justify-content:flex-end">
@@ -936,7 +941,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     const lessons = parseLessons(lessonsText);
 
     if(!title) throw new Error("Kurs nomi majburiy.");
-    if(type==="paid" && (!Number.isFinite(price) || price<1)) throw new Error("Pullik kurs uchun narx (coin) 1+ bo‘lsin.");
+    if(type==="paid" && (!Number.isFinite(price) || price<1)) throw new Error("Pullik kurs uchun narx (so'm) 1+ bo‘lsin.");
 
     return { title, description, status, faculty, groups, type, price, previewImage, lessons };
   }
@@ -952,7 +957,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       let url="/api/courses", method="POST";
       if(editingId){ url="/api/courses/" + encodeURIComponent(editingId); method="PUT"; }
       await apiFetch(url, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
-      setOk("Kurs saqlandi (API).");
+      setOk("Kurs saqlandi.");
       closeCourseModal();
       await reload();
       return;
@@ -969,7 +974,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         list.push({ id, ...payload, teacherName: state.me?.fullname || state.me?.name || state.me?.username || "Teacher", createdAtMs: Date.now() });
       }
       writeDemoCourses(list);
-      setOk("Kurs saqlandi (demo/localStorage).");
+      setOk("Kurs saqlandi.");
       closeCourseModal();
       await reload();
     }
@@ -981,14 +986,14 @@ a,button,input,select,textarea{touch-action:manipulation}
     // API attempt
     try{
       await apiFetch("/api/courses/" + encodeURIComponent(id), { method:"DELETE" });
-      setOk("Kurs o‘chirildi (API).");
+      setOk("Kurs o‘chirildi.");
       closeCourseModal();
       await reload();
       return;
     }catch(e){
       const list = readDemoCourses().filter(x=>String(x.id)!==String(id));
       writeDemoCourses(list);
-      setOk("Kurs o‘chirildi (demo/localStorage).");
+      setOk("Kurs o‘chirildi.");
       closeCourseModal();
       await reload();
     }
@@ -1059,7 +1064,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       let url="/api/lives", method="POST";
       if(editingId){ url="/api/lives/" + encodeURIComponent(editingId); method="PUT"; }
       await apiFetch(url, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
-      setOk("Live saqlandi (API).");
+      setOk("Live saqlandi.");
       closeLiveModal();
       await reload();
       return;
@@ -1077,7 +1082,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         list.push({ id, ...payload, createdAtMs: Date.now() });
       }
       writeDemoLives(list);
-      setOk("Live saqlandi (demo/localStorage).");
+      setOk("Live saqlandi.");
       closeLiveModal();
       await reload();
     }
@@ -1089,7 +1094,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     // API attempt
     try{
       await apiFetch("/api/lives/" + encodeURIComponent(id), { method:"DELETE" });
-      setOk("Live o‘chirildi (API).");
+      setOk("Live o‘chirildi.");
       closeLiveModal();
       await reload();
       return;
@@ -1097,7 +1102,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       seedDemoLives();
       const list = readDemoLives().filter(x=>String(x.id)!==String(id));
       writeDemoLives(list);
-      setOk("Live o‘chirildi (demo/localStorage).");
+      setOk("Live o‘chirildi.");
       closeLiveModal();
       await reload();
     }
@@ -1113,7 +1118,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({ status })
       });
-      setOk("Live status yangilandi (API).");
+      setOk("Live status yangilandi.");
       await reload();
       return;
     }catch(e){
@@ -1124,7 +1129,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       if(idx>=0){
         list[idx].status = status;
         writeDemoLives(list);
-        setOk("Live status yangilandi (demo/localStorage).");
+        setOk("Live status yangilandi.");
         await reload();
       }else{
         setErr("Live topilmadi.");
@@ -1152,7 +1157,115 @@ a,button,input,select,textarea{touch-action:manipulation}
   });
   $("l_saveBtn").addEventListener("click", saveLive);
 
+  async function importRecordedLessonToCourse(){
+    clearMsg();
+    try{
+      const data = await apiFetch("/api/teacher/group-lessons/recorded");
+      const items = Array.isArray(data.items) ? data.items : [];
+      if(!items.length){
+        setErr("Yozib olingan dars topilmadi. Avval live dars yozuvini yuklang.");
+        return;
+      }
+
+      const top = items.slice(0, 12);
+      const menu = top.map((x, i)=> `${i+1}) ${x.title || "Dars"} | ${x.studyGroup || "-"} | ${x.lessonId}`).join("\n");
+      const selectedRaw = window.prompt(`Yozuvdan kurs yaratish uchun raqam yoki lessonId kiriting:\n\n${menu}`);
+      if(!selectedRaw) return;
+      let selected = null;
+      const asNum = Number(selectedRaw);
+      if(Number.isFinite(asNum) && asNum >= 1 && asNum <= top.length){
+        selected = top[asNum - 1];
+      }else{
+        selected = items.find(x => String(x.lessonId) === String(selectedRaw).trim());
+      }
+      if(!selected){
+        setErr("Lesson topilmadi.");
+        return;
+      }
+
+      const title = window.prompt("Kurs nomi:", selected.title || "Yozib olingan dars kursi");
+      if(!title || !title.trim()) return;
+      const paid = window.confirm("Bu kurs pullik bo'lsinmi? (OK=pullik, Cancel=bepul)");
+      let price = 0;
+      if(paid){
+        const p = Number(window.prompt("Narxni so'mda kiriting:", "15000") || "0");
+        if(!Number.isFinite(p) || p < 1){
+          setErr("Pullik kurs uchun narx (so'm) 1+ bo'lishi kerak.");
+          return;
+        }
+        price = Math.round(p);
+      }
+
+      const body = {
+        lessonId: selected.lessonId,
+        title: title.trim(),
+        description: `Yozib olingan live dars asosida yaratilgan kurs (${selected.groupName || selected.studyGroup || ""})`,
+        type: paid ? "paid" : "free",
+        price,
+        pricingCurrency: "UZS",
+        status: "draft",
+        freeForSourceGroup: true
+      };
+
+      const created = await apiFetch("/api/courses/from-group-lesson", {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const cid = created?.course?._id || created?.course?.id || "";
+      setOk(`Yozuv kursga aylantirildi.${cid ? " Kurs ID: " + cid : ""}`);
+      await reload();
+    }catch(e){
+      setErr(e?.message || "Yozuvdan kurs yaratishda xatolik.");
+    }
+  }
+
+  async function refreshDailyMissionButton(){
+    const btn = $("claimDailyMissionBtn");
+    if(!btn) return;
+    try{
+      const data = await apiFetch("/api/coins/missions");
+      const missions = Array.isArray(data.missions) ? data.missions : [];
+      const m = missions.find(x => String(x.key || "") === "daily_login");
+      if(!m){
+        btn.disabled = true;
+        btn.textContent = "Bonus mavjud emas";
+        return;
+      }
+      if (m.claimed) {
+        btn.disabled = true;
+        btn.textContent = "Kunlik bonus olindi";
+      } else if (m.eligible) {
+        btn.disabled = false;
+        btn.textContent = "Kunlik bonus";
+      } else {
+        btn.disabled = true;
+        btn.textContent = "Shart bajarilmagan";
+      }
+    } catch(_) {
+      btn.disabled = true;
+      btn.textContent = "Bonus offline";
+    }
+  }
+
+  async function claimDailyMission(){
+    const btn = $("claimDailyMissionBtn");
+    if(!btn) return;
+    btn.disabled = true;
+    try{
+      const data = await apiFetch("/api/coins/missions/daily_login/claim", { method: "POST" });
+      setOk(`Kunlik bonus olindi: +${Number(data.reward || 0)} so'm`);
+    } catch(e) {
+      console.warn("teacher daily mission:", e?.message || e);
+    } finally {
+      await refreshDailyMissionButton();
+    }
+  }
+
   // events
+  $("importLessonBtn")?.addEventListener("click", ()=> importRecordedLessonToCourse().catch(()=>{}));
+  $("claimDailyMissionBtn")?.addEventListener("click", ()=> claimDailyMission().catch(()=>{}));
   $("refreshBtn").addEventListener("click", reload);
   ["q","statusFilter","sortSel"].forEach(id=>{
     $(id).addEventListener("input", ()=> render());
@@ -1173,6 +1286,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     $("mePill").textContent = name;
     $("mePill").style.display="inline-flex";
     $("nameVal").textContent = name;
+    await refreshDailyMissionButton();
 
     await reload();
   }

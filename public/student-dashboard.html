@@ -349,6 +349,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         <a class="btn ghost small" href="/courses.html">Kurslar</a>
         <a class="btn ghost small" href="/tests.html">Testlar</a>
         <a class="btn ghost small" href="/certificate.html">Sertifikat</a>
+        <a class="btn ghost small" href="/mini-games.html">Mini o'yinlar</a>
         <a class="btn ghost small" href="/profile.html">Profil</a>
         <button class="btn danger small" id="logoutBtn">Chiqish</button>
       </div>
@@ -364,6 +365,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         <a class="btn ghost" href="/courses.html">📚 Kurslar</a>
         <a class="btn ghost" href="/tests.html">🧪 Testlar</a>
         <a class="btn ghost" href="/certificate.html">🏅 Sertifikat</a>
+        <a class="btn ghost" href="/mini-games.html">🎮 Mini o'yinlar</a>
         <a class="btn ghost" href="/messages.html">💌 Xabarlar</a>
         <a class="btn ghost" href="/channels.html">📣 Kanallar</a>
         <a class="btn ghost" href="/groups.html">👥 Guruhlar</a>
@@ -402,7 +404,7 @@ a,button,input,select,textarea{touch-action:manipulation}
             <div class="val" style="font-size:14px" id="groupVal">—</div>
           </div>
           <div class="box">
-            <div class="label">Coin balans</div>
+            <div class="label">Balans (so'm)</div>
             <div class="val" id="coinsVal">—</div>
           </div>
           <div class="box">
@@ -421,12 +423,13 @@ a,button,input,select,textarea{touch-action:manipulation}
           <a class="btn primary" href="/courses.html">+ Kurs tanlash</a>
           <a class="btn" href="/tests.html">Test ishlash</a>
           <a class="btn" href="/certificate.html">Sertifikat</a>
+          <a class="btn" href="/mini-games.html">Mini o'yinlar</a>
+          <button class="btn" id="claimDailyMissionBtn">Kunlik bonus</button>
           <button class="btn" id="refreshBtn">Yangilash</button>
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          API bo‘lsa: <code>/api/me</code>, <code>API/progress</code>, <code>API/courses</code> dan real ma’lumotlar chiqadi.
-          Aks holda localStorage demo ishlaydi.
+          Ma'lumot serverdan olinadi, internet bo'lmaganda vaqtincha lokal rejim ishlatiladi.
         </div>
       </div>
 
@@ -580,6 +583,52 @@ a,button,input,select,textarea{touch-action:manipulation}
     $("openCourseBtn").href = "/course.html?id=" + encodeURIComponent(next.courseId);
   }
 
+  async function refreshDailyMissionButton(){
+    const btn = $("claimDailyMissionBtn");
+    if(!btn) return;
+    try{
+      const data = await apiFetch("/api/coins/missions");
+      if (typeof data.coins !== "undefined") {
+        $("coinsVal").textContent = String(Number(data.coins || 0));
+      }
+      const list = Array.isArray(data.missions) ? data.missions : [];
+      const m = list.find(x => String(x.key || "") === "daily_login");
+      if(!m){
+        btn.disabled = true;
+        btn.textContent = "Bonus mavjud emas";
+        return;
+      }
+      if (m.claimed) {
+        btn.disabled = true;
+        btn.textContent = "Kunlik bonus olindi";
+      } else if (m.eligible) {
+        btn.disabled = false;
+        btn.textContent = "Kunlik bonus";
+      } else {
+        btn.disabled = true;
+        btn.textContent = "Shart bajarilmagan";
+      }
+    }catch(_){
+      btn.disabled = true;
+      btn.textContent = "Bonus offline";
+    }
+  }
+
+  async function claimDailyMission(){
+    const btn = $("claimDailyMissionBtn");
+    if(!btn) return;
+    btn.disabled = true;
+    try{
+      const data = await apiFetch("/api/coins/missions/daily_login/claim", { method: "POST" });
+      $("coinsVal").textContent = String(Number(data.coins || 0));
+    }catch(e){
+      // Keep flow simple: status is refreshed below.
+      console.warn("daily mission claim:", e?.message || e);
+    } finally {
+      await refreshDailyMissionButton();
+    }
+  }
+
   async function init(){
     clearErr();
     const me = await apiMe();
@@ -600,9 +649,10 @@ a,button,input,select,textarea{touch-action:manipulation}
     $("facultyVal").textContent = me.faculty || "—";
     $("groupVal").textContent = me.group || "—";
     $("coinsVal").textContent = String(Number(me.coins ?? me.coin ?? 0));
+    await refreshDailyMissionButton();
 
     const { list: allCourses, mode } = await fetchCourses();
-    $("modeTxt").textContent = "Rejim: " + mode;
+    $("modeTxt").textContent = "Ma'lumot manbasi: " + mode;
 
     const joinedIds = readJoined(uid).map(String);
     const my = allCourses.filter(c=> joinedIds.includes(String(c.id)));
@@ -650,7 +700,7 @@ a,button,input,select,textarea{touch-action:manipulation}
           <div class="title">${c.title}</div>
           <div class="tiny meta">${c.faculty || "—"} • Teacher: ${c.teacherName || "—"}</div>
           <div class="row" style="margin-top:8px">
-            ${c.type==="paid" ? `<span class="tag paid">Pullik • ${Number(c.price||0)} coin</span>` : `<span class="tag free">Bepul</span>`}
+            ${c.type==="paid" ? `<span class="tag paid">Pullik • ${Number(c.price||0)} so'm</span>` : `<span class="tag free">Bepul</span>`}
             <span class="tag">Progress: ${pct}%</span>
           </div>
           <div class="progressRow">${makeBar(pct)}</div>
@@ -668,6 +718,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     setNextAction(bestNext);
   }
 
+  $("claimDailyMissionBtn")?.addEventListener("click", ()=> claimDailyMission().catch(()=>{}));
   $("refreshBtn").addEventListener("click", ()=> init().catch(e=> setErr(e.message || "Xatolik")));
   init().catch(e=> setErr(e.message || "Xatolik"));
 </script>

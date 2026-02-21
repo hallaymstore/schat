@@ -224,18 +224,17 @@
         </div>
 
         <div class="row" style="margin-top:10px">
-          <input id="courseFilter" class="input" placeholder="Course ID filter (ixtiyoriy)" style="flex:1;min-width:240px" />
+          <input id="courseFilter" class="input" placeholder="Kurs ID bo‘yicha filter (ixtiyoriy)" style="flex:1;min-width:240px" />
           <button class="btn" id="refreshBtn">Yangilash</button>
           <button class="btn primary" id="createBtn" style="display:none">+ Yangi test</button>
         </div>
-        <div class="tiny" style="margin-top:10px">Course’dan kelganda: <code>?courseId=...</code> bilan avtomatik filtrlanadi.</div>
+        <div class="tiny" style="margin-top:10px">Kurs sahifasidan kirilganda tegishli testlar avtomatik tanlanadi.</div>
       </div>
 
       <div class="card col-4">
-        <h3 style="margin:0 0 10px 0">Rejim / API</h3>
+        <h3 style="margin:0 0 10px 0">Rejim</h3>
         <div class="muted">
-          API mavjud bo‘lsa: <code>/api/tests</code> (GET/POST/PUT/DELETE) ishlaydi.
-          Aks holda demo localStorage ishlaydi.
+          Internetga ulangan holatda server ma’lumotlari ishlatiladi, aks holda vaqtincha lokal rejim ishga tushadi.
         </div>
         <div class="divider"></div>
         <div class="tiny" id="modeTxt">—</div>
@@ -280,6 +279,10 @@
             <input id="t_title" class="input" placeholder="Masalan: 1-mavzu testi" />
           </div>
           <div class="col-4">
+            <label class="tiny">Fan / bo‘lim</label>
+            <input id="t_subject" class="input" placeholder="Masalan: Moliya asoslari" />
+          </div>
+          <div class="col-4">
             <label class="tiny">Status</label>
             <select id="t_status" class="input">
               <option value="draft">Draft</option>
@@ -298,6 +301,22 @@
           <div class="col-4">
             <label class="tiny">Passing %</label>
             <input id="t_passPct" class="input" type="number" min="1" max="100" value="60" />
+          </div>
+          <div class="col-4">
+            <label class="tiny">Test bosqichi</label>
+            <select id="t_phase" class="input">
+              <option value="during">Kurs davomida</option>
+              <option value="after">Kurs yakunida</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label class="tiny">Yakuniy test</label>
+            <div class="row" style="margin-top:6px">
+              <label class="tiny" style="display:flex;align-items:center;gap:8px">
+                <input id="t_isFinal" type="checkbox" />
+                Sertifikatdan oldingi final test sifatida belgilash
+              </label>
+            </div>
           </div>
 
           <div class="col-12">
@@ -327,7 +346,7 @@
         </div>
 
         <div class="divider"></div>
-        <div class="tiny">Student ishlashi: <code>/test.html?id=TEST_ID</code></div>
+        <div class="tiny">Saqlangandan so‘ng testlar ro‘yxatidan darhol ishlash mumkin bo‘ladi.</div>
       </div>
     </div>
   </div>
@@ -405,17 +424,37 @@
   }
 
   function normalizeTest(raw){
+    const incomingQuestions = Array.isArray(raw.questions) ? raw.questions : (Array.isArray(raw.items) ? raw.items : []);
+    const questions = incomingQuestions.map((q)=> {
+      const options = Array.isArray(q.options) ? q.options : [];
+      const pick = (k) => {
+        const f = options.find((o)=> String(o.key || "").toUpperCase() === k);
+        return String(f?.text || q[k.toLowerCase()] || "");
+      };
+      return {
+        q: q.q || q.text || q.question || "",
+        a: q.a || pick("A"),
+        b: q.b || pick("B"),
+        c: q.c || pick("C"),
+        d: q.d || pick("D"),
+        correct: (q.correct || q.answerKey || q.ans || "").toUpperCase()
+      };
+    }).filter((q)=> q.q && q.a && q.b && q.c && q.d);
+
     return {
       id: raw._id || raw.id || raw.testId,
       title: raw.title || raw.name || "Nomsiz test",
+      subject: raw.subject || raw.title || "",
       description: raw.description || raw.desc || "",
       status: raw.status || (raw.published ? "published" : "draft"),
       courseId: raw.courseId || raw.course?._id || raw.course || "",
       timeMin: Number(raw.timeMin || raw.durationMin || 10),
       passPct: Number(raw.passPct || raw.passingPercent || 60),
+      phase: String(raw.phase || "after"),
+      isFinal: !!raw.isFinal,
       teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
       createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : (raw.createdAtMs || Date.now()),
-      questions: Array.isArray(raw.questions) ? raw.questions : (raw.items || [])
+      questions
     };
   }
 
@@ -434,12 +473,12 @@
       const data = await apiFetch("/api/tests");
       const list = Array.isArray(data) ? data : (data.tests || []);
       state.isDemo = false;
-      state.mode = "API";
+      state.mode = "Server";
       return list.map(normalizeTest);
     }catch(e){
       seedDemo();
       state.isDemo = true;
-      state.mode = "DEMO(localStorage)";
+      state.mode = "Lokal";
       return readDemo().map(normalizeTest);
     }
   }
@@ -490,7 +529,7 @@
 
     const filtered = applySort(state.list.filter(matchFilters));
     $("countTxt").textContent = `Topildi: ${filtered.length} ta test`;
-    $("hintTxt").textContent = state.isDemo ? "Demo rejim: testlar localStorage’da." : "API rejim: testlar server’dan.";
+    $("hintTxt").textContent = state.isDemo ? "Vaqtincha lokal rejim faol." : "Server rejimi faol.";
 
     if(!filtered.length){
       wrap.innerHTML = `<div class="muted" style="grid-column:span 12">Hech narsa topilmadi.</div>`;
@@ -512,6 +551,8 @@
           <span class="tag">Savol: ${Array.isArray(t.questions)?t.questions.length:0}</span>
           <span class="tag warn">Time: ${Number(t.timeMin||10)} min</span>
           <span class="tag">Pass: ${Number(t.passPct||60)}%</span>
+          <span class="tag">${t.phase === "during" ? "Davomida" : "Yakunida"}</span>
+          ${t.isFinal ? `<span class="tag open">Yakuniy</span>` : ``}
           <span class="tag">Teacher: ${t.teacherName || "-"}</span>
         </div>
         <div class="row" style="margin-top:10px; justify-content:flex-end">
@@ -592,11 +633,14 @@
 
   function fillModal(t){
     $("t_title").value = t?.title || "";
+    $("t_subject").value = t?.subject || "";
     $("t_desc").value = t?.description || "";
     $("t_status").value = t?.status || "draft";
     $("t_courseId").value = t?.courseId || "";
     $("t_timeMin").value = Number(t?.timeMin || 10);
     $("t_passPct").value = Number(t?.passPct || 60);
+    $("t_phase").value = t?.phase || "after";
+    $("t_isFinal").checked = !!t?.isFinal;
     $("qWrap").innerHTML = "";
     const qs = Array.isArray(t?.questions) ? t.questions : [];
     if(qs.length) qs.forEach(q=> addQuestionRow(q));
@@ -614,7 +658,17 @@
       if(!q) continue;
       if(!a || !b || !c || !d) throw new Error("Har savolda 4 ta variant bo‘lsin (A/B/C/D).");
       if(!["A","B","C","D"].includes(correct)) throw new Error("To‘g‘ri javob A/B/C/D bo‘lishi kerak.");
-      out.push({ q, a, b, c, d, correct });
+      out.push({
+        q, a, b, c, d, correct,
+        text: q,
+        options: [
+          { key: "A", text: a },
+          { key: "B", text: b },
+          { key: "C", text: c },
+          { key: "D", text: d }
+        ],
+        answerKey: correct
+      });
     }
     if(out.length < 1) throw new Error("Kamida 1 ta savol bo‘lishi kerak.");
     return out;
@@ -623,12 +677,16 @@
   async function saveTest(publish){
     clearMsg();
     const title = ($("t_title").value || "").trim();
+    const subject = ($("t_subject").value || "").trim();
     const description = ($("t_desc").value || "").trim();
     const courseId = ($("t_courseId").value || "").trim();
     const status = publish ? "published" : ($("t_status").value || "draft");
     const timeMin = Number($("t_timeMin").value || 10);
     const passPct = Number($("t_passPct").value || 60);
+    const phase = String($("t_phase").value || "after");
+    const isFinal = !!$("t_isFinal").checked;
     if(!title) return setErr("Test nomi majburiy.");
+    if(!subject) return setErr("Fan/bo‘lim majburiy.");
     if(!courseId) return setErr("Course ID majburiy (kurs bilan bog‘lash uchun).");
     if(isNaN(timeMin) || timeMin < 1) return setErr("Time limit 1 minutdan katta bo‘lsin.");
     if(isNaN(passPct) || passPct < 1 || passPct > 100) return setErr("Passing % 1..100 oralig‘ida bo‘lsin.");
@@ -640,11 +698,11 @@
 
     // API attempt
     try{
-      const payload = { title, description, status, courseId, timeMin, passPct, questions };
+      const payload = { title, subject, description, status, courseId, timeMin, passPct, phase, isFinal, questions };
       let url="/api/tests", method="POST";
       if(editingId){ url="/api/tests/" + encodeURIComponent(editingId); method="PUT"; }
       await apiFetch(url, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
-      setOk("Test saqlandi (API).");
+      setOk("Test saqlandi.");
       closeModal();
       await reload();
       return;
@@ -655,18 +713,18 @@
       if(editingId){
         const idx = list.findIndex(x=>String(x.id)===String(editingId));
         if(idx>=0){
-          list[idx] = { ...list[idx], title, description, status, courseId, timeMin, passPct, questions, updatedAt: Date.now() };
+          list[idx] = { ...list[idx], title, subject, description, status, courseId, timeMin, passPct, phase, isFinal, questions, updatedAt: Date.now() };
         }
       }else{
         const id = "t_" + Math.random().toString(16).slice(2) + "_" + Date.now();
         list.push({
-          id, title, description, status, courseId, timeMin, passPct, questions,
+          id, title, subject, description, status, courseId, timeMin, passPct, phase, isFinal, questions,
           teacherName: state.me?.fullname || state.me?.name || state.me?.username || "Teacher",
           createdAt: Date.now()
         });
       }
       writeDemo(list);
-      setOk("Test saqlandi (demo/localStorage).");
+      setOk("Test saqlandi.");
       closeModal();
       await reload();
     }
@@ -678,7 +736,7 @@
     // API attempt
     try{
       await apiFetch("/api/tests/" + encodeURIComponent(id), { method:"DELETE" });
-      setOk("Test o‘chirildi (API).");
+      setOk("Test o‘chirildi.");
       closeModal();
       await reload();
       return;
@@ -686,7 +744,7 @@
       seedDemo();
       const list = readDemo().filter(x=>String(x.id)!==String(id));
       writeDemo(list);
-      setOk("Test o‘chirildi (demo/localStorage).");
+      setOk("Test o‘chirildi.");
       closeModal();
       await reload();
     }

@@ -134,6 +134,8 @@
     .viewerBody{padding:14px}
     .ytWrap{aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid color-mix(in oklab, var(--border) 85%, transparent); display:none}
     .ytWrap iframe{width:100%;height:100%;border:0}
+    .videoWrap{aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid color-mix(in oklab, var(--border) 85%, transparent); display:none;background:#000}
+    .videoWrap video{width:100%;height:100%;object-fit:contain;background:#000}
     .pdfWrap{height:520px;border-radius:14px;overflow:hidden;border:1px solid color-mix(in oklab, var(--border) 85%, transparent); display:none}
     .pdfWrap iframe{width:100%;height:100%;border:0}
     .txtWrap{display:none; white-space:pre-wrap; line-height:1.65; font-size:14px}
@@ -244,6 +246,7 @@
           </div>
           <div class="viewerBody">
             <div class="ytWrap" id="ytWrap"><iframe id="ytFrame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+            <div class="videoWrap" id="videoWrap"><video id="videoPlayer" controls playsinline preload="metadata"></video></div>
             <div class="pdfWrap" id="pdfWrap"><iframe id="pdfFrame"></iframe></div>
             <div class="txtWrap" id="txtWrap"></div>
             <div class="muted" id="emptyHint">Chapdan dars tanlang — video / PDF / matn shu yerda ochiladi.</div>
@@ -271,11 +274,11 @@
         </div>
 
         <div class="tiny" id="certHint" style="margin-top:10px">
-          Sertifikat sharti: kurs progress 100% va (ixtiyoriy) testdan o‘tganlik. API bo‘lsa tekshiradi.
+          Sertifikat sharti: kurs progress 100% va yakuniy test (agar belgilangan bo‘lsa)dan o‘tish.
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          Progress API: <code>GET /api/progress?courseId=</code>, <code>POST /api/progress</code> (fallback localStorage).
+          Progress avtomatik saqlanadi va keyingi kirishda davom ettirish ochiladi.
         </div>
       </div>
     </div>
@@ -349,6 +352,11 @@
     }catch(e){ return ""; }
   }
 
+  function isYoutubeLikeUrl(url){
+    const v = String(url || "").toLowerCase();
+    return v.includes("youtube.com/") || v.includes("youtu.be/");
+  }
+
   // ---------- DEMO STORAGE ----------
   function demoCoursesKey(){ return "demoCourses_v2"; }
   function readDemoCourses(){ try{ return JSON.parse(localStorage.getItem(demoCoursesKey()) || "[]"); }catch{ return []; } }
@@ -373,23 +381,30 @@
       teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
       teacherId: raw.teacherId || raw.teacher?._id || raw.ownerId || "",
       lessons: Array.isArray(raw.lessons) ? raw.lessons : (raw.modules || raw.content || []),
-      testId: raw.testId || raw.test?._id || raw.test || ""
+      testId: raw.testId || raw.test?._id || raw.test || "",
+      finalTestId: raw.finalTestId || ""
     };
   }
 
   function normalizeLesson(raw, idx){
-    // accepted keys: type, title, url, text, pdfUrl, youtubeUrl
+    // accepted keys: type, title, text, pdfUrl, youtubeUrl, videoUrl
     const type = (raw.type || raw.kind || "").toLowerCase();
     const title = raw.title || raw.name || `Dars ${idx+1}`;
-    const youtubeUrl = raw.youtubeUrl || raw.youtube || raw.videoUrl || "";
+    const youtubeUrl = raw.youtubeUrl || raw.youtube || "";
+    const videoUrl = raw.videoUrl || raw.video || raw.url || "";
     const pdfUrl = raw.pdfUrl || raw.pdf || raw.documentUrl || "";
     const text = raw.text || raw.body || "";
     let resolvedType = type;
     if(!resolvedType){
-      if(youtubeUrl) resolvedType="video";
+      if(youtubeUrl && isYoutubeLikeUrl(youtubeUrl)) resolvedType="youtube";
+      else if(videoUrl && isYoutubeLikeUrl(videoUrl)) resolvedType="youtube";
+      else if(videoUrl || youtubeUrl) resolvedType="video";
       else if(pdfUrl) resolvedType="pdf";
       else if(text) resolvedType="text";
       else resolvedType="text";
+    }
+    if(resolvedType === "video" && isYoutubeLikeUrl(videoUrl || youtubeUrl)){
+      resolvedType = "youtube";
     }
     return {
       id: raw._id || raw.id || `l${idx+1}`,
@@ -397,6 +412,7 @@
       title,
       type: resolvedType,
       youtubeUrl,
+      videoUrl,
       pdfUrl,
       text
     };
@@ -440,6 +456,16 @@
       const demo = readDemoCourses().map(normalizeCourse).find(x=>String(x.id)===String(courseId));
       if(!demo) throw new Error("Kurs topilmadi.");
       return demo;
+    }
+  }
+
+  async function fetchCourseContent(courseId){
+    try{
+      const data = await apiFetch("/api/courses/" + encodeURIComponent(courseId) + "/content");
+      const items = Array.isArray(data.items) ? data.items : [];
+      return items.map((x, i)=> normalizeLesson(x, i));
+    }catch(_){
+      return [];
     }
   }
 
@@ -523,7 +549,7 @@
     $("tagTeacher").textContent = "Teacher: " + (c.teacherName || "—");
     $("tagFaculty").textContent = c.faculty || "—";
     if(c.type === "paid"){
-      $("tagPrice").textContent = "Pullik • " + Number(c.price||0) + " coin";
+      $("tagPrice").textContent = "Pullik • " + Number(c.price||0) + " so'm";
       $("tagPrice").className = "tag chip paid";
     }else{
       $("tagPrice").textContent = "Bepul";
@@ -590,10 +616,15 @@
 
   function hideAllViewer(){
     $("ytWrap").style.display="none";
+    $("videoWrap").style.display="none";
     $("pdfWrap").style.display="none";
     $("txtWrap").style.display="none";
     $("emptyHint").style.display="none";
     $("ytFrame").src = "about:blank";
+    const vp = $("videoPlayer");
+    vp.pause();
+    vp.removeAttribute("src");
+    vp.load();
     $("pdfFrame").src = "about:blank";
     $("txtWrap").textContent = "";
   }
@@ -620,8 +651,8 @@
     $("nextBtn").style.display = hasNext ? "inline-flex" : "none";
 
     hideAllViewer();
-    if(l.type === "video" && l.youtubeUrl){
-      const embed = youtubeEmbed(l.youtubeUrl);
+    if((l.type === "youtube" || (l.type === "video" && isYoutubeLikeUrl(l.youtubeUrl || l.videoUrl))) && (l.youtubeUrl || l.videoUrl)){
+      const embed = youtubeEmbed(l.youtubeUrl || l.videoUrl);
       if(embed){
         $("ytFrame").src = embed;
         $("ytWrap").style.display="block";
@@ -629,6 +660,11 @@
         $("txtWrap").textContent = "Video URL xato yoki qo‘llab-quvvatlanmaydi.";
         $("txtWrap").style.display="block";
       }
+    }else if(l.type === "video" && (l.videoUrl || l.youtubeUrl)){
+      const src = l.videoUrl || l.youtubeUrl;
+      const vp = $("videoPlayer");
+      vp.src = src;
+      $("videoWrap").style.display="block";
     }else if(l.type === "pdf" && l.pdfUrl){
       $("pdfFrame").src = l.pdfUrl;
       $("pdfWrap").style.display="block";
@@ -696,11 +732,11 @@
       $("certHint").textContent = "Sertifikat olish mumkin (server tasdiqladi).";
     }else if(apiEligible === false){
       certBtn.style.display = "none";
-      $("certHint").textContent = "Server bo‘yicha sertifikat hozircha ruxsat berilmadi (ehtimol test sharti).";
+      $("certHint").textContent = "Sertifikat hali yopiq. Yakuniy testdan o‘tganingizni tekshiring.";
     }else{
       // Unknown: allow navigation with parameters
       certBtn.style.display = "inline-flex";
-      $("certHint").textContent = "Progress 100%. Sertifikat sahifasida yakuniy tekshiruv bo‘lishi mumkin.";
+      $("certHint").textContent = "Progress 100%. Sertifikat sahifasida yakuniy tekshiruv bo‘ladi.";
     }
 
     certBtn.href = "/certificate.html?type=course&sourceId=" + encodeURIComponent(state.course.id);
@@ -718,7 +754,7 @@
 
   async function init(){
     const courseId = qs("id");
-    if(!courseId){ setErr("Course ID topilmadi. course.html dan kiring."); return; }
+    if(!courseId){ setErr("Kurs ID topilmadi. Kurslar sahifasidan qayta oching."); return; }
 
     const me = await apiMe();
     if(!me) return;
@@ -739,11 +775,12 @@
     renderHeader();
 
     // lessons
-    const rawLessons = Array.isArray(c.lessons) ? c.lessons : [];
+    const apiLessons = await fetchCourseContent(c.id);
+    const rawLessons = apiLessons.length ? apiLessons : (Array.isArray(c.lessons) ? c.lessons : []);
     const lessons = rawLessons.length
       ? rawLessons.map((x,i)=> normalizeLesson(x,i))
       : seedDemoLessons(c).map((x,i)=> normalizeLesson(x,i));
-    state.lessons = lessons.map((x,i)=> ({...x, idx:i}));
+    state.lessons = lessons.map((x,i)=> ({ ...x, idx:i }));
 
     // progress
     const uid = me._id || me.id || me.username;
@@ -771,7 +808,9 @@
     await updateCertificateUI();
 
     // link tests: if course has testId, deep-link test.html?id=
-    if(c.testId){
+    if(c.finalTestId){
+      $("goTestsBtn").href = "/test.html?id=" + encodeURIComponent(c.finalTestId) + "&courseId=" + encodeURIComponent(c.id);
+    }else if(c.testId){
       $("goTestsBtn").href = "/test.html?id=" + encodeURIComponent(c.testId) + "&courseId=" + encodeURIComponent(c.id);
     }else{
       $("goTestsBtn").href = "/tests.html?courseId=" + encodeURIComponent(c.id);

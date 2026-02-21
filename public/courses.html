@@ -215,7 +215,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>QDTU LMS</h1>
-          <div class="sub">Kurslar • qidirish • join • teacher CRUD</div>
+          <div class="sub">Kurslar katalogi</div>
         </div>
         <div class="pills">
           <span id="roleBadge" class="pill badge student">STUDENT</span>
@@ -275,13 +275,18 @@
         <div class="row" style="margin-top:10px">
           <span class="tiny">Tip: filterlar real vaqt rejimida ishlaydi. Teacher’da “Yangi kurs” ochiladi.</span>
         </div>
+
+        <div class="row" id="teacherFilterWrap" style="display:none;margin-top:10px">
+          <span class="tag chip" id="teacherFilterTag">Teacher filtri faol</span>
+          <button class="btn small" id="clearTeacherFilterBtn">Barcha kurslar</button>
+        </div>
       </div>
 
       <div class="card col-4">
         <h3>Hisob / cheklovlar</h3>
         <div class="kpi">
           <div class="box">
-            <div class="muted">Coin</div>
+            <div class="muted">Balans (so'm)</div>
             <div class="val" id="coinsVal">—</div>
           </div>
           <div class="box">
@@ -295,11 +300,11 @@
           <ul style="margin:8px 0 0 18px; padding:0">
             <li>Fakultet bo‘yicha</li>
             <li>Guruh (MMT-520-25) bo‘yicha</li>
-            <li>Pullik kurs — coin tekshiruv</li>
+            <li>Pullik kurs — balans tekshiruv</li>
           </ul>
         </div>
         <div class="tiny" style="margin-top:10px">
-          Backend bo‘lsa: <code>/api/courses</code> (GET/POST/PUT/DELETE) ishlaydi. Aks holda demo localStorage ishlaydi.
+          Internet mavjud bo'lsa serverdan yuklanadi, aks holda vaqtincha lokal rejim ishlatiladi.
         </div>
       </div>
 
@@ -353,7 +358,7 @@
           </div>
 
           <div class="col-3">
-            <label>Narx (coin)</label>
+            <label>Narx (so'm)</label>
             <input id="c_price" class="input" type="number" min="0" value="0" />
           </div>
           <div class="col-3">
@@ -400,7 +405,7 @@
         <div class="divider"></div>
 
         <div class="tiny">
-          API bo‘lsa: <code>POST/PUT/DELETE /api/courses</code>. Demo rejimda localStorage ishlaydi.
+          O'zgarishlar serverga saqlanadi, internet yo'q bo'lsa vaqtincha lokal saqlash ishlaydi.
         </div>
       </div>
     </div>
@@ -423,6 +428,7 @@
 
   // ---------- utils ----------
   const $ = (id)=> document.getElementById(id);
+  function qs(name){ return new URLSearchParams(location.search).get(name); }
   function getToken(){ return localStorage.getItem("token") || ""; }
   function escapeHtml(str){
     return String(str ?? "")
@@ -549,7 +555,7 @@
   // ---------- UI helpers ----------
   function courseTags(c){
     const priceTag = c.type==="paid"
-      ? `<span class="tag paid chip">Pullik • ${Number(c.price||0)} coin</span>`
+      ? `<span class="tag paid chip">Pullik • ${Number(c.price||0)} so'm</span>`
       : `<span class="tag free chip">Bepul</span>`;
     const statusTag = (c.status||"published")==="published"
       ? `<span class="tag open chip">Published</span>`
@@ -570,9 +576,11 @@
     const f = $("facultyFilter").value || "";
     const p = $("priceFilter").value || "";
     const g = ($("groupFilter").value || "").trim().toLowerCase();
+    const t = state.teacherFilterId || "";
 
     if(f && (c.faculty || "") !== f) return false;
     if(p && ((p==="paid" && c.type!=="paid") || (p==="free" && c.type!=="free"))) return false;
+    if(t && String(c.teacherId || "") !== String(t)) return false;
 
     if(q){
       const hay = `${c.title} ${c.description} ${c.teacherName} ${c.faculty}`.toLowerCase();
@@ -656,7 +664,7 @@
     // Try API
     try{
       await apiFetch("/api/courses/" + encodeURIComponent(editingId), { method:"DELETE" });
-      setOk("Kurs o‘chirildi (API).");
+      setOk("Kurs o‘chirildi.");
       closeModal();
       await loadAndRender();
       return;
@@ -666,7 +674,7 @@
       const list = readDemoCourses();
       const next = list.filter(x=>String(x.id)!==String(editingId));
       writeDemoCourses(next);
-      setOk("Kurs o‘chirildi (demo/localStorage).");
+      setOk("Kurs o‘chirildi.");
       closeModal();
       await loadAndRender();
     }
@@ -686,7 +694,7 @@
     const coverUrl = ($("c_cover").value || "").trim();
 
     if(!title){ setErr("Kurs nomi majburiy."); return; }
-    if(type==="paid" && (isNaN(price) || price < 1)){ setErr("Pullik kurs uchun narx (coin) 1 dan katta bo‘lsin."); return; }
+    if(type==="paid" && (isNaN(price) || price < 1)){ setErr("Pullik kurs uchun narx (so'm) 1 dan katta bo‘lsin."); return; }
 
     const editingId = $("saveCourseBtn").dataset.editing || $("saveDraftBtn").dataset.editing || "";
 
@@ -700,7 +708,7 @@
         method = "PUT";
       }
       await apiFetch(url, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
-      setOk("Kurs saqlandi (API).");
+      setOk("Kurs saqlandi.");
       closeModal();
       await loadAndRender();
       return;
@@ -737,18 +745,22 @@
         });
       }
       writeDemoCourses(list);
-      setOk("Kurs saqlandi (demo/localStorage).");
+      setOk("Kurs saqlandi.");
       closeModal();
       await loadAndRender();
     }
   }
 
   // ---------- load + render ----------
-  let state = { list: [], me:null, isDemo:false };
+  let state = { list: [], me:null, isDemo:false, teacherFilterId:"" };
 
   async function fetchCourses(){
     try{
-      const data = await apiFetch("/api/courses");
+      const teacherFilterId = state.teacherFilterId || "";
+      const url = teacherFilterId
+        ? ("/api/courses?teacherId=" + encodeURIComponent(teacherFilterId))
+        : "/api/courses";
+      const data = await apiFetch(url);
       const list = Array.isArray(data) ? data : (data.courses || []);
       state.isDemo = false;
       return list.map(normalizeCourse);
@@ -765,7 +777,13 @@
 
     const filtered = applySort(list.filter(matchFilters));
     $("countTxt").textContent = `Topildi: ${filtered.length} ta kurs`;
-    $("modeTxt").textContent = state.isDemo ? "Rejim: demo/localStorage (API topilmadi yoki ruxsat yo‘q)" : "Rejim: API";
+    $("modeTxt").textContent = state.isDemo ? "Ma'lumot manbasi: lokal rejim" : "Ma'lumot manbasi: server";
+    if(state.teacherFilterId){
+      $("teacherFilterWrap").style.display = "flex";
+      $("teacherFilterTag").textContent = "Teacher bo‘yicha kurslar";
+    }else{
+      $("teacherFilterWrap").style.display = "none";
+    }
     if(!filtered.length){
       container.innerHTML = `<div class="muted" style="grid-column:span 12">Hech narsa topilmadi.</div>`;
       return;
@@ -794,7 +812,7 @@
           <div class="muted cdesc">${escapeHtml((c.description||"").slice(0, 140))}${(c.description||"").length>140 ? "…" : ""}</div>
           <div class="cmeta">
             ${courseTags(c)}
-            <span class="tag">Teacher: <b>${escapeHtml(c.teacherName || "-")}</b></span>
+            ${c.teacherId ? `<a class="tag" href="/courses.html?teacherId=${encodeURIComponent(c.teacherId)}">Teacher: <b>${escapeHtml(c.teacherName || "-")}</b></a>` : `<span class="tag">Teacher: <b>${escapeHtml(c.teacherName || "-")}</b></span>`}
             <span class="tag">Fakultet: <b>${escapeHtml(c.faculty || "-")}</b></span>
           </div>
           <div class="cactions">
@@ -909,6 +927,9 @@
     $("q").value=""; $("facultyFilter").value=""; $("priceFilter").value=""; $("groupFilter").value=""; $("sortSel").value="new";
     renderCourses(state.list);
   });
+  $("clearTeacherFilterBtn").addEventListener("click", ()=>{
+    location.href = "/courses.html";
+  });
 
   ["q","facultyFilter","priceFilter","groupFilter","sortSel"].forEach(id=>{
     $(id).addEventListener("input", ()=> renderCourses(state.list));
@@ -929,6 +950,7 @@
 
   async function init(){
     fillFacultySelects();
+    state.teacherFilterId = String(qs("teacherId") || "").trim();
     const me = await apiMe();
     if(!me) return;
     state.me = me;

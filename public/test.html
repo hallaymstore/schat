@@ -233,8 +233,7 @@
         <div id="resultBox" class="muted">—</div>
         <div class="divider"></div>
         <div class="tiny">
-          Submit API: <code>POST /api/tests/:id/submit</code> (fallback: localStorage).
-          Pass bo‘lsa server progressga <code>testPassed</code> flag qo‘yishi mumkin.
+          Test yakunlanganda natija avtomatik saqlanadi va kurs progressiga bog‘lanadi.
         </div>
       </div>
     </div>
@@ -319,6 +318,23 @@
   }
 
   function normalizeTest(raw){
+    const incomingQuestions = Array.isArray(raw.questions) ? raw.questions : (Array.isArray(raw.items) ? raw.items : []);
+    const questions = incomingQuestions.map((q)=> {
+      const options = Array.isArray(q.options) ? q.options : [];
+      const pick = (k) => {
+        const f = options.find((o)=> String(o.key || "").toUpperCase() === k);
+        return String(f?.text || q[k.toLowerCase()] || "");
+      };
+      return {
+        q: q.q || q.text || q.question || "",
+        a: q.a || pick("A"),
+        b: q.b || pick("B"),
+        c: q.c || pick("C"),
+        d: q.d || pick("D"),
+        correct: (q.correct || q.answerKey || q.ans || "").toUpperCase()
+      };
+    }).filter((q)=> q.q && q.a && q.b && q.c && q.d);
+
     return {
       id: raw._id || raw.id || raw.testId,
       title: raw.title || raw.name || "Nomsiz test",
@@ -328,7 +344,7 @@
       timeMin: Number(raw.timeMin || raw.durationMin || 10),
       passPct: Number(raw.passPct || raw.passingPercent || 60),
       teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
-      questions: Array.isArray(raw.questions) ? raw.questions : (raw.items || [])
+      questions
     };
   }
 
@@ -521,7 +537,7 @@
       // demo store
       const uid = state.me?._id || state.me?.id || state.me?.username;
       demoStoreResult(uid, state.test.id, { correct, total, pct, pass, at: Date.now(), forced: !!forced });
-      setErr("API topilmadi. Natija demo/localStorage ga saqlandi.");
+      setErr("Server bilan vaqtincha aloqa bo‘lmadi. Natija qurilmada saqlandi.");
     }
 
     // UI post-finish
@@ -555,7 +571,7 @@
     clearMsg();
     const role = String(state.me?.role || "student").toLowerCase();
     if(role === "teacher" || role === "admin"){
-      setErr("Teacher/Admin testni ishlamaydi (demo). Student akkaunt bilan kiring.");
+      setErr("Teacher/Admin test ishlamaydi. Student akkaunt bilan kiring.");
       return;
     }
     if(state.test.status !== "published"){

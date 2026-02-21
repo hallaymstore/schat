@@ -184,6 +184,95 @@
 <script>
 function getToken(){ return localStorage.getItem('token') || ''; }
 function q(name){ return new URLSearchParams(location.search).get(name); }
+let currentUser = null;
+let lessonMap = new Map();
+
+async function loadCurrentUser(){
+  try{
+    const res = await fetch('/api/me', {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    const data = await res.json().catch(()=>null);
+    if(res.ok && data && data.success){
+      currentUser = data.user || data || null;
+      return;
+    }
+  }catch(_){}
+  currentUser = null;
+}
+
+function canImportLessonToCourse(lesson){
+  const role = String(currentUser?.role || '').toLowerCase();
+  if (role === 'admin') return true;
+  if (role !== 'teacher') return false;
+  const meId = String(currentUser?._id || currentUser?.id || '');
+  const hostId = String(lesson?.host?.userId || '');
+  return !!(meId && hostId && meId === hostId);
+}
+
+async function addLessonToCourse(lessonId){
+  const lesson = lessonMap.get(String(lessonId));
+  if(!lesson || !lesson.recordingUrl){
+    alert('Bu darsda yozuv topilmadi.');
+    return;
+  }
+
+  const titleDefault = String(lesson.title || 'Recorded lesson').trim() || 'Recorded lesson';
+  const title = prompt('Kurs nomi:', titleDefault);
+  if(title === null) return;
+  const cleanTitle = String(title || '').trim();
+  if(!cleanTitle){
+    alert('Kurs nomi bo‘sh bo‘lmasin.');
+    return;
+  }
+
+  const modeInput = prompt("Kurs turi: free yoki paid", "free");
+  if(modeInput === null) return;
+  const type = String(modeInput || '').trim().toLowerCase() === 'paid' ? 'paid' : 'free';
+
+  let price = 0;
+  if(type === 'paid'){
+    const p = prompt("Narx (so'm):", "49000");
+    if(p === null) return;
+    const val = Number(String(p).replace(/[^\d]/g, ''));
+    if(!Number.isFinite(val) || val < 1){
+      alert("Narx 1 so'mdan katta bo‘lishi kerak.");
+      return;
+    }
+    price = Math.round(val);
+  }
+
+  const payload = {
+    lessonId: String(lessonId),
+    title: cleanTitle,
+    description: `Imported from group lesson: ${titleDefault}`,
+    type,
+    status: 'draft',
+    pricingCurrency: 'UZS',
+    freeForSourceGroup: true
+  };
+  if(type === 'paid') payload.price = price;
+
+  const res = await fetch('/api/courses/from-group-lesson', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(()=>null);
+  if(!res.ok || !data?.success){
+    alert(data?.error || `Kursga qo‘shib bo‘lmadi (HTTP ${res.status})`);
+    return;
+  }
+
+  const courseId = String(data?.course?._id || '');
+  alert("Dars kursga qo‘shildi (draft).");
+  if(courseId){
+    window.open(`/course.html?id=${encodeURIComponent(courseId)}`, '_blank');
+  }
+}
 
 function resolveBackLink(){
   const groupId = q('groupId');
@@ -363,6 +452,7 @@ async function downloadRecording(url, fallbackName){
 
 async function load(){
   resolveBackLink();
+  await loadCurrentUser();
 
   const groupId = q('groupId');
   document.getElementById('gid').textContent = groupId || '—';
@@ -384,10 +474,12 @@ async function load(){
   const data = await res.json();
   const list = document.getElementById('list');
   list.innerHTML = '';
+  lessonMap = new Map();
   const lessons = data.lessons || [];
   document.getElementById('msg').textContent = lessons.length ? `${lessons.length} ta dars topildi` : 'Hali dars yozuvlari yo‘q';
 
   lessons.forEach(l => {
+    lessonMap.set(String(l._id), l);
     const div = document.createElement('div');
     div.className = 'lessonCard p-4 sm:p-5';
 
@@ -404,6 +496,9 @@ async function load(){
           <div class="text-xs text-white/60 mt-1">Agar video o‘ynamasa: “Ochish” ni bosib alohida tabda ko‘ring.</div>
         </div>`
       : `<span class="chip">Yozuv yo‘q</span>`;
+    const importBtn = (l.recordingUrl && canImportLessonToCourse(l))
+      ? `<button class="btn btn-primary" onclick="addLessonToCourse('${l._id}')">🎓 Kursga qo‘shish</button>`
+      : '';
 
     const title = (l.title && String(l.title).trim()) ? String(l.title).trim() : 'Live dars';
 
@@ -426,6 +521,7 @@ async function load(){
 
         <div class="text-sm flex gap-2 items-center flex-wrap justify-end">
           ${rec}
+          ${importBtn}
           <button class="btn" onclick="showAttendance('${l._id}')">📋 Davomat</button>
         </div>
       </div>

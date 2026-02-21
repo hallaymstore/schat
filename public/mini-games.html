@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Games - HALLAYM edu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(1200px 700px at 10% -10%, rgba(20, 184, 166, 0.24), transparent 55%),
+        radial-gradient(1100px 700px at 90% 0%, rgba(59, 130, 246, 0.18), transparent 52%),
+        linear-gradient(180deg, #031a25 0%, #051f2b 40%, #071a24 100%);
+      color: #e5f7fb;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(16px);
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .cell {
+      aspect-ratio: 1 / 1;
+      font-size: 32px;
+      font-weight: 800;
+    }
+    .tap-target {
+      width: 100%;
+      min-height: 84px;
+      font-size: 20px;
+      font-weight: 800;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(20, 184, 166, 0.75), rgba(245, 158, 11, 0.7));
+      border: 1px solid rgba(255,255,255,0.24);
+    }
+    .small-scroll {
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .small-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    .small-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.22);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="p-3 sm:p-5">
+  <main class="max-w-7xl mx-auto space-y-4">
+    <section class="glass rounded-2xl p-4 sm:p-5">
+      <div class="flex flex-wrap items-center gap-3 justify-between">
+        <div>
+          <h1 class="text-2xl font-extrabold tracking-tight">Mini Games Hub</h1>
+          <p class="text-white/75 text-sm" id="contextLabel">Global mode</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="backLink" href="/student-dashboard.html" class="px-4 py-2 rounded-xl bg-white/12 border border-white/20 hover:bg-white/18">Orqaga</a>
+          <button id="refreshAllBtn" class="px-4 py-2 rounded-xl bg-emerald-500/80 hover:bg-emerald-500">Yangilash</button>
+        </div>
+      </div>
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="rounded-xl p-3 bg-white/8 border border-white/12">
+          <div class="text-xs text-white/65">Foydalanuvchi</div>
+          <div id="meName" class="font-bold text-lg">-</div>
+        </div>
+        <div class="rounded-xl p-3 bg-white/8 border border-white/12">
+          <div class="text-xs text-white/65">Coin balans</div>
+          <div id="coinBalance" class="font-extrabold text-2xl">0</div>
+        </div>
+        <div class="rounded-xl p-3 bg-white/8 border border-white/12">
+          <div class="text-xs text-white/65">PVP holat</div>
+          <div id="pvpStatusBadge" class="font-semibold">Queue emas</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <article class="glass rounded-2xl p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold">Coin missions</h2>
+          <span id="missionDayKey" class="text-xs text-white/70">-</span>
+        </div>
+        <div id="missionList" class="mt-3 space-y-2">
+          <div class="text-sm text-white/70">Yuklanmoqda...</div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+          <div class="rounded-lg p-2 bg-white/8 border border-white/12">
+            <div class="text-xs text-white/65">Solo cap</div>
+            <div id="soloCapText" class="font-semibold">0 / 120</div>
+          </div>
+          <div class="rounded-lg p-2 bg-white/8 border border-white/12">
+            <div class="text-xs text-white/65">PVP cap</div>
+            <div id="pvpCapText" class="font-semibold">0 / 180</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="glass rounded-2xl p-4 lg:col-span-2">
+        <h2 class="text-lg font-bold">Solo games</h2>
+        <p class="text-sm text-white/70">Tap Rush va Guess Number orqali bepul coin ishlang.</p>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="rounded-xl p-3 bg-white/8 border border-white/12">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold">Tap Rush</h3>
+              <span id="tapTimer" class="text-sm">15s</span>
+            </div>
+            <div class="text-sm text-white/70 mt-1">15 soniyada iloji boricha ko'p bosish.</div>
+            <div class="mt-3 text-sm">Score: <b id="tapScore">0</b></div>
+            <button id="tapStartBtn" class="mt-3 w-full px-3 py-2 rounded-xl bg-cyan-500/85 hover:bg-cyan-500">Boshlash</button>
+            <button id="tapTargetBtn" class="tap-target mt-3" disabled>TAP</button>
+            <div id="tapResult" class="text-xs text-white/75 mt-2 min-h-[18px]"></div>
+          </div>
+
+          <div class="rounded-xl p-3 bg-white/8 border border-white/12">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold">Guess Number</h3>
+              <span id="guessAttempts" class="text-sm">0 urinish</span>
+            </div>
+            <div class="text-sm text-white/70 mt-1">1-20 oralig'ida son toping, kam urinish - ko'proq coin.</div>
+            <div class="mt-3 flex items-center gap-2">
+              <input id="guessInput" type="number" min="1" max="20" class="flex-1 px-3 py-2 rounded-xl bg-white/10 border border-white/20 outline-none" placeholder="1..20" />
+              <button id="guessSubmitBtn" class="px-3 py-2 rounded-xl bg-sky-500/85 hover:bg-sky-500" disabled>Top</button>
+            </div>
+            <div class="mt-2 flex gap-2">
+              <button id="guessStartBtn" class="px-3 py-2 rounded-xl bg-cyan-500/85 hover:bg-cyan-500">Yangi o'yin</button>
+              <button id="guessFinishBtn" class="px-3 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15" disabled>Tugatish</button>
+            </div>
+            <div id="guessHint" class="text-xs text-white/75 mt-2 min-h-[18px]"></div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <article class="glass rounded-2xl p-4 xl:col-span-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-bold">PVP Tic-Tac-Toe</h2>
+            <p id="pvpScopeText" class="text-sm text-white/70">Global queue</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="joinQueueBtn" class="px-3 py-2 rounded-xl bg-emerald-500/85 hover:bg-emerald-500">Queue join</button>
+            <button id="leaveQueueBtn" class="px-3 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15">Queue leave</button>
+            <button id="leaveGameBtn" class="px-3 py-2 rounded-xl bg-rose-500/85 hover:bg-rose-500">Forfeit</button>
+          </div>
+        </div>
+        <div id="pvpStatusText" class="text-sm text-white/75 mt-3">Queuega qo'shilishingiz mumkin.</div>
+
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-[240px_1fr] gap-4">
+          <div class="rounded-xl p-3 bg-white/8 border border-white/12">
+            <div class="text-xs text-white/65">Siz</div>
+            <div id="youText" class="font-semibold">-</div>
+            <div class="mt-3 text-xs text-white/65">Raqib</div>
+            <div id="oppText" class="font-semibold">-</div>
+            <div class="mt-3 text-xs text-white/65">Turn</div>
+            <div id="turnText" class="font-semibold">-</div>
+          </div>
+          <div class="rounded-xl p-3 bg-white/8 border border-white/12">
+            <div class="board" id="board"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="glass rounded-2xl p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold">Leaderboard</h2>
+          <button id="refreshLbBtn" class="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 hover:bg-white/15 text-sm">Yangilash</button>
+        </div>
+        <div id="leaderboardList" class="mt-3 space-y-2 small-scroll">
+          <div class="text-sm text-white/70">Yuklanmoqda...</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="glass rounded-2xl p-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold">Mening game activity</h2>
+        <button id="refreshActBtn" class="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 hover:bg-white/15 text-sm">Yangilash</button>
+      </div>
+      <div id="activityList" class="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2"></div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      token: localStorage.getItem('token') || '',
+      me: null,
+      scope: 'global',
+      groupId: '',
+      opponentId: '',
+      socket: null,
+      queueing: false,
+      activeGame: null,
+      board: Array(9).fill(''),
+      tap: { running: false, score: 0, timeLeft: 15, timer: null },
+      guess: { active: false, target: 0, attempts: 0, finished: false }
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s || '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
+    function notify(text, type = 'info') {
+      const el = $('pvpStatusText');
+      if (!el) return;
+      el.textContent = text;
+      if (type === 'error') el.className = 'text-sm text-rose-200 mt-3';
+      else if (type === 'ok') el.className = 'text-sm text-emerald-200 mt-3';
+      else el.className = 'text-sm text-white/75 mt-3';
+    }
+
+    function parseContext() {
+      const q = new URLSearchParams(location.search);
+      const scopeRaw = String(q.get('scope') || '').toLowerCase();
+      const groupId = String(q.get('groupId') || q.get('group') || '').trim();
+      const opponent = String(q.get('opponent') || q.get('user') || '').trim();
+      if (scopeRaw === 'group' && groupId) {
+        state.scope = 'group';
+        state.groupId = groupId;
+      } else if (scopeRaw === 'duel' && opponent) {
+        state.scope = 'duel';
+        state.opponentId = opponent;
+      } else {
+        state.scope = 'global';
+        state.groupId = '';
+        state.opponentId = '';
+      }
+    }
+
+    function setContextUI() {
+      const scopeText = state.scope === 'group'
+        ? `Group mode (${state.groupId})`
+        : (state.scope === 'duel' ? 'Duel mode (1v1)' : 'Global mode');
+      $('contextLabel').textContent = scopeText;
+      $('pvpScopeText').textContent = scopeText;
+
+      if (state.scope === 'group' && state.groupId) {
+        $('backLink').href = `/group.html?id=${encodeURIComponent(state.groupId)}`;
+      } else if (state.scope === 'duel' && state.opponentId) {
+        $('backLink').href = `/chat.html?user=${encodeURIComponent(state.opponentId)}`;
+      } else {
+        const role = String(state.me?.role || '').toLowerCase();
+        $('backLink').href = role === 'teacher' ? '/teacher-dashboard.html' : '/student-dashboard.html';
+      }
+    }
+
+    async function api(url, options = {}) {
+      if (!state.token) throw new Error('Token missing');
+      const headers = { ...(options.headers || {}), Authorization: `Bearer ${state.token}` };
+      if (!headers['Content-Type'] && options.body && !(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+      }
+      const res = await fetch(url, { ...options, headers });
+      let data = null;
+      try { data = await res.json(); } catch (_) { data = null; }
+      if (!res.ok) {
+        const msg = data?.error || `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+      return data || {};
+    }
+
+    async function loadMe() {
+      if (!state.token) {
+        location.href = '/login.html';
+        return;
+      }
+      const me = await api('/api/me');
+      state.me = me.user || me;
+      $('meName').textContent = state.me.nickname || state.me.username || 'User';
+      $('coinBalance').textContent = String(Number(state.me.coins || 0));
+      $('youText').textContent = `${state.me.nickname || state.me.username || 'You'} (${state.me.username || ''})`;
+      setContextUI();
+    }
+
+    function setCoinBalance(value) {
+      const n = Number(value || 0);
+      $('coinBalance').textContent = String(n);
+      if (state.me) state.me.coins = n;
+    }
+
+    async function loadMissions() {
+      try {
+        const data = await api('/api/coins/missions');
+        $('missionDayKey').textContent = data.dayKey || '';
+        setCoinBalance(data.coins || 0);
+        const solo = data?.caps?.solo || { used: 0, cap: 120 };
+        const pvp = data?.caps?.pvp || { used: 0, cap: 180 };
+        $('soloCapText').textContent = `${solo.used || 0} / ${solo.cap || 120}`;
+        $('pvpCapText').textContent = `${pvp.used || 0} / ${pvp.cap || 180}`;
+
+        const list = Array.isArray(data.missions) ? data.missions : [];
+        if (!list.length) {
+          $('missionList').innerHTML = '<div class="text-sm text-white/70">Missionlar topilmadi.</div>';
+          return;
+        }
+        $('missionList').innerHTML = list.map((m) => {
+          const progress = m?.progress ? `${Number(m.progress.current || 0)} / ${Number(m.progress.target || 1)}` : '';
+          const canClaim = !m.claimed && !!m.eligible;
+          return `
+            <div class="rounded-xl p-3 bg-white/8 border border-white/12">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-semibold">${esc(m.title || m.key)}</div>
+                  <div class="text-xs text-white/70">${esc(m.description || '')}</div>
+                  <div class="text-xs text-cyan-100 mt-1">Reward: +${Number(m.reward || 0)} coin ${progress ? `| Progress: ${progress}` : ''}</div>
+                </div>
+                <button class="px-2.5 py-1.5 rounded-lg text-xs ${canClaim ? 'bg-emerald-500/85 hover:bg-emerald-500' : 'bg-white/10 border border-white/20'}"
+                        ${canClaim ? '' : 'disabled'}
+                        onclick="claimMission('${esc(m.key)}')">
+                  ${m.claimed ? 'Claimed' : (canClaim ? 'Claim' : 'Locked')}
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        $('missionList').innerHTML = `<div class="text-sm text-rose-200">${esc(e.message || 'Missions load failed')}</div>`;
+      }
+    }
+
+    async function claimMission(key) {
+      try {
+        const data = await api(`/api/coins/missions/${encodeURIComponent(key)}/claim`, { method: 'POST' });
+        setCoinBalance(data.coins || 0);
+        notify(`Mission claimed: +${Number(data.reward || 0)} coin`, 'ok');
+        await Promise.all([loadMissions(), loadActivity()]);
+      } catch (e) {
+        notify(e.message || 'Mission claim failed', 'error');
+      }
+    }
+    window.claimMission = claimMission;
+
+    async function submitSoloResult(gameType, score, meta = {}) {
+      const payload = {
+        gameType,
+        score,
+        scope: state.scope,
+        groupId: state.groupId,
+        opponentId: state.opponentId,
+        meta
+      };
+      const data = await api('/api/games/solo-result', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      setCoinBalance(data.coins || 0);
+      await Promise.all([loadMissions(), loadActivity(), loadLeaderboard()]);
+      return data;
+    }
+
+    function resetTapUi() {
+      $('tapTimer').textContent = `${state.tap.timeLeft}s`;
+      $('tapScore').textContent = String(state.tap.score);
+      $('tapStartBtn').disabled = state.tap.running;
+      $('tapTargetBtn').disabled = !state.tap.running;
+    }
+
+    function stopTapRush() {
+      if (state.tap.timer) clearInterval(state.tap.timer);
+      state.tap.timer = null;
+      state.tap.running = false;
+      resetTapUi();
+    }
+
+    function startTapRush() {
+      if (state.tap.running) return;
+      state.tap.running = true;
+      state.tap.timeLeft = 15;
+      state.tap.score = 0;
+      $('tapResult').textContent = '';
+      resetTapUi();
+      state.tap.timer = setInterval(async () => {
+        state.tap.timeLeft -= 1;
+        resetTapUi();
+        if (state.tap.timeLeft <= 0) {
+          stopTapRush();
+          try {
+            const rs = await submitSoloResult('tap_rush', state.tap.score, { durationMs: 15000, source: 'tap_rush' });
+            $('tapResult').textContent = `Natija: ${state.tap.score} | Reward: +${Number(rs.reward || 0)} coin`;
+          } catch (e) {
+            $('tapResult').textContent = e.message || 'Result save failed';
+          }
+        }
+      }, 1000);
+    }
+
+    function tapOnce() {
+      if (!state.tap.running) return;
+      const inc = 1 + Math.floor(Math.random() * 2);
+      state.tap.score += inc;
+      $('tapScore').textContent = String(state.tap.score);
+    }
+
+    function resetGuessUi() {
+      $('guessAttempts').textContent = `${state.guess.attempts} urinish`;
+      $('guessSubmitBtn').disabled = !state.guess.active || state.guess.finished;
+      $('guessFinishBtn').disabled = !state.guess.active || state.guess.finished;
+    }
+
+    function startGuessGame() {
+      state.guess.active = true;
+      state.guess.finished = false;
+      state.guess.attempts = 0;
+      state.guess.target = 1 + Math.floor(Math.random() * 20);
+      $('guessHint').textContent = "O'yin boshlandi. Sonni kiriting.";
+      $('guessInput').value = '';
+      resetGuessUi();
+    }
+
+    async function finishGuessGame(force = false) {
+      if (!state.guess.active || state.guess.finished) return;
+      state.guess.finished = true;
+      state.guess.active = false;
+      resetGuessUi();
+      const score = force ? 20 : Math.max(1, state.guess.attempts || 20);
+      try {
+        const rs = await submitSoloResult('guess_number', score, { source: 'guess_number', solved: !force });
+        if (force) $('guessHint').textContent = `Tugadi. Reward: +${Number(rs.reward || 0)} coin`;
+        else $('guessHint').textContent += ` | Reward: +${Number(rs.reward || 0)} coin`;
+      } catch (e) {
+        $('guessHint').textContent = e.message || 'Result save failed';
+      }
+    }
+
+    async function submitGuess() {
+      if (!state.guess.active || state.guess.finished) return;
+      const v = Number($('guessInput').value || 0);
+      if (!Number.isFinite(v) || v < 1 || v > 20) {
+        $('guessHint').textContent = '1 dan 20 gacha kiriting.';
+        return;
+      }
+      state.guess.attempts += 1;
+      resetGuessUi();
+      if (v === state.guess.target) {
+        $('guessHint').textContent = `Topdingiz! ${state.guess.attempts} urinish.`;
+        await finishGuessGame(false);
+        return;
+      }
+      if (state.guess.attempts >= 10) {
+        $('guessHint').textContent = `Urinishlar tugadi. To'g'ri javob: ${state.guess.target}.`;
+        await finishGuessGame(true);
+        return;
+      }
+      $('guessHint').textContent = v < state.guess.target ? 'Kattaroq son.' : 'Kichikroq son.';
+    }
+
+    function renderBoard() {
+      const game = state.activeGame;
+      const board = Array.isArray(game?.board) ? game.board : Array(9).fill('');
+      state.board = board.slice(0, 9);
+      const myTurn = !!game?.yourTurn;
+      $('board').innerHTML = state.board.map((v, idx) => `
+        <button class="cell rounded-xl border border-white/20 bg-white/8 hover:bg-white/14"
+                ${(!myTurn || !game || game.status !== 'active' || v) ? 'disabled' : ''}
+                onclick="playMove(${idx})">${esc(v || '')}</button>
+      `).join('');
+
+      $('turnText').textContent = game ? (game.yourTurn ? `Siz (${game.yourSymbol})` : `Raqib (${game.opponentSymbol})`) : '-';
+      $('oppText').textContent = game?.opponent?.nickname || game?.opponent?.username || game?.players?.find((p) => !p.isYou)?.nickname || '-';
+    }
+
+    function updatePvpStatusBadge() {
+      if (state.activeGame && state.activeGame.status === 'active') {
+        $('pvpStatusBadge').textContent = 'Oyin active';
+        return;
+      }
+      if (state.queueing) {
+        $('pvpStatusBadge').textContent = 'Queue waiting';
+        return;
+      }
+      $('pvpStatusBadge').textContent = 'Queue emas';
+    }
+
+    function connectSocket() {
+      if (state.socket) return;
+      const s = io({ transports: ['websocket', 'polling'] });
+      state.socket = s;
+
+      s.on('connect', () => {
+        s.emit('authenticate', state.token);
+      });
+
+      s.on('authenticated', () => {
+        s.emit('game:resume');
+      });
+
+      s.on('game:duelInvite', (data) => {
+        if (state.scope !== 'duel') return;
+        notify(`Duel taklif: ${data?.fromName || data?.fromUserId || 'User'}`);
+      });
+
+      s.on('game:queueState', (data) => {
+        const status = String(data?.status || '');
+        if (status === 'waiting') {
+          state.queueing = true;
+          notify(`Queue waiting. Position: ${Number(data.position || 0)} | Waiting: ${Number(data.waiting || 0)}`);
+        } else if (status === 'matched') {
+          state.queueing = false;
+          notify('Opponent topildi. Oyin boshlandi.', 'ok');
+        } else if (status === 'left') {
+          state.queueing = false;
+          notify('Queue dan chiqildi.');
+        }
+        updatePvpStatusBadge();
+      });
+
+      s.on('game:start', (payload) => {
+        const game = payload?.game || {};
+        const players = Array.isArray(payload?.players) ? payload.players : [];
+        const me = players.find((p) => p.isYou) || null;
+        const opp = players.find((p) => !p.isYou) || null;
+        state.activeGame = {
+          ...game,
+          players,
+          me,
+          opponent: opp
+        };
+        state.queueing = false;
+        notify(payload?.message || 'Game started', 'ok');
+        renderBoard();
+        updatePvpStatusBadge();
+      });
+
+      s.on('game:update', (payload) => {
+        const game = payload?.game || {};
+        const players = Array.isArray(payload?.players) ? payload.players : [];
+        const me = players.find((p) => p.isYou) || null;
+        const opp = players.find((p) => !p.isYou) || null;
+        state.activeGame = {
+          ...game,
+          players,
+          me,
+          opponent: opp
+        };
+        renderBoard();
+      });
+
+      s.on('game:end', async (payload) => {
+        const game = payload?.game || {};
+        const players = Array.isArray(payload?.players) ? payload.players : [];
+        const me = players.find((p) => p.isYou) || null;
+        const opp = players.find((p) => !p.isYou) || null;
+        state.activeGame = { ...game, players, me, opponent: opp };
+        state.queueing = false;
+        updatePvpStatusBadge();
+        renderBoard();
+        const reward = Number(payload?.reward || 0);
+        const winnerId = String(payload?.winnerId || '');
+        const winText = winnerId ? (winnerId === String(state.me?._id || state.me?.id || '') ? 'Siz yutdingiz' : 'Raqib yutdi') : 'Durrang';
+        notify(`${winText}. Reward: +${reward} coin`, winnerId && winnerId === String(state.me?._id || state.me?.id || '') ? 'ok' : 'info');
+        if (typeof payload?.coins !== 'undefined') setCoinBalance(payload.coins);
+        await Promise.all([loadMissions(), loadActivity(), loadLeaderboard()]);
+      });
+
+      s.on('game:error', (data) => {
+        notify(data?.error || 'Game error', 'error');
+      });
+    }
+
+    function queueJoin() {
+      if (!state.socket) return;
+      state.socket.emit('game:queueJoin', {
+        gameType: 'tic_tac_toe',
+        scope: state.scope,
+        groupId: state.groupId,
+        opponentId: state.opponentId
+      });
+    }
+
+    function queueLeave() {
+      if (!state.socket) return;
+      state.socket.emit('game:queueLeave');
+    }
+
+    function leaveGame() {
+      if (!state.socket) return;
+      state.socket.emit('game:leave');
+      state.activeGame = null;
+      state.queueing = false;
+      renderBoard();
+      updatePvpStatusBadge();
+      notify('Oyin tark etildi.');
+    }
+
+    function playMove(index) {
+      if (!state.socket || !state.activeGame?.gameId) return;
+      state.socket.emit('game:move', { gameId: state.activeGame.gameId, index });
+    }
+    window.playMove = playMove;
+
+    async function loadActivity() {
+      try {
+        const data = await api('/api/games/my-activity?limit=24');
+        const list = Array.isArray(data.items) ? data.items : [];
+        if (!list.length) {
+          $('activityList').innerHTML = '<div class="text-sm text-white/70">Hozircha activity yoq.</div>';
+          return;
+        }
+        $('activityList').innerHTML = list.map((it) => `
+          <div class="rounded-xl p-3 bg-white/8 border border-white/12">
+            <div class="font-semibold">${esc(it.gameType || '-')} <span class="text-xs text-white/65">(${esc(it.mode || '-')})</span></div>
+            <div class="text-xs text-white/70 mt-1">Result: ${esc(it.result || '-')} | Score: ${Number(it.score || 0)}</div>
+            <div class="text-xs text-emerald-200 mt-1">+${Number(it.coinsAwarded || 0)} coin</div>
+            <div class="text-[11px] text-white/55 mt-1">${new Date(it.createdAt).toLocaleString()}</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        $('activityList').innerHTML = `<div class="text-sm text-rose-200">${esc(e.message || 'Activity load failed')}</div>`;
+      }
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const q = new URLSearchParams();
+        q.set('range', 'week');
+        if (state.scope === 'group' && state.groupId) {
+          q.set('scope', 'group');
+          q.set('groupId', state.groupId);
+        } else if (state.scope === 'duel') {
+          q.set('scope', 'duel');
+        }
+        const data = await api(`/api/games/leaderboard?${q.toString()}`);
+        const list = Array.isArray(data.items) ? data.items : [];
+        if (!list.length) {
+          $('leaderboardList').innerHTML = '<div class="text-sm text-white/70">Hozircha leaderboard bosh.</div>';
+          return;
+        }
+        $('leaderboardList').innerHTML = list.map((it) => `
+          <div class="rounded-lg px-3 py-2 bg-white/8 border border-white/12 flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <div class="text-sm font-semibold truncate">#${Number(it.rank || 0)} ${esc(it.nickname || it.username || 'User')}</div>
+              <div class="text-xs text-white/65">Games: ${Number(it.totalGames || 0)} | Wins: ${Number(it.wins || 0)}</div>
+            </div>
+            <div class="text-sm font-bold text-amber-200">${Number(it.totalCoins || 0)}c</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        $('leaderboardList').innerHTML = `<div class="text-sm text-rose-200">${esc(e.message || 'Leaderboard load failed')}</div>`;
+      }
+    }
+
+    function bindUi() {
+      $('refreshAllBtn').addEventListener('click', async () => {
+        await Promise.all([loadMissions(), loadActivity(), loadLeaderboard()]);
+        notify('Yangilandi', 'ok');
+      });
+      $('refreshLbBtn').addEventListener('click', () => loadLeaderboard());
+      $('refreshActBtn').addEventListener('click', () => loadActivity());
+
+      $('tapStartBtn').addEventListener('click', startTapRush);
+      $('tapTargetBtn').addEventListener('click', tapOnce);
+
+      $('guessStartBtn').addEventListener('click', startGuessGame);
+      $('guessSubmitBtn').addEventListener('click', submitGuess);
+      $('guessFinishBtn').addEventListener('click', () => finishGuessGame(true));
+      $('guessInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitGuess();
+        }
+      });
+
+      $('joinQueueBtn').addEventListener('click', queueJoin);
+      $('leaveQueueBtn').addEventListener('click', queueLeave);
+      $('leaveGameBtn').addEventListener('click', leaveGame);
+    }
+
+    async function init() {
+      parseContext();
+      await loadMe();
+      bindUi();
+      resetTapUi();
+      resetGuessUi();
+      renderBoard();
+      updatePvpStatusBadge();
+      await Promise.all([loadMissions(), loadActivity(), loadLeaderboard()]);
+      connectSocket();
+    }
+
+    window.addEventListener('beforeunload', () => {
+      try { state.socket?.emit('game:leave'); } catch (_) {}
+    });
+
+    init().catch((e) => {
+      notify(e.message || 'Init failed', 'error');
+      if (/token|auth|401|403/i.test(String(e.message || ''))) {
+        localStorage.removeItem('token');
+        setTimeout(() => { location.href = '/login.html'; }, 800);
+      }
+    });
+  </script>
+  <script src="/ui-actions-menu.js" defer></script>
+</body>
+</html>

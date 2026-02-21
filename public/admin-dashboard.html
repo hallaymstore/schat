@@ -1452,6 +1452,9 @@
         const hostLabel = escapeHtml(host.fullName || host.username || (x.hostId||'—'));
         const rec = x.recordingUrl ? `<a class="underline font-extrabold" target="_blank" href="${x.recordingUrl}">Ko‘rish</a>` : `<span class="muted2">—</span>`;
         const dur = x.recordingDurationSec ? `${Math.round(x.recordingDurationSec)}s` : '—';
+        const recActions = x.recordingUrl
+          ? `<button class="pill px-3 py-1 text-xs font-extrabold bg-red-500/20 border border-red-300/40" onclick="delGroupLessonRecording('${x._id}')">Yozuvni o‘chirish</button>`
+          : `<span class="text-xs muted2">—</span>`;
         return `
           <tr class="row border-b border-white/10">
             <td class="p-3 text-xs muted2">${fmtDate(x.startedAt || x.createdAt)}</td>
@@ -1465,13 +1468,14 @@
             </td>
             <td class="p-3 text-xs">${dur}</td>
             <td class="p-3">${rec}</td>
+            <td class="p-3">${recActions}</td>
           </tr>
         `;
       }).join('');
 
       document.getElementById('content').innerHTML = sel + `<div class="mt-4">` + tableWrap(`
         <thead><tr class="text-left text-xs muted2">
-          <th class="p-3">Boshlanish</th><th class="p-3">Dars</th><th class="p-3">Host</th><th class="p-3">Duration</th><th class="p-3">Recording</th>
+          <th class="p-3">Boshlanish</th><th class="p-3">Dars</th><th class="p-3">Host</th><th class="p-3">Duration</th><th class="p-3">Recording</th><th class="p-3">Amal</th>
         </tr></thead>
         <tbody>${rows || ''}</tbody>
       `) + `</div>` + (items.length?'' : `<div class="text-sm muted2 mt-3">Dars yo‘q.</div>`);
@@ -1503,6 +1507,23 @@ async function delItem(type, id){
           if(!res.ok) return toast(j?.error || "O‘chirish xatosi", 'error');
           toast("O‘chirildi.", 'success');
           await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    async function delGroupLessonRecording(lessonId){
+      modal.show({
+        title: "Yozuvni o‘chirish",
+        sub: "Faqat video yozuv o‘chadi, dars metama’lumoti qoladi.",
+        okText: "O‘chirish",
+        bodyHTML: `<div class="glass rounded-2xl p-4 text-sm muted2">
+          Lesson ID: <span class="font-mono font-extrabold">${lessonId}</span>
+        </div>`,
+        onOk: async ()=>{
+          const {res, j} = await api(`/api/admin/group-lessons/${lessonId}/recording`, { method:'DELETE' });
+          if(!res.ok) return toast(j?.error || "Yozuv o‘chirilmadi", 'error');
+          toast("Yozuv o‘chirildi.", 'success');
           await loadList();
         }
       });

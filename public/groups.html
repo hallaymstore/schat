@@ -323,14 +323,14 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 <a href="/channels.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-broadcast-tower w-5 text-center"></i><span>Channels</span></a>
 <a href="/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-user w-5 text-center"></i><span>Profile</span></a>
       <div class="h-px bg-white/15 my-1"></div>
-      <button type="button" onclick="openGroupTabFromMenu('my')" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
-        <i class="fas fa-user-friends w-5 text-center"></i><span>Mening guruhlarim</span>
+      <button type="button" onclick="openGroupTabFromMenu('all')" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
+        <i class="fas fa-globe w-5 text-center"></i><span>Sizga mos + barcha</span>
       </button>
       <button type="button" onclick="openGroupTabFromMenu('joined')" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
         <i class="fas fa-people-group w-5 text-center"></i><span>Qo‘shilgan guruhlar</span>
       </button>
-      <button type="button" onclick="openGroupTabFromMenu('all')" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
-        <i class="fas fa-globe w-5 text-center"></i><span>Barcha guruhlar</span>
+      <button type="button" onclick="openGroupTabFromMenu('my')" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
+        <i class="fas fa-user-friends w-5 text-center"></i><span>Men yaratgan guruhlar</span>
       </button>
       <button type="button" onclick="openCreateModalFromMenu()" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-500/30 hover:bg-emerald-500/40 border border-emerald-200/30 text-white font-semibold text-left">
         <i class="fas fa-plus-circle w-5 text-center"></i><span>Yangi guruh yaratish</span>
@@ -455,9 +455,9 @@ button,a{ -webkit-tap-highlight-color: transparent; }
               <i class="fa-solid fa-layer-group"></i><span class="ml-2 hidden sm:inline">Guruh menyu</span>
             </button>
             <div id="groupQuickMenuPanel" class="hidden absolute right-0 mt-2 w-64 rounded-2xl glass border border-white/20 p-2 z-[90]">
-              <button type="button" onclick="openGroupTabFromMenu('my')"><i class="fas fa-user-friends mr-2"></i>Mening guruhlarim</button>
+              <button type="button" onclick="openGroupTabFromMenu('all')"><i class="fas fa-globe mr-2"></i>Sizga mos + barcha</button>
               <button type="button" onclick="openGroupTabFromMenu('joined')"><i class="fas fa-people-group mr-2"></i>Qo‘shilgan guruhlar</button>
-              <button type="button" onclick="openGroupTabFromMenu('all')"><i class="fas fa-globe mr-2"></i>Barcha guruhlar</button>
+              <button type="button" onclick="openGroupTabFromMenu('my')"><i class="fas fa-user-friends mr-2"></i>Men yaratgan guruhlar</button>
               <div class="h-px bg-white/15 my-2"></div>
               <button type="button" onclick="openCreateModalFromMenu()"><i class="fas fa-plus-circle mr-2"></i>Yangi guruh yaratish</button>
             </div>
@@ -497,7 +497,8 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         <div class="glass rounded-2xl p-4 mb-6 flex items-center justify-between gap-3">
           <div class="min-w-0">
             <div class="text-xs muted2">Ko‘rinish</div>
-            <div id="currentGroupTabLabel" class="font-bold text-base sm:text-lg text-teal-200">Mening guruhlarim</div>
+            <div id="currentGroupTabLabel" class="font-bold text-base sm:text-lg text-teal-200">Sizga mos + barcha guruhlar</div>
+            <div id="profileStudyGroupHint" class="text-xs muted2 mt-1">O‘quv guruhi: —</div>
           </div>
           <button type="button" onclick="toggleGroupQuickMenu()" class="btn-primary text-white px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap">
             <i class="fas fa-sliders mr-2"></i>Menyu
@@ -644,12 +645,60 @@ button,a{ -webkit-tap-highlight-color: transparent; }
     </div>
 
     <script>
-        let currentGroupTab = 'my';
+        let currentGroupTab = 'all';
         let meProfile = null;
         let allowedUniversities = [];
         let allowedFaculties = [];
         let allowedStudyTypes = [];
         let allowedStudyGroups = [];
+
+        function normText(v){
+            return String(v || '').trim().toLowerCase();
+        }
+
+        function updateProfileStudyGroupHint(){
+            const el = document.getElementById('profileStudyGroupHint');
+            if (!el) return;
+            const sg = String(meProfile?.studyGroup || '').trim();
+            const st = String(meProfile?.studyType || '').trim();
+            const fac = String(meProfile?.faculty || '').trim();
+            if (!sg) {
+                el.textContent = 'O‘quv guruhi: belgilanmagan';
+                return;
+            }
+            const extra = [fac, st].filter(Boolean).join(' • ');
+            el.textContent = extra
+              ? `O‘quv guruhi: ${sg} (${extra})`
+              : `O‘quv guruhi: ${sg}`;
+        }
+
+        function getGroupRelevanceScore(group){
+            const mySg = normText(meProfile?.studyGroup);
+            const mySt = normText(meProfile?.studyType);
+            const myFac = normText(meProfile?.faculty);
+            const myUni = normText(meProfile?.university);
+            const gSg = normText(group?.studyGroup);
+            const gSt = normText(group?.studyType);
+            const gFac = normText(group?.faculty);
+            const gUni = normText(group?.university);
+
+            let score = 0;
+            if (myUni && gUni && myUni === gUni) score += 2;
+            if (myFac && gFac && myFac === gFac) score += 3;
+            if (mySt && gSt && mySt === gSt) score += 4;
+            if (mySg && gSg && mySg === gSg) score += 10;
+            return score;
+        }
+
+        function prioritizeGroupsForUser(groups){
+            if (!Array.isArray(groups)) return [];
+            const scored = groups.map((g, i) => ({ g, i, score: getGroupRelevanceScore(g) }));
+            scored.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return a.i - b.i;
+            });
+            return scored.map((x) => x.g);
+        }
 
         async function loadMeProfile(){
             try{
@@ -662,6 +711,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             }catch(e){
                 meProfile = null;
             }
+            updateProfileStudyGroupHint();
         }
 
         async function loadFacultyCatalog(university, selectedFaculty='', selectedStudyType='', selectedStudyGroup=''){
@@ -872,7 +922,8 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 const data = await response.json();
                 
                 if (data.success) {
-                    renderGroups(data.groups);
+                    const prioritized = prioritizeGroupsForUser(data.groups || []);
+                    renderGroups(prioritized);
                     updateStats(data.stats);
                 }
             } catch (error) {
@@ -898,7 +949,9 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 return;
             }
             
-            container.innerHTML = groups.map(group => `
+            container.innerHTML = groups.map(group => {
+                const isMyStudyGroup = normText(group.studyGroup) && normText(group.studyGroup) === normText(meProfile?.studyGroup);
+                return `
                 <div class="group-card glass rounded-2xl shadow overflow-hidden relative">
                     <div class="p-6 sm:p-7">
                         <div class="flex items-start justify-between mb-4">
@@ -906,6 +959,9 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                                 <i class="fas fa-users text-white"></i>
                             </div>
                             <div class="flex items-center space-x-2">
+                                ${isMyStudyGroup ?
+                                    '<span class="text-xs bg-amber-300/20 text-amber-200 px-2 py-1 rounded">Sizning o‘quv guruhingiz</span>' : ''
+                                }
                                 ${group.isPrivate ? 
                                     '<span class="text-xs bg-gray-100 muted2 px-2 py-1 rounded">Private</span>' : 
                                     '<span class="text-xs bg-green-100 text-emerald-200 px-2 py-1 rounded">Public</span>'
@@ -988,7 +1044,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
         
         // Update statistics
@@ -1021,12 +1077,12 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 function switchGroupTab(tab){
   currentGroupTab = tab;
   const tabLabelMap = {
-    my: 'Mening guruhlarim',
+    my: 'Men yaratgan guruhlar',
     joined: 'Qo‘shilgan guruhlar',
-    all: 'Barcha guruhlar'
+    all: 'Sizga mos + barcha guruhlar'
   };
   const labelEl = document.getElementById('currentGroupTabLabel');
-  if (labelEl) labelEl.textContent = tabLabelMap[tab] || tabLabelMap.my;
+  if (labelEl) labelEl.textContent = tabLabelMap[tab] || tabLabelMap.all;
 
   document.querySelectorAll('.group-tab').forEach(btn=>{
     const on = btn.dataset.tab === tab;
@@ -1178,7 +1234,7 @@ try {
             await checkAuth();
             await loadMeProfile();
             await loadUniversityCatalog();
-            switchGroupTab('my');
+            switchGroupTab('all');
         });
     </script>
 

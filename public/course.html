@@ -187,6 +187,7 @@
         <div class="row" style="margin-top:14px">
           <button class="btn primary" id="joinBtn" style="display:none">Kursga qo‘shilish</button>
           <a class="btn primary" id="openBtn" href="#" style="display:none">Kursni ochish</a>
+          <a class="btn" id="teacherCoursesBtn" href="#" style="display:none">Teacher kurslari</a>
           <a class="btn" id="editBtn" href="#" style="display:none">Teacher: Tahrirlash</a>
         </div>
 
@@ -195,8 +196,8 @@
         <div class="cta" style="margin-top:14px">
           <div style="font-weight:900">Keyingi qadam</div>
           <div class="tiny" style="margin-top:6px">
-            Kursga qo‘shilgandan so‘ng <code>joinedcourse.html</code> sahifasida darslarni ketma-ket bajarish va progress saqlash ishlaydi.
-            Kursni to‘liq tugatsangiz <code>certificate.html</code> orqali sertifikat olish mumkin (backend tekshiradi).
+            Kursga qo‘shilgandan so‘ng darslarni ketma-ket bajarish va progress saqlash ishlaydi.
+            Kursni to‘liq tugatsangiz sertifikat olish bo‘limi ochiladi.
           </div>
         </div>
       </div>
@@ -215,13 +216,13 @@
           Qoidalar:
           <ul style="margin:8px 0 0 18px; padding:0">
             <li>Student faqat o‘z fakultet/guruhiga mos kursga qo‘shiladi.</li>
-            <li>Pullik kurs: coin student balansidan yechiladi.</li>
-            <li>Teacher balansiga 50% qo‘shiladi (server83.js logikasiga mos).</li>
+            <li>Pullik kurs: so'm balansi hisobidan yechiladi.</li>
+            <li>O'qituvchi daromad oladi, platforma ulushi avtomatik ajratiladi.</li>
           </ul>
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          Join endpoint: <code>POST /api/courses/:id/join</code> (fallback: <code>/api/join-course</code>).
+          Kursga qo'shilish tugmasi orqali darhol kirish yoki xarid qilish mumkin.
         </div>
       </div>
     </div>
@@ -304,12 +305,15 @@
       teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
       teacherId: raw.teacherId || raw.teacher?._id || raw.ownerId || "",
       youtubeUrl: raw.youtubeUrl || raw.youtube || "",
-      coverUrl: raw.coverUrl || raw.cover || ""
+      coverUrl: raw.coverUrl || raw.cover || "",
+      pricingCurrency: String(raw.pricingCurrency || "UZS"),
+      sourceStudyGroup: raw.sourceStudyGroup || "",
+      freeForSourceGroup: raw.freeForSourceGroup !== false
     };
   }
 
   function courseTags(course){
-    const t = course.type === "paid" ? `Pullik: ${Number(course.price||0)} coin` : `Bepul`;
+    const t = course.type === "paid" ? `Pullik: ${Number(course.price||0)} so'm` : `Bepul`;
     const st = (course.status||"published") === "published" ? `Published` : `Draft`;
     return { t, st };
   }
@@ -344,7 +348,7 @@
   function fetchCourseFromDemo(id){
     const list = readDemoCourses().map(normalizeCourse);
     const c = list.find(x=>String(x.id)===String(id));
-    if(!c) throw new Error("Kurs topilmadi (demo).");
+    if(!c) throw new Error("Kurs topilmadi.");
     return c;
   }
 
@@ -356,21 +360,23 @@
     }
 
     const allowedGroups = Array.isArray(course.groups) ? course.groups.filter(Boolean) : [];
+    const meGroup = String(me.group || me.studyGroup || "").trim().toLowerCase();
+    const sourceStudyGroup = String(course.sourceStudyGroup || "").trim().toLowerCase();
+    const sourceGroupFree = !!(course.freeForSourceGroup && meGroup && sourceStudyGroup && meGroup === sourceStudyGroup);
     if(allowedGroups.length){
-      if(!me.group) return { ok:false, reason:"Sizda guruh belgilanmagan." };
-      const meGroup = String(me.group).trim().toLowerCase();
+      if(!meGroup) return { ok:false, reason:"Sizda guruh belgilanmagan." };
       const ok = allowedGroups.some(g=>String(g).trim().toLowerCase() === meGroup);
       if(!ok) return { ok:false, reason:"Bu kurs sizning guruhingiz uchun ochiq emas." };
     }
 
-    if(course.type === "paid"){
+    if(course.type === "paid" && !sourceGroupFree){
       const coins = Number(me.coins ?? me.coin ?? 0);
       if(coins < Number(course.price||0)){
-        return { ok:false, reason:"Coin yetarli emas. Balansni to‘ldiring." };
+        return { ok:false, reason:"Balans yetarli emas. Hisobni to‘ldiring." };
       }
     }
 
-    return { ok:true, reason:"" };
+    return { ok:true, reason:"", sourceGroupFree };
   }
 
   function youtubeEmbed(url){
@@ -456,12 +462,19 @@
     const joinBtn = $("joinBtn");
     const openBtn = $("openBtn");
     const editBtn = $("editBtn");
+    const teacherCoursesBtn = $("teacherCoursesBtn");
     const hint = $("joinHint");
 
     joinBtn.style.display = "none";
     openBtn.style.display = "none";
     editBtn.style.display = "none";
+    teacherCoursesBtn.style.display = "none";
     hint.style.display = "none";
+
+    if(course.teacherId){
+      teacherCoursesBtn.style.display = "inline-flex";
+      teacherCoursesBtn.href = "/courses.html?teacherId=" + encodeURIComponent(course.teacherId);
+    }
 
     if(isTeacher){
       editBtn.style.display = "inline-flex";
@@ -482,8 +495,10 @@
       hint.style.display = "block";
       if(check.ok){
         joinBtn.style.display = "inline-flex";
-        hint.textContent = (course.type==="paid")
-          ? `Bu kurs pullik. Narx: ${Number(course.price||0)} coin. “Kursga qo‘shilish” bosilganda coin yechish server83.js backend’da bajariladi.`
+        hint.textContent = (course.type==="paid" && !check.sourceGroupFree)
+          ? `Bu kurs pullik. Narx: ${Number(course.price||0)} so'm. “Kursga qo‘shilish” bosilganda balansdan avtomatik yechiladi.`
+          : (course.type==="paid" && check.sourceGroupFree)
+          ? "Siz manba guruh talabasisiz. Ushbu pullik kurs siz uchun bepul ochiladi."
           : "Bu kurs bepul. “Kursga qo‘shilish” ni bosing.";
       }else{
         hint.textContent = "Qo‘shilish mumkin emas: " + check.reason;
@@ -520,10 +535,10 @@
       }
       if(!res.ok){
         const data = await res.json().catch(()=> ({}));
-        throw new Error(data.error || "API join failed");
+        throw new Error(data.error || "Kursga qo‘shilishda xatolik");
       }
 
-      setOk("Kursga qo‘shildingiz (API). Yo‘naltirilmoqda...");
+      setOk("Kursga qo‘shildingiz. Yo‘naltirilmoqda...");
       setTimeout(()=> location.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id), 550);
       return;
     }catch(e){
@@ -534,13 +549,13 @@
         joined.push(course.id);
         writeJoined(uid, joined);
       }
-      // demo: coin subtract UI-only
+      // demo: balance subtract UI-only
       if(course.type==="paid"){
         const curCoins = Number(me.coins ?? me.coin ?? 0);
         const newCoins = Math.max(0, curCoins - Number(course.price||0));
         localStorage.setItem("demoCoins_override_" + uid, String(newCoins));
       }
-      setOk("Kursga qo‘shildingiz (demo). Yo‘naltirilmoqda...");
+      setOk("Kursga qo‘shildingiz. Yo‘naltirilmoqda...");
       setTimeout(()=> location.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id), 550);
     }
   }

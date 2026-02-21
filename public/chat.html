@@ -847,6 +847,7 @@
     <div class="mt-4 grid gap-2">
       <a href="/messages.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-arrow-left w-5 text-center"></i><span>Back to Messages</span></a>
 <button id="mUserInfo" onclick="window.__drawer?.openPanel?.(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-circle-info w-5 text-center"></i><span>User Info</span></button>
+<button id="mDuelGameBtn" onclick="openDuelMiniGames(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-gamepad w-5 text-center"></i><span>1v1 Mini game</span></button>
 <a href="/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"><i class="fas fa-user w-5 text-center"></i><span>Profile</span></a>
     </div>
   </aside>
@@ -895,6 +896,9 @@
                 </div>
             </div>
             <div class="flex items-center space-x-2">
+                <button onclick="openDuelMiniGames()" class="p-2 hover:bg-white/10 rounded-full transition" title="1v1 Mini game">
+                    <i class="fas fa-gamepad"></i>
+                </button>
                 <button id="videoCallBtn" onclick="startVideoCall()" class="p-2 hover:bg-white/10 rounded-full transition" title="Video Call">
                     <i class="fas fa-video"></i>
                 </button>
@@ -1340,6 +1344,9 @@ const floatingRobot = (() => {
             
             // Setup scroll listener for infinite scroll
             setupInfiniteScroll();
+
+            // If user accepted from global popup on another page, restore pending offer here.
+            consumeGlobalIncomingCallHandoff();
             
             console.log('✅ Chat initialized successfully');
             try{ floatingRobot.ensure(); }catch(e){}
@@ -1360,6 +1367,48 @@ const floatingRobot = (() => {
             
             console.log('👤 Chat User ID:', chatUserId);
         }
+
+        function consumeGlobalIncomingCallHandoff() {
+            try {
+                const key = 'schat:pendingIncomingCall';
+                const raw = localStorage.getItem(key);
+                if (!raw) return;
+                const payload = JSON.parse(raw);
+                if (!payload || !payload.from) return;
+
+                // Expire old handoff data
+                const age = Date.now() - Number(payload.ts || 0);
+                if (age > 3 * 60 * 1000) {
+                    localStorage.removeItem(key);
+                    return;
+                }
+
+                // Only consume if this chat page is opened for the same caller.
+                if (String(payload.from) !== String(chatUserId)) return;
+                localStorage.removeItem(key);
+
+                pendingOffer = payload.offer || null;
+                showIncomingCall({
+                    type: payload.type || 'audio',
+                    callerInfo: Object.assign({}, payload.callerInfo || {}, {
+                        callId: payload.callId || payload.callerInfo?.callId || null,
+                        nickname: payload.callerInfo?.nickname || chatUser?.nickname || 'Unknown',
+                        avatar: payload.callerInfo?.avatar || chatUser?.avatar || ''
+                    })
+                });
+            } catch (e) {
+                console.warn('consumeGlobalIncomingCallHandoff error:', e);
+            }
+        }
+
+        function openDuelMiniGames() {
+            if (!chatUserId) {
+                showNotification('Chat user aniqlanmadi', 'error');
+                return;
+            }
+            window.location.href = `/mini-games.html?scope=duel&opponent=${encodeURIComponent(chatUserId)}`;
+        }
+        window.openDuelMiniGames = openDuelMiniGames;
         
         // Authentication check
         async function checkAuth() {

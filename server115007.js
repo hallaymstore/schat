@@ -66,13 +66,25 @@ app.get('/api/rtc-config', (req, res) => {
     const turnUrlRaw = String(process.env.TURN_URL || process.env.TURN_SERVER || '').trim();
     const turnUsername = String(process.env.TURN_USERNAME || process.env.TURN_USER || '').trim();
     const turnCredential = String(process.env.TURN_CREDENTIAL || process.env.TURN_PASSWORD || '').trim();
+    const disablePublicTurn = String(process.env.DISABLE_PUBLIC_TURN || '').trim() === '1';
+    const fallbackTurnUrls = [
+      'turn:openrelay.metered.ca:80',
+      'turn:openrelay.metered.ca:80?transport=tcp',
+      'turn:openrelay.metered.ca:443',
+      'turns:openrelay.metered.ca:443?transport=tcp'
+    ];
 
-    if (turnUrlRaw) {
-      const urls = turnUrlRaw.split(',').map(s => s.trim()).filter(Boolean);
+    const urls = turnUrlRaw
+      ? turnUrlRaw.split(',').map(s => s.trim()).filter(Boolean)
+      : (!disablePublicTurn ? fallbackTurnUrls : []);
+    const username = turnUsername || (!turnUrlRaw && !disablePublicTurn ? 'openrelayproject' : '');
+    const credential = turnCredential || (!turnUrlRaw && !disablePublicTurn ? 'openrelayproject' : '');
+
+    if (urls.length && username && credential) {
       iceServers.push({
         urls,
-        username: turnUsername,
-        credential: turnCredential
+        username,
+        credential
       });
     }
 
@@ -959,6 +971,36 @@ const GroupMessageSchema = new mongoose.Schema({
 });
 const GroupMessage = mongoose.model('GroupMessage', GroupMessageSchema);
 
+// Coin mission claim log (daily unique claim per mission)
+const CoinMissionClaimSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  missionKey: { type: String, required: true, index: true },
+  dayKey: { type: String, required: true, index: true }, // YYYY-MM-DD
+  meta: { type: mongoose.Schema.Types.Mixed, default: {} },
+  createdAt: { type: Date, default: Date.now, index: true }
+});
+CoinMissionClaimSchema.index({ userId: 1, missionKey: 1, dayKey: 1 }, { unique: true });
+const CoinMissionClaim = mongoose.models.CoinMissionClaim || mongoose.model('CoinMissionClaim', CoinMissionClaimSchema);
+
+// Game activity log (solo + pvp)
+const GameActivitySchema = new mongoose.Schema({
+  gameId: { type: String, default: '', index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  gameType: { type: String, required: true, index: true }, // tap_rush, guess_number, tic_tac_toe, ...
+  mode: { type: String, enum: ['solo', 'pvp'], default: 'solo', index: true },
+  scope: { type: String, enum: ['global', 'group', 'duel'], default: 'global', index: true },
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', default: null, index: true },
+  opponentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+  score: { type: Number, default: 0, index: true },
+  result: { type: String, enum: ['win', 'lose', 'draw', 'participate'], default: 'participate', index: true },
+  coinsAwarded: { type: Number, default: 0 },
+  meta: { type: mongoose.Schema.Types.Mixed, default: {} },
+  createdAt: { type: Date, default: Date.now, index: true }
+});
+GameActivitySchema.index({ userId: 1, createdAt: -1 });
+GameActivitySchema.index({ mode: 1, gameType: 1, createdAt: -1 });
+const GameActivity = mongoose.models.GameActivity || mongoose.model('GameActivity', GameActivitySchema);
+
 
 // ==================== GROUP LESSONS (Class Live) ====================
 // GroupLesson: one live lesson session inside a Group (teacher live inside a group)
@@ -1433,6 +1475,67 @@ app.get('/api/group-lessons', authenticateToken, async (req, res) => {
   }
 });
 
+// Download a lesson recording (auth + group member check).
+// Used for local /uploads/lessons files where browser download headers are needed.
+app.get('/api/group-lessons/download', authenticateToken, async (req, res) => {
+  try {
+    const rawUrl = String(req.query.url || '').trim();
+    if (!rawUrl) return res.status(400).json({ error: 'url required' });
+
+    let recordingUrl = rawUrl;
+    try { recordingUrl = decodeURIComponent(rawUrl); } catch (_) {}
+    if (!recordingUrl) return res.status(400).json({ error: 'Invalid url' });
+    if (/[\r\n]/.test(recordingUrl)) return res.status(400).json({ error: 'Invalid url' });
+
+    const lesson = await GroupLesson.findOne({ recordingUrl }).select('groupId recordingUrl hostId').lean();
+    if (!lesson) return res.status(404).json({ error: 'Recording not found' });
+
+    let ok = await isGroupMember(String(lesson.groupId || ''), req.userId);
+    if (!ok) {
+      const viewer = await User.findById(req.userId).select('role isAdmin').lean();
+      const isAdmin = !!viewer?.isAdmin || String(viewer?.role || '').toLowerCase() === 'admin';
+      const isHost = String(lesson.hostId || '') === String(req.userId || '');
+      ok = !!(isAdmin || isHost);
+    }
+    if (!ok) return res.status(403).json({ error: 'Access denied' });
+
+    const recUrl = String(lesson.recordingUrl || '');
+    if (!recUrl) return res.status(404).json({ error: 'Recording empty' });
+
+    if (recUrl.startsWith('/uploads/lessons/')) {
+      const fs = require('fs');
+      const fileName = path.basename(recUrl);
+      const baseDir = path.join(__dirname, 'uploads', 'lessons');
+      const filePath = path.join(baseDir, fileName);
+      if (!filePath.startsWith(baseDir)) return res.status(400).json({ error: 'Invalid path' });
+      if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
+
+      const ext = path.extname(fileName).toLowerCase();
+      const mime = (ext === '.mp4') ? 'video/mp4'
+        : (ext === '.webm') ? 'video/webm'
+        : (ext === '.mov') ? 'video/quicktime'
+        : 'application/octet-stream';
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Cache-Control', 'private, max-age=60');
+      return res.download(filePath, fileName);
+    }
+
+    // For remote recordings (e.g., cloud), redirect after access check.
+    try {
+      const u = new URL(recUrl);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+        return res.status(400).json({ error: 'Unsupported recording URL' });
+      }
+      return res.redirect(u.toString());
+    } catch (_) {
+      return res.status(400).json({ error: 'Invalid recording URL' });
+    }
+  } catch (e) {
+    console.error('GET /api/group-lessons/download error:', e);
+    return res.status(500).json({ error: 'Failed to download recording' });
+  }
+});
+
 // Attendance report (teacher only: host or admin). Returns joined + absent lists.
 // Attendance report (teacher only: host or admin). Returns joined + absent lists.
 app.get('/api/group-lessons/:lessonId/attendance', authenticateToken, attachUserRole, async (req, res) => {
@@ -1508,7 +1611,6 @@ app.post('/api/group-lessons/:lessonId/recording', authenticateToken, attachUser
     const isHost = String(lesson.hostId) === String(req.userId);
     if (!(role === 'admin' || isHost)) return res.status(403).json({ error: 'Only host teacher can upload recording' });
 
-    if (!req.file) return res.status(400).json({ error: 'No recording file uploaded' });
 const incomingTitle = (req.body && req.body.title ? String(req.body.title) : '').trim();
 
 if (!req.file) return res.status(400).json({ error: 'No recording file uploaded' });
@@ -1880,6 +1982,611 @@ const activeChannelLives = new Map();
 // Course live sessions state (in-memory): liveId -> { hostId, startedAt, mode, viewers: Set<userId> }
 const activeCourseLives = new Map();
 
+// ==================== MINI GAMES (Queue + PVP state) ====================
+const MINI_GAME_DAILY_CAPS = Object.freeze({
+  solo: 120,
+  pvp: 180
+});
+
+const MINI_COIN_MISSIONS = Object.freeze([
+  {
+    key: 'daily_login',
+    title: 'Daily login bonus',
+    description: 'Har kuni bir marta bonus coin oling.',
+    reward: 20,
+    cycle: 'daily'
+  },
+  {
+    key: 'daily_chat',
+    title: 'Daily chat bonus',
+    description: 'Bugun kamida bitta xabar yuboring.',
+    reward: 16,
+    cycle: 'daily'
+  },
+  {
+    key: 'daily_play',
+    title: 'Daily gamer bonus',
+    description: 'Bugun mini game oynang.',
+    reward: 22,
+    cycle: 'daily'
+  },
+  {
+    key: 'profile_complete',
+    title: 'Profile completed',
+    description: 'Profilni toliq toldirib bir martalik bonus oling.',
+    reward: 40,
+    cycle: 'once'
+  }
+]);
+
+const MINI_SOLO_GAMES = Object.freeze(['tap_rush', 'guess_number', 'memory_flip']);
+
+const miniGameQueues = {
+  tic_tac_toe: {
+    global: [],              // userId[]
+    group: new Map(),        // groupId -> userId[]
+    duel: new Map()          // pairKey -> Set<userId>
+  }
+};
+
+// gameId -> state
+const activeMiniGames = new Map();
+// userId -> gameId
+const userMiniGame = new Map();
+
+function getMiniMissionByKey(key) {
+  const k = String(key || '').trim().toLowerCase();
+  return MINI_COIN_MISSIONS.find((m) => String(m.key) === k) || null;
+}
+
+function dayStartLocal(date = new Date()) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function dayKeyLocal(date = new Date()) {
+  const d = new Date(date);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizeMiniScope(scope) {
+  const s = String(scope || '').toLowerCase();
+  if (s === 'group') return 'group';
+  if (s === 'duel') return 'duel';
+  return 'global';
+}
+
+function miniMissionClaimDayKey(missionKey) {
+  const m = getMiniMissionByKey(missionKey);
+  if (!m) return dayKeyLocal();
+  return String(m.cycle) === 'once' ? 'once' : dayKeyLocal();
+}
+
+function duelPairKey(a, b) {
+  return [String(a || ''), String(b || '')].sort().join(':');
+}
+
+function isObjectIdLike(value) {
+  try { return mongoose.Types.ObjectId.isValid(String(value || '')); } catch (_) { return false; }
+}
+
+function isProfileCompleteForCoinMission(userDoc) {
+  const u = userDoc || {};
+  const has = (v) => String(v || '').trim().length > 0;
+  const hasShortBio = String(u.bio || '').trim().length >= 8;
+  return has(u.fullName) && has(u.nickname) && has(u.university) && has(u.faculty) && has(u.studyType) && has(u.studyGroup) && hasShortBio;
+}
+
+function calcSoloReward(gameType, scoreRaw) {
+  const game = String(gameType || '').trim().toLowerCase();
+  const score = Math.max(0, Math.floor(Number(scoreRaw || 0)));
+  if (game === 'tap_rush') {
+    return Math.min(60, 6 + Math.floor(score / 11));
+  }
+  if (game === 'guess_number') {
+    // Score should be lower when attempts are lower. Frontend sends 1..20.
+    const attempts = Math.max(1, score || 20);
+    return Math.max(8, 36 - attempts);
+  }
+  if (game === 'memory_flip') {
+    return Math.min(50, 10 + Math.floor(score / 2));
+  }
+  return Math.min(30, 6 + Math.floor(score / 10));
+}
+
+function summarizeSoloGameResult(gameType, scoreRaw) {
+  const game = String(gameType || '').trim().toLowerCase();
+  const score = Math.max(0, Math.floor(Number(scoreRaw || 0)));
+  if (game === 'tap_rush') {
+    if (score >= 340) return 'win';
+    if (score >= 180) return 'participate';
+    return 'participate';
+  }
+  if (game === 'guess_number') {
+    return (score > 0 && score <= 20) ? 'win' : 'participate';
+  }
+  if (game === 'memory_flip') {
+    if (score >= 12) return 'win';
+    return 'participate';
+  }
+  return 'participate';
+}
+
+async function resolveMiniContextForUser(userId, payload = {}) {
+  const scope = normalizeMiniScope(payload.scope);
+  const out = {
+    ok: true,
+    scope,
+    groupId: '',
+    opponentId: ''
+  };
+
+  if (scope === 'group') {
+    const groupId = String(payload.groupId || '').trim();
+    if (!isObjectIdLike(groupId)) return { ok: false, error: 'groupId invalid' };
+    const canJoin = await isGroupMember(groupId, userId);
+    if (!canJoin) return { ok: false, error: 'Group access denied' };
+    out.groupId = groupId;
+    return out;
+  }
+
+  if (scope === 'duel') {
+    const opponentId = String(payload.opponentId || '').trim();
+    if (!isObjectIdLike(opponentId)) return { ok: false, error: 'opponentId invalid' };
+    if (String(opponentId) === String(userId)) return { ok: false, error: 'You cannot duel yourself' };
+    const exists = await User.findById(opponentId).select('_id').lean();
+    if (!exists) return { ok: false, error: 'Opponent not found' };
+    out.opponentId = opponentId;
+    return out;
+  }
+
+  return out;
+}
+
+function enqueueUnique(arr, userId) {
+  const uid = String(userId || '');
+  if (!uid) return;
+  if (!arr.includes(uid)) arr.push(uid);
+}
+
+function dequeueDistinctPair(arr) {
+  while (arr.length > 0 && !arr[0]) arr.shift();
+  if (arr.length < 2) return null;
+  const first = arr.shift();
+  let second = null;
+  while (arr.length > 0 && !second) {
+    const cand = arr.shift();
+    if (cand && String(cand) !== String(first)) second = cand;
+  }
+  if (!second) {
+    if (first) arr.unshift(first);
+    return null;
+  }
+  return [String(first), String(second)];
+}
+
+function getQueuePosition(arr, userId) {
+  if (!Array.isArray(arr)) return 0;
+  const pos = arr.findIndex((u) => String(u) === String(userId));
+  return pos >= 0 ? (pos + 1) : 0;
+}
+
+function emitMiniQueueStateToUser(userId, data = {}) {
+  const uid = String(userId || '');
+  if (!uid) return;
+  emitToUser(uid, 'game:queueState', {
+    success: true,
+    gameType: 'tic_tac_toe',
+    ...data
+  });
+}
+
+async function tryMatchMiniQueue(gameType, scope, options = {}) {
+  const g = String(gameType || '').trim().toLowerCase();
+  const s = normalizeMiniScope(scope);
+  if (g !== 'tic_tac_toe') return null;
+
+  if (s === 'global') {
+    const q = miniGameQueues.tic_tac_toe.global;
+    while (q.length >= 2) {
+      const pair = dequeueDistinctPair(q);
+      if (!pair) break;
+      const [u1, u2] = pair;
+      if (!isUserOnline(u1) || !isUserOnline(u2)) continue;
+      if (userMiniGame.has(u1) || userMiniGame.has(u2)) continue;
+      const state = await startTicTacToeGame([u1, u2], { scope: 'global' });
+      if (state) return state;
+    }
+    return null;
+  }
+
+  if (s === 'group') {
+    const groupId = String(options.groupId || '');
+    if (!groupId) return null;
+    const q = miniGameQueues.tic_tac_toe.group.get(groupId) || [];
+    while (q.length >= 2) {
+      const pair = dequeueDistinctPair(q);
+      if (!pair) break;
+      const [u1, u2] = pair;
+      if (!isUserOnline(u1) || !isUserOnline(u2)) continue;
+      if (userMiniGame.has(u1) || userMiniGame.has(u2)) continue;
+      const state = await startTicTacToeGame([u1, u2], { scope: 'group', groupId });
+      if (state) {
+        miniGameQueues.tic_tac_toe.group.set(groupId, q);
+        return state;
+      }
+    }
+    if (q.length) miniGameQueues.tic_tac_toe.group.set(groupId, q);
+    else miniGameQueues.tic_tac_toe.group.delete(groupId);
+    return null;
+  }
+
+  if (s === 'duel') {
+    const pairKey = String(options.pairKey || '');
+    if (!pairKey) return null;
+    const set = miniGameQueues.tic_tac_toe.duel.get(pairKey);
+    if (!set) return null;
+    const players = Array.from(set).map(String).filter(Boolean).filter((uid) => isUserOnline(uid) && !userMiniGame.has(uid));
+    if (players.length < 2) return null;
+    const [u1, u2] = players;
+    set.delete(u1);
+    set.delete(u2);
+    if (!set.size) miniGameQueues.tic_tac_toe.duel.delete(pairKey);
+    const opponentId = (String(options.userId || '') === String(u1)) ? u2 : u1;
+    const state = await startTicTacToeGame([u1, u2], { scope: 'duel', opponentId });
+    return state || null;
+  }
+
+  return null;
+}
+
+function removeUserFromMiniGameQueues(userId) {
+  const uid = String(userId || '');
+  if (!uid) return;
+
+  const gq = miniGameQueues.tic_tac_toe.global;
+  miniGameQueues.tic_tac_toe.global = gq.filter((u) => String(u) !== uid);
+
+  for (const [gid, arr] of miniGameQueues.tic_tac_toe.group.entries()) {
+    const next = (arr || []).filter((u) => String(u) !== uid);
+    if (next.length) miniGameQueues.tic_tac_toe.group.set(gid, next);
+    else miniGameQueues.tic_tac_toe.group.delete(gid);
+  }
+
+  for (const [key, set] of miniGameQueues.tic_tac_toe.duel.entries()) {
+    set.delete(uid);
+    if (!set.size) miniGameQueues.tic_tac_toe.duel.delete(key);
+  }
+}
+
+function findTicWinnerSymbol(board) {
+  const b = Array.isArray(board) ? board : [];
+  const lines = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  for (const [a, c, d] of lines) {
+    if (b[a] && b[a] === b[c] && b[a] === b[d]) return b[a];
+  }
+  return '';
+}
+
+function boardIsFull(board) {
+  return Array.isArray(board) && board.length === 9 && board.every(Boolean);
+}
+
+async function getTodayGameCoins(userId, mode) {
+  const uid = String(userId || '');
+  if (!uid) return 0;
+  const match = { userId: new mongoose.Types.ObjectId(uid), createdAt: { $gte: dayStartLocal() } };
+  if (mode) match.mode = String(mode);
+  const agg = await GameActivity.aggregate([
+    { $match: match },
+    { $group: { _id: null, total: { $sum: '$coinsAwarded' } } }
+  ]);
+  return Number(agg?.[0]?.total || 0);
+}
+
+async function creditCoinsWithCap(userId, desiredCoins, mode) {
+  const uid = String(userId || '');
+  const desired = Math.max(0, Number(desiredCoins || 0));
+  if (!uid || !desired) return { awarded: 0, cap: MINI_GAME_DAILY_CAPS[mode] || 0, used: 0 };
+
+  const cap = Number(MINI_GAME_DAILY_CAPS[mode] || 0);
+  if (!cap) return { awarded: 0, cap: 0, used: 0 };
+  const used = await getTodayGameCoins(uid, mode);
+  const left = Math.max(0, cap - used);
+  const awarded = Math.max(0, Math.min(left, desired));
+  if (awarded > 0) {
+    await User.updateOne({ _id: uid }, { $inc: { coins: awarded } });
+  }
+  return { awarded, cap, used };
+}
+
+function getMiniProfile(state, userId) {
+  const uid = String(userId || '');
+  return (state?.profiles && state.profiles[uid]) || {
+    userId: uid,
+    username: uid,
+    nickname: uid,
+    avatar: ''
+  };
+}
+
+function buildTicStateForUser(state, viewerId, extras = {}) {
+  const me = String(viewerId || '');
+  const opponentId = (state.players || []).find((u) => String(u) !== me) || null;
+  const yourSymbol = state.symbols?.[me] || '';
+  const oppSymbol = opponentId ? (state.symbols?.[opponentId] || '') : '';
+  return {
+    success: true,
+    game: {
+      gameId: state.gameId,
+      gameType: state.gameType,
+      scope: state.scope,
+      groupId: state.groupId || '',
+      status: state.status,
+      board: state.board,
+      turn: state.turn,
+      yourTurn: String(state.turn) === me,
+      yourSymbol,
+      opponentSymbol: oppSymbol,
+      startedAt: state.startedAt,
+      endedAt: state.endedAt || null
+    },
+    players: (state.players || []).map((uid) => {
+      const p = getMiniProfile(state, uid);
+      return {
+        userId: String(uid),
+        username: p.username || '',
+        nickname: p.nickname || p.username || 'User',
+        avatar: p.avatar || '',
+        symbol: state.symbols?.[String(uid)] || '',
+        isYou: String(uid) === me
+      };
+    }),
+    ...extras
+  };
+}
+
+async function emitTicState(state, eventName = 'game:update', extrasByUser = {}) {
+  for (const uid of (state.players || [])) {
+    const payload = buildTicStateForUser(state, uid, extrasByUser[String(uid)] || {});
+    emitToUser(String(uid), eventName, payload);
+  }
+}
+
+async function startTicTacToeGame(players, opts = {}) {
+  const uniqPlayers = Array.from(new Set((players || []).map((x) => String(x || '')).filter(Boolean)));
+  if (uniqPlayers.length !== 2) return null;
+  const [a, b] = uniqPlayers;
+  if (userMiniGame.has(a) || userMiniGame.has(b)) return null;
+
+  const first = Math.random() < 0.5 ? a : b;
+  const second = String(first) === String(a) ? b : a;
+  const gameId = `ttt_${uuidv4()}`;
+  const users = await User.find({ _id: { $in: [a, b] } }).select('username nickname avatar').lean();
+  const profiles = {};
+  for (const u of (users || [])) {
+    profiles[String(u._id)] = {
+      userId: String(u._id),
+      username: String(u.username || ''),
+      nickname: String(u.nickname || u.username || 'User'),
+      avatar: String(u.avatar || '')
+    };
+  }
+
+  const state = {
+    gameId,
+    gameType: 'tic_tac_toe',
+    scope: normalizeMiniScope(opts.scope),
+    groupId: opts.groupId ? String(opts.groupId) : '',
+    players: [first, second],
+    symbols: { [first]: 'X', [second]: 'O' },
+    board: Array(9).fill(''),
+    turn: first,
+    status: 'active',
+    startedAt: Date.now(),
+    endedAt: null,
+    profiles
+  };
+
+  activeMiniGames.set(gameId, state);
+  userMiniGame.set(first, gameId);
+  userMiniGame.set(second, gameId);
+
+  await emitTicState(state, 'game:start', {
+    [first]: { message: 'O‘yin boshlandi' },
+    [second]: { message: 'O‘yin boshlandi' }
+  });
+  return state;
+}
+
+async function finalizeTicGame(gameId, winnerId = null, reason = 'completed') {
+  const state = activeMiniGames.get(String(gameId || ''));
+  if (!state || state.status !== 'active') return null;
+
+  state.status = 'ended';
+  state.endedAt = Date.now();
+
+  const p1 = String(state.players?.[0] || '');
+  const p2 = String(state.players?.[1] || '');
+  const hasWinner = !!winnerId && (String(winnerId) === p1 || String(winnerId) === p2);
+  const loserId = hasWinner ? (String(winnerId) === p1 ? p2 : p1) : '';
+
+  const baseReward = {};
+  if (hasWinner) {
+    baseReward[String(winnerId)] = 30;
+    if (loserId) baseReward[String(loserId)] = 8;
+  } else {
+    if (p1) baseReward[p1] = 14;
+    if (p2) baseReward[p2] = 14;
+  }
+
+  const rewardResult = {};
+  for (const uid of (state.players || [])) {
+    rewardResult[String(uid)] = await creditCoinsWithCap(String(uid), Number(baseReward[String(uid)] || 0), 'pvp');
+  }
+
+  const docs = [];
+  for (const uid of (state.players || [])) {
+    const me = String(uid);
+    const opponent = (state.players || []).find((x) => String(x) !== me) || null;
+    const r = rewardResult[me] || { awarded: 0 };
+    let result = 'draw';
+    if (hasWinner) result = (String(winnerId) === me) ? 'win' : 'lose';
+
+    docs.push({
+      gameId: String(state.gameId),
+      userId: me,
+      gameType: 'tic_tac_toe',
+      mode: 'pvp',
+      scope: state.scope || 'global',
+      groupId: isObjectIdLike(state.groupId) ? state.groupId : null,
+      opponentId: isObjectIdLike(opponent) ? opponent : null,
+      score: result === 'win' ? 1 : (result === 'draw' ? 0 : -1),
+      result,
+      coinsAwarded: Number(r.awarded || 0),
+      meta: { reason, board: state.board, startedAt: state.startedAt, endedAt: state.endedAt }
+    });
+  }
+  if (docs.length) await GameActivity.insertMany(docs).catch(() => null);
+
+  const ids = (state.players || []).map((x) => new mongoose.Types.ObjectId(String(x)));
+  const coinRows = await User.find({ _id: { $in: ids } }).select('_id coins').lean();
+  const coinMap = new Map(coinRows.map((u) => [String(u._id), Number(u.coins || 0)]));
+
+  const extras = {};
+  for (const uid of (state.players || [])) {
+    const me = String(uid);
+    const rr = rewardResult[me] || { awarded: 0 };
+    extras[me] = {
+      winnerId: hasWinner ? String(winnerId) : null,
+      reason,
+      reward: Number(rr.awarded || 0),
+      coins: Number(coinMap.get(me) || 0),
+      cap: Number(rr.cap || MINI_GAME_DAILY_CAPS.pvp),
+      usedToday: Number(rr.used || 0)
+    };
+  }
+  await emitTicState(state, 'game:end', extras);
+
+  for (const uid of (state.players || [])) {
+    userMiniGame.delete(String(uid));
+  }
+  activeMiniGames.delete(String(gameId));
+  return state;
+}
+
+async function forfeitMiniGame(userId, reason = 'forfeit') {
+  const uid = String(userId || '');
+  if (!uid) return;
+  const gid = userMiniGame.get(uid);
+  if (!gid) return;
+  const state = activeMiniGames.get(String(gid));
+  if (!state || state.status !== 'active') {
+    userMiniGame.delete(uid);
+    return;
+  }
+  const opp = (state.players || []).find((x) => String(x) !== uid) || null;
+  await finalizeTicGame(String(gid), opp ? String(opp) : null, reason);
+}
+
+async function evaluateCoinMissionStatus(userId, missionKey, userDoc = null) {
+  const mission = getMiniMissionByKey(missionKey);
+  if (!mission) return null;
+  const uid = String(userId || '');
+  if (!uid) return null;
+  const todayStart = dayStartLocal();
+  const claimDayKey = miniMissionClaimDayKey(mission.key);
+
+  const claim = await CoinMissionClaim.findOne({
+    userId: uid,
+    missionKey: mission.key,
+    dayKey: claimDayKey
+  }).select('_id createdAt').lean();
+
+  if (claim) {
+    return {
+      ...mission,
+      claimed: true,
+      claimDayKey,
+      eligible: false,
+      progress: { current: 1, target: 1 }
+    };
+  }
+
+  if (mission.key === 'daily_login') {
+    return {
+      ...mission,
+      claimed: false,
+      claimDayKey,
+      eligible: true,
+      progress: { current: 1, target: 1 }
+    };
+  }
+
+  if (mission.key === 'daily_chat') {
+    const [pmCount, gmCount] = await Promise.all([
+      Message.countDocuments({ senderId: uid, createdAt: { $gte: todayStart } }),
+      GroupMessage.countDocuments({ senderId: uid, createdAt: { $gte: todayStart } })
+    ]);
+    const total = Number(pmCount || 0) + Number(gmCount || 0);
+    return {
+      ...mission,
+      claimed: false,
+      claimDayKey,
+      eligible: total >= 1,
+      progress: { current: Math.min(total, 1), target: 1, raw: total }
+    };
+  }
+
+  if (mission.key === 'daily_play') {
+    const gamesToday = await GameActivity.countDocuments({ userId: uid, createdAt: { $gte: todayStart } });
+    return {
+      ...mission,
+      claimed: false,
+      claimDayKey,
+      eligible: Number(gamesToday || 0) >= 1,
+      progress: { current: Math.min(Number(gamesToday || 0), 1), target: 1, raw: Number(gamesToday || 0) }
+    };
+  }
+
+  if (mission.key === 'profile_complete') {
+    const me = userDoc || await User.findById(uid).select('fullName nickname bio university faculty studyType studyGroup avatar').lean();
+    const done = isProfileCompleteForCoinMission(me);
+    return {
+      ...mission,
+      claimed: false,
+      claimDayKey,
+      eligible: done,
+      progress: { current: done ? 1 : 0, target: 1 }
+    };
+  }
+
+  return {
+    ...mission,
+    claimed: false,
+    claimDayKey,
+    eligible: false,
+    progress: { current: 0, target: 1 }
+  };
+}
+
+async function getCoinMissionStatuses(userId, userDoc = null) {
+  const out = [];
+  for (const m of MINI_COIN_MISSIONS) {
+    const status = await evaluateCoinMissionStatus(userId, m.key, userDoc);
+    if (status) out.push(status);
+  }
+  return out;
+}
+
 // ==================== LIVE SESSIONS MODELS ====================
 // LiveSession: teacher scheduled/live events (free/paid)
 const LiveSessionSchema = new mongoose.Schema({
@@ -1989,7 +2696,7 @@ io.on('connection', (socket) => {
       console.log('✅ User authenticated:', userId);
       
       // Join university room (for services/signals broadcasts)
-      const u = await User.findById(userId).select('university faculty isAdmin role username').lean();
+      const u = await User.findById(userId).select('university faculty studyType studyGroup isAdmin role username').lean();
       if (u && u.university) {
         socket.university = u.university;
         socket.join('uni:' + u.university);
@@ -1997,6 +2704,7 @@ io.on('connection', (socket) => {
       socket.userUniversity = cleanText(u?.university, 180);
       socket.userFaculty = cleanText(u?.faculty, 180);
       socket.userRole = String(u?.role || '').toLowerCase();
+      socket.username = String(u?.username || '');
 
       // Join user's personal room
       socket.join(userId);
@@ -2026,6 +2734,73 @@ io.on('connection', (socket) => {
         userId: userId,
         socketId: socket.id
       });
+
+      // If there are already active group calls, push a lightweight invite snapshot.
+      // This lets users who are currently on other pages still see "join now?" popup.
+      try {
+        const activeEntries = Array.from(activeGroupCalls.entries() || []);
+        if (activeEntries.length) {
+          const activeGroupIds = activeEntries
+            .map(([gid]) => String(gid || '').trim())
+            .filter((gid) => mongoose.Types.ObjectId.isValid(gid));
+
+          if (activeGroupIds.length) {
+            const groups = await Group.find({ _id: { $in: activeGroupIds } })
+              .select('_id name username members university faculty studyType studyGroup')
+              .lean();
+            const gmap = new Map((groups || []).map((g) => [String(g._id), g]));
+
+            const startedByIds = Array.from(new Set(activeEntries.map(([, c]) => String(c?.startedBy || '')).filter(Boolean)));
+            const starters = startedByIds.length
+              ? await User.find({ _id: { $in: startedByIds } }).select('fullName nickname username avatar').lean()
+              : [];
+            const smap = new Map((starters || []).map((s) => [String(s._id), s]));
+
+            const meUni = cleanText(u?.university, 180);
+            const meFac = cleanText(u?.faculty, 180);
+            const meType = cleanText(u?.studyType, 80);
+            const meGroup = cleanText(u?.studyGroup, 80);
+
+            const inScope = (g) => {
+              const gUni = cleanText(g?.university, 180);
+              const gFac = cleanText(g?.faculty, 180);
+              const gType = cleanText(g?.studyType, 80);
+              const gGroup = cleanText(g?.studyGroup, 80);
+              if (gUni && (!meUni || gUni !== meUni)) return false;
+              if (gFac && (!meFac || gFac !== meFac)) return false;
+              if (gType && (!meType || gType !== meType)) return false;
+              if (gGroup && (!meGroup || gGroup !== meGroup)) return false;
+              return true;
+            };
+
+            for (const [gid, call] of activeEntries) {
+              const groupDoc = gmap.get(String(gid));
+              if (!groupDoc || !call) continue;
+
+              const isMember = (groupDoc.members || []).some((m) => String(m) === String(userId));
+              if (!isMember && !inScope(groupDoc)) continue;
+              if (String(call.startedBy || '') === String(userId)) continue;
+
+              const st = smap.get(String(call.startedBy || '')) || {};
+              socket.emit('groupCallIncomingGlobal', {
+                groupId: String(gid),
+                callId: String(call.callId || ''),
+                callType: String(call.callType || 'video'),
+                title: String(call.title || 'Live dars'),
+                from: String(call.startedBy || ''),
+                fromName: String(st.fullName || st.nickname || st.username || 'Teacher'),
+                fromAvatar: String(st.avatar || ''),
+                groupName: String(groupDoc.name || ''),
+                groupUsername: String(groupDoc.username || ''),
+                startedAt: call.startedAt || Date.now(),
+                active: true
+              });
+            }
+          }
+        }
+      } catch (activeErr) {
+        console.warn('socket auth active-call snapshot warn:', activeErr?.message || activeErr);
+      }
       
     } catch (error) {
       console.error('❌ Socket authentication error:', error);
@@ -2042,7 +2817,7 @@ io.on('connection', (socket) => {
       if (!groupId) return;
 
       // Security: only members/public group, or scoped organizer/admin can join
-      const group = await Group.findById(groupId).select('isPublic members university faculty').lean();
+      const group = await Group.findById(groupId).select('isPublic members university faculty name username').lean();
       if (!group) return socket.emit('groupError', { error: 'Group not found' });
 
       const isMember = (group.members || []).some(m => String(m) === String(socket.userId));
@@ -2222,7 +2997,7 @@ socket.on('lessonTransferControl', async (data) => {
       if (!groupId) return;
 
       // Ensure access
-      const group = await Group.findById(groupId).select('isPublic members university faculty').lean();
+      const group = await Group.findById(groupId).select('isPublic members university faculty studyType studyGroup name username').lean();
       if (!group) return socket.emit('groupCallError', { error: 'Group not found' });
       const isMember = (group.members || []).some(m => String(m) === String(socket.userId));
       const canScopedModerate = canUserModerateGroupByScope({
@@ -2269,6 +3044,46 @@ socket.on('lessonTransferControl', async (data) => {
           from: socket.userId,
           startedAt: call.startedAt
         });
+
+        // Global site popup support:
+        // Notify each group member directly (works even when user is on other pages).
+        try {
+          const starter = await User.findById(socket.userId).select('fullName nickname username avatar').lean();
+          const starterName = String(starter?.fullName || starter?.nickname || starter?.username || 'Teacher').trim();
+          const incomingPayload = {
+            groupId,
+            callId,
+            callType,
+            title: call.title,
+            from: String(socket.userId),
+            fromName: starterName,
+            fromAvatar: String(starter?.avatar || '').trim(),
+            groupName: String(group?.name || '').trim(),
+            groupUsername: String(group?.username || '').trim(),
+            startedAt: call.startedAt
+          };
+
+          const notifyIds = new Set((group.members || []).map((m) => String(m || '')).filter(Boolean));
+
+          // Also notify users in the same academic scope (helps students who haven't opened/joined group page yet).
+          const scopeFilter = { _id: { $ne: socket.userId } };
+          if (group.university) scopeFilter.university = String(group.university || '').trim();
+          if (group.faculty) scopeFilter.faculty = String(group.faculty || '').trim();
+          if (group.studyType) scopeFilter.studyType = String(group.studyType || '').trim();
+          if (group.studyGroup) scopeFilter.studyGroup = String(group.studyGroup || '').trim();
+          const hasScope = !!(scopeFilter.university || scopeFilter.faculty || scopeFilter.studyType || scopeFilter.studyGroup);
+          if (hasScope) {
+            const scopedUsers = await User.find(scopeFilter).select('_id').limit(5000).lean().catch(() => []);
+            for (const su of (scopedUsers || [])) notifyIds.add(String(su?._id || ''));
+          }
+
+          for (const uid of Array.from(notifyIds)) {
+            if (String(uid) === String(socket.userId)) continue;
+            emitToUser(uid, 'groupCallIncomingGlobal', incomingPayload);
+          }
+        } catch (notifyErr) {
+          console.warn('groupCallStart global notify warn:', notifyErr?.message || notifyErr);
+        }
 
         console.log('📞 Group call started:', { groupId, callId, by: socket.userId, callType });
       } else {
@@ -2605,6 +3420,203 @@ socket.on('groupCallLeave', async (data) => {
       socket.emit('groupCallError', { error: 'Failed to end call' });
     }
   });
+
+  // ==================== MINI GAMES SOCKET (Realtime PVP) ====================
+  socket.on('game:resume', async () => {
+    try {
+      if (!socket.userId) return;
+      const uid = String(socket.userId);
+      const gameId = userMiniGame.get(uid);
+      if (!gameId) return;
+      const state = activeMiniGames.get(String(gameId));
+      if (!state || state.status !== 'active') return;
+      const payload = buildTicStateForUser(state, uid, { message: 'Active game resumed' });
+      socket.emit('game:update', payload);
+    } catch (e) {
+      console.error('game:resume error:', e);
+    }
+  });
+
+  socket.on('game:queueJoin', async (payload) => {
+    try {
+      if (!socket.userId) return socket.emit('game:error', { error: 'Not authenticated' });
+      const uid = String(socket.userId);
+      const gameType = String(payload?.gameType || 'tic_tac_toe').trim().toLowerCase();
+      if (gameType !== 'tic_tac_toe') {
+        return socket.emit('game:error', { error: 'Only tic_tac_toe is currently supported' });
+      }
+
+      const context = await resolveMiniContextForUser(uid, {
+        scope: payload?.scope,
+        groupId: payload?.groupId,
+        opponentId: payload?.opponentId
+      });
+      if (!context.ok) return socket.emit('game:error', { error: context.error || 'Invalid context' });
+
+      // If already in active game, push its current state.
+      const existingGameId = userMiniGame.get(uid);
+      if (existingGameId) {
+        const state = activeMiniGames.get(String(existingGameId));
+        if (state && state.status === 'active') {
+          socket.emit('game:update', buildTicStateForUser(state, uid, { message: 'Already in active game' }));
+          return;
+        }
+        userMiniGame.delete(uid);
+      }
+
+      // Keep each user in only one queue at a time.
+      removeUserFromMiniGameQueues(uid);
+
+      if (context.scope === 'global') {
+        enqueueUnique(miniGameQueues.tic_tac_toe.global, uid);
+        const state = await tryMatchMiniQueue('tic_tac_toe', 'global');
+        if (!state) {
+          emitMiniQueueStateToUser(uid, {
+            scope: 'global',
+            status: 'waiting',
+            waiting: miniGameQueues.tic_tac_toe.global.length,
+            position: getQueuePosition(miniGameQueues.tic_tac_toe.global, uid)
+          });
+        } else {
+          for (const p of (state.players || [])) {
+            emitMiniQueueStateToUser(p, { scope: 'global', status: 'matched', waiting: 0, position: 0 });
+          }
+        }
+        return;
+      }
+
+      if (context.scope === 'group') {
+        const gid = String(context.groupId || '');
+        const q = miniGameQueues.tic_tac_toe.group.get(gid) || [];
+        enqueueUnique(q, uid);
+        miniGameQueues.tic_tac_toe.group.set(gid, q);
+
+        const state = await tryMatchMiniQueue('tic_tac_toe', 'group', { groupId: gid });
+        if (!state) {
+          emitMiniQueueStateToUser(uid, {
+            scope: 'group',
+            groupId: gid,
+            status: 'waiting',
+            waiting: q.length,
+            position: getQueuePosition(q, uid)
+          });
+        } else {
+          for (const p of (state.players || [])) {
+            emitMiniQueueStateToUser(p, { scope: 'group', groupId: gid, status: 'matched', waiting: 0, position: 0 });
+          }
+        }
+        return;
+      }
+
+      // Duel scope
+      const opponentId = String(context.opponentId || '');
+      const key = duelPairKey(uid, opponentId);
+      const set = miniGameQueues.tic_tac_toe.duel.get(key) || new Set();
+      set.add(uid);
+      miniGameQueues.tic_tac_toe.duel.set(key, set);
+
+      const meName = (socket.username || socket.userName || '').toString().trim();
+      emitToUser(opponentId, 'game:duelInvite', {
+        success: true,
+        gameType: 'tic_tac_toe',
+        fromUserId: uid,
+        fromName: meName || 'User',
+        scope: 'duel'
+      });
+
+      const state = await tryMatchMiniQueue('tic_tac_toe', 'duel', { pairKey: key, userId: uid });
+      if (!state) {
+        emitMiniQueueStateToUser(uid, {
+          scope: 'duel',
+          opponentId,
+          status: 'waiting',
+          waiting: set.size,
+          position: set.size
+        });
+      } else {
+        for (const p of (state.players || [])) {
+          const opp = (state.players || []).find((x) => String(x) !== String(p)) || '';
+          emitMiniQueueStateToUser(p, { scope: 'duel', opponentId: String(opp), status: 'matched', waiting: 0, position: 0 });
+        }
+      }
+    } catch (e) {
+      console.error('game:queueJoin error:', e);
+      socket.emit('game:error', { error: 'Failed to join game queue' });
+    }
+  });
+
+  socket.on('game:queueLeave', () => {
+    try {
+      if (!socket.userId) return;
+      removeUserFromMiniGameQueues(String(socket.userId));
+      socket.emit('game:queueState', {
+        success: true,
+        gameType: 'tic_tac_toe',
+        status: 'left',
+        waiting: 0,
+        position: 0
+      });
+    } catch (e) {
+      console.error('game:queueLeave error:', e);
+    }
+  });
+
+  socket.on('game:move', async (payload) => {
+    try {
+      if (!socket.userId) return;
+      const uid = String(socket.userId);
+      const gameId = String(payload?.gameId || userMiniGame.get(uid) || '');
+      const index = Math.floor(Number(payload?.index));
+      if (!gameId) return socket.emit('game:error', { error: 'gameId missing' });
+      if (!Number.isInteger(index) || index < 0 || index > 8) return socket.emit('game:error', { error: 'Invalid move index' });
+
+      const state = activeMiniGames.get(gameId);
+      if (!state) return socket.emit('game:error', { error: 'Game not found' });
+      if (state.status !== 'active') return socket.emit('game:error', { error: 'Game already finished' });
+      if (String(state.gameType) !== 'tic_tac_toe') return socket.emit('game:error', { error: 'Unsupported game' });
+      if (!(state.players || []).some((x) => String(x) === uid)) return socket.emit('game:error', { error: 'Not your game' });
+      if (String(state.turn) !== uid) return socket.emit('game:error', { error: 'Not your turn' });
+      if ((state.board || [])[index]) return socket.emit('game:error', { error: 'Cell already occupied' });
+
+      const mySymbol = state.symbols?.[uid];
+      if (!mySymbol) return socket.emit('game:error', { error: 'Your symbol not found' });
+      state.board[index] = mySymbol;
+
+      const winnerSymbol = findTicWinnerSymbol(state.board);
+      if (winnerSymbol) {
+        const winnerId = (state.players || []).find((u) => String(state.symbols?.[String(u)] || '') === String(winnerSymbol)) || null;
+        await finalizeTicGame(gameId, winnerId ? String(winnerId) : null, 'completed');
+        return;
+      }
+
+      if (boardIsFull(state.board)) {
+        await finalizeTicGame(gameId, null, 'draw');
+        return;
+      }
+
+      const next = (state.players || []).find((x) => String(x) !== uid) || uid;
+      state.turn = String(next);
+      activeMiniGames.set(gameId, state);
+      await emitTicState(state, 'game:update', {
+        [uid]: { lastMove: index },
+        [String(next)]: { lastMove: index }
+      });
+    } catch (e) {
+      console.error('game:move error:', e);
+      socket.emit('game:error', { error: 'Failed to apply move' });
+    }
+  });
+
+  socket.on('game:leave', async () => {
+    try {
+      if (!socket.userId) return;
+      removeUserFromMiniGameQueues(String(socket.userId));
+      await forfeitMiniGame(String(socket.userId), 'left_game');
+    } catch (e) {
+      console.error('game:leave error:', e);
+    }
+  });
+
   // ==================== CHANNEL LIVE (WebRTC one-to-many) ====================
   // Host (channel creator) can start a live stream (camera or screen share).
   // Viewers can join to watch (receive-only).
@@ -3506,6 +4518,16 @@ socket.on('chat:live', ({ liveId, text }) => {
       console.error('disconnect groupcall cleanup error:', e);
     }
 
+    // Cleanup mini-game queues + active PVP game
+    try {
+      if (socket.userId) {
+        removeUserFromMiniGameQueues(String(socket.userId));
+        await forfeitMiniGame(String(socket.userId), 'disconnect');
+      }
+    } catch (e) {
+      console.error('disconnect mini-game cleanup error:', e);
+    }
+
 
     // Auto-cleanup channel live streams
     try {
@@ -4009,6 +5031,290 @@ app.get('/api/me', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to get user' });
+  }
+});
+
+// ==================== MINI GAMES + COIN MISSIONS API ====================
+app.get('/api/coins/missions', authenticateToken, async (req, res) => {
+  try {
+    const me = await User.findById(req.userId).select('fullName nickname bio university faculty studyType studyGroup avatar coins').lean();
+    if (!me) return res.status(404).json({ error: 'User not found' });
+
+    const [missions, soloUsed, pvpUsed] = await Promise.all([
+      getCoinMissionStatuses(req.userId, me),
+      getTodayGameCoins(req.userId, 'solo'),
+      getTodayGameCoins(req.userId, 'pvp')
+    ]);
+
+    res.json({
+      success: true,
+      dayKey: dayKeyLocal(),
+      coins: Number(me.coins || 0),
+      missions,
+      caps: {
+        solo: { used: Number(soloUsed || 0), cap: Number(MINI_GAME_DAILY_CAPS.solo || 0) },
+        pvp: { used: Number(pvpUsed || 0), cap: Number(MINI_GAME_DAILY_CAPS.pvp || 0) }
+      }
+    });
+  } catch (error) {
+    console.error('GET /api/coins/missions error:', error);
+    res.status(500).json({ error: 'Failed to load missions' });
+  }
+});
+
+app.post('/api/coins/missions/:missionKey/claim', authenticateToken, async (req, res) => {
+  try {
+    const mission = getMiniMissionByKey(req.params.missionKey);
+    if (!mission) return res.status(404).json({ error: 'Mission not found' });
+
+    const me = await User.findById(req.userId).select('fullName nickname bio university faculty studyType studyGroup avatar coins').lean();
+    if (!me) return res.status(404).json({ error: 'User not found' });
+
+    const status = await evaluateCoinMissionStatus(req.userId, mission.key, me);
+    if (!status) return res.status(404).json({ error: 'Mission not found' });
+    if (status.claimed) return res.status(400).json({ error: 'Mission already claimed', mission: status });
+    if (!status.eligible) return res.status(400).json({ error: 'Mission conditions not met yet', mission: status });
+
+    const claimDayKey = status.claimDayKey || miniMissionClaimDayKey(mission.key);
+    try {
+      await CoinMissionClaim.create({
+        userId: req.userId,
+        missionKey: mission.key,
+        dayKey: claimDayKey,
+        meta: { from: 'api_claim' }
+      });
+    } catch (e) {
+      if (Number(e?.code) === 11000) {
+        return res.status(400).json({ error: 'Mission already claimed' });
+      }
+      throw e;
+    }
+
+    await User.updateOne({ _id: req.userId }, { $inc: { coins: Number(mission.reward || 0) } });
+    const updated = await User.findById(req.userId).select('coins').lean();
+
+    res.json({
+      success: true,
+      reward: Number(mission.reward || 0),
+      coins: Number(updated?.coins || 0),
+      mission: {
+        ...mission,
+        claimed: true,
+        claimDayKey
+      }
+    });
+  } catch (error) {
+    console.error('POST /api/coins/missions/:missionKey/claim error:', error);
+    res.status(500).json({ error: 'Failed to claim mission' });
+  }
+});
+
+app.post('/api/games/solo-result', authenticateToken, async (req, res) => {
+  try {
+    const gameType = String(req.body?.gameType || '').trim().toLowerCase();
+    if (!MINI_SOLO_GAMES.includes(gameType)) {
+      return res.status(400).json({ error: 'Unsupported gameType' });
+    }
+
+    const score = Math.max(0, Math.floor(Number(req.body?.score || 0)));
+    const scopeCtx = await resolveMiniContextForUser(req.userId, {
+      scope: req.body?.scope,
+      groupId: req.body?.groupId,
+      opponentId: req.body?.opponentId
+    });
+    if (!scopeCtx.ok) return res.status(400).json({ error: scopeCtx.error || 'Invalid game scope' });
+
+    const desiredReward = calcSoloReward(gameType, score);
+    const credit = await creditCoinsWithCap(req.userId, desiredReward, 'solo');
+    const result = summarizeSoloGameResult(gameType, score);
+
+    const rawMeta = (req.body && typeof req.body.meta === 'object' && req.body.meta) ? req.body.meta : {};
+    const meta = {
+      level: Number(rawMeta.level || 1),
+      durationMs: Number(rawMeta.durationMs || 0),
+      source: String(rawMeta.source || 'mini-games-ui').slice(0, 80)
+    };
+
+    const activity = await GameActivity.create({
+      gameId: `solo_${uuidv4()}`,
+      userId: req.userId,
+      gameType,
+      mode: 'solo',
+      scope: scopeCtx.scope,
+      groupId: isObjectIdLike(scopeCtx.groupId) ? scopeCtx.groupId : null,
+      opponentId: isObjectIdLike(scopeCtx.opponentId) ? scopeCtx.opponentId : null,
+      score,
+      result,
+      coinsAwarded: Number(credit.awarded || 0),
+      meta
+    });
+
+    const me = await User.findById(req.userId).select('coins').lean();
+
+    res.json({
+      success: true,
+      activityId: String(activity._id),
+      gameType,
+      score,
+      result,
+      desiredReward: Number(desiredReward || 0),
+      reward: Number(credit.awarded || 0),
+      coins: Number(me?.coins || 0),
+      cap: Number(credit.cap || MINI_GAME_DAILY_CAPS.solo),
+      usedToday: Number(credit.used || 0)
+    });
+  } catch (error) {
+    console.error('POST /api/games/solo-result error:', error);
+    res.status(500).json({ error: 'Failed to save game result' });
+  }
+});
+
+app.get('/api/games/my-activity', authenticateToken, async (req, res) => {
+  try {
+    const limitRaw = Number(req.query.limit || 30);
+    const limit = Math.min(120, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 30));
+
+    const rows = await GameActivity.find({ userId: req.userId })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate('opponentId', 'username nickname avatar')
+      .populate('groupId', 'name username studyGroup')
+      .lean();
+
+    const [soloUsed, pvpUsed] = await Promise.all([
+      getTodayGameCoins(req.userId, 'solo'),
+      getTodayGameCoins(req.userId, 'pvp')
+    ]);
+
+    const items = (rows || []).map((r) => ({
+      id: String(r._id),
+      gameId: String(r.gameId || ''),
+      gameType: String(r.gameType || ''),
+      mode: String(r.mode || 'solo'),
+      scope: String(r.scope || 'global'),
+      group: r.groupId ? {
+        id: String(r.groupId._id || ''),
+        name: String(r.groupId.name || ''),
+        username: String(r.groupId.username || ''),
+        studyGroup: String(r.groupId.studyGroup || '')
+      } : null,
+      opponent: r.opponentId ? {
+        id: String(r.opponentId._id || ''),
+        username: String(r.opponentId.username || ''),
+        nickname: String(r.opponentId.nickname || r.opponentId.username || ''),
+        avatar: String(r.opponentId.avatar || '')
+      } : null,
+      score: Number(r.score || 0),
+      result: String(r.result || 'participate'),
+      coinsAwarded: Number(r.coinsAwarded || 0),
+      createdAt: r.createdAt
+    }));
+
+    res.json({
+      success: true,
+      items,
+      caps: {
+        solo: { used: Number(soloUsed || 0), cap: Number(MINI_GAME_DAILY_CAPS.solo || 0) },
+        pvp: { used: Number(pvpUsed || 0), cap: Number(MINI_GAME_DAILY_CAPS.pvp || 0) }
+      }
+    });
+  } catch (error) {
+    console.error('GET /api/games/my-activity error:', error);
+    res.status(500).json({ error: 'Failed to load activity' });
+  }
+});
+
+app.get('/api/games/leaderboard', authenticateToken, async (req, res) => {
+  try {
+    const range = String(req.query.range || 'week').toLowerCase();
+    const mode = String(req.query.mode || '').toLowerCase();
+    const gameType = String(req.query.gameType || '').toLowerCase();
+    const scope = String(req.query.scope || '').toLowerCase();
+    const groupId = String(req.query.groupId || '').trim();
+
+    const now = Date.now();
+    let since = new Date(now - (7 * 24 * 60 * 60 * 1000));
+    if (range === 'day') since = new Date(now - (24 * 60 * 60 * 1000));
+    if (range === 'month') since = new Date(now - (30 * 24 * 60 * 60 * 1000));
+
+    const match = {
+      createdAt: { $gte: since },
+      coinsAwarded: { $gt: 0 }
+    };
+
+    if (mode === 'solo' || mode === 'pvp') match.mode = mode;
+    if (gameType && (MINI_SOLO_GAMES.includes(gameType) || gameType === 'tic_tac_toe')) match.gameType = gameType;
+    if (scope === 'global' || scope === 'group' || scope === 'duel') match.scope = scope;
+
+    if (scope === 'group' && groupId) {
+      if (!isObjectIdLike(groupId)) return res.status(400).json({ error: 'groupId invalid' });
+      const canJoin = await isGroupMember(groupId, req.userId);
+      if (!canJoin) return res.status(403).json({ error: 'Group access denied' });
+      match.groupId = new mongoose.Types.ObjectId(groupId);
+    }
+
+    const rows = await GameActivity.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: '$userId',
+          totalCoins: { $sum: '$coinsAwarded' },
+          totalGames: { $sum: 1 },
+          wins: { $sum: { $cond: [{ $eq: ['$result', 'win'] }, 1, 0] } },
+          scoreTotal: { $sum: '$score' }
+        }
+      },
+      { $sort: { totalCoins: -1, wins: -1, totalGames: -1, scoreTotal: -1 } },
+      { $limit: 40 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 0,
+          userId: '$_id',
+          totalCoins: 1,
+          totalGames: 1,
+          wins: 1,
+          scoreTotal: 1,
+          username: '$user.username',
+          nickname: '$user.nickname',
+          avatar: '$user.avatar'
+        }
+      }
+    ]);
+
+    const items = (rows || []).map((r, idx) => ({
+      rank: idx + 1,
+      userId: String(r.userId || ''),
+      username: String(r.username || ''),
+      nickname: String(r.nickname || r.username || 'User'),
+      avatar: String(r.avatar || ''),
+      totalCoins: Number(r.totalCoins || 0),
+      totalGames: Number(r.totalGames || 0),
+      wins: Number(r.wins || 0),
+      scoreTotal: Number(r.scoreTotal || 0),
+      isMe: String(r.userId || '') === String(req.userId)
+    }));
+
+    res.json({
+      success: true,
+      range: ['day', 'week', 'month'].includes(range) ? range : 'week',
+      mode: (mode === 'solo' || mode === 'pvp') ? mode : '',
+      gameType: gameType || '',
+      scope: (scope === 'global' || scope === 'group' || scope === 'duel') ? scope : '',
+      groupId: groupId || '',
+      items
+    });
+  } catch (error) {
+    console.error('GET /api/games/leaderboard error:', error);
+    res.status(500).json({ error: 'Failed to load leaderboard' });
   }
 });
 
@@ -6703,40 +8009,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-
-// WebRTC ICE config endpoint (STUN + optional TURN via env)
-// Set these env vars (Render > Environment):
-//   TURN_URL=turn:free.expressturn.com:3478?transport=udp,turn:free.expressturn.com:3478?transport=tcp
-//   TURN_USERNAME=...
-//   TURN_PASSWORD=...
-app.get('/api/rtc-config', (req, res) => {
-  try {
-    const stun = [
-      'stun:stun.l.google.com:19302',
-      'stun:stun1.l.google.com:19302'
-    ];
-    const iceServers = [{ urls: stun }];
-
-    const turnUrlRaw = (process.env.TURN_URL || '').trim();
-    const turnUser = (process.env.TURN_USERNAME || '').trim();
-    const turnPass = (process.env.TURN_PASSWORD || '').trim();
-
-    if (turnUrlRaw && turnUser && turnPass) {
-      const urls = turnUrlRaw.split(',').map(s => s.trim()).filter(Boolean);
-      iceServers.push({
-        urls,
-        username: turnUser,
-        credential: turnPass
-      });
-    }
-
-    res.json({ iceServers });
-  } catch (e) {
-    res.json({
-      iceServers: [{ urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302'] }]
-    });
-  }
-});
 
 // Get server stats
 app.get('/api/server/stats', authenticateToken, async (req, res) => {
@@ -10113,17 +11385,97 @@ function makeSerial(prefix, sourceId) {
   return `${String(prefix).toUpperCase()}-${yyyy}${mm}${dd}-${String(sourceId || 'X').slice(0, 6)}-${rnd}`;
 }
 
+function toObjectIdOrNull(value) {
+  try {
+    if (!value) return null;
+    const s = String(value).trim();
+    if (!mongoose.Types.ObjectId.isValid(s)) return null;
+    return new mongoose.Types.ObjectId(s);
+  } catch (_) {
+    return null;
+  }
+}
+
+function normalizeMoneyValue(rawValue) {
+  const n = Number(rawValue || 0);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round(n);
+}
+
+function makeCertificateSecureKey(prefix = 'KEY') {
+  const rand = crypto.randomBytes(8).toString('hex').toUpperCase();
+  return `${String(prefix || 'KEY').toUpperCase()}-${rand}`;
+}
+
+function buildCertificateHolderHash({ userId, fullName, facultyGroup, sourceId, secureKey }) {
+  const payload = [
+    String(userId || ''),
+    String(fullName || '').trim(),
+    String(facultyGroup || '').trim(),
+    String(sourceId || '').trim(),
+    String(secureKey || '').trim()
+  ].join('|');
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
+
+function getCertificateSignSecret() {
+  return String(process.env.CERT_SIGNING_SECRET || process.env.JWT_SECRET || 'schat_cert_secret');
+}
+
+function buildCertificateSignature({ certId, serial, userId, sourceId, secureKey, issuedAt }) {
+  const body = [
+    String(certId || ''),
+    String(serial || ''),
+    String(userId || ''),
+    String(sourceId || ''),
+    String(secureKey || ''),
+    String(issuedAt instanceof Date ? issuedAt.toISOString() : (issuedAt || ''))
+  ].join('|');
+  return crypto.createHmac('sha256', getCertificateSignSecret()).update(body).digest('hex');
+}
+
+function buildCertificateVerifyUrl(certId) {
+  return `/certificate.html?verify=${encodeURIComponent(String(certId || ''))}`;
+}
+
+function buildCertificateQrUrl(verifyUrl) {
+  const text = encodeURIComponent(String(verifyUrl || ''));
+  return `https://quickchart.io/qr?size=300&text=${text}`;
+}
+
+function getSubmissionPassPct(testDoc) {
+  const p = Number(testDoc?.passPct || 60);
+  if (!Number.isFinite(p)) return 60;
+  return Math.max(1, Math.min(100, Math.round(p)));
+}
+
+function isYoutubeLikeUrl(url) {
+  const v = String(url || '').toLowerCase();
+  if (!v) return false;
+  return v.includes('youtube.com/') || v.includes('youtu.be/');
+}
+
 // ---------- Schemas ----------
 const CourseSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
   description: { type: String, default: '', trim: true },
   type: { type: String, enum: ['free', 'paid'], default: 'free' },
   price: { type: Number, default: 0, min: 0 },
+  pricingCurrency: { type: String, default: 'UZS' }, // display currency (so'm)
   status: { type: String, enum: ['draft', 'published'], default: 'draft' },
   faculty: { type: String, default: '', trim: true },
   groups: { type: [String], default: [] }, // empty => open for all groups (within faculty rule if faculty set)
   youtubeUrl: { type: String, default: '', trim: true },
   coverUrl: { type: String, default: '', trim: true },
+  sourceGroupLessonId: { type: mongoose.Schema.Types.ObjectId, ref: 'GroupLesson', default: null, index: true },
+  sourceGroupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', default: null, index: true },
+  sourceUniversity: { type: String, default: '', trim: true },
+  sourceFaculty: { type: String, default: '', trim: true },
+  sourceStudyGroup: { type: String, default: '', trim: true },
+  freeForSourceGroup: { type: Boolean, default: true },
+  importedFromRecordedLesson: { type: Boolean, default: false },
+  testIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Test' }],
+  finalTestId: { type: mongoose.Schema.Types.ObjectId, ref: 'Test', default: null },
 
   teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   teacherName: { type: String, default: '' }, // cached
@@ -10134,10 +11486,11 @@ const CourseSchema = new mongoose.Schema({
 const CourseContentSchema = new mongoose.Schema({
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
   order: { type: Number, default: 1 },
-  type: { type: String, enum: ['youtube', 'text', 'pdf'], required: true },
+  type: { type: String, enum: ['youtube', 'video', 'text', 'pdf'], required: true },
   title: { type: String, default: 'Bo‘lim', trim: true },
   text: { type: String, default: '' },
   youtubeUrl: { type: String, default: '' },
+  videoUrl: { type: String, default: '' },
   pdfUrl: { type: String, default: '' }
 }, { timestamps: true });
 
@@ -10152,7 +11505,8 @@ CourseEnrollmentSchema.index({ courseId: 1, userId: 1 }, { unique: true });
 const CourseProgressSchema = new mongoose.Schema({
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-  progress: { type: mongoose.Schema.Types.Mixed, default: {} } // { contentId: true }
+  progress: { type: mongoose.Schema.Types.Mixed, default: {} }, // { contentId: true }
+  testsPassed: { type: mongoose.Schema.Types.Mixed, default: {} } // { testId: true }
 }, { timestamps: true });
 CourseProgressSchema.index({ courseId: 1, userId: 1 }, { unique: true });
 
@@ -10163,6 +11517,11 @@ const TestSchema = new mongoose.Schema({
   status: { type: String, enum: ['draft', 'published'], default: 'draft' },
   faculty: { type: String, default: '' },
   groups: { type: [String], default: [] },
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null, index: true },
+  phase: { type: String, enum: ['during', 'after'], default: 'after', index: true },
+  passPct: { type: Number, default: 60, min: 1, max: 100 },
+  timeMin: { type: Number, default: 0, min: 0 },
+  isFinal: { type: Boolean, default: false },
 
   // Either store structured questions, or raw text
   questions: {
@@ -10194,8 +11553,21 @@ const CertificateSchema = new mongoose.Schema({
   type: { type: String, enum: ['course', 'test'], required: true },
   sourceId: { type: String, required: true }, // courseId or testId as string
   title: { type: String, default: '' }, // course/test title cached
+  fullName: { type: String, default: '' },
+  facultyGroup: { type: String, default: '' },
+  courseTitle: { type: String, default: '' },
+  teacherName: { type: String, default: '' },
+  dateISO: { type: String, default: '' },
   score: { type: Number, default: null }, // for tests
   serial: { type: String, required: true, unique: true },
+  certId: { type: String, default: '', index: true },
+  verifyUrl: { type: String, default: '' },
+  qrCodeUrl: { type: String, default: '' },
+  secureKey: { type: String, default: '' }, // unique per certificate, shown to owner
+  holderHash: { type: String, default: '' }, // binds cert to exact person profile
+  signature: { type: String, default: '', index: true }, // HMAC-like signature
+  issuedByTeacher: { type: String, default: '' },
+  issuedByPlatform: { type: String, default: 'HALLAYM edu' },
   issuedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
@@ -10230,14 +11602,25 @@ app.use(['/api/courses', '/api/tests', '/api/certificates'], authenticateToken, 
 app.get('/api/courses', async (req, res) => {
   try {
     const role = (req.userRole || 'student').toLowerCase();
+    const mine = String(req.query.mine || '') === '1';
+    const teacherIdFilter = String(req.query.teacherId || req.query.teacher || '').trim();
+    const includeDraftForOwner = String(req.query.includeDraft || '') === '1';
+
     let query = {};
-    if (role === 'student') {
+
+    if (mine && req.userId) {
+      query.teacherId = req.userId;
+    } else if (teacherIdFilter && toObjectIdOrNull(teacherIdFilter)) {
+      query.teacherId = toObjectIdOrNull(teacherIdFilter);
+      if (!(role === 'admin' || (req.userId && String(req.userId) === String(teacherIdFilter) && includeDraftForOwner))) {
+        query.status = 'published';
+      }
+    } else if (role === 'student') {
       query.status = 'published';
+    } else if (role === 'teacher') {
+      query = mine ? { teacherId: req.userId } : { $or: [{ teacherId: req.userId }, { status: 'published' }] };
     }
-    // Teacher sees own + published by others? usually teacher needs own
-    if (role === 'teacher') {
-      query = { $or: [{ teacherId: req.userId }, { status: 'published' }] };
-    }
+
     const list = await Course.find(query).sort({ createdAt: -1 }).lean();
     res.json({ courses: list });
   } catch (e) {
@@ -10271,7 +11654,14 @@ app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teache
 
     const groups = normalizeGroups(req.body.groups);
     const type = (req.body.type || 'free').toLowerCase();
-    const price = Number(req.body.price || 0);
+    const price = normalizeMoneyValue(req.body.price);
+    const pricingCurrency = String(req.body.pricingCurrency || 'UZS').toUpperCase();
+    const freeForSourceGroup = (req.body.freeForSourceGroup !== false);
+    const testIdsInput = Array.isArray(req.body.testIds) ? req.body.testIds : [];
+    const testIds = Array.from(new Set(testIdsInput.map((x) => String(x || '').trim()).filter((x) => mongoose.Types.ObjectId.isValid(x))))
+      .map((x) => new mongoose.Types.ObjectId(x));
+    const finalTestId = String(req.body.finalTestId || '').trim();
+    const finalTestObjId = mongoose.Types.ObjectId.isValid(finalTestId) ? new mongoose.Types.ObjectId(finalTestId) : null;
 
     if (!req.body.title || !String(req.body.title).trim()) {
       return res.status(400).json({ error: 'title is required' });
@@ -10285,11 +11675,21 @@ app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teache
       description: String(req.body.description || '').trim(),
       type: type === 'paid' ? 'paid' : 'free',
       price: type === 'paid' ? price : 0,
+      pricingCurrency,
       status: (req.body.status || 'draft') === 'published' ? 'published' : 'draft',
       faculty: String(req.body.faculty || '').trim(),
       groups,
       youtubeUrl: String(req.body.youtubeUrl || '').trim(),
       coverUrl: String(req.body.coverUrl || req.body.cover || req.body.previewImage || req.body.preview || '').trim(),
+      sourceUniversity: String(req.body.sourceUniversity || '').trim(),
+      sourceFaculty: String(req.body.sourceFaculty || '').trim(),
+      sourceStudyGroup: String(req.body.sourceStudyGroup || '').trim(),
+      freeForSourceGroup,
+      sourceGroupLessonId: toObjectIdOrNull(req.body.sourceGroupLessonId),
+      sourceGroupId: toObjectIdOrNull(req.body.sourceGroupId),
+      importedFromRecordedLesson: !!req.body.importedFromRecordedLesson,
+      testIds,
+      finalTestId: finalTestObjId,
       teacherId: teacher._id,
       teacherName: teacher.fullName || teacher.nickname || teacher.username || 'Teacher'
     });
@@ -10299,8 +11699,9 @@ app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teache
     if (Array.isArray(req.body.lessons) && req.body.lessons.length) {
       const docs = req.body.lessons.map((l, i) => {
         const t = String(l.type || l.kind || '').toLowerCase();
-        const type = (t === 'pdf') ? 'pdf' : (t === 'text') ? 'text' : 'youtube';
+        const type = (t === 'pdf') ? 'pdf' : (t === 'text') ? 'text' : (t === 'video') ? 'video' : 'youtube';
         const youtubeUrl = String(l.youtubeUrl || l.url || l.link || '').trim();
+        const videoUrl = String(l.videoUrl || l.url || l.link || '').trim();
         const pdfUrl = String(l.pdfUrl || l.url || l.link || '').trim();
         const text = String(l.text || l.body || '').trim();
         return {
@@ -10310,6 +11711,7 @@ app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teache
           title: String(l.title || l.name || `Bo'lim ${i + 1}`).trim(),
           text: type === 'text' ? text : '',
           youtubeUrl: type === 'youtube' ? youtubeUrl : '',
+          videoUrl: type === 'video' ? videoUrl : '',
           pdfUrl: type === 'pdf' ? pdfUrl : ''
         };
       }).filter(d => d.title);
@@ -10320,6 +11722,141 @@ app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teache
   } catch (e) {
     console.error('POST /api/courses error:', e);
     res.status(500).json({ error: 'Failed to create course' });
+  }
+});
+
+// Teacher/Admin: list own recorded group lessons (to import as course)
+app.get('/api/teacher/group-lessons/recorded', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const role = String(req.userRole || '').toLowerCase();
+    const hostIdQuery = String(req.query.hostId || '').trim();
+    const hostId = (role === 'admin' && mongoose.Types.ObjectId.isValid(hostIdQuery))
+      ? hostIdQuery
+      : String(req.userId);
+
+    const query = {
+      hostId,
+      recordingUrl: { $exists: true, $ne: '' }
+    };
+
+    const lessons = await GroupLesson.find(query).sort({ startedAt: -1 }).limit(200).lean();
+    const groupIds = Array.from(new Set((lessons || []).map((l) => String(l.groupId || '')).filter(Boolean)));
+    const groups = await Group.find({ _id: { $in: groupIds } }).select('name username university faculty studyType studyGroup').lean();
+    const groupMap = new Map(groups.map((g) => [String(g._id), g]));
+
+    const items = (lessons || []).map((l) => {
+      const g = groupMap.get(String(l.groupId || '')) || {};
+      return {
+        lessonId: String(l._id),
+        groupId: String(l.groupId || ''),
+        groupName: String(g.name || ''),
+        groupUsername: String(g.username || ''),
+        university: String(g.university || ''),
+        faculty: String(g.faculty || ''),
+        studyType: String(g.studyType || ''),
+        studyGroup: String(g.studyGroup || ''),
+        title: String(l.title || 'Recorded lesson'),
+        mode: String(l.mode || 'camera'),
+        recordingUrl: String(l.recordingUrl || ''),
+        startedAt: l.startedAt,
+        endedAt: l.endedAt
+      };
+    });
+
+    res.json({ success: true, items });
+  } catch (e) {
+    console.error('GET /api/teacher/group-lessons/recorded error:', e);
+    res.status(500).json({ error: 'Failed to load recorded lessons' });
+  }
+});
+
+// Teacher/Admin: create a course from previously recorded own group lesson
+app.post('/api/courses/from-group-lesson', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const role = String(req.userRole || '').toLowerCase();
+    const lessonId = String(req.body.lessonId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(lessonId)) return res.status(400).json({ error: 'lessonId required' });
+
+    const lesson = await GroupLesson.findById(lessonId).lean();
+    if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
+    if (!String(lesson.recordingUrl || '').trim()) return res.status(400).json({ error: 'Lesson has no recording yet' });
+
+    if (role !== 'admin' && String(lesson.hostId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Only lesson host teacher can import this recording' });
+    }
+
+    const teacher = await User.findById(req.userId).select('fullName nickname username').lean();
+    if (!teacher) return res.status(404).json({ error: 'User not found' });
+
+    const group = await Group.findById(String(lesson.groupId || '')).select('name university faculty studyType studyGroup').lean();
+
+    const type = String(req.body.type || 'free').toLowerCase() === 'paid' ? 'paid' : 'free';
+    const price = normalizeMoneyValue(req.body.price || 0);
+    if (type === 'paid' && price < 1) return res.status(400).json({ error: 'Paid course price must be at least 1' });
+
+    const title = String(req.body.title || '').trim() || String(lesson.title || '').trim() || 'Recorded lesson course';
+    const description = String(req.body.description || '').trim()
+      || 'Group live recording converted to course format.';
+    const status = String(req.body.status || 'draft') === 'published' ? 'published' : 'draft';
+    const freeForSourceGroup = (req.body.freeForSourceGroup !== false);
+    const extraGroups = normalizeGroups(req.body.groups);
+    const sourceStudyGroup = String(group?.studyGroup || '').trim();
+    const groups = Array.from(new Set([...(sourceStudyGroup ? [sourceStudyGroup] : []), ...extraGroups]));
+
+    const testIdsInput = Array.isArray(req.body.testIds) ? req.body.testIds : [];
+    const testIds = Array.from(new Set(testIdsInput.map((x) => String(x || '').trim()).filter((x) => mongoose.Types.ObjectId.isValid(x))))
+      .map((x) => new mongoose.Types.ObjectId(x));
+    const finalTestIdRaw = String(req.body.finalTestId || '').trim();
+    const finalTestId = mongoose.Types.ObjectId.isValid(finalTestIdRaw) ? new mongoose.Types.ObjectId(finalTestIdRaw) : null;
+
+    const course = await Course.create({
+      title,
+      description,
+      type,
+      price: type === 'paid' ? price : 0,
+      pricingCurrency: String(req.body.pricingCurrency || 'UZS').toUpperCase(),
+      status,
+      faculty: String(req.body.faculty || group?.faculty || '').trim(),
+      groups,
+      coverUrl: String(req.body.coverUrl || req.body.previewImage || '').trim(),
+      teacherId: req.userId,
+      teacherName: teacher.fullName || teacher.nickname || teacher.username || 'Teacher',
+      sourceGroupLessonId: lesson._id,
+      sourceGroupId: toObjectIdOrNull(lesson.groupId),
+      sourceUniversity: String(group?.university || '').trim(),
+      sourceFaculty: String(group?.faculty || '').trim(),
+      sourceStudyGroup: sourceStudyGroup,
+      freeForSourceGroup,
+      importedFromRecordedLesson: true,
+      testIds,
+      finalTestId
+    });
+
+    const recordedUrl = String(lesson.recordingUrl || '').trim();
+    const contentType = isYoutubeLikeUrl(recordedUrl) ? 'youtube' : 'video';
+    await CourseContent.create({
+      courseId: course._id,
+      order: 1,
+      type: contentType,
+      title: 'Recorded live lesson',
+      youtubeUrl: contentType === 'youtube' ? recordedUrl : '',
+      videoUrl: contentType === 'video' ? recordedUrl : '',
+      text: '',
+      pdfUrl: ''
+    });
+
+    res.status(201).json({
+      success: true,
+      course,
+      importedFromLesson: {
+        lessonId: String(lesson._id),
+        groupId: String(lesson.groupId || ''),
+        recordingUrl: recordedUrl
+      }
+    });
+  } catch (e) {
+    console.error('POST /api/courses/from-group-lesson error:', e);
+    res.status(500).json({ error: 'Failed to import recorded lesson as course' });
   }
 });
 
@@ -10341,10 +11878,25 @@ app.put('/api/courses/:id', authenticateToken, attachUserRole, requireRole(['tea
     if (req.body.groups !== undefined) c.groups = normalizeGroups(req.body.groups);
     if (req.body.youtubeUrl !== undefined) c.youtubeUrl = String(req.body.youtubeUrl || '').trim();
     if (req.body.coverUrl !== undefined) c.coverUrl = String(req.body.coverUrl || '').trim();
+    if (req.body.pricingCurrency !== undefined) c.pricingCurrency = String(req.body.pricingCurrency || 'UZS').toUpperCase();
+    if (req.body.freeForSourceGroup !== undefined) c.freeForSourceGroup = (req.body.freeForSourceGroup !== false);
+    if (req.body.sourceUniversity !== undefined) c.sourceUniversity = String(req.body.sourceUniversity || '').trim();
+    if (req.body.sourceFaculty !== undefined) c.sourceFaculty = String(req.body.sourceFaculty || '').trim();
+    if (req.body.sourceStudyGroup !== undefined) c.sourceStudyGroup = String(req.body.sourceStudyGroup || '').trim();
+
+    if (req.body.testIds !== undefined) {
+      const arr = Array.isArray(req.body.testIds) ? req.body.testIds : [];
+      c.testIds = Array.from(new Set(arr.map((x) => String(x || '').trim()).filter((x) => mongoose.Types.ObjectId.isValid(x))))
+        .map((x) => new mongoose.Types.ObjectId(x));
+    }
+    if (req.body.finalTestId !== undefined) {
+      const v = String(req.body.finalTestId || '').trim();
+      c.finalTestId = mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : null;
+    }
 
     if (req.body.type !== undefined) {
       const type = String(req.body.type).toLowerCase();
-      const price = Number(req.body.price || c.price || 0);
+      const price = normalizeMoneyValue(req.body.price || c.price || 0);
       if (type === 'paid') {
         if (!Number.isFinite(price) || price < 1) return res.status(400).json({ error: 'price >= 1 required for paid' });
         c.type = 'paid';
@@ -10354,7 +11906,7 @@ app.put('/api/courses/:id', authenticateToken, attachUserRole, requireRole(['tea
         c.price = 0;
       }
     } else if (req.body.price !== undefined && c.type === 'paid') {
-      const price = Number(req.body.price || 0);
+      const price = normalizeMoneyValue(req.body.price || 0);
       if (!Number.isFinite(price) || price < 1) return res.status(400).json({ error: 'price >= 1 required' });
       c.price = price;
     }
@@ -10384,6 +11936,8 @@ app.post('/api/courses/:id/join', authenticateToken, attachUserRole, requireRole
       return res.status(403).json({ error: 'Course is not published' });
     }
 
+    let isSourceGroupStudent = false;
+
     // Faculty/group restriction for student
     if (role === 'student') {
       const cFaculty = String(course.faculty || '').trim();
@@ -10392,11 +11946,13 @@ app.post('/api/courses/:id/join', authenticateToken, attachUserRole, requireRole
         return res.status(403).json({ error: 'Course is for another faculty' });
       }
       const allowedGroups = (course.groups || []).map(x => String(x).trim()).filter(Boolean);
+      const mg = String(userGroup(me) || '').trim();
+      const sourceGroup = String(course.sourceStudyGroup || '').trim();
+      isSourceGroupStudent = !!(course.freeForSourceGroup && mg && sourceGroup && mg.toLowerCase() === sourceGroup.toLowerCase());
       if (allowedGroups.length) {
-        const mg = String(userGroup(me) || '').trim();
         if (!mg) return res.status(403).json({ error: 'User group is missing' });
         const ok = allowedGroups.some(g => g.toLowerCase() === mg.toLowerCase());
-        if (!ok) return res.status(403).json({ error: 'Course is not open for your group' });
+        if (!ok && !isSourceGroupStudent) return res.status(403).json({ error: 'Course is not open for your group' });
       }
     }
 
@@ -10406,10 +11962,10 @@ app.post('/api/courses/:id/join', authenticateToken, attachUserRole, requireRole
 
     let paidAmount = 0;
 
-    if (role === 'student' && course.type === 'paid') {
-      const price = Number(course.price || 0);
+    if (role === 'student' && course.type === 'paid' && !isSourceGroupStudent) {
+      const price = normalizeMoneyValue(course.price || 0);
       if (price < 1) return res.status(400).json({ error: 'Invalid course price' });
-      if (Number(me.coins || 0) < price) return res.status(400).json({ error: 'Insufficient coins' });
+      if (Number(me.coins || 0) < price) return res.status(400).json({ error: 'Insufficient balance' });
 
       // Split: 50% teacherBalance, 50% platform adminBalance
       paidAmount = price;
@@ -10477,7 +12033,7 @@ app.post('/api/courses/:id/content', authenticateToken, attachUserRole, requireR
     }
 
     const type = String(req.body.type || '').toLowerCase();
-    if (!['youtube', 'text', 'pdf'].includes(type)) return res.status(400).json({ error: 'Invalid content type' });
+    if (!['youtube', 'video', 'text', 'pdf'].includes(type)) return res.status(400).json({ error: 'Invalid content type' });
 
     const order = Number(req.body.order || 0);
     const maxOrder = await CourseContent.findOne({ courseId: course._id }).sort({ order: -1 }).lean();
@@ -10490,6 +12046,7 @@ app.post('/api/courses/:id/content', authenticateToken, attachUserRole, requireR
       title: String(req.body.title || 'Bo‘lim').trim(),
       text: String(req.body.text || ''),
       youtubeUrl: String(req.body.youtubeUrl || ''),
+      videoUrl: String(req.body.videoUrl || ''),
       pdfUrl: String(req.body.pdfUrl || '')
     });
 
@@ -10518,11 +12075,12 @@ app.put('/api/courses/:id/content/:contentId', authenticateToken, attachUserRole
     if (req.body.title !== undefined) item.title = String(req.body.title || '').trim();
     if (req.body.type !== undefined) {
       const t = String(req.body.type || '').toLowerCase();
-      if (!['youtube', 'text', 'pdf'].includes(t)) return res.status(400).json({ error: 'Invalid content type' });
+      if (!['youtube', 'video', 'text', 'pdf'].includes(t)) return res.status(400).json({ error: 'Invalid content type' });
       item.type = t;
     }
     if (req.body.text !== undefined) item.text = String(req.body.text || '');
     if (req.body.youtubeUrl !== undefined) item.youtubeUrl = String(req.body.youtubeUrl || '');
+    if (req.body.videoUrl !== undefined) item.videoUrl = String(req.body.videoUrl || '');
     if (req.body.pdfUrl !== undefined) item.pdfUrl = String(req.body.pdfUrl || '');
 
     await item.save();
@@ -10549,6 +12107,91 @@ app.delete('/api/courses/:id/content/:contentId', authenticateToken, attachUserR
   } catch (e) {
     console.error('DELETE /api/courses/:id/content/:contentId error:', e);
     res.status(500).json({ error: 'Failed to delete content' });
+  }
+});
+
+// List tests linked to a course
+app.get('/api/courses/:id/tests', async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).lean();
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+
+    const role = (req.userRole || 'student').toLowerCase();
+    if (role === 'student') {
+      const joined = await CourseEnrollment.findOne({ courseId: course._id, userId: req.userId }).lean();
+      if (!joined) return res.status(403).json({ error: 'Not joined' });
+    } else if (role === 'teacher') {
+      const isOwner = String(course.teacherId) === String(req.userId);
+      if (!isOwner && course.status !== 'published') return res.status(403).json({ error: 'Not allowed' });
+    }
+
+    const query = { courseId: course._id };
+    if (role === 'student') query.status = 'published';
+    const tests = await Test.find(query)
+      .sort({ createdAt: -1 })
+      .select('_id title subject description status passPct phase isFinal teacherName createdAt')
+      .lean();
+
+    const finalTestId = course.finalTestId ? String(course.finalTestId) : '';
+    const items = (tests || []).map((t) => ({
+      ...t,
+      isFinal: !!(t.isFinal || (finalTestId && String(t._id) === finalTestId))
+    }));
+
+    res.json({ success: true, tests: items, finalTestId });
+  } catch (e) {
+    console.error('GET /api/courses/:id/tests error:', e);
+    res.status(500).json({ error: 'Failed to load course tests' });
+  }
+});
+
+// Link existing tests to a course and optionally set final test
+app.post('/api/courses/:id/tests/link', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+
+    const role = String(req.userRole || '').toLowerCase();
+    if (role === 'teacher' && String(course.teacherId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Not owner' });
+    }
+
+    const idsRaw = Array.isArray(req.body?.testIds) ? req.body.testIds : [];
+    const testIds = Array.from(new Set(idsRaw.map((x) => String(x || '').trim()).filter((x) => mongoose.Types.ObjectId.isValid(x))));
+    if (!testIds.length) return res.status(400).json({ error: 'testIds required' });
+
+    const tests = await Test.find({ _id: { $in: testIds } });
+    if (tests.length !== testIds.length) return res.status(404).json({ error: 'Some tests not found' });
+    if (role === 'teacher') {
+      const allMine = tests.every((t) => String(t.teacherId) === String(req.userId));
+      if (!allMine) return res.status(403).json({ error: 'Teacher can link only own tests' });
+    }
+
+    await Test.updateMany({ _id: { $in: testIds } }, { $set: { courseId: course._id } });
+
+    const merged = new Set([...(course.testIds || []).map((x) => String(x)), ...testIds]);
+    course.testIds = Array.from(merged).map((x) => new mongoose.Types.ObjectId(x));
+
+    const finalTestIdRaw = String(req.body?.finalTestId || '').trim();
+    if (finalTestIdRaw) {
+      if (!merged.has(finalTestIdRaw)) return res.status(400).json({ error: 'finalTestId must be linked test' });
+      course.finalTestId = new mongoose.Types.ObjectId(finalTestIdRaw);
+      await Test.updateMany({ _id: { $in: testIds } }, { $set: { isFinal: false } });
+      await Test.updateOne({ _id: finalTestIdRaw }, { $set: { isFinal: true } });
+    }
+
+    await course.save();
+    res.json({
+      success: true,
+      course: {
+        _id: course._id,
+        testIds: (course.testIds || []).map((x) => String(x)),
+        finalTestId: course.finalTestId ? String(course.finalTestId) : ''
+      }
+    });
+  } catch (e) {
+    console.error('POST /api/courses/:id/tests/link error:', e);
+    res.status(500).json({ error: 'Failed to link tests' });
   }
 });
 
@@ -10581,9 +12224,11 @@ app.post('/api/courses/:id/progress', async (req, res) => {
 app.get('/api/tests', async (req, res) => {
   try {
     const role = (req.userRole || 'student').toLowerCase();
+    const courseId = String(req.query.courseId || '').trim();
     let query = {};
     if (role === 'student') query.status = 'published';
     if (role === 'teacher') query = { $or: [{ teacherId: req.userId }, { status: 'published' }] };
+    if (courseId && mongoose.Types.ObjectId.isValid(courseId)) query.courseId = new mongoose.Types.ObjectId(courseId);
     const list = await Test.find(query).sort({ createdAt: -1 }).lean();
     res.json({ tests: list });
   } catch (e) {
@@ -10665,8 +12310,24 @@ app.post('/api/tests', authenticateToken, attachUserRole, requireRole(['teacher'
     if (!title) return res.status(400).json({ error: 'title is required' });
     if (!subject) return res.status(400).json({ error: 'subject is required' });
 
-    const groups = normalizeGroups(req.body.groups);
+    const courseIdRaw = String(req.body.courseId || '').trim();
+    const courseObjId = mongoose.Types.ObjectId.isValid(courseIdRaw) ? new mongoose.Types.ObjectId(courseIdRaw) : null;
+    let course = null;
+    if (courseObjId) {
+      course = await Course.findById(courseObjId).select('_id teacherId faculty groups testIds finalTestId').lean();
+      if (!course) return res.status(404).json({ error: 'Linked course not found' });
+      const role = String(req.userRole || '').toLowerCase();
+      if (role === 'teacher' && String(course.teacherId) !== String(req.userId)) {
+        return res.status(403).json({ error: 'Only course owner can attach tests to this course' });
+      }
+    }
+
+    const groups = normalizeGroups(req.body.groups || course?.groups || []);
     const status = (req.body.status || 'draft') === 'published' ? 'published' : 'draft';
+    const phase = (String(req.body.phase || 'after').toLowerCase() === 'during') ? 'during' : 'after';
+    const passPct = getSubmissionPassPct({ passPct: req.body.passPct });
+    const timeMin = Math.max(0, Math.round(Number(req.body.timeMin || 0)));
+    const isFinal = !!req.body.isFinal;
 
     let questions = [];
     let questionsText = String(req.body.questionsText || req.body.questions_raw || '').trim();
@@ -10696,13 +12357,29 @@ app.post('/api/tests', authenticateToken, attachUserRole, requireRole(['teacher'
       subject,
       description: String(req.body.description || '').trim(),
       status,
-      faculty: String(req.body.faculty || '').trim(),
+      faculty: String(req.body.faculty || course?.faculty || '').trim(),
       groups,
+      courseId: courseObjId,
+      phase,
+      passPct,
+      timeMin,
+      isFinal,
       questions,
       questionsText,
       teacherId: teacher._id,
       teacherName: teacher.fullName || teacher.nickname || teacher.username || 'Teacher'
     });
+
+    if (courseObjId) {
+      const testIds = Array.from(new Set([...(course?.testIds || []).map((x) => String(x)), String(test._id)]))
+        .map((x) => new mongoose.Types.ObjectId(x));
+      const set = { testIds };
+      if (isFinal) set.finalTestId = test._id;
+      await Course.updateOne({ _id: courseObjId }, { $set: set });
+      if (isFinal) {
+        await Test.updateMany({ courseId: courseObjId, _id: { $ne: test._id } }, { $set: { isFinal: false } });
+      }
+    }
 
     res.status(201).json({ test });
   } catch (e) {
@@ -10726,6 +12403,25 @@ app.put('/api/tests/:id', authenticateToken, attachUserRole, requireRole(['teach
     if (req.body.status !== undefined) t.status = (req.body.status === 'published') ? 'published' : 'draft';
     if (req.body.faculty !== undefined) t.faculty = String(req.body.faculty || '').trim();
     if (req.body.groups !== undefined) t.groups = normalizeGroups(req.body.groups);
+    if (req.body.phase !== undefined) t.phase = (String(req.body.phase || '').toLowerCase() === 'during') ? 'during' : 'after';
+    if (req.body.passPct !== undefined) t.passPct = getSubmissionPassPct({ passPct: req.body.passPct });
+    if (req.body.timeMin !== undefined) t.timeMin = Math.max(0, Math.round(Number(req.body.timeMin || 0)));
+    if (req.body.isFinal !== undefined) t.isFinal = !!req.body.isFinal;
+
+    if (req.body.courseId !== undefined) {
+      const nextCourseId = String(req.body.courseId || '').trim();
+      if (nextCourseId) {
+        if (!mongoose.Types.ObjectId.isValid(nextCourseId)) return res.status(400).json({ error: 'Invalid courseId' });
+        const c = await Course.findById(nextCourseId).select('_id teacherId testIds').lean();
+        if (!c) return res.status(404).json({ error: 'Linked course not found' });
+        if (role === 'teacher' && String(c.teacherId) !== String(req.userId)) {
+          return res.status(403).json({ error: 'Only course owner can attach this test' });
+        }
+        t.courseId = c._id;
+      } else {
+        t.courseId = null;
+      }
+    }
 
     // Update questions: accept questions[] or questionsText
     if (req.body.questions !== undefined) {
@@ -10752,6 +12448,20 @@ app.put('/api/tests/:id', authenticateToken, attachUserRole, requireRole(['teach
     }
 
     await t.save();
+
+    if (t.courseId) {
+      const c = await Course.findById(t.courseId);
+      if (c) {
+        const merged = new Set([...(c.testIds || []).map((x) => String(x)), String(t._id)]);
+        c.testIds = Array.from(merged).map((x) => new mongoose.Types.ObjectId(x));
+        if (t.isFinal) c.finalTestId = t._id;
+        await c.save();
+        if (t.isFinal) {
+          await Test.updateMany({ courseId: c._id, _id: { $ne: t._id } }, { $set: { isFinal: false } });
+        }
+      }
+    }
+
     res.json({ test: t });
   } catch (e) {
     console.error('PUT /api/tests/:id error:', e);
@@ -10771,8 +12481,20 @@ app.delete('/api/tests/:id', authenticateToken, attachUserRole, requireRole(['te
       return res.status(403).json({ error: 'Only owner teacher or admin can delete' });
     }
 
+    const linkedCourseId = test.courseId ? String(test.courseId) : '';
     await TestSubmission.deleteMany({ testId: test._id });
     await test.deleteOne();
+
+    if (linkedCourseId && mongoose.Types.ObjectId.isValid(linkedCourseId)) {
+      const c = await Course.findById(linkedCourseId);
+      if (c) {
+        const next = (c.testIds || []).map((x) => String(x)).filter((x) => x !== String(test._id));
+        c.testIds = next.map((x) => new mongoose.Types.ObjectId(x));
+        if (c.finalTestId && String(c.finalTestId) === String(test._id)) c.finalTestId = null;
+        await c.save();
+      }
+    }
+
     res.json({ success: true });
   } catch (e) {
     console.error('DELETE /api/tests/:id error:', e);
@@ -10806,6 +12528,8 @@ app.post('/api/tests/:id/submit', requireRole(['student']), async (req, res) => 
 
     const answers = req.body.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
     const score = computeScore(test.questions || [], answers);
+    const passPct = getSubmissionPassPct(test);
+    const passed = Number(score.pct || 0) >= passPct;
 
     const submission = await TestSubmission.create({
       testId: test._id,
@@ -10816,7 +12540,27 @@ app.post('/api/tests/:id/submit', requireRole(['student']), async (req, res) => 
       total: score.total
     });
 
-    res.json({ success: true, score: score.pct, correct: score.correct, total: score.total, submissionId: submission._id });
+    if (passed && test.courseId) {
+      const progress = await CourseProgress.findOne({ courseId: test.courseId, userId: req.userId }).lean();
+      const tp = (progress?.testsPassed && typeof progress.testsPassed === 'object') ? progress.testsPassed : {};
+      tp[String(test._id)] = true;
+      await CourseProgress.findOneAndUpdate(
+        { courseId: test.courseId, userId: req.userId },
+        { $set: { testsPassed: tp } },
+        { upsert: true, new: true }
+      ).catch(() => null);
+    }
+
+    res.json({
+      success: true,
+      score: score.pct,
+      correct: score.correct,
+      total: score.total,
+      passPct,
+      passed,
+      courseId: test.courseId ? String(test.courseId) : '',
+      submissionId: submission._id
+    });
   } catch (e) {
     console.error('POST /api/tests/:id/submit error:', e);
     res.status(500).json({ error: 'Failed to submit test' });
@@ -10836,6 +12580,8 @@ app.post('/api/submit-test', authenticateToken, attachUserRole, requireRole(['st
 
     const answers = req.body.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
     const score = computeScore(test.questions || [], answers);
+    const passPct = getSubmissionPassPct(test);
+    const passed = Number(score.pct || 0) >= passPct;
 
     const submission = await TestSubmission.create({
       testId: test._id,
@@ -10846,7 +12592,27 @@ app.post('/api/submit-test', authenticateToken, attachUserRole, requireRole(['st
       total: score.total
     });
 
-    res.json({ success: true, score: score.pct, correct: score.correct, total: score.total, submissionId: submission._id });
+    if (passed && test.courseId) {
+      const progress = await CourseProgress.findOne({ courseId: test.courseId, userId: req.userId }).lean();
+      const tp = (progress?.testsPassed && typeof progress.testsPassed === 'object') ? progress.testsPassed : {};
+      tp[String(test._id)] = true;
+      await CourseProgress.findOneAndUpdate(
+        { courseId: test.courseId, userId: req.userId },
+        { $set: { testsPassed: tp } },
+        { upsert: true, new: true }
+      ).catch(() => null);
+    }
+
+    res.json({
+      success: true,
+      score: score.pct,
+      correct: score.correct,
+      total: score.total,
+      passPct,
+      passed,
+      courseId: test.courseId ? String(test.courseId) : '',
+      submissionId: submission._id
+    });
   } catch (e) {
     console.error('POST /api/submit-test error:', e);
     res.status(500).json({ error: 'Failed to submit test' });
@@ -10880,6 +12646,8 @@ app.post('/api/test/submit', authenticateToken, attachUserRole, requireRole(['st
 
     const answers = req.body.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
     const score = computeScore(test.questions || [], answers);
+    const passPct = getSubmissionPassPct(test);
+    const passed = Number(score.pct || 0) >= passPct;
     const submission = await TestSubmission.create({
       testId: test._id,
       userId: req.userId,
@@ -10888,7 +12656,26 @@ app.post('/api/test/submit', authenticateToken, attachUserRole, requireRole(['st
       correct: score.correct,
       total: score.total
     });
-    res.json({ success: true, score: score.pct, correct: score.correct, total: score.total, submissionId: submission._id });
+    if (passed && test.courseId) {
+      const progress = await CourseProgress.findOne({ courseId: test.courseId, userId: req.userId }).lean();
+      const tp = (progress?.testsPassed && typeof progress.testsPassed === 'object') ? progress.testsPassed : {};
+      tp[String(test._id)] = true;
+      await CourseProgress.findOneAndUpdate(
+        { courseId: test.courseId, userId: req.userId },
+        { $set: { testsPassed: tp } },
+        { upsert: true, new: true }
+      ).catch(() => null);
+    }
+    res.json({
+      success: true,
+      score: score.pct,
+      correct: score.correct,
+      total: score.total,
+      passPct,
+      passed,
+      courseId: test.courseId ? String(test.courseId) : '',
+      submissionId: submission._id
+    });
   } catch (e) {
     console.error('POST /api/test/submit error:', e);
     res.status(500).json({ error: 'Failed to submit test' });
@@ -10922,6 +12709,8 @@ app.post('/api/certificates/generate', requireRole(['student']), async (req, res
 
     let title = '';
     let scoreVal = null;
+    let issuedByTeacher = '';
+    let issuedByPlatform = 'HALLAYM edu';
 
     if (type === 'course') {
       const course = await Course.findById(sourceId).lean();
@@ -10939,8 +12728,11 @@ app.post('/api/certificates/generate', requireRole(['student']), async (req, res
       const pmap = (prog?.progress && typeof prog.progress === 'object') ? prog.progress : {};
       const allDone = items.every(it => pmap[String(it._id)] === true);
       if (!allDone) return res.status(403).json({ error: 'Course is not completed yet' });
+      const tStatus = await getCourseTestStatus(req.userId, course._id);
+      if (!tStatus.passed) return res.status(403).json({ error: 'Final test is not passed yet' });
 
       title = course.title || 'Course';
+      issuedByTeacher = String(course.teacherName || '').trim();
     } else {
       const test = await Test.findById(sourceId).lean();
       if (!test) return res.status(404).json({ error: 'Test not found' });
@@ -10948,22 +12740,60 @@ app.post('/api/certificates/generate', requireRole(['student']), async (req, res
       // Must have passing submission (>=60)
       const last = await TestSubmission.findOne({ testId: test._id, userId: req.userId }).sort({ createdAt: -1 }).lean();
       if (!last) return res.status(403).json({ error: 'No submission' });
-      if (Number(last.score || 0) < 60) return res.status(403).json({ error: 'Score is below passing threshold' });
+      const passPct = getSubmissionPassPct(test);
+      if (Number(last.score || 0) < passPct) return res.status(403).json({ error: 'Score is below passing threshold' });
 
       title = test.title || 'Test';
       scoreVal = Number(last.score || 0);
+      issuedByTeacher = String(test.teacherName || '').trim();
     }
 
     const serial = makeSerial(type, sourceId);
+    const certId = makeSerial('CERT', sourceId);
+    const secureKey = makeCertificateSecureKey('SK');
+    const me = await User.findById(req.userId).select('fullName nickname username faculty studyGroup').lean();
+    const fullName = String(me?.fullName || me?.nickname || me?.username || 'Student').trim();
+    const facultyGroup = [String(me?.faculty || '').trim(), String(me?.studyGroup || '').trim()].filter(Boolean).join(' • ');
+    const verifyUrl = buildCertificateVerifyUrl(certId);
+    const qrCodeUrl = buildCertificateQrUrl(verifyUrl);
+    const issuedAt = new Date();
+    const holderHash = buildCertificateHolderHash({
+      userId: req.userId,
+      fullName,
+      facultyGroup,
+      sourceId,
+      secureKey
+    });
+    const signature = buildCertificateSignature({
+      certId,
+      serial,
+      userId: req.userId,
+      sourceId,
+      secureKey,
+      issuedAt
+    });
 
     const cert = await Certificate.create({
       userId: req.userId,
       type,
       sourceId,
       title,
+      fullName,
+      facultyGroup,
+      courseTitle: title,
+      teacherName: issuedByTeacher,
+      dateISO: issuedAt.toISOString().slice(0, 10),
       score: scoreVal,
       serial,
-      issuedAt: new Date()
+      certId,
+      verifyUrl,
+      qrCodeUrl,
+      secureKey,
+      holderHash,
+      signature,
+      issuedByTeacher,
+      issuedByPlatform,
+      issuedAt
     });
 
     res.status(201).json({ success: true, certificate: cert });
@@ -11843,6 +13673,62 @@ app.get('/api/admin/group-lessons', authenticateToken, requireAdmin, async (req,
   }
 });
 
+// Admin: delete only lesson recording media (keeps lesson + attendance metadata)
+app.delete('/api/admin/group-lessons/:lessonId/recording', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const lessonId = String(req.params.lessonId || '');
+    if (!mongoose.Types.ObjectId.isValid(lessonId)) {
+      return res.status(400).json({ error: 'Invalid lesson id' });
+    }
+
+    const lesson = await GroupLesson.findById(lessonId);
+    if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
+
+    const recordingUrl = String(lesson.recordingUrl || '').trim();
+    const recordingPublicId = String(lesson.recordingPublicId || '').trim();
+
+    // Cloudinary cleanup (best effort)
+    if (recordingPublicId) {
+      try {
+        await cloudinary.uploader.destroy(recordingPublicId, { resource_type: 'video', invalidate: true });
+      } catch (cloudErr) {
+        console.warn('admin lesson recording delete cloudinary warn:', cloudErr?.message || cloudErr);
+      }
+    }
+
+    // Local file cleanup (best effort)
+    if (recordingUrl.startsWith('/uploads/lessons/')) {
+      try {
+        const fs = require('fs');
+        const baseDir = path.join(__dirname, 'uploads', 'lessons');
+        const fileName = path.basename(recordingUrl);
+        const filePath = path.join(baseDir, fileName);
+        if (filePath.startsWith(baseDir) && fs.existsSync(filePath)) {
+          await fs.promises.unlink(filePath).catch(() => null);
+        }
+      } catch (localErr) {
+        console.warn('admin lesson recording delete local warn:', localErr?.message || localErr);
+      }
+    }
+
+    lesson.recordingUrl = '';
+    lesson.recordingPublicId = '';
+    lesson.recordingBytes = 0;
+    lesson.recordingDurationSec = 0;
+    await lesson.save();
+
+    await audit(req, 'GROUP_LESSON_RECORDING_DELETE', 'lesson', lessonId, {
+      groupId: String(lesson.groupId || ''),
+      hadRecording: !!recordingUrl
+    });
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('admin group lesson recording delete error', e);
+    res.status(500).json({ error: 'Failed to delete lesson recording' });
+  }
+});
+
 // Delete channel post
 app.delete('/api/admin/channel-posts/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -11968,20 +13854,61 @@ async function getCourseCompletion(userId, courseId) {
   return { totalLessons, doneLessonIds, pct };
 }
 
+async function getCourseTestStatus(userId, courseId) {
+  const course = await Course.findById(courseId).select('finalTestId testIds').lean();
+  if (!course) return { required: false, passed: false, finalTestId: '', passedTestIds: [] };
+
+  const rawIds = [];
+  if (course.finalTestId) rawIds.push(String(course.finalTestId));
+  if (Array.isArray(course.testIds)) rawIds.push(...course.testIds.map((x) => String(x)));
+  const testIds = Array.from(new Set(rawIds.filter(Boolean)));
+  if (!testIds.length) return { required: false, passed: true, finalTestId: '', passedTestIds: [] };
+
+  const [tests, submissions, pr] = await Promise.all([
+    Test.find({ _id: { $in: testIds } }).select('_id passPct').lean(),
+    TestSubmission.find({ userId, testId: { $in: testIds } }).sort({ createdAt: -1 }).lean(),
+    CourseProgress.findOne({ courseId, userId }).select('testsPassed').lean()
+  ]);
+
+  const passByTest = new Map();
+  const passPctMap = new Map((tests || []).map((t) => [String(t._id), getSubmissionPassPct(t)]));
+  for (const t of (tests || [])) passByTest.set(String(t._id), false);
+
+  for (const s of (submissions || [])) {
+    const tid = String(s.testId);
+    if (!passByTest.has(tid) || passByTest.get(tid)) continue;
+    const need = Number(passPctMap.get(tid) || 60);
+    if (Number(s.score || 0) >= need) passByTest.set(tid, true);
+  }
+
+  const passedMap = (pr?.testsPassed && typeof pr.testsPassed === 'object') ? pr.testsPassed : {};
+  for (const tid of testIds) {
+    if (passedMap[tid] === true) passByTest.set(tid, true);
+  }
+
+  const finalTestId = course.finalTestId ? String(course.finalTestId) : '';
+  const required = !!finalTestId;
+  const passed = required ? !!passByTest.get(finalTestId) : true;
+  const passedTestIds = testIds.filter((tid) => !!passByTest.get(tid));
+
+  return { required, passed, finalTestId, allTestIds: testIds, passedTestIds };
+}
+
 // New: progress endpoints used by improved joinedcourse/certificate
 app.get('/api/progress/:courseId', authenticateToken, attachUserRole, requireRole(['student','admin','teacher']), async (req, res) => {
   try {
     const courseId = req.params.courseId;
     const info = await getCourseCompletion(req.userId, courseId);
-
-    // infer testPassed if course has linked testId (optional)
-    let testPassed = false;
-    try{
-      const course = await Course.findById(courseId).select('_id').lean();
-      // if client stores a separate mapping, ignore; keep false by default
-    }catch(_){}
-
-    res.json({ ok: true, courseId, ...info, testPassed });
+    const test = await getCourseTestStatus(req.userId, courseId);
+    res.json({
+      ok: true,
+      courseId,
+      ...info,
+      testPassed: !!test.passed,
+      requiredFinalTest: !!test.required,
+      finalTestId: test.finalTestId || '',
+      passedTestIds: test.passedTestIds || []
+    });
   } catch (e) {
     console.error('GET /api/progress/:courseId error:', e);
     res.status(500).json({ error: 'Failed to load progress' });
@@ -12013,9 +13940,82 @@ app.post('/api/progress/:courseId', authenticateToken, attachUserRole, requireRo
     ).lean();
 
     const info = await getCourseCompletion(req.userId, courseId);
-    res.json({ ok: true, progress: updated?.progress || {}, ...info });
+    const test = await getCourseTestStatus(req.userId, courseId);
+    res.json({
+      ok: true,
+      progress: updated?.progress || {},
+      ...info,
+      testPassed: !!test.passed,
+      requiredFinalTest: !!test.required,
+      finalTestId: test.finalTestId || '',
+      passedTestIds: test.passedTestIds || []
+    });
   } catch (e) {
     console.error('POST /api/progress/:courseId error:', e);
+    res.status(500).json({ error: 'Failed to save progress' });
+  }
+});
+
+// Compatibility aliases used by legacy pages
+app.get('/api/progress', authenticateToken, attachUserRole, requireRole(['student','admin','teacher']), async (req, res) => {
+  try {
+    const courseId = String(req.query.courseId || req.query.id || '').trim();
+    if (!courseId) return res.status(400).json({ error: 'courseId required' });
+    const info = await getCourseCompletion(req.userId, courseId);
+    const test = await getCourseTestStatus(req.userId, courseId);
+    res.json({
+      ok: true,
+      courseId,
+      ...info,
+      testPassed: !!test.passed,
+      requiredFinalTest: !!test.required,
+      finalTestId: test.finalTestId || '',
+      passedTestIds: test.passedTestIds || []
+    });
+  } catch (e) {
+    console.error('GET /api/progress error:', e);
+    res.status(500).json({ error: 'Failed to load progress' });
+  }
+});
+
+app.post('/api/progress', authenticateToken, attachUserRole, requireRole(['student','admin','teacher']), async (req, res) => {
+  try {
+    const courseId = String(req.body?.courseId || req.body?.id || '').trim();
+    if (!courseId) return res.status(400).json({ error: 'courseId required' });
+    const body = req.body || {};
+    const setMap = {};
+
+    if (Array.isArray(body.doneLessonIds)) {
+      for (const id of body.doneLessonIds) setMap[String(id)] = true;
+    } else if (body.contentId) {
+      setMap[String(body.contentId)] = body.done !== false;
+    } else if (body.progress && typeof body.progress === 'object') {
+      Object.assign(setMap, body.progress);
+    } else {
+      return res.status(400).json({ error: 'doneLessonIds[] or contentId required' });
+    }
+
+    const cur = await CourseProgress.findOne({ courseId, userId: req.userId }).lean();
+    const merged = Object.assign({}, (cur?.progress && typeof cur.progress === 'object') ? cur.progress : {}, setMap);
+    await CourseProgress.findOneAndUpdate(
+      { courseId, userId: req.userId },
+      { $set: { progress: merged } },
+      { upsert: true, new: true }
+    ).lean();
+
+    const info = await getCourseCompletion(req.userId, courseId);
+    const test = await getCourseTestStatus(req.userId, courseId);
+    res.json({
+      ok: true,
+      courseId,
+      ...info,
+      testPassed: !!test.passed,
+      requiredFinalTest: !!test.required,
+      finalTestId: test.finalTestId || '',
+      passedTestIds: test.passedTestIds || []
+    });
+  } catch (e) {
+    console.error('POST /api/progress error:', e);
     res.status(500).json({ error: 'Failed to save progress' });
   }
 });
@@ -12037,8 +14037,21 @@ app.get('/api/certificate/check', authenticateToken, attachUserRole, requireRole
     }
 
     const info = await getCourseCompletion(req.userId, courseId);
-    const eligible = info.pct >= 100;
-    res.json({ ok: eligible, eligible, courseId, pct: info.pct, totalLessons: info.totalLessons, doneLessonIds: info.doneLessonIds });
+    const test = await getCourseTestStatus(req.userId, courseId);
+    const eligible = info.pct >= 100 && (!!test.passed);
+    res.json({
+      ok: eligible,
+      eligible,
+      courseId,
+      pct: info.pct,
+      totalLessons: info.totalLessons,
+      doneLessonIds: info.doneLessonIds,
+      requiredFinalTest: !!test.required,
+      finalTestId: test.finalTestId || '',
+      testPassed: !!test.passed,
+      passedTestIds: test.passedTestIds || [],
+      reason: eligible ? '' : (info.pct < 100 ? 'course_not_completed' : 'final_test_not_passed')
+    });
   } catch (e) {
     console.error('GET /api/certificate/check error:', e);
     res.status(500).json({ error: 'Failed to check eligibility' });
@@ -12058,8 +14071,21 @@ app.get('/api/certificates/eligible', authenticateToken, attachUserRole, require
     }
 
     const info = await getCourseCompletion(req.userId, courseId);
-    const eligible = info.pct >= 100;
-    res.json({ ok: eligible, eligible, courseId, pct: info.pct, totalLessons: info.totalLessons, doneLessonIds: info.doneLessonIds });
+    const test = await getCourseTestStatus(req.userId, courseId);
+    const eligible = info.pct >= 100 && (!!test.passed);
+    res.json({
+      ok: eligible,
+      eligible,
+      courseId,
+      pct: info.pct,
+      totalLessons: info.totalLessons,
+      doneLessonIds: info.doneLessonIds,
+      requiredFinalTest: !!test.required,
+      finalTestId: test.finalTestId || '',
+      testPassed: !!test.passed,
+      passedTestIds: test.passedTestIds || [],
+      reason: eligible ? '' : (info.pct < 100 ? 'course_not_completed' : 'final_test_not_passed')
+    });
   } catch (e) {
     console.error('GET /api/certificates/eligible error:', e);
     res.status(500).json({ error: 'Failed to check eligibility' });
@@ -12070,9 +14096,8 @@ app.get('/api/certificates/eligible', authenticateToken, attachUserRole, require
 app.post('/api/certificates', authenticateToken, attachUserRole, requireRole(['student','admin']), async (req, res) => {
   try {
     const body = req.body || {};
-    const certId = String(body.certId || body.serial || '').trim();
+    const certId = String(body.certId || body.serial || makeSerial('CERT', body.courseId || body.sourceId || 'COURSE')).trim();
     const courseId = String(body.courseId || body.sourceId || '').trim();
-    if (!certId) return res.status(400).json({ error: 'certId required' });
     if (!courseId) return res.status(400).json({ error: 'courseId required' });
 
     // server-side eligibility (student)
@@ -12082,25 +14107,55 @@ app.post('/api/certificates', authenticateToken, attachUserRole, requireRole(['s
       if (!en) return res.status(403).json({ error: 'Not joined' });
     }
     const info = await getCourseCompletion(req.userId, courseId);
-    if (role === 'student' && info.pct < 100) return res.status(403).json({ error: 'Course not completed' });
+    if (info.pct < 100) return res.status(403).json({ error: 'Course not completed' });
+    const test = await getCourseTestStatus(req.userId, courseId);
+    if (!test.passed) return res.status(403).json({ error: 'Final test is not passed' });
 
     const course = await Course.findById(courseId).select('title teacherName').lean();
+    const me = await User.findById(req.userId).select('fullName nickname username faculty studyGroup').lean();
+    const fullName = String(body.fullName || me?.fullName || me?.nickname || me?.username || '').trim();
+    const facultyGroup = String(body.facultyGroup || body.fg || [me?.faculty, me?.studyGroup].filter(Boolean).join(' • ') || '').trim();
+    const serial = String(body.serial || makeSerial('COURSE', courseId)).trim();
+    const secureKey = String(body.secureKey || makeCertificateSecureKey('SK')).trim();
+    const issuedAt = new Date();
+    const verifyUrl = String(body.verifyUrl || buildCertificateVerifyUrl(certId)).trim();
+    const qrCodeUrl = String(body.qrCodeUrl || buildCertificateQrUrl(verifyUrl)).trim();
+    const holderHash = buildCertificateHolderHash({
+      userId: req.userId,
+      fullName,
+      facultyGroup,
+      sourceId: courseId,
+      secureKey
+    });
+    const signature = buildCertificateSignature({
+      certId,
+      serial,
+      userId: req.userId,
+      sourceId: courseId,
+      secureKey,
+      issuedAt
+    });
 
     const doc = await Certificate.findOneAndUpdate(
       { userId: req.userId, type: 'course', sourceId: courseId },
       {
         $set: {
           title: String(body.courseTitle || course?.title || '').trim(),
-          serial: String(body.serial || certId).trim(),
-          issuedAt: new Date(),
+          serial,
+          issuedAt,
           certId,
-          verifyUrl: String(body.verifyUrl || '').trim(),
-          fullName: String(body.fullName || '').trim(),
-          facultyGroup: String(body.facultyGroup || body.fg || '').trim(),
+          verifyUrl,
+          qrCodeUrl,
+          secureKey,
+          holderHash,
+          fullName,
+          facultyGroup,
           courseTitle: String(body.courseTitle || course?.title || '').trim(),
           teacherName: String(body.teacherName || course?.teacherName || '').trim(),
           dateISO: String(body.dateISO || '').trim(),
-          signature: String(body.signature || '').trim()
+          signature,
+          issuedByTeacher: String(body.teacherName || course?.teacherName || '').trim(),
+          issuedByPlatform: String(body.platformName || 'HALLAYM edu').trim()
         }
       },
       { upsert: true, new: true }
@@ -12122,7 +14177,22 @@ app.get('/api/certificates/verify', async (req, res) => {
     const cert = await Certificate.findOne({ $or: [{ certId: id }, { serial: id }] }).lean();
     if (!cert) return res.json({ ok: false, valid: false });
 
-    res.json({ ok: true, valid: true, certificate: cert });
+    const expectedSig = buildCertificateSignature({
+      certId: cert.certId || cert.serial || '',
+      serial: cert.serial || '',
+      userId: cert.userId,
+      sourceId: cert.sourceId,
+      secureKey: cert.secureKey || '',
+      issuedAt: cert.issuedAt
+    });
+    const valid = !!(cert.signature && expectedSig && String(cert.signature) === String(expectedSig));
+
+    res.json({
+      ok: true,
+      valid,
+      reason: valid ? '' : 'signature_mismatch',
+      certificate: cert
+    });
   } catch (e) {
     console.error('GET /api/certificates/verify error:', e);
     res.status(500).json({ error: 'Failed to verify certificate' });
@@ -12137,8 +14207,20 @@ app.get('/api/certificates/eligible2', authenticateToken, attachUserRole, requir
     const courseId = req.query.courseId;
     if (!courseId) return res.status(400).json({ error: 'courseId required' });
     const info = await getCourseCompletion(req.userId, courseId);
-    const eligible = info.pct >= 100;
-    res.json({ ok: eligible, eligible, courseId, pct: info.pct, totalLessons: info.totalLessons, doneLessonIds: info.doneLessonIds });
+    const test = await getCourseTestStatus(req.userId, courseId);
+    const eligible = info.pct >= 100 && (!!test.passed);
+    res.json({
+      ok: eligible,
+      eligible,
+      courseId,
+      pct: info.pct,
+      totalLessons: info.totalLessons,
+      doneLessonIds: info.doneLessonIds,
+      requiredFinalTest: !!test.required,
+      finalTestId: test.finalTestId || '',
+      testPassed: !!test.passed,
+      passedTestIds: test.passedTestIds || []
+    });
   }catch(e){
     res.status(500).json({ error: 'Failed' });
   }
