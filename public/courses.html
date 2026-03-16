@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kurslar — QDTU LMS</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
+      --primary:#2563eb; --primary2:#7c3aed; --danger:#ef4444; --ok:#10b981; --warn:#f59e0b;
+      --shadow: 0 18px 50px rgba(2,6,23,.10);
+      --ring: 0 0 0 4px rgba(37,99,235,.18);
+      --grid: rgba(15,23,42,.06);
+    }
+    .dark{
+      --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --border:#223047;
+      --shadow: 0 20px 70px rgba(0,0,0,.45);
+      --grid: rgba(148,163,184,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text)}
+    a{color:inherit}
+    .bg{
+      position:fixed; inset:0; z-index:-2;
+      background:
+        radial-gradient(1100px 500px at 10% 10%, rgba(37,99,235,.22), transparent 60%),
+        radial-gradient(900px 500px at 92% 18%, rgba(124,58,237,.18), transparent 60%),
+        radial-gradient(900px 600px at 50% 92%, rgba(16,185,129,.14), transparent 60%),
+        linear-gradient(180deg, var(--bg), var(--bg));
+    }
+    .gridbg{
+      position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 72%);
+      opacity:.85;
+    }
+
+    header{
+      position:sticky; top:0; z-index:50;
+      padding:14px 16px;
+      backdrop-filter: blur(10px);
+      background: color-mix(in oklab, var(--bg) 72%, transparent);
+      border-bottom:1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    }
+    .nav{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    }
+    .brand{display:flex; align-items:center; gap:10px}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      box-shadow: var(--shadow);
+    }
+    .brand h1{font-size:14px; margin:0; letter-spacing:.2px}
+    .brand .sub{font-size:12px; color:var(--muted); margin-top:2px}
+    .pills{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .pill{font-size:12px; padding:7px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 80%, transparent); background: color-mix(in oklab, var(--card) 85%, transparent)}
+    .badge{font-weight:800; letter-spacing:.6px}
+    .badge.student{color:var(--ok)}
+    .badge.teacher{color:color-mix(in oklab, var(--primary) 88%, white)}
+    .badge.admin{color:var(--warn)}
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 92%, transparent);
+      color:var(--text);
+      padding:10px 12px; border-radius:12px; text-decoration:none; cursor:pointer;
+      box-shadow: 0 1px 0 rgba(0,0,0,.03);
+      transition: transform .08s ease, filter .12s ease, background .12s ease;
+      user-select:none;
+      font-weight:650;
+    }
+    .btn:hover{filter:brightness(1.02)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background: linear-gradient(135deg, var(--primary), var(--primary2)); color:#fff; border-color:transparent}
+    .btn.danger{background: linear-gradient(135deg, #ef4444, #fb7185); color:#fff; border-color:transparent}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:8px 10px; border-radius:11px; font-size:13px; font-weight:700}
+    .icon{width:18px; height:18px; display:inline-block}
+
+    .container{max-width:1200px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:16px; padding:16px;
+      box-shadow: 0 8px 28px rgba(2,6,23,.06);
+    }
+    .card h2,.card h3{margin:0 0 10px 0}
+    .card h3{font-size:16px}
+    .muted{color:var(--muted);font-size:13px;line-height:1.55}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .input, select, textarea{
+      width:100%; padding:11px 12px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      border-radius:12px; font-size:14px;
+      background: color-mix(in oklab, var(--card) 95%, transparent);
+      color:var(--text);
+      outline:none;
+    }
+    .input:focus, select:focus, textarea:focus{box-shadow: var(--ring); border-color:transparent}
+    label{font-size:13px;color:color-mix(in oklab, var(--muted) 92%, var(--text))}
+    .col-12{grid-column:span 12}
+    .col-8{grid-column:span 8}
+    .col-4{grid-column:span 4}
+    .col-6{grid-column:span 6}
+    .col-3{grid-column:span 3}
+    @media (max-width:980px){
+      .col-8,.col-4,.col-6,.col-3{grid-column:span 12}
+    }
+
+    .err,.ok{
+      border-radius:14px; padding:12px 14px; margin:14px 0; display:none;
+      border:1px solid transparent;
+    }
+    .err{background: color-mix(in oklab, #ffedd5 65%, var(--card)); border-color:#fed7aa; color:#9a3412}
+    .ok{background: color-mix(in oklab, #dcfce7 50%, var(--card)); border-color:#86efac; color:#065f46}
+
+    .kpi{display:flex; gap:10px; flex-wrap:wrap}
+    .kpi .box{flex:1; min-width:180px; padding:12px; border-radius:14px; border:1px dashed color-mix(in oklab, var(--border) 80%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent)}
+    .kpi .val{font-size:20px; font-weight:900; margin-top:4px}
+    .tag{display:inline-flex; gap:8px; align-items:center; font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid color-mix(in oklab, var(--border) 85%, transparent); background: color-mix(in oklab, var(--card) 92%, transparent)}
+    .tag.free{border-color:#86efac; background: color-mix(in oklab, #dcfce7 35%, var(--card))}
+    .tag.paid{border-color:#93c5fd; background: color-mix(in oklab, #dbeafe 35%, var(--card))}
+    .tag.open{border-color:#fde68a; background: color-mix(in oklab, #fef9c3 35%, var(--card))}
+    .tag.lock{border-color:#fecaca; background: color-mix(in oklab, #fee2e2 35%, var(--card))}
+    .tag.chip{padding:5px 10px; font-weight:800}
+
+    .courses{display:grid; grid-template-columns:repeat(12,1fr); gap:12px; margin-top:12px}
+    .course{
+      grid-column:span 6;
+      border-radius:16px; overflow:hidden;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--card) 96%, transparent);
+      display:flex; gap:12px;
+      min-height:132px;
+      transition: transform .08s ease, filter .12s ease;
+    }
+    .course:hover{filter:brightness(1.01)}
+    .course:active{transform:translateY(1px)}
+    .thumb{
+      width:168px; min-width:168px; background:
+        linear-gradient(135deg, rgba(37,99,235,.20), rgba(124,58,237,.16)),
+        radial-gradient(120px 120px at 50% 20%, rgba(255,255,255,.22), transparent 60%);
+      border-right:1px solid color-mix(in oklab, var(--border) 80%, transparent);
+      position:relative;
+    }
+    .thumb img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none}
+    .thumb .hint{position:absolute; left:10px; bottom:10px; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800;
+      background: color-mix(in oklab, var(--card) 80%, transparent); border:1px solid color-mix(in oklab, var(--border) 80%, transparent);
+    }
+    .cbody{padding:12px 12px 12px 0; flex:1; display:flex; flex-direction:column}
+    .ctitle{font-weight:950; letter-spacing:.2px}
+    .cdesc{margin-top:6px}
+    .cmeta{margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+    .cactions{margin-top:auto; display:flex; flex-wrap:wrap; gap:8px; padding-top:10px}
+    .course .btn{padding:9px 10px; border-radius:12px; font-size:13px}
+
+    @media (max-width:980px){ .course{grid-column:span 12} .thumb{width:140px; min-width:140px} }
+    @media (max-width:520px){ .thumb{display:none} .cbody{padding:12px} }
+
+    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:60}
+    .modal{
+      max-width:920px;width:100%;
+      border-radius:18px;
+      border:1px solid color-mix(in oklab, var(--border) 70%, transparent);
+      overflow:hidden;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .modal header{
+      position:relative;
+      background: linear-gradient(135deg, rgba(37,99,235,.95), rgba(124,58,237,.92));
+      color:#fff; padding:14px 16px;
+      border-bottom:none;
+    }
+    .modal .body{padding:16px}
+    .divider{height:1px;background:color-mix(in oklab, var(--border) 85%, transparent); margin:12px 0}
+    .tiny{font-size:12px;color:var(--muted)}
+    footer{padding:18px 16px;color:var(--muted);text-align:center}
+    .skeleton{
+      border-radius:16px;
+      border:1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: linear-gradient(90deg,
+        color-mix(in oklab, var(--card) 92%, transparent) 0%,
+        color-mix(in oklab, var(--card) 80%, transparent) 45%,
+        color-mix(in oklab, var(--card) 92%, transparent) 100%);
+      background-size: 220% 100%;
+      animation: shimmer 1.15s linear infinite;
+      height:140px;
+    }
+    @keyframes shimmer{0%{background-position: 200% 0}100%{background-position:-200% 0}}
+    code{background:color-mix(in oklab, var(--card) 92%, transparent);border:1px solid color-mix(in oklab, var(--border) 85%, transparent);border-radius:10px;padding:2px 7px}
+  </style>
+  <script>
+    (function(){
+      const key="theme";
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark ? "dark" : "light");
+      if(mode==="dark") document.documentElement.classList.add("dark");
+    })();
+  </script>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+</head>
+<body>
+  <div class="bg"></div><div class="gridbg"></div>
+
+  <header>
+    <div class="nav">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>QDTU LMS</h1>
+          <div class="sub">Kurslar katalogi</div>
+        </div>
+        <div class="pills">
+          <span id="roleBadge" class="pill badge student">STUDENT</span>
+          <span id="mePill" class="pill" style="display:none"></span>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn ghost small" id="themeBtn" title="Tema">
+          <span class="icon">🌓</span><span>Tema</span>
+        </button>
+        <a class="btn ghost small" id="dashLink" href="/student-dashboard.html">Dashboard</a>
+        <a class="btn ghost small" href="/tests.html">Testlar</a>
+        <a class="btn ghost small" href="/certificate.html">Sertifikat</a>
+        <button class="btn danger small" id="logoutBtn">Chiqish</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="errBox" class="err"></div>
+    <div id="okBox" class="ok"></div>
+
+    <div class="grid">
+      <div class="card col-8">
+        <h2 style="margin:0 0 6px 0;font-size:18px">Kurslar katalogi</h2>
+        <div class="muted">
+          Student — kurslarga qo‘shiladi. Teacher — kurs yaratadi, tahrirlaydi, publish/draft qiladi.
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <input id="q" class="input" placeholder="Qidirish: kurs nomi, o‘qituvchi, fakultet..." style="flex:1;min-width:240px" />
+          <select id="facultyFilter" style="max-width:420px">
+            <option value="">Fakultet (barchasi)</option>
+          </select>
+          <select id="priceFilter" style="max-width:240px">
+            <option value="">Narx (barchasi)</option>
+            <option value="free">Bepul</option>
+            <option value="paid">Pullik</option>
+          </select>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <input id="groupFilter" class="input" placeholder="Guruh filtri (misol: MMT-520-25)" style="flex:1;min-width:240px" />
+          <select id="sortSel" style="max-width:240px">
+            <option value="new">Saralash: yangi</option>
+            <option value="old">Saralash: eski</option>
+            <option value="title">Saralash: nom</option>
+            <option value="price">Saralash: narx</option>
+          </select>
+          <button class="btn" id="refreshBtn">Yangilash</button>
+          <button class="btn primary" id="createBtn" style="display:none">+ Yangi kurs</button>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <span class="tiny">Tip: filterlar real vaqt rejimida ishlaydi. Teacher’da “Yangi kurs” ochiladi.</span>
+        </div>
+
+        <div class="row" id="teacherFilterWrap" style="display:none;margin-top:10px">
+          <span class="tag chip" id="teacherFilterTag">Teacher filtri faol</span>
+          <button class="btn small" id="clearTeacherFilterBtn">Barcha kurslar</button>
+        </div>
+      </div>
+
+      <div class="card col-4">
+        <h3>Hisob / cheklovlar</h3>
+        <div class="kpi">
+          <div class="box">
+            <div class="muted">Balans (so'm)</div>
+            <div class="val" id="coinsVal">—</div>
+          </div>
+          <div class="box">
+            <div class="muted">Mening guruhim</div>
+            <div class="val" style="font-size:14px" id="groupVal">—</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="muted">
+          Kurs cheklovlari:
+          <ul style="margin:8px 0 0 18px; padding:0">
+            <li>Fakultet bo‘yicha</li>
+            <li>Guruh (MMT-520-25) bo‘yicha</li>
+            <li>Pullik kurs — balans tekshiruv</li>
+          </ul>
+        </div>
+        <div class="tiny" style="margin-top:10px">
+          Internet mavjud bo'lsa serverdan yuklanadi, aks holda vaqtincha lokal rejim ishlatiladi.
+        </div>
+      </div>
+
+      <div class="card col-12">
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div>
+            <div class="muted" id="countTxt">Yuklanmoqda...</div>
+            <div class="tiny" id="modeTxt">—</div>
+          </div>
+          <div class="row">
+            <button class="btn small" id="clearFiltersBtn">Filterlarni tozalash</button>
+          </div>
+        </div>
+
+        <div id="list" class="courses" aria-live="polite" style="margin-top:12px">
+          <div class="skeleton" style="grid-column:span 6"></div>
+          <div class="skeleton" style="grid-column:span 6"></div>
+          <div class="skeleton" style="grid-column:span 6"></div>
+          <div class="skeleton" style="grid-column:span 6"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE/EDIT MODAL -->
+  <div id="modalBackdrop" class="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <header>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div style="font-weight:950" id="modalTitle">Yangi kurs</div>
+          <div class="row">
+            <button class="btn ghost small" id="closeModalBtn" style="border-color:rgba(255,255,255,.35);color:#fff">Yopish</button>
+          </div>
+        </div>
+        <div class="tiny" style="color:rgba(255,255,255,.88); margin-top:6px">
+          Publish qilsangiz studentlar ko‘radi. Draft — faqat teacher/admin.
+        </div>
+      </header>
+      <div class="body">
+        <div class="grid">
+          <div class="col-6">
+            <label>Kurs nomi</label>
+            <input id="c_title" class="input" placeholder="Masalan: Neft-gaz geologiyasi 1" />
+          </div>
+          <div class="col-6">
+            <label>Kurs turi</label>
+            <select id="c_type">
+              <option value="free">Bepul</option>
+              <option value="paid">Pullik</option>
+            </select>
+          </div>
+
+          <div class="col-3">
+            <label>Narx (so'm)</label>
+            <input id="c_price" class="input" type="number" min="0" value="0" />
+          </div>
+          <div class="col-3">
+            <label>Status</label>
+            <select id="c_status">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label>Fakultet</label>
+            <select id="c_faculty"></select>
+          </div>
+
+          <div class="col-12">
+            <label>Guruhlar (vergul bilan, misol: MMT-520-25, EKT-110-26)</label>
+            <input id="c_groups" class="input" placeholder="MMT-520-25, ..." />
+            <div class="tiny" style="margin-top:6px">Bo‘sh qoldirilsa, fakultet ichida barcha guruhlar uchun ochiq.</div>
+          </div>
+
+          <div class="col-12">
+            <label>Qisqa tavsif</label>
+            <textarea id="c_desc" class="input" rows="3" placeholder="Kurs maqsadi, qisqacha reja..."></textarea>
+          </div>
+
+          <div class="col-6">
+            <label>YouTube Preview URL (ixtiyoriy)</label>
+            <input id="c_youtube" class="input" placeholder="https://www.youtube.com/watch?v=..." />
+          </div>
+          <div class="col-6">
+            <label>Cover Image URL (ixtiyoriy)</label>
+            <input id="c_cover" class="input" placeholder="https://..." />
+          </div>
+
+          <div class="col-12 row" style="justify-content:space-between">
+            <div class="row">
+              <button class="btn primary" id="saveCourseBtn">Saqlash</button>
+              <button class="btn" id="saveDraftBtn">Draft saqlash</button>
+            </div>
+            <button class="btn danger" id="deleteCourseBtn" style="display:none">O‘chirish</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="tiny">
+          O'zgarishlar serverga saqlanadi, internet yo'q bo'lsa vaqtincha lokal saqlash ishlaydi.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Qarshi Davlat Texnika Universiteti — LMS (Courses)</footer>
+
+<script>
+  const API_BASE = "";
+
+  const FACULTIES = [
+    "Neft-gaz va geologiya fakulteti",
+    "Iqtisodiyot va boshqaruv fakulteti",
+    "Energetika muhandisligi fakulteti",
+    "Transport va qurilish muhandisligi fakulteti",
+    "Raqamli texnologiyalar va sun'iy intellekt fakulteti",
+    "Shahrisabz oziq-ovqat muhandisligi fakulteti",
+    "Irrigatsiya muhandisligi fakulteti"
+  ];
+
+  // ---------- utils ----------
+  const $ = (id)=> document.getElementById(id);
+  function qs(name){ return new URLSearchParams(location.search).get(name); }
+  function getToken(){ return localStorage.getItem("token") || ""; }
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+  function setErr(msg){
+    const box = $("errBox");
+    box.textContent = msg; box.style.display="block";
+    $("okBox").style.display="none";
+  }
+  function setOk(msg){
+    const box = $("okBox");
+    box.textContent = msg; box.style.display="block";
+    $("errBox").style.display="none";
+  }
+  function clearMsg(){ $("errBox").style.display="none"; $("okBox").style.display="none"; }
+
+  async function apiFetch(url, opts={}){
+    const token = getToken();
+    const headers = Object.assign({}, opts.headers || {});
+    if(token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + url, Object.assign({}, opts, { headers }));
+    let data = null;
+    const ct = res.headers.get("content-type") || "";
+    if(ct.includes("application/json")){
+      try{ data = await res.json(); }catch{ data = null; }
+    }else{
+      try{ data = await res.text(); }catch{ data = null; }
+    }
+    if(!res.ok){
+      const msg = (data && data.error) ? data.error : ("So'rov xatosi: " + res.status);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  // ---------- theme ----------
+  $("themeBtn").addEventListener("click", ()=>{
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+  });
+
+  // ---------- demo storage ----------
+  function demoKey(){ return "demoCourses_v2"; }
+  function readDemoCourses(){ try{ return JSON.parse(localStorage.getItem(demoKey()) || "[]"); }catch{ return []; } }
+  function writeDemoCourses(list){ localStorage.setItem(demoKey(), JSON.stringify(list)); }
+  function seedDemoIfEmpty(){
+    const cur = readDemoCourses();
+    if(cur.length) return;
+    const seed = [
+      {
+        id: "c1",
+        title: "Energetika asoslari",
+        description: "Energetika muhandisligi kirish kursi.",
+        type: "free",
+        price: 0,
+        status: "published",
+        faculty: "Energetika muhandisligi fakulteti",
+        groups: ["EKT-110-26"],
+        teacherName: "Teacher Demo",
+        teacherId: "t_demo",
+        createdAt: Date.now() - 86400000,
+        youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        coverUrl: ""
+      },
+      {
+        id: "c2",
+        title: "Raqamli texnologiyalar va SI",
+        description: "Sun'iy intellektga kirish, amaliy mashg'ulotlar.",
+        type: "paid",
+        price: 50,
+        status: "published",
+        faculty: "Raqamli texnologiyalar va sun'iy intellekt fakulteti",
+        groups: [],
+        teacherName: "Teacher Demo",
+        teacherId: "t_demo",
+        createdAt: Date.now() - 43200000,
+        youtubeUrl: "",
+        coverUrl: ""
+      }
+    ];
+    writeDemoCourses(seed);
+  }
+
+  // ---------- data normalization ----------
+  function normalizeCourse(raw){
+    return {
+      id: raw._id || raw.id || raw.courseId,
+      title: raw.title || raw.name || "Nomsiz kurs",
+      description: raw.description || raw.desc || "",
+      type: (raw.type || (raw.isPaid ? "paid" : "free") || "free"),
+      price: Number(raw.price ?? raw.cost ?? 0),
+      status: raw.status || (raw.published ? "published" : "published"),
+      faculty: raw.faculty || raw.facultyName || "",
+      groups: Array.isArray(raw.groups) ? raw.groups : (raw.allowedGroups || []),
+      teacherName: raw.teacherName || raw.teacher?.fullname || raw.teacher?.name || raw.ownerName || "",
+      teacherId: raw.teacherId || raw.teacher?._id || raw.ownerId || "",
+      createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : (raw.createdAtMs || Date.now()),
+      youtubeUrl: raw.youtubeUrl || raw.youtube || "",
+      coverUrl: raw.coverUrl || raw.cover || ""
+    };
+  }
+
+  // ---------- auth/me ----------
+  async function apiMe(){
+    const token = getToken();
+    if(!token){ location.href="/login.html"; return null; }
+    try{
+      return await apiFetch("/api/me");
+    }catch(e){
+      localStorage.removeItem("token");
+      location.href="/login.html";
+      return null;
+    }
+  }
+
+  // ---------- UI helpers ----------
+  function courseTags(c){
+    const priceTag = c.type==="paid"
+      ? `<span class="tag paid chip">Pullik • ${Number(c.price||0)} so'm</span>`
+      : `<span class="tag free chip">Bepul</span>`;
+    const statusTag = (c.status||"published")==="published"
+      ? `<span class="tag open chip">Published</span>`
+      : `<span class="tag lock chip">Draft</span>`;
+    const groups = (c.groups && c.groups.length)
+      ? `<span class="tag chip">${escapeHtml(c.groups.join(", "))}</span>`
+      : `<span class="tag chip">Guruh: ochiq</span>`;
+    return priceTag + statusTag + groups;
+  }
+
+  function youtubeThumb(url){
+    // display hint only; coverUrl is preferred. For YouTube we can show generic gradient.
+    return "";
+  }
+
+  function matchFilters(c){
+    const q = ($("q").value || "").trim().toLowerCase();
+    const f = $("facultyFilter").value || "";
+    const p = $("priceFilter").value || "";
+    const g = ($("groupFilter").value || "").trim().toLowerCase();
+    const t = state.teacherFilterId || "";
+
+    if(f && (c.faculty || "") !== f) return false;
+    if(p && ((p==="paid" && c.type!=="paid") || (p==="free" && c.type!=="free"))) return false;
+    if(t && String(c.teacherId || "") !== String(t)) return false;
+
+    if(q){
+      const hay = `${c.title} ${c.description} ${c.teacherName} ${c.faculty}`.toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+
+    if(g){
+      const groups = (c.groups || []).map(x=>String(x).toLowerCase());
+      if(groups.length && !groups.some(x=>x.includes(g))) return false;
+      // groups bo‘sh bo‘lsa — ochiq, ko‘rsataveramiz
+    }
+    return true;
+  }
+
+  function applySort(list){
+    const key = $("sortSel").value;
+    const out = [...list];
+    if(key==="new") out.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+    else if(key==="old") out.sort((a,b)=> (a.createdAt||0)-(b.createdAt||0));
+    else if(key==="title") out.sort((a,b)=> String(a.title||"").localeCompare(String(b.title||""), "uz"));
+    else if(key==="price") out.sort((a,b)=> Number(a.price||0)-Number(b.price||0));
+    return out;
+  }
+
+  function setRoleUI(me){
+    const role = String(me.role || "student").toLowerCase();
+    const badge = $("roleBadge");
+    badge.classList.remove("student","teacher","admin");
+    badge.classList.add(role==="teacher" ? "teacher" : role==="admin" ? "admin" : "student");
+    badge.textContent = role.toUpperCase();
+
+    const name = me.fullname || me.name || me.username || "—";
+    const group = me.group || "Guruh yo‘q";
+    const faculty = me.faculty || "Fakultet yo‘q";
+    $("mePill").textContent = `${name} • ${faculty} • ${group}`;
+    $("mePill").style.display = "inline-flex";
+
+    $("dashLink").href = role==="teacher" ? "/teacher-dashboard.html"
+      : role==="admin" ? "/admin-dashboard.html"
+      : "/student-dashboard.html";
+
+    const coins = Number(me.coins ?? me.coin ?? 0);
+    $("coinsVal").textContent = isNaN(coins) ? "0" : String(coins);
+    $("groupVal").textContent = group;
+
+    $("createBtn").style.display = role==="teacher" ? "inline-flex" : "none";
+    $("modeTxt").textContent = role==="teacher" ? "Teacher mode: CRUD yoqilgan" : "Student mode: join + view";
+  }
+
+  // ---------- modal ----------
+  function openModal(){
+    $("modalBackdrop").style.display="flex";
+    document.body.style.overflow="hidden";
+  }
+  function closeModal(){
+    $("modalBackdrop").style.display="none";
+    document.body.style.overflow="";
+    delete $("saveCourseBtn").dataset.editing;
+    delete $("saveDraftBtn").dataset.editing;
+    $("deleteCourseBtn").style.display = "none";
+  }
+  $("closeModalBtn").addEventListener("click", closeModal);
+  $("modalBackdrop").addEventListener("click", (e)=>{ if(e.target === $("modalBackdrop")) closeModal(); });
+  document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
+
+  function fillModal(course){
+    $("c_title").value = course?.title || "";
+    $("c_desc").value = course?.description || "";
+    $("c_type").value = course?.type || "free";
+    $("c_price").value = Number(course?.price || 0);
+    $("c_status").value = course?.status || "draft";
+    $("c_faculty").value = course?.faculty || (FACULTIES[0] || "");
+    $("c_groups").value = (course?.groups && course.groups.length) ? course.groups.join(", ") : "";
+    $("c_youtube").value = course?.youtubeUrl || "";
+    $("c_cover").value = course?.coverUrl || "";
+  }
+
+  async function deleteCourse(editingId){
+    if(!editingId) return;
+    clearMsg();
+    // Try API
+    try{
+      await apiFetch("/api/courses/" + encodeURIComponent(editingId), { method:"DELETE" });
+      setOk("Kurs o‘chirildi.");
+      closeModal();
+      await loadAndRender();
+      return;
+    }catch(e){
+      // Demo fallback
+      seedDemoIfEmpty();
+      const list = readDemoCourses();
+      const next = list.filter(x=>String(x.id)!==String(editingId));
+      writeDemoCourses(next);
+      setOk("Kurs o‘chirildi.");
+      closeModal();
+      await loadAndRender();
+    }
+  }
+
+  async function saveCourse(me, publish){
+    clearMsg();
+    const title = ($("c_title").value || "").trim();
+    const desc = ($("c_desc").value || "").trim();
+    const type = $("c_type").value;
+    const price = Number($("c_price").value || 0);
+    const status = publish ? "published" : ($("c_status").value || "draft");
+    const faculty = $("c_faculty").value;
+    const groupsRaw = ($("c_groups").value || "").trim();
+    const groups = groupsRaw ? groupsRaw.split(",").map(x=>x.trim()).filter(Boolean) : [];
+    const youtubeUrl = ($("c_youtube").value || "").trim();
+    const coverUrl = ($("c_cover").value || "").trim();
+
+    if(!title){ setErr("Kurs nomi majburiy."); return; }
+    if(type==="paid" && (isNaN(price) || price < 1)){ setErr("Pullik kurs uchun narx (so'm) 1 dan katta bo‘lsin."); return; }
+
+    const editingId = $("saveCourseBtn").dataset.editing || $("saveDraftBtn").dataset.editing || "";
+
+    // Try API
+    try{
+      const payload = { title, description: desc, type, price, status, faculty, groups, youtubeUrl, coverUrl };
+      let url = "/api/courses";
+      let method = "POST";
+      if(editingId){
+        url = "/api/courses/" + encodeURIComponent(editingId);
+        method = "PUT";
+      }
+      await apiFetch(url, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
+      setOk("Kurs saqlandi.");
+      closeModal();
+      await loadAndRender();
+      return;
+    }catch(e){
+      // Demo fallback
+      seedDemoIfEmpty();
+      const list = readDemoCourses();
+      if(editingId){
+        const idx = list.findIndex(x=>String(x.id)===String(editingId));
+        if(idx>=0){
+          list[idx] = {
+            ...list[idx],
+            title, description: desc, type, price, status,
+            faculty, groups, youtubeUrl, coverUrl,
+            updatedAt: Date.now()
+          };
+        }
+      }else{
+        const id = "c_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+        list.push({
+          id,
+          title,
+          description: desc,
+          type,
+          price,
+          status,
+          faculty,
+          groups,
+          youtubeUrl,
+          coverUrl,
+          teacherName: me?.fullname || me?.name || me?.username || "Teacher",
+          teacherId: me?._id || me?.id || "t_local",
+          createdAt: Date.now()
+        });
+      }
+      writeDemoCourses(list);
+      setOk("Kurs saqlandi.");
+      closeModal();
+      await loadAndRender();
+    }
+  }
+
+  // ---------- load + render ----------
+  let state = { list: [], me:null, isDemo:false, teacherFilterId:"" };
+
+  async function fetchCourses(){
+    try{
+      const teacherFilterId = state.teacherFilterId || "";
+      const url = teacherFilterId
+        ? ("/api/courses?teacherId=" + encodeURIComponent(teacherFilterId))
+        : "/api/courses";
+      const data = await apiFetch(url);
+      const list = Array.isArray(data) ? data : (data.courses || []);
+      state.isDemo = false;
+      return list.map(normalizeCourse);
+    }catch(e){
+      state.isDemo = true;
+      seedDemoIfEmpty();
+      return readDemoCourses().map(normalizeCourse);
+    }
+  }
+
+  function renderCourses(list){
+    const container = $("list");
+    container.innerHTML = "";
+
+    const filtered = applySort(list.filter(matchFilters));
+    $("countTxt").textContent = `Topildi: ${filtered.length} ta kurs`;
+    $("modeTxt").textContent = state.isDemo ? "Ma'lumot manbasi: lokal rejim" : "Ma'lumot manbasi: server";
+    if(state.teacherFilterId){
+      $("teacherFilterWrap").style.display = "flex";
+      $("teacherFilterTag").textContent = "Teacher bo‘yicha kurslar";
+    }else{
+      $("teacherFilterWrap").style.display = "none";
+    }
+    if(!filtered.length){
+      container.innerHTML = `<div class="muted" style="grid-column:span 12">Hech narsa topilmadi.</div>`;
+      return;
+    }
+
+    const role = String(state.me?.role || "student").toLowerCase();
+    const isTeacher = role==="teacher";
+    const isAdmin = role==="admin";
+
+    filtered.forEach(c=>{
+      const el = document.createElement("div");
+      el.className = "course";
+      const cover = String(c.coverUrl || "").trim();
+
+      const statusChip = (c.status||"published")==="published" ? "Published" : "Draft";
+
+      const viewHref = "/course.html?id=" + encodeURIComponent(c.id);
+
+      el.innerHTML = `
+        <div class="thumb">
+          <img alt="cover" />
+          <div class="hint">${escapeHtml(statusChip)}</div>
+        </div>
+        <div class="cbody">
+          <div class="ctitle">${escapeHtml(c.title)}</div>
+          <div class="muted cdesc">${escapeHtml((c.description||"").slice(0, 140))}${(c.description||"").length>140 ? "…" : ""}</div>
+          <div class="cmeta">
+            ${courseTags(c)}
+            ${c.teacherId ? `<a class="tag" href="/courses.html?teacherId=${encodeURIComponent(c.teacherId)}">Teacher: <b>${escapeHtml(c.teacherName || "-")}</b></a>` : `<span class="tag">Teacher: <b>${escapeHtml(c.teacherName || "-")}</b></span>`}
+            <span class="tag">Fakultet: <b>${escapeHtml(c.faculty || "-")}</b></span>
+          </div>
+          <div class="cactions">
+            <a class="btn primary" href="${viewHref}">Ko‘rish</a>
+            ${isTeacher ? `<button class="btn" data-act="edit" data-id="${escapeHtml(c.id)}">Tahrirlash</button>` : ``}
+            ${(isTeacher || isAdmin) ? `<button class="btn" data-act="dup" data-id="${escapeHtml(c.id)}">Nusxa</button>` : ``}
+          </div>
+        </div>
+      `;
+
+      const img = el.querySelector("img");
+      if(cover){
+        img.src = cover;
+        img.style.display="block";
+        img.addEventListener("error", ()=>{ img.style.display="none"; });
+      }
+
+      el.addEventListener("click", (ev)=>{
+        // allow card click for view unless clicking a button
+        const t = ev.target;
+        if(t && (t.closest("button") || t.closest("a"))) return;
+        location.href = viewHref;
+      });
+
+      const editBtn = el.querySelector('[data-act="edit"]');
+      if(editBtn){
+        editBtn.addEventListener("click", async (ev)=>{
+          ev.preventDefault(); ev.stopPropagation();
+          await openEdit(c.id);
+        });
+      }
+      const dupBtn = el.querySelector('[data-act="dup"]');
+      if(dupBtn){
+        dupBtn.addEventListener("click", async (ev)=>{
+          ev.preventDefault(); ev.stopPropagation();
+          await duplicateCourse(c.id);
+        });
+      }
+      container.appendChild(el);
+    });
+  }
+
+  async function openEdit(id){
+    clearMsg();
+    const role = String(state.me?.role || "student").toLowerCase();
+    if(role!=="teacher" && role!=="admin"){ setErr("Faqat teacher/admin tahrirlashi mumkin."); return; }
+
+    const c = state.list.find(x=>String(x.id)===String(id));
+    if(!c){ setErr("Kurs topilmadi."); return; }
+
+    $("modalTitle").textContent = "Kursni tahrirlash";
+    fillModal(c);
+
+    $("saveCourseBtn").dataset.editing = id;
+    $("saveDraftBtn").dataset.editing = id;
+
+    $("deleteCourseBtn").style.display = "inline-flex";
+    $("deleteCourseBtn").onclick = ()=> deleteCourse(id);
+
+    openModal();
+  }
+
+  async function duplicateCourse(id){
+    clearMsg();
+    const c = state.list.find(x=>String(x.id)===String(id));
+    if(!c){ setErr("Kurs topilmadi."); return; }
+    $("modalTitle").textContent = "Kursdan nusxa olish";
+    fillModal({ ...c, title: (c.title || "Kurs") + " (copy)", status:"draft" });
+
+    delete $("saveCourseBtn").dataset.editing;
+    delete $("saveDraftBtn").dataset.editing;
+    $("deleteCourseBtn").style.display="none";
+
+    openModal();
+  }
+
+  async function loadAndRender(){
+    clearMsg();
+    $("list").innerHTML = `
+      <div class="skeleton" style="grid-column:span 6"></div>
+      <div class="skeleton" style="grid-column:span 6"></div>
+      <div class="skeleton" style="grid-column:span 6"></div>
+      <div class="skeleton" style="grid-column:span 6"></div>
+    `;
+    const list = await fetchCourses();
+    state.list = list;
+    renderCourses(list);
+  }
+
+  // ---------- init ----------
+  function fillFacultySelects(){
+    const f1 = $("facultyFilter");
+    const f2 = $("c_faculty");
+    // reset both (keep first option in filter)
+    f1.innerHTML = `<option value="">Fakultet (barchasi)</option>`;
+    f2.innerHTML = "";
+    FACULTIES.forEach(x=>{
+      const o1 = document.createElement("option"); o1.value = x; o1.textContent = x;
+      f1.appendChild(o1);
+      const o2 = document.createElement("option"); o2.value = x; o2.textContent = x;
+      f2.appendChild(o2);
+    });
+  }
+
+  $("logoutBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("token");
+    location.href="/login.html";
+  });
+
+  $("refreshBtn").addEventListener("click", loadAndRender);
+  $("clearFiltersBtn").addEventListener("click", ()=>{
+    $("q").value=""; $("facultyFilter").value=""; $("priceFilter").value=""; $("groupFilter").value=""; $("sortSel").value="new";
+    renderCourses(state.list);
+  });
+  $("clearTeacherFilterBtn").addEventListener("click", ()=>{
+    location.href = "/courses.html";
+  });
+
+  ["q","facultyFilter","priceFilter","groupFilter","sortSel"].forEach(id=>{
+    $(id).addEventListener("input", ()=> renderCourses(state.list));
+    $(id).addEventListener("change", ()=> renderCourses(state.list));
+  });
+
+  $("createBtn").addEventListener("click", ()=>{
+    $("modalTitle").textContent = "Yangi kurs";
+    fillModal(null);
+    delete $("saveCourseBtn").dataset.editing;
+    delete $("saveDraftBtn").dataset.editing;
+    $("deleteCourseBtn").style.display="none";
+    openModal();
+  });
+
+  $("saveCourseBtn").addEventListener("click", ()=> saveCourse(state.me, true));
+  $("saveDraftBtn").addEventListener("click", ()=> saveCourse(state.me, false));
+
+  async function init(){
+    fillFacultySelects();
+    state.teacherFilterId = String(qs("teacherId") || "").trim();
+    const me = await apiMe();
+    if(!me) return;
+    state.me = me;
+    setRoleUI(me);
+
+    // deep-link edit: /courses.html#edit=<id>
+    const hash = decodeURIComponent((location.hash || "").replace("#",""));
+    if(hash.startsWith("edit=")){
+      const id = hash.slice(5);
+      await loadAndRender();
+      await openEdit(id);
+      return;
+    }
+
+    await loadAndRender();
+  }
+
+  init().catch((e)=> setErr(e?.message || "Xatolik yuz berdi."));
+</script>
+  <script src="/ui-actions-menu.js" defer></script>
+  <script src="/global-assistant.js" defer></script>
+</body>
+</html>
+
+
+

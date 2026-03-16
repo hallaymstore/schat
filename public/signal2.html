@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Signal - UniConnect</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>.gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script>
+  tailwind = { config: { darkMode:'class', theme:{ extend:{
+    fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
+    keyframes:{
+      floaty:{'0%,100%':{transform:'translateY(0px)'},'50%':{transform:'translateY(-10px)'}},
+      shimmer:{'0%':{backgroundPosition:'0% 50%'},'100%':{backgroundPosition:'100% 50%'}},
+      pop:{'0%':{transform:'scale(.98)',opacity:'0'},'100%':{transform:'scale(1)',opacity:'1'}},
+      pulseSoft:{'0%,100%':{transform:'scale(1)'},'50%':{transform:'scale(1.02)'}}
+    },
+    animation:{
+      floaty:'floaty 7s ease-in-out infinite',
+      shimmer:'shimmer 7s ease-in-out infinite',
+      pop:'pop .45s ease-out both',
+      pulseSoft:'pulseSoft 3.2s ease-in-out infinite'
+    }
+  }}}};
+</script>
+<script>
+  (function(){
+    const key='theme';
+    const saved=localStorage.getItem(key);
+    const prefers=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const mode=saved || (prefers?'dark':'light');
+    if(mode==='dark') document.documentElement.classList.add('dark');
+  })();
+</script>
+<style id="ultraGlass">
+  :root{
+    --glass-bg: rgba(255,255,255,.58);
+    --glass-brd: rgba(255,255,255,.30);
+    --muted: rgba(15,23,42,.74);
+    --muted2: rgba(15,23,42,.56);
+    --grid: rgba(15,23,42,.06);
+    --ring: rgba(99,102,241,.45);
+    --shadow: rgba(0,0,0,.22);
+    --a1: rgba(99,102,241,1);
+    --a2: rgba(236,72,153,1);
+    --a3: rgba(34,197,94,1);
+  }
+  html.dark{
+    --glass-bg: rgba(2,6,23,.64);
+    --glass-brd: rgba(148,163,184,.16);
+    --muted: rgba(226,232,240,.80);
+    --muted2: rgba(226,232,240,.56);
+    --grid: rgba(148,163,184,.08);
+    --ring: rgba(236,72,153,.34);
+    --shadow: rgba(0,0,0,.52);
+  }
+
+  html, body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial !important; }
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 700px at 12% 12%, rgba(99,102,241,.28), transparent 60%),
+      radial-gradient(900px 600px at 88% 16%, rgba(236,72,153,.20), transparent 62%),
+      radial-gradient(900px 700px at 50% 96%, rgba(34,197,94,.16), transparent 60%),
+      linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1)) !important;
+    background-attachment: fixed !important;
+    color: rgb(15 23 42);
+  }
+  html.dark body{
+    background:
+      radial-gradient(1200px 700px at 12% 12%, rgba(99,102,241,.20), transparent 60%),
+      radial-gradient(900px 600px at 88% 16%, rgba(236,72,153,.16), transparent 62%),
+      radial-gradient(900px 700px at 50% 96%, rgba(34,197,94,.12), transparent 60%),
+      linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1)) !important;
+    color: rgb(226 232 240);
+  }
+
+  body:before{
+    content:"";
+    position:fixed; inset:0; z-index:-1;
+    background-image:
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+    opacity:.85;
+    pointer-events:none;
+  }
+
+  header, nav, .navbar, .topbar{
+    background: var(--glass-bg) !important;
+    border-bottom: 1px solid var(--glass-brd) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 18px 55px var(--shadow) !important;
+  }
+
+  .glass, .card, .panel, .container, .box, .content, main, section, aside,
+  [class*="card"], [class*="panel"], [class*="box"], [class*="container"], [class*="content"]{
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  main, .main, #main, #content, .content, .wrapper, .page, .page-content{
+    max-width: 1200px;
+    margin-left:auto; margin-right:auto;
+  }
+
+  input, textarea, select{
+    background: rgba(255,255,255,.42) !important;
+    border: 1px solid rgba(255,255,255,.26) !important;
+    color: rgb(15 23 42) !important;
+    border-radius: 14px !important;
+    outline: none !important;
+  }
+  html.dark input, html.dark textarea, html.dark select{
+    background: rgba(2,6,23,.34) !important;
+    border: 1px solid rgba(148,163,184,.18) !important;
+    color: rgb(226 232 240) !important;
+  }
+  input:focus, textarea:focus, select:focus{
+    box-shadow: 0 0 0 5px var(--ring) !important;
+    border-color: transparent !important;
+  }
+
+  button, .btn, [role="button"], input[type="submit"], .button{
+    border-radius: 14px !important;
+    transition: transform .18s ease, filter .18s ease, box-shadow .18s ease !important;
+  }
+  button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
+  .btn-primary, button.primary, .primary-btn{
+    background: linear-gradient(135deg, var(--a1), var(--a2)) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255,255,255,.18) !important;
+    box-shadow: 0 18px 40px rgba(99,102,241,.22) !important;
+  }
+  a{ text-decoration:none; }
+
+  table{ border-collapse: separate !important; border-spacing: 0 10px !important; width:100% !important; }
+  thead th{ color: var(--muted2) !important; font-weight: 900 !important; font-size: 12px !important; letter-spacing: .04em; text-transform: uppercase; }
+  tbody tr{ background: var(--glass-bg) !important; border: 1px solid var(--glass-brd) !important; box-shadow: 0 18px 55px var(--shadow); }
+  tbody td{ padding: 12px 14px !important; }
+
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb{ background: rgba(148,163,184,.28); border-radius: 999px; }
+  ::-webkit-scrollbar-track{ background: transparent; }
+
+  #themeFab{
+    position: fixed;
+    right: 16px;
+    top: 92px;
+    z-index: 9999;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-brd);
+    box-shadow: 0 18px 55px var(--shadow);
+    border-radius: 16px;
+    padding: 10px 12px;
+    font-weight: 900;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  #themeFab .kicker{ font-weight: 900; opacity:.85; }
+
+  #pageHero{
+    border-radius: 26px;
+    border: 1px solid var(--glass-brd);
+    background: var(--glass-bg);
+    box-shadow: 0 20px 60px var(--shadow);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    overflow:hidden;
+  }
+  #pageHero .shine{
+    background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.28), rgba(255,255,255,0));
+    background-size: 200% 100%;
+  }
+</style>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="px-4 md:px-8 pt-6">
+  <div id="pageHero" class="max-w-6xl mx-auto p-6 md:p-8 animate-pop">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <div class="text-xs font-extrabold tracking-widest uppercase" style="color: var(--muted2);">SChat • Signal</div>
+        <div class="mt-2 text-2xl md:text-3xl font-black leading-tight">Signal</div>
+        <div class="mt-2 text-sm" style="color: var(--muted);">
+          Shisha uslubidagi ultra dizayn, yumshoq animatsiyalar va kunduzgi/tungi rejim.
+        </div>
+      </div>
+      <div class="glass rounded-2xl px-4 py-3 animate-floaty" style="border: 1px solid var(--glass-brd); background: var(--glass-bg);">
+        <div class="text-xs font-extrabold" style="color: var(--muted2);">Tezkor</div>
+        <div class="mt-1 flex items-center gap-2 text-sm font-extrabold" style="color: var(--muted);">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Effektlar yoqilgan
+        </div>
+      </div>
+    </div>
+    <div class="shine mt-5 h-1 rounded-full animate-shimmer"></div>
+  </div>
+</div>
+  <nav class="gradient-bg text-white h-16 flex items-center px-4">
+    <div class="container mx-auto flex justify-between items-center">
+      <a href="/signals.html" class="flex items-center space-x-2">
+        <i class="fas fa-arrow-left"></i>
+        <span class="font-semibold">Back to Signals</span>
+      </a>
+      <div class="flex items-center space-x-4">
+        <a href="/services.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Services"><i class="fas fa-store"></i></a>
+        <a href="/messages.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Messages"><i class="fas fa-comments"></i></a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mx-auto px-4 py-6">
+    <div id="wrap" class="bg-white border border-gray-100 rounded-xl shadow-sm p-5">
+      <div id="loading" class="text-gray-600">Loading...</div>
+
+      <div id="content" class="hidden">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h1 id="title" class="text-2xl font-bold text-gray-800"></h1>
+            <div class="mt-2 text-sm text-gray-600">
+              <span id="meta"></span>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="vote(1)" class="px-4 py-2 rounded-lg border hover:bg-gray-50"><i class="fas fa-thumbs-up mr-2"></i>Up</button>
+            <button onclick="vote(-1)" class="px-4 py-2 rounded-lg border hover:bg-gray-50"><i class="fas fa-thumbs-down mr-2"></i>Down</button>
+          </div>
+        </div>
+
+        <div id="tags" class="mt-4 flex flex-wrap gap-2"></div>
+        <div id="body" class="mt-4 text-gray-700 whitespace-pre-wrap"></div>
+
+        <div class="mt-6 border-t pt-4">
+          <h2 class="font-semibold text-gray-800 mb-3">Comments</h2>
+          <div class="flex gap-2">
+            <input id="c" class="flex-1 border rounded-lg px-3 py-2" placeholder="Write a comment..."/>
+            <button onclick="comment()" class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white">
+              <i class="fas fa-paper-plane mr-2"></i>Send
+            </button>
+          </div>
+          <div id="comments" class="mt-4 space-y-3"></div>
+        </div>
+
+        <div class="mt-6 border-t pt-4">
+          <button onclick="report()" class="text-red-600 hover:text-red-700 text-sm">
+            <i class="fas fa-flag mr-2"></i>Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const id = new URLSearchParams(location.search).get('id');
+
+    async function api(path, opts={}){
+      const headers = opts.headers || {};
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return fetch(path, { ...opts, headers });
+    }
+    function esc(s){ return String(s||'').replace(/[&<>"']/g, (m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    function badge(status){
+      const map = {
+        open: 'bg-red-100 text-red-800',
+        acknowledged: 'bg-yellow-100 text-yellow-800',
+        in_progress: 'bg-blue-100 text-blue-800',
+        resolved: 'bg-green-100 text-green-800'
+      };
+      return `<span class="text-xs px-2 py-1 rounded-full ${map[status]||'bg-gray-100 text-gray-800'}">${status}</span>`;
+    }
+
+    async function load(){
+      const r = await fetch('/api/signals/' + id);
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+
+      document.getElementById('title').textContent = j.signal.title;
+      document.getElementById('meta').innerHTML = `Impact: ${Number(j.signal.impactScore||0).toFixed(2)} • Urgency: ${j.signal.urgency} • ${badge(j.signal.status)}`;
+      document.getElementById('tags').innerHTML = (j.signal.tags||[]).map(t=>`<span class="text-xs bg-gray-100 px-2 py-1 rounded-full">${esc(t)}</span>`).join('');
+      document.getElementById('body').textContent = j.signal.body;
+
+      renderComments(j.comments||[]);
+
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('content').classList.remove('hidden');
+    }
+
+    function renderComments(items){
+      document.getElementById('comments').innerHTML = items.map(c => `
+        <div class="bg-gray-50 border border-gray-100 rounded-lg p-3">
+          <div class="text-sm text-gray-700">${esc(c.body)}</div>
+          <div class="text-xs text-gray-500 mt-1">${new Date(c.createdAt).toLocaleString()}</div>
+        </div>
+      `).join('');
+    }
+
+    async function vote(v){
+      if (!token) return (window.location.href='/login.html');
+      const r = await api('/api/signals/' + id + '/vote', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ vote: v })
+      });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+      load();
+    }
+
+    async function comment(){
+      if (!token) return (window.location.href='/login.html');
+      const body = document.getElementById('c').value.trim();
+      if (!body) return;
+      const r = await api('/api/signals/' + id + '/comment', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ body })
+      });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+      document.getElementById('c').value='';
+      load();
+    }
+
+    async function report(){
+      if (!token) return (window.location.href='/login.html');
+      const reason = prompt('Report reason (short):');
+      if (!reason) return;
+      const r = await api('/api/signals/' + id + '/report', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+      alert('Reported. Thanks.');
+    }
+
+    load();
+  </script>
+<div id="themeFab" title="Kunduzgi / Tungi rejim">
+  <i id="themeFabIcon" class="fa-solid fa-moon"></i>
+  <span id="themeFabLabel">Tungi</span>
+  <span class="kicker">• Signal</span>
+</div>
+<script>
+  (function(){
+    const key='theme';
+    const btn=document.getElementById('themeFab');
+    const icon=document.getElementById('themeFabIcon');
+    const label=document.getElementById('themeFabLabel');
+    function apply(mode){
+      if(mode==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+      localStorage.setItem(key, mode);
+      icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+      label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+    }
+    const saved=localStorage.getItem(key);
+    const prefers=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    apply(saved || (prefers?'dark':'light'));
+    btn.addEventListener('click', ()=> apply(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
+  })();
+</script>
+  <script src="/ui-actions-menu.js" defer></script>
+  <script src="/global-assistant.js" defer></script>
+</body>
+</html>
+
+
+

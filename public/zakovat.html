@@ -1,0 +1,1045 @@
+﻿<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zakovat Live - SCHAT</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <style>
+    :root{
+      --bg-0:#061a1d;
+      --bg-1:#0a2c31;
+      --glass:rgba(255,255,255,.08);
+      --line:rgba(255,255,255,.18);
+      --text:#e7f7f8;
+      --muted:#b0d4d8;
+      --ok:#2fd48f;
+      --warn:#ffcb66;
+      --err:#ff7d7d;
+      --accent:#28d5d9;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 10% -10%, rgba(20,180,220,.28), transparent 60%),
+        radial-gradient(1200px 700px at 90% 5%, rgba(26,208,137,.22), transparent 65%),
+        linear-gradient(180deg, var(--bg-0), var(--bg-1));
+      min-height:100vh;
+    }
+    .wrap{
+      max-width:1320px;
+      margin:0 auto;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .card{
+      background:var(--glass);
+      border:1px solid var(--line);
+      border-radius:16px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .top{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 14px;
+    }
+    .title{
+      font-size:24px;
+      font-weight:800;
+      letter-spacing:.3px;
+    }
+    .muted{ color:var(--muted); font-size:13px; }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:13px;
+      background:rgba(255,255,255,.06);
+      white-space:nowrap;
+    }
+    .chip.ok{ border-color:rgba(47,212,143,.5); color:#c7ffe3; }
+    .chip.warn{ border-color:rgba(255,203,102,.5); color:#ffecbd; }
+    .chip.err{ border-color:rgba(255,125,125,.5); color:#ffd7d7; }
+    .controls{
+      padding:12px;
+      display:grid;
+      grid-template-columns: repeat(12, minmax(0,1fr));
+      gap:10px;
+      align-items:end;
+    }
+    .field{ display:flex; flex-direction:column; gap:6px; }
+    .field label{ font-size:12px; color:var(--muted); }
+    .field input{
+      height:42px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.22);
+      color:var(--text);
+      padding:0 12px;
+      outline:none;
+    }
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    button{
+      height:42px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      padding:0 14px;
+      color:var(--text);
+      background:rgba(255,255,255,.08);
+      font-weight:700;
+      cursor:pointer;
+    }
+    button.primary{
+      background:linear-gradient(135deg, #15c0d2, #2fd48f);
+      color:#062427;
+      border:none;
+    }
+    button.warn{
+      background:linear-gradient(135deg, #ffca57, #ff9c38);
+      color:#3c2600;
+      border:none;
+    }
+    button.danger{
+      background:linear-gradient(135deg, #ff6f6f, #ff4545);
+      color:#2f0606;
+      border:none;
+    }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
+    .layout{
+      display:grid;
+      grid-template-columns: 1.5fr .9fr;
+      gap:12px;
+      min-height:56vh;
+    }
+    .stage{
+      position:relative;
+      overflow:hidden;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:#050a0f;
+      min-height:52vh;
+    }
+    .stage video{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      background:#000;
+    }
+    .stage .label{
+      position:absolute;
+      left:10px;
+      top:10px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.42);
+      border-radius:999px;
+      padding:5px 10px;
+      font-size:12px;
+    }
+    .stage .subtitle{
+      position:absolute;
+      left:10px;
+      bottom:10px;
+      max-width:70%;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.48);
+      border-radius:12px;
+      padding:7px 10px;
+      font-size:12px;
+      color:#d9edf0;
+    }
+    .right-panel{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .participants{
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-height:280px;
+    }
+    .participants h3{
+      margin:0 0 6px;
+      font-size:15px;
+      color:#d4f2f5;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:8px;
+      overflow:auto;
+      max-height:64vh;
+    }
+    .tile{
+      border:1px solid var(--line);
+      border-radius:12px;
+      overflow:hidden;
+      background:#08131a;
+      min-height:130px;
+      display:flex;
+      flex-direction:column;
+    }
+    .tile video{
+      width:100%;
+      aspect-ratio:16/9;
+      object-fit:cover;
+      background:#000;
+    }
+    .tile .name{
+      font-size:12px;
+      color:#d4eef1;
+      padding:6px 8px;
+      border-top:1px solid rgba(255,255,255,.12);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .log{
+      padding:10px;
+      min-height:120px;
+      max-height:220px;
+      overflow:auto;
+      font-size:12px;
+      line-height:1.45;
+      color:#d8eef1;
+    }
+    .log div{ margin-bottom:5px; }
+    .mobile-only{ display:none; }
+    @media (max-width: 980px){
+      .layout{ grid-template-columns:1fr; }
+      .grid{ grid-template-columns:repeat(3, minmax(0,1fr)); max-height:38vh; }
+      .stage{ min-height:42vh; }
+      .mobile-only{ display:inline-flex; }
+    }
+    @media (max-width: 640px){
+      .wrap{ padding:8px; gap:8px; }
+      .title{ font-size:20px; }
+      .controls{
+        grid-template-columns:1fr;
+        gap:8px;
+      }
+      .grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+      .stage{ min-height:40vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card top">
+      <div>
+        <div class="title">Zakovat Live</div>
+        <div class="muted">Host (o‘qituvchi/tashkilotchi) barchaga ko‘rinadi. Ishtirokchi media faqat hostga uzatiladi.</div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <div id="roleChip" class="chip">Role: -</div>
+        <div id="timerChip" class="chip">Timer: --:--</div>
+        <div id="antiChip" class="chip warn">Anti-cheat: kutilyapti</div>
+      </div>
+    </div>
+
+    <div class="card controls">
+      <div class="field" style="grid-column: span 4;">
+        <label for="sessionId">Sessiya kodi</label>
+        <input id="sessionId" type="text" placeholder="masalan: zakovat-2026-1">
+      </div>
+      <div class="field" style="grid-column: span 2;">
+        <label for="durationMin">Davomiylik (minut)</label>
+        <input id="durationMin" type="number" min="5" max="360" value="45">
+      </div>
+      <div class="field" style="grid-column: span 3;">
+        <label for="sessionTitle">Nomi</label>
+        <input id="sessionTitle" type="text" placeholder="Zakovat dars sinovi">
+      </div>
+      <div class="actions" style="grid-column: span 3;">
+        <button id="startBtn" class="primary">Boshlash</button>
+        <button id="joinBtn" class="warn">Qo‘shilish</button>
+        <button id="leaveBtn">Tark etish</button>
+        <button id="endBtn" class="danger">Yakunlash</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="card" style="padding:10px;">
+        <div class="stage">
+          <video id="hostVideo" autoplay playsinline></video>
+          <div class="label" id="stageLabel">1-stage / Host</div>
+          <div class="subtitle" id="stageSubtitle">Sessiyaga kirilmagan</div>
+        </div>
+      </div>
+
+      <div class="right-panel">
+        <div id="hostParticipantsWrap" class="card participants">
+          <h3>Ishtirokchilar (faqat host ko‘radi)</h3>
+          <div id="participantsGrid" class="grid"></div>
+        </div>
+        <div class="card log" id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const state = {
+        token: localStorage.getItem('token') || '',
+        me: null,
+        socket: null,
+        socketAuthed: false,
+        rtcConfig: { iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }] },
+        session: null,
+        sessionId: '',
+        isHost: false,
+        localStream: null,
+        peers: new Map(),
+        remoteStreams: new Map(),
+        countdownTimer: null,
+        anti: {
+          enabled: false,
+          reported: false,
+          lockTimer: null,
+          bc: null,
+          gazeTimer: null,
+          noFaceStreak: 0,
+          offCenterStreak: 0,
+          lockKey: '',
+          blurTimer: null,
+          onVisibility: null,
+          onBlur: null,
+          onFullscreen: null
+        }
+      };
+
+      const ui = {
+        sessionId: document.getElementById('sessionId'),
+        durationMin: document.getElementById('durationMin'),
+        sessionTitle: document.getElementById('sessionTitle'),
+        roleChip: document.getElementById('roleChip'),
+        timerChip: document.getElementById('timerChip'),
+        antiChip: document.getElementById('antiChip'),
+        startBtn: document.getElementById('startBtn'),
+        joinBtn: document.getElementById('joinBtn'),
+        leaveBtn: document.getElementById('leaveBtn'),
+        endBtn: document.getElementById('endBtn'),
+        hostVideo: document.getElementById('hostVideo'),
+        stageSubtitle: document.getElementById('stageSubtitle'),
+        stageLabel: document.getElementById('stageLabel'),
+        hostParticipantsWrap: document.getElementById('hostParticipantsWrap'),
+        participantsGrid: document.getElementById('participantsGrid'),
+        log: document.getElementById('log')
+      };
+
+      function logLine(text, type) {
+        const el = document.createElement('div');
+        const tm = new Date();
+        const hh = String(tm.getHours()).padStart(2, '0');
+        const mm = String(tm.getMinutes()).padStart(2, '0');
+        const ss = String(tm.getSeconds()).padStart(2, '0');
+        el.textContent = `[${hh}:${mm}:${ss}] ${text}`;
+        if (type === 'err') el.style.color = '#ffd0d0';
+        if (type === 'ok') el.style.color = '#c2ffdf';
+        if (type === 'warn') el.style.color = '#ffeab9';
+        ui.log.prepend(el);
+      }
+
+      function setAntiChip(mode, text) {
+        ui.antiChip.className = `chip ${mode || ''}`.trim();
+        ui.antiChip.textContent = `Anti-cheat: ${text}`;
+      }
+
+      function getSessionIdInput() {
+        const q = new URLSearchParams(location.search);
+        const fromQuery = (q.get('session') || q.get('groupId') || q.get('id') || '').trim();
+        const fromInput = (ui.sessionId.value || '').trim();
+        return (fromInput || fromQuery || 'zakovat-main').toLowerCase().replace(/[^a-z0-9:_-]/g, '').slice(0, 80);
+      }
+
+      function meId() {
+        return String(state.me?._id || state.me?.id || '');
+      }
+
+      function meRole() {
+        return String(state.me?.role || '').toLowerCase();
+      }
+
+      function canHost() {
+        const role = meRole();
+        return role === 'teacher' || role === 'organizer' || role === 'admin';
+      }
+
+      function fmtTime(sec) {
+        const s = Math.max(0, Number(sec || 0));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const ss = Math.floor(s % 60);
+        if (h > 0) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+        return `${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+      }
+
+      async function loadRtcConfig() {
+        try {
+          const res = await fetch('/api/rtc-config');
+          const data = await res.json();
+          if (data && Array.isArray(data.iceServers) && data.iceServers.length) {
+            state.rtcConfig = { iceServers: data.iceServers };
+            return;
+          }
+        } catch (_) {}
+      }
+
+      async function fetchMe() {
+        if (!state.token) {
+          location.href = '/login.html';
+          return;
+        }
+        const res = await fetch('/api/me', {
+          headers: { Authorization: `Bearer ${state.token}` }
+        });
+        if (!res.ok) {
+          localStorage.removeItem('token');
+          location.href = '/login.html';
+          return;
+        }
+        const data = await res.json();
+        state.me = data.user || data;
+        const role = meRole() || 'student';
+        ui.roleChip.textContent = `Role: ${role}`;
+        ui.startBtn.disabled = !canHost();
+        ui.endBtn.disabled = true;
+      }
+
+      function ensureSocket() {
+        if (state.socket) return;
+        state.socket = io({
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionAttempts: 15
+        });
+
+        state.socket.on('connect', () => {
+          state.socket.emit('authenticate', state.token);
+        });
+
+        state.socket.on('authenticated', () => {
+          state.socketAuthed = true;
+          logLine('Socket autentifikatsiya muvaffaqiyatli.', 'ok');
+          const sid = getSessionIdInput();
+          ui.sessionId.value = sid;
+        });
+
+        state.socket.on('authenticationError', () => {
+          state.socketAuthed = false;
+          logLine('Socket token noto‘g‘ri.', 'err');
+        });
+
+        state.socket.on('disconnect', () => {
+          state.socketAuthed = false;
+          logLine('Socket uzildi, qayta ulanmoqda...', 'warn');
+        });
+
+        state.socket.on('zakovat:error', (d) => {
+          logLine(d?.error || 'Zakovat xatoligi', 'err');
+        });
+
+        state.socket.on('zakovat:started', (payload) => {
+          applySession(payload);
+          logLine('Zakovat sessiyasi boshlandi.', 'ok');
+        });
+
+        state.socket.on('zakovat:joined', (payload) => {
+          applySession(payload);
+          logLine('Zakovat sessiyasiga qo‘shildingiz.', 'ok');
+        });
+
+        state.socket.on('zakovat:session', (payload) => {
+          if (!payload || !payload.sessionId) return;
+          if (state.sessionId && String(state.sessionId) !== String(payload.sessionId)) return;
+          applySession(payload);
+        });
+
+        state.socket.on('zakovat:userJoined', (d) => {
+          if (!state.session || String(d?.sessionId || '') !== String(state.session.sessionId || '')) return;
+          logLine(`${d?.user?.fullName || d?.user?.username || d?.user?.userId} kirdi.`, 'ok');
+          requestSessionState();
+        });
+
+        state.socket.on('zakovat:userLeft', (d) => {
+          if (!state.session || String(d?.sessionId || '') !== String(state.session.sessionId || '')) return;
+          logLine(`${d?.userId || 'User'} chiqdi (${d?.reason || 'left'}).`, 'warn');
+          closePeer(String(d?.userId || ''));
+          removeParticipantTile(String(d?.userId || ''));
+          requestSessionState();
+        });
+
+        state.socket.on('zakovat:timer', (d) => {
+          if (!state.session || String(d?.sessionId || '') !== String(state.session.sessionId || '')) return;
+          ui.timerChip.textContent = `Timer: ${fmtTime(d?.remainingSec || 0)}`;
+        });
+
+        state.socket.on('zakovat:signal', async (payload) => {
+          if (!payload || !payload.from || !payload.type) return;
+          if (!state.session || String(payload.sessionId || '') !== String(state.session.sessionId || '')) return;
+          await handleSignal(payload);
+        });
+
+        state.socket.on('zakovat:blocked', (d) => {
+          logLine(d?.message || 'Qoidabuzarlik sabab sessiyadan chetlatildingiz.', 'err');
+          setAntiChip('err', 'bloklangan');
+          leaveLocalOnly();
+        });
+
+        state.socket.on('zakovat:cheatDetected', (d) => {
+          if (!state.isHost) return;
+          logLine(`Cheat aniqlandi: ${d?.userId} (${d?.reason || 'policy'})`, 'warn');
+        });
+
+        state.socket.on('zakovat:ended', (d) => {
+          if (!state.session || String(d?.sessionId || '') !== String(state.session.sessionId || '')) return;
+          logLine(`Sessiya yakunlandi (${d?.reason || 'ended'}).`, 'warn');
+          leaveLocalOnly();
+        });
+      }
+
+      async function ensureLocalStream() {
+        const existing = state.localStream;
+        if (existing && existing.getTracks().some((t) => t.readyState === 'live')) return existing;
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 24, max: 30 }
+          }
+        });
+        state.localStream = stream;
+        if (state.isHost) {
+          ui.hostVideo.srcObject = stream;
+          ui.hostVideo.muted = true;
+          ui.hostVideo.play().catch(() => {});
+        }
+        return stream;
+      }
+
+      function createParticipantTile(userId, label) {
+        if (!state.isHost) return null;
+        const uid = String(userId || '');
+        if (!uid || uid === meId()) return null;
+        let tile = document.getElementById(`tile_${uid}`);
+        if (tile) return tile.querySelector('video');
+
+        tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.id = `tile_${uid}`;
+        tile.innerHTML = `
+          <video id="vid_${uid}" autoplay playsinline></video>
+          <div class="name">${label || uid}</div>
+        `;
+        ui.participantsGrid.appendChild(tile);
+        return tile.querySelector('video');
+      }
+
+      function removeParticipantTile(userId) {
+        const uid = String(userId || '');
+        const tile = document.getElementById(`tile_${uid}`);
+        if (!tile) return;
+        const v = tile.querySelector('video');
+        if (v) {
+          try { v.pause(); } catch (_) {}
+          v.srcObject = null;
+        }
+        tile.remove();
+      }
+
+      function closePeer(userId) {
+        const uid = String(userId || '');
+        const pc = state.peers.get(uid);
+        if (pc) {
+          try { pc.onicecandidate = null; } catch (_) {}
+          try { pc.ontrack = null; } catch (_) {}
+          try { pc.close(); } catch (_) {}
+        }
+        state.peers.delete(uid);
+        state.remoteStreams.delete(uid);
+      }
+
+      function closeAllPeers() {
+        for (const uid of Array.from(state.peers.keys())) closePeer(uid);
+      }
+
+      function syncPeerSet() {
+        if (!state.session) return;
+        const hostId = String(state.session.hostId || '');
+        const participants = Array.isArray(state.session.participants) ? state.session.participants : [];
+        const participantIds = participants.map((x) => String(x.userId || '')).filter(Boolean);
+
+        if (state.isHost) {
+          for (const uid of Array.from(state.peers.keys())) {
+            if (!participantIds.includes(uid) || uid === meId()) {
+              closePeer(uid);
+              removeParticipantTile(uid);
+            }
+          }
+          if (state.localStream) {
+            ui.hostVideo.srcObject = state.localStream;
+            ui.hostVideo.muted = true;
+            ui.hostVideo.play().catch(() => {});
+          }
+          return;
+        }
+
+        for (const uid of Array.from(state.peers.keys())) {
+          if (uid !== hostId) closePeer(uid);
+        }
+        if (hostId && hostId !== meId()) {
+          ensurePeer(hostId, true).catch((e) => {
+            logLine(`Host bilan ulanish xatosi: ${e?.message || e}`, 'err');
+          });
+        }
+      }
+
+      async function ensurePeer(targetUserId, initiator) {
+        const uid = String(targetUserId || '');
+        if (!uid || !state.session) return null;
+        if (state.peers.has(uid)) return state.peers.get(uid);
+
+        const stream = await ensureLocalStream();
+        const pc = new RTCPeerConnection(state.rtcConfig || { iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }] });
+        state.peers.set(uid, pc);
+
+        for (const track of stream.getTracks()) {
+          pc.addTrack(track, stream);
+        }
+
+        pc.onicecandidate = (event) => {
+          if (!event.candidate || !state.socket || !state.session) return;
+          state.socket.emit('zakovat:signal', {
+            sessionId: state.session.sessionId,
+            to: uid,
+            type: 'ice',
+            data: event.candidate
+          });
+        };
+
+        pc.ontrack = (event) => {
+          const remote = event.streams && event.streams[0] ? event.streams[0] : new MediaStream([event.track]);
+          state.remoteStreams.set(uid, remote);
+
+          if (state.isHost) {
+            const p = (state.session?.participants || []).find((x) => String(x.userId || '') === uid);
+            const vid = createParticipantTile(uid, p ? (p.fullName || p.username || uid) : uid);
+            if (vid) {
+              vid.srcObject = remote;
+              vid.muted = false;
+              vid.play().catch(() => {});
+            }
+            return;
+          }
+
+          if (String(state.session.hostId || '') === uid) {
+            ui.hostVideo.srcObject = remote;
+            ui.hostVideo.muted = false;
+            ui.hostVideo.play().catch(() => {});
+            ui.stageSubtitle.textContent = 'Host jonli efirda';
+          }
+        };
+
+        pc.onconnectionstatechange = () => {
+          const st = String(pc.connectionState || '');
+          if (st === 'failed' || st === 'closed' || st === 'disconnected') {
+            closePeer(uid);
+            if (!state.isHost && uid === String(state.session?.hostId || '')) {
+              ui.stageSubtitle.textContent = 'Host ulanmagan, qayta ulanish...';
+              setTimeout(() => {
+                if (state.session && !state.peers.has(uid)) syncPeerSet();
+              }, 1200);
+            }
+          }
+        };
+
+        if (initiator) {
+          const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+          await pc.setLocalDescription(offer);
+          state.socket.emit('zakovat:signal', {
+            sessionId: state.session.sessionId,
+            to: uid,
+            type: 'offer',
+            data: offer
+          });
+        }
+        return pc;
+      }
+
+      async function handleSignal(payload) {
+        const from = String(payload.from || '');
+        const type = String(payload.type || '');
+        if (!from || !type) return;
+        const pc = await ensurePeer(from, false);
+        if (!pc) return;
+
+        if (type === 'offer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(payload.data));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          state.socket.emit('zakovat:signal', {
+            sessionId: state.session.sessionId,
+            to: from,
+            type: 'answer',
+            data: answer
+          });
+          return;
+        }
+        if (type === 'answer') {
+          if (!pc.currentRemoteDescription) {
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.data));
+          }
+          return;
+        }
+        if (type === 'ice') {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(payload.data));
+          } catch (_) {}
+        }
+      }
+
+      function renderParticipants() {
+        if (!state.session) return;
+        const participants = Array.isArray(state.session.participants) ? state.session.participants : [];
+        if (!state.isHost) {
+          ui.hostParticipantsWrap.style.display = 'none';
+          return;
+        }
+        ui.hostParticipantsWrap.style.display = '';
+        const idsInSession = new Set(participants.map((x) => String(x.userId || '')));
+        for (const uid of Array.from(state.remoteStreams.keys())) {
+          if (!idsInSession.has(uid)) {
+            closePeer(uid);
+            removeParticipantTile(uid);
+          }
+        }
+        for (const p of participants) {
+          const uid = String(p.userId || '');
+          if (!uid || uid === meId()) continue;
+          createParticipantTile(uid, p.fullName || p.username || uid);
+        }
+      }
+
+      function applySession(payload) {
+        if (!payload || !payload.sessionId) return;
+        state.session = payload;
+        state.sessionId = String(payload.sessionId || '');
+        state.isHost = !!payload.isHost;
+        ui.sessionId.value = state.sessionId;
+        ui.endBtn.disabled = !state.isHost;
+        ui.stageSubtitle.textContent = state.isHost
+          ? 'Siz host sifatida efirdasiz'
+          : 'Host signal kutilmoqda';
+        ui.stageLabel.textContent = state.isHost ? '1-stage / Siz (Host)' : '1-stage / O‘qituvchi';
+        renderParticipants();
+        syncPeerSet();
+        refreshCountdown();
+        startCountdownLoop();
+
+        if (state.isHost) {
+          stopAntiCheat();
+          setAntiChip('ok', 'host rejim');
+        } else {
+          startAntiCheat();
+        }
+      }
+
+      function refreshCountdown() {
+        if (!state.session) {
+          ui.timerChip.textContent = 'Timer: --:--';
+          return;
+        }
+        const rem = Math.max(0, Math.floor((Number(state.session.endsAt || Date.now()) - Date.now()) / 1000));
+        ui.timerChip.textContent = `Timer: ${fmtTime(rem)}`;
+      }
+
+      function startCountdownLoop() {
+        if (state.countdownTimer) clearInterval(state.countdownTimer);
+        state.countdownTimer = setInterval(refreshCountdown, 1000);
+      }
+
+      function requestSessionState() {
+        if (!state.socket || !state.session) return;
+        state.socket.emit('zakovat:state', { sessionId: state.session.sessionId });
+      }
+
+      async function requestFullscreenIfPossible() {
+        try {
+          if (document.fullscreenElement) return true;
+          if (document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen();
+            return !!document.fullscreenElement;
+          }
+        } catch (_) {}
+        return false;
+      }
+
+      function reportCheat(reason, meta) {
+        if (!state.session || state.isHost) return;
+        if (state.anti.reported) return;
+        state.anti.reported = true;
+        setAntiChip('err', `qoidabuzarlik: ${reason}`);
+        logLine(`Cheat signal yuborildi: ${reason}`, 'err');
+        if (state.socket) {
+          state.socket.emit('zakovat:cheat', {
+            sessionId: state.session.sessionId,
+            reason: String(reason || 'policy'),
+            meta: meta || {}
+          });
+        }
+      }
+
+      function stopAntiCheat() {
+        const anti = state.anti;
+        anti.enabled = false;
+        anti.reported = false;
+        anti.noFaceStreak = 0;
+        anti.offCenterStreak = 0;
+
+        if (anti.lockTimer) { clearInterval(anti.lockTimer); anti.lockTimer = null; }
+        if (anti.gazeTimer) { clearInterval(anti.gazeTimer); anti.gazeTimer = null; }
+        if (anti.blurTimer) { clearTimeout(anti.blurTimer); anti.blurTimer = null; }
+
+        if (anti.bc) {
+          try { anti.bc.close(); } catch (_) {}
+          anti.bc = null;
+        }
+
+        if (anti.onVisibility) document.removeEventListener('visibilitychange', anti.onVisibility);
+        if (anti.onBlur) window.removeEventListener('blur', anti.onBlur);
+        if (anti.onFullscreen) document.removeEventListener('fullscreenchange', anti.onFullscreen);
+        anti.onVisibility = null;
+        anti.onBlur = null;
+        anti.onFullscreen = null;
+
+        if (anti.lockKey) {
+          try { localStorage.removeItem(anti.lockKey); } catch (_) {}
+          anti.lockKey = '';
+        }
+      }
+
+      function startAntiCheat() {
+        if (!state.session || state.isHost) return;
+        stopAntiCheat();
+        const anti = state.anti;
+        anti.enabled = true;
+        anti.reported = false;
+
+        setAntiChip('warn', 'faol');
+
+        const uid = meId();
+        const sid = String(state.session.sessionId || '');
+        anti.lockKey = `zakovat_lock_${sid}_${uid}`;
+
+        const checkExistingLock = () => {
+          const old = Number(localStorage.getItem(anti.lockKey) || 0);
+          if (old && (Date.now() - old) < 8000) {
+            reportCheat('multi_tab_lock', { old });
+          }
+          localStorage.setItem(anti.lockKey, String(Date.now()));
+        };
+        checkExistingLock();
+        anti.lockTimer = setInterval(() => {
+          try { localStorage.setItem(anti.lockKey, String(Date.now())); } catch (_) {}
+        }, 1500);
+
+        if ('BroadcastChannel' in window) {
+          try {
+            anti.bc = new BroadcastChannel(`zakovat:${sid}:${uid}`);
+            anti.bc.onmessage = (evt) => {
+              const t = String(evt?.data?.type || '');
+              if (t === 'hello') reportCheat('multi_tab_channel', evt?.data || {});
+            };
+            anti.bc.postMessage({ type: 'hello', at: Date.now() });
+          } catch (_) {}
+        }
+
+        anti.onVisibility = () => {
+          if (document.visibilityState !== 'visible') {
+            reportCheat('tab_hidden', { visibilityState: document.visibilityState });
+          }
+        };
+        document.addEventListener('visibilitychange', anti.onVisibility);
+
+        anti.onBlur = () => {
+          if (anti.blurTimer) clearTimeout(anti.blurTimer);
+          anti.blurTimer = setTimeout(() => {
+            if (!document.hasFocus()) reportCheat('window_blur');
+          }, 500);
+        };
+        window.addEventListener('blur', anti.onBlur);
+
+        anti.onFullscreen = () => {
+          if (!document.fullscreenElement) reportCheat('fullscreen_exit');
+        };
+        document.addEventListener('fullscreenchange', anti.onFullscreen);
+
+        requestFullscreenIfPossible().then((ok) => {
+          if (!ok) logLine('Fullscreen majburiy emas (brauzer cheklovi).', 'warn');
+        });
+
+        // Best-effort gaze check (FaceDetector API mavjud bo'lsa ishlaydi).
+        if ('FaceDetector' in window) {
+          try {
+            const detector = new window.FaceDetector({ maxDetectedFaces: 1, fastMode: true });
+            anti.gazeTimer = setInterval(async () => {
+              if (!anti.enabled || anti.reported || !state.localStream) return;
+              const v = document.createElement('video');
+              v.srcObject = state.localStream;
+              v.muted = true;
+              v.playsInline = true;
+              await v.play().catch(() => {});
+              if (!v.videoWidth || !v.videoHeight) return;
+
+              let faces = [];
+              try { faces = await detector.detect(v); } catch (_) { faces = []; }
+              if (!faces || !faces.length) {
+                anti.noFaceStreak += 1;
+                if (anti.noFaceStreak >= 6) reportCheat('face_not_detected');
+                return;
+              }
+              anti.noFaceStreak = 0;
+
+              const b = faces[0].boundingBox || {};
+              const cx = (Number(b.x || 0) + Number(b.width || 0) / 2) / v.videoWidth;
+              const cy = (Number(b.y || 0) + Number(b.height || 0) / 2) / v.videoHeight;
+              const off = Math.abs(cx - 0.5) > 0.34 || Math.abs(cy - 0.5) > 0.36;
+              if (off) anti.offCenterStreak += 1;
+              else anti.offCenterStreak = 0;
+              if (anti.offCenterStreak >= 5) reportCheat('gaze_offscreen', { cx, cy });
+            }, 1800);
+          } catch (_) {
+            logLine('FaceDetector ishga tushmadi, fallback anti-cheat ishlaydi.', 'warn');
+          }
+        } else {
+          logLine('FaceDetector mavjud emas, ko‘z nazorati fallback rejimda.', 'warn');
+        }
+      }
+
+      async function startSession() {
+        if (!state.socketAuthed) return logLine('Socket hali autentifikatsiya bo‘lmagan.', 'err');
+        if (!canHost()) return logLine('Bu akkaunt host bo‘lolmaydi.', 'err');
+
+        state.sessionId = getSessionIdInput();
+        if (!state.sessionId) return logLine('Sessiya kodi kiritilmagan.', 'err');
+
+        const mins = Math.max(5, Math.min(360, Number(ui.durationMin.value || 45)));
+        const title = (ui.sessionTitle.value || '').trim();
+
+        await ensureLocalStream();
+        state.isHost = true;
+        ui.hostVideo.srcObject = state.localStream;
+        ui.hostVideo.muted = true;
+        ui.hostVideo.play().catch(() => {});
+
+        state.socket.emit('zakovat:start', {
+          sessionId: state.sessionId,
+          durationSec: mins * 60,
+          title
+        });
+      }
+
+      async function joinSession() {
+        if (!state.socketAuthed) return logLine('Socket hali autentifikatsiya bo‘lmagan.', 'err');
+        state.sessionId = getSessionIdInput();
+        if (!state.sessionId) return logLine('Sessiya kodi kiritilmagan.', 'err');
+
+        await ensureLocalStream();
+        if (!canHost()) {
+          const ok = await requestFullscreenIfPossible();
+          if (!ok) logLine('Fullscreen yoqilmadi, lekin davom etildi.', 'warn');
+        }
+
+        state.socket.emit('zakovat:join', { sessionId: state.sessionId });
+      }
+
+      function leaveLocalOnly() {
+        if (state.countdownTimer) {
+          clearInterval(state.countdownTimer);
+          state.countdownTimer = null;
+        }
+        stopAntiCheat();
+        closeAllPeers();
+        if (state.localStream) {
+          try { state.localStream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+          state.localStream = null;
+        }
+        ui.participantsGrid.innerHTML = '';
+        ui.hostVideo.srcObject = null;
+        ui.stageSubtitle.textContent = 'Sessiya yakunlangan yoki tark etilgan';
+        ui.timerChip.textContent = 'Timer: --:--';
+        ui.endBtn.disabled = true;
+        state.session = null;
+        state.isHost = false;
+      }
+
+      function leaveSession() {
+        if (state.socket && state.session) {
+          state.socket.emit('zakovat:leave', { sessionId: state.session.sessionId });
+        }
+        leaveLocalOnly();
+      }
+
+      function endSession() {
+        if (!state.session || !state.isHost || !state.socket) return;
+        state.socket.emit('zakovat:end', { sessionId: state.session.sessionId });
+      }
+
+      function attachEvents() {
+        ui.startBtn.addEventListener('click', () => startSession().catch((e) => logLine(e?.message || String(e), 'err')));
+        ui.joinBtn.addEventListener('click', () => joinSession().catch((e) => logLine(e?.message || String(e), 'err')));
+        ui.leaveBtn.addEventListener('click', leaveSession);
+        ui.endBtn.addEventListener('click', endSession);
+
+        window.addEventListener('beforeunload', () => {
+          try {
+            if (state.socket && state.session) {
+              state.socket.emit('zakovat:leave', { sessionId: state.session.sessionId });
+            }
+          } catch (_) {}
+          stopAntiCheat();
+        });
+      }
+
+      async function bootstrap() {
+        await loadRtcConfig();
+        await fetchMe();
+        ensureSocket();
+        attachEvents();
+        const preset = getSessionIdInput();
+        ui.sessionId.value = preset;
+        logLine('Zakovat sahifasi tayyor.', 'ok');
+      }
+
+      bootstrap().catch((e) => {
+        logLine(`Init xato: ${e?.message || e}`, 'err');
+      });
+    })();
+  </script>
+  <script src="/ui-actions-menu.js" defer></script>
+</body>
+</html>

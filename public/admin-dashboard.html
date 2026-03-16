@@ -1,0 +1,2526 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin panel — SChat</title>
+  <meta name="description" content="Admin panel: top-up so‘rovlari, foydalanuvchilar, kanallar, guruhlar, xizmatlar va xabarlar boshqaruvi."/>
+  <script>
+    tailwind = { config: { darkMode:'class', theme:{ extend:{
+      fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
+      keyframes:{
+        shimmer:{'0%':{backgroundPosition:'0% 50%'},'100%':{backgroundPosition:'100% 50%'}},
+        pop:{'0%':{transform:'scale(.98)',opacity:.0},'100%':{transform:'scale(1)',opacity:1}}
+      },
+      animation:{ shimmer:'shimmer 6s ease-in-out infinite', pop:'pop .45s ease-out both' }
+    }}}};
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,.58);
+      --glass-brd: rgba(255,255,255,.36);
+      --muted: rgba(15,23,42,.72);
+      --muted2: rgba(15,23,42,.55);
+      --grid: rgba(15,23,42,.06);
+      --ring: rgba(99,102,241,.45);
+      --ok: rgba(34,197,94,.18);
+      --bad: rgba(239,68,68,.18);
+    }
+    .dark{
+      --glass-bg: rgba(2,6,23,.58);
+      --glass-brd: rgba(148,163,184,.16);
+      --muted: rgba(226,232,240,.78);
+      --muted2: rgba(226,232,240,.55);
+      --grid: rgba(148,163,184,.08);
+      --ring: rgba(236,72,153,.35);
+      --ok: rgba(34,197,94,.14);
+      --bad: rgba(239,68,68,.14);
+    }
+    body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .muted{ color: var(--muted); }
+    .muted2{ color: var(--muted2); }
+    .glass{
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .btn-primary{ background: linear-gradient(135deg, rgba(99,102,241,1), rgba(236,72,153,1)); }
+    .btn-primary:hover{ filter: brightness(1.05); }
+    .btn-ghost:hover{ background: rgba(148,163,184,.12); }
+    .glow-ring:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
+    .u-anim{
+      background: linear-gradient(90deg, rgba(99,102,241,1), rgba(236,72,153,1));
+      background-size: 200% 200%;
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      animation: shimmer 6s ease-in-out infinite;
+    }
+    .bg-orbs{
+      position: fixed; inset: 0; z-index: -2; overflow: hidden;
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.38), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.28), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.22), transparent 60%),
+        linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1));
+    }
+    .dark .bg-orbs{
+      background:
+        radial-gradient(1200px 600px at 12% 12%, rgba(99,102,241,.24), transparent 60%),
+        radial-gradient(900px 520px at 88% 18%, rgba(236,72,153,.19), transparent 60%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(34,197,94,.14), transparent 60%),
+        linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1));
+    }
+    .bg-grid{
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 70px 70px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+      opacity: .85;
+    }
+    .g-border{ position: relative; }
+    .g-border:before{
+      content:"";
+      position:absolute; inset:-1px; border-radius: 1.5rem;
+      background: linear-gradient(135deg, rgba(99,102,241,.55), rgba(236,72,153,.45), rgba(34,197,94,.35));
+      z-index:-1;
+    }
+    .field{
+      background: rgba(255,255,255,.38);
+      border: 1px solid rgba(255,255,255,.28);
+    }
+    .dark .field{
+      background: rgba(2,6,23,.35);
+      border: 1px solid rgba(148,163,184,.18);
+    }
+    .field:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); border-color: transparent; }
+    .pill{ background: rgba(148,163,184,.14); border: 1px solid rgba(148,163,184,.18); }
+    .row:hover{ background: rgba(148,163,184,.10); }
+  </style>
+  <script>
+    (function(){
+      const key='theme';
+      const saved=localStorage.getItem(key);
+      const prefersDark=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=saved || (prefersDark?'dark':'light');
+      if(mode==='dark') document.documentElement.classList.add('dark');
+    })();
+  </script>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+</head>
+
+<body class="min-h-screen text-slate-900 dark:text-slate-100">
+  <div class="bg-orbs"></div>
+  <div class="bg-grid"></div>
+
+  <header class="sticky top-0 z-50">
+    <div class="mx-auto max-w-7xl px-4 py-4">
+      <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
+        <a href="/profile.html" class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl btn-primary flex items-center justify-center text-white">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-extrabold tracking-tight">Admin panel</div>
+            <div class="text-xs muted">Boshqaruv • Nazorat • Tozalash</div>
+          </div>
+        </a>
+
+        <div class="flex items-center gap-2">
+          <div class="glass rounded-xl px-3 py-2 text-sm font-extrabold">
+            <i class="fa-solid fa-circle-check mr-2"></i><span id="meAdmin">Tekshirilmoqda…</span>
+          </div>
+          <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring">
+            <i id="themeIcon" class="fa-solid fa-moon"></i><span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
+          </button>
+          <button id="logoutBtn" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i><span class="ml-2 hidden sm:inline">Chiqish</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-8">
+    <div id="toast" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-[60] glass rounded-2xl px-4 py-3 text-sm font-extrabold"></div>
+
+    <section class="glass rounded-3xl p-6 g-border animate-pop">
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-shield"></i>
+            <span>Admin nazorati</span>
+          </div>
+          <h1 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+            Platformani <span class="u-anim">tartibga soling</span>
+          </h1>
+          <p class="mt-2 muted2 text-sm sm:text-base">
+            Top-up so‘rovlari, foydalanuvchilar, kanallar, guruhlar, xizmatlar va shaxsiy xabarlarni ko‘rish hamda o‘chirish.
+            Ehtiyotkorlik bilan ishlating.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="glass rounded-2xl p-4">
+            <div class="text-[11px] font-extrabold muted">Foydalanuvchi</div>
+            <div class="mt-1 text-xl font-black" id="cUsers">—</div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-[11px] font-extrabold muted">Kanallar</div>
+            <div class="mt-1 text-xl font-black" id="cChannels">—</div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-[11px] font-extrabold muted">Guruhlar</div>
+            <div class="mt-1 text-xl font-black" id="cGroups">—</div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="text-[11px] font-extrabold muted">Kutilgan top-up</div>
+            <div class="mt-1 text-xl font-black" id="cTopups">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-2">
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="topups"><i class="fa-solid fa-coins mr-2"></i>Top-up so‘rovlari</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="users"><i class="fa-solid fa-users mr-2"></i>Foydalanuvchilar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="channels"><i class="fa-solid fa-hashtag mr-2"></i>Kanallar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="groups"><i class="fa-solid fa-people-group mr-2"></i>Guruhlar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="groupmsgs"><i class="fa-solid fa-comments mr-2"></i>Guruh xabarlari</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="lessons"><i class="fa-solid fa-video mr-2"></i>Yozilgan darslar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="channelposts"><i class="fa-solid fa-newspaper mr-2"></i>Kanal postlari</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="realtime"><i class="fa-solid fa-satellite-dish mr-2"></i>Real-time</button>
+          <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="catalog"><i class="fa-solid fa-university mr-2"></i>Katalog</button>
+          <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="broadcast"><i class="fa-solid fa-bullhorn mr-2"></i>Broadcast</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="support"><i class="fa-solid fa-headset mr-2"></i>Support</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="services"><i class="fa-solid fa-store mr-2"></i>Xizmatlar</button>
+        <button class="tab pill rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring" data-tab="pms"><i class="fa-solid fa-envelope mr-2"></i>Shaxsiy xabarlar</button>
+      </div>
+    </section>
+
+    <section class="mt-6 glass rounded-3xl p-6 g-border animate-pop">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div>
+          <div class="text-lg font-black" id="tabTitle">—</div>
+          <div class="text-xs muted2 mt-1" id="tabSub">—</div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+            <input id="q" class="field rounded-2xl px-11 py-3 text-sm w-[260px] max-w-full" placeholder="Qidirish (ixtiyoriy)"/>
+          </div>
+          <button id="refreshBtn" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow-ring">
+            Yangilash <i class="fa-solid fa-rotate ml-2"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="content" class="mt-5"></div>
+      <div id="pager" class="mt-5 flex items-center justify-between hidden">
+        <button id="prevBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">Oldingi</button>
+        <div class="text-xs muted2">Sahifa: <span id="pageNo" class="font-extrabold">1</span></div>
+        <button id="nextBtn" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">Keyingi</button>
+      </div>
+    </section>
+
+    <!-- Modal -->
+    <div id="modal" class="hidden fixed inset-0 z-[70]">
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="absolute inset-0 flex items-end sm:items-center justify-center p-4">
+        <div class="glass rounded-3xl w-full max-w-xl p-5 sm:p-6 g-border flex flex-col" style="max-height:85vh;">
+          <div class="flex items-center justify-between">
+            <div>
+              <div id="mTitle" class="text-lg font-black">—</div>
+              <div id="mSub" class="text-xs muted2 mt-1">—</div>
+            </div>
+            <button id="mClose" class="glass rounded-xl px-3 py-2 btn-ghost glow-ring"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div id="mBody" class="mt-4 flex-1 overflow-auto pr-1" style="min-height:0;"></div>
+          <div class="mt-5 flex items-center justify-end gap-2">
+            <button id="mCancel" class="glass rounded-xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">Bekor</button>
+            <button id="mOk" class="btn-primary rounded-xl px-4 py-2 text-sm font-extrabold text-white glow-ring">Saqlash</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Small DOM helpers (jQuery-free)
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    // Theme
+    (function(){
+      const key='theme';
+      const html=document.documentElement;
+      const btn=document.getElementById('themeToggle');
+      const icon=document.getElementById('themeIcon');
+      const label=document.getElementById('themeLabel');
+      function apply(mode){
+        if(mode==='dark') html.classList.add('dark'); else html.classList.remove('dark');
+        localStorage.setItem(key, mode);
+        icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+      }
+      const saved = localStorage.getItem(key);
+      if(saved) apply(saved);
+      else apply((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark':'light');
+      btn.addEventListener('click', ()=> apply(html.classList.contains('dark') ? 'light' : 'dark'));
+    })();
+
+    const token = () => localStorage.getItem('token') || '';
+    const toast = (text, type='info') => {
+      const el = document.getElementById('toast');
+      el.textContent = text;
+      el.classList.remove('hidden');
+      el.style.background = type === 'error' ? 'var(--bad)' : 'var(--ok)';
+      el.style.border = '1px solid rgba(148,163,184,.2)';
+      el.style.color = type === 'error' ? 'rgba(220,38,38,.95)' : 'rgba(16,185,129,.95)';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=> el.classList.add('hidden'), 4200);
+    };
+
+    const fmtDate = (d) => { try { return new Date(d).toLocaleString('uz-UZ'); } catch { return ''; } };
+
+    // Modal
+    const modal = {
+      root: document.getElementById('modal'),
+      title: document.getElementById('mTitle'),
+      sub: document.getElementById('mSub'),
+      body: document.getElementById('mBody'),
+      ok: document.getElementById('mOk'),
+      cancel: document.getElementById('mCancel'),
+      close: document.getElementById('mClose'),
+      show({title, sub, bodyHTML, okText='Saqlash', onOk}){
+        this.title.textContent = title || '';
+        this.sub.textContent = sub || '';
+        this.body.innerHTML = bodyHTML || '';
+        this.ok.textContent = okText;
+        this.root.classList.remove('hidden');
+        this.ok.onclick = async ()=>{
+          this.ok.disabled = true;
+          try{ await onOk?.(); this.hide(); } finally { this.ok.disabled=false; }
+        };
+      },
+      hide(){ this.root.classList.add('hidden'); this.ok.onclick=null; }
+    };
+    modal.cancel.onclick = ()=> modal.hide();
+    modal.close.onclick = ()=> modal.hide();
+
+    // State
+    let tab = 'topups';
+    let page = 1;
+    let limit = 25;
+
+    const tabMeta = {
+      topups: { title:'Top-up so‘rovlari', sub:'Kutilayotgan so‘rovlarni tasdiqlang yoki rad eting.' },
+      users: { title:'Foydalanuvchilar', sub:'Profil/coin/admin flag boshqaruvi. Ehtiyotkorlik bilan o‘chiring.' },
+      channels: { title:'Kanallar', sub:'Kanallar ro‘yxati va o‘chirish. (Postlar bilan.)' },
+      groups: { title:'Guruhlar', sub:'Guruhlar ro‘yxati va o‘chirish. (Xabarlar bilan.)' },
+      groupmsgs: { title:'Guruh xabarlari', sub:'Tanlangan guruh xabarlarini ko‘rish va o‘chirish (moderatsiya + audit).' },
+      lessons: { title:'Yozilgan darslar', sub:'Guruh bo‘yicha lesson/recording ro‘yxati. (audit log bor)' },
+      channelposts: { title:'Kanal postlari', sub:'Tanlangan kanal postlarini ko‘rish va o‘chirish (moderatsiya + audit).' },
+      services: { title:'Xizmatlar', sub:'Services ro‘yxati va o‘chirish. (Order/Review bilan.)' },
+      pms: { title:'Shaxsiy xabarlar', sub:'Private message’larni ko‘rish va o‘chirish (moderatsiya).' },
+      realtime: { title:'Real-time', sub:'Online foydalanuvchilar va aktiv call/live ro‘yxati (real vaqt).' },
+      catalog: { title:'Universitet katalogi', sub:'Universitet/fakultet/o‘quv guruhlari/yo‘nalishlar ro‘yxatini boshqaring.' },
+      broadcast: { title:'Admin xabarnoma', sub:'Universitet/fakultet/guruh bo‘yicha xabar yuboring (push + notification).' },
+      support: { title:'Support Chat', sub:'Chatbot orqali kelgan foydalanuvchi savollariga shu yerdan javob bering.' },
+    };
+
+    function setTab(newTab){
+      tab = newTab;
+      page = 1;
+      document.getElementById('tabTitle').textContent = tabMeta[tab].title;
+      document.getElementById('tabSub').textContent = tabMeta[tab].sub;
+      document.querySelectorAll('.tab').forEach(b=>{
+        const active = b.dataset.tab === tab;
+        b.classList.toggle('active', active);
+        b.style.background = active ? 'rgba(99,102,241,.16)' : 'rgba(148,163,184,.14)';
+        b.style.border = active ? '1px solid rgba(99,102,241,.35)' : '1px solid rgba(148,163,184,.18)';
+      });
+      loadList();
+    }
+
+    async function api(path, opts={}){
+      const res = await fetch(path, {
+        ...opts,
+        headers: { 'Authorization': `Bearer ${token()}`, ...(opts.headers||{}) }
+      });
+      const j = await res.json().catch(()=>null);
+      return { res, j };
+    }
+
+    async function ensureAdmin(){
+      if(!token()){ window.location.href='/login.html'; return; }
+
+      // ✅ Correct auth endpoint (was /api/pet/me -> caused 404 and forced logout)
+      const {res, j} = await api('/api/me');
+      if(!res.ok){
+        localStorage.removeItem('token');
+        window.location.href='/login.html';
+        return;
+      }
+
+      // server usually returns {success:true, user:{...}}
+      const u = (j && (j.user || j.data?.user || j)) || {};
+      const role = String(u.role || '').toLowerCase();
+      const isAdmin = !!u.isAdmin || role === 'admin';
+
+      if(!isAdmin){
+        toast("Admin huquqi yo‘q.", 'error');
+        document.getElementById('meAdmin').textContent = 'Admin EMAS';
+        setTimeout(()=> window.location.href='/profile.html', 1500);
+        return;
+      }
+
+      document.getElementById('meAdmin').textContent = 'Admin OK';
+      await loadOverview();
+      setTab('topups');
+    }
+
+    async function loadOverview(){
+      const {res, j} = await api('/api/admin/overview');
+      if(!res.ok) return;
+      document.getElementById('cUsers').textContent = j.users ?? '—';
+      document.getElementById('cChannels').textContent = j.channels ?? '—';
+      document.getElementById('cGroups').textContent = j.groups ?? '—';
+      document.getElementById('cTopups').textContent = j.topupsPending ?? '—';
+    }
+
+    function pagerShow(show, pageNo){
+      const p = document.getElementById('pager');
+      p.classList.toggle('hidden', !show);
+      document.getElementById('pageNo').textContent = pageNo;
+    }
+
+    function setLoading(){
+      document.getElementById('content').innerHTML = `<div class="text-sm muted2"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Yuklanmoqda…</div>`;
+      pagerShow(false, page);
+    }
+
+    function tableWrap(inner){
+      return `<div class="overflow-auto rounded-2xl border border-white/20">
+        <table class="min-w-full text-sm">
+          ${inner}
+        </table>
+      </div>`;
+    }
+
+    async function loadList(){
+      setLoading();
+      const q = document.getElementById('q').value.trim();
+      if(tab === 'topups') return loadTopups(q);
+      if(tab === 'users') return loadUsers(q);
+      if(tab === 'channels') return loadChannels(q);
+      if(tab === 'groups') return loadGroups(q);
+      if(tab === 'groupmsgs') return loadGroupMessagesTab(q);
+      if(tab === 'lessons') return loadLessonsTab(q);
+      if(tab === 'channelposts') return loadChannelPostsTab(q);
+      if(tab === 'services') return loadServices(q);
+      if(tab === 'pms') return loadPMs(q);
+      if(tab === 'realtime') return loadRealtime();
+      if(tab === 'catalog') return loadCatalog(q);
+      if(tab === 'broadcast') return loadBroadcast();
+      if(tab === 'support') return loadSupportAdminTab(q);
+    }
+
+    // TOPUPS
+    async function loadTopups(){
+      const {res, j} = await api('/api/admin/topup-requests?status=pending');
+      if(!res.ok) return toast(j?.error || "Top-up ro‘yxatini olishda xatolik", 'error');
+
+      const list = j.requests || [];
+      if(!list.length){
+        document.getElementById('content').innerHTML = `<div class="text-sm muted2">Kutilayotgan so‘rov yo‘q.</div>`;
+        pagerShow(false, page);
+        return;
+      }
+
+      const rows = list.map(r => {
+        const u = r.userId || {};
+        return `
+          <tr class="row border-b border-white/10">
+            <td class="p-3">
+              <div class="font-extrabold">${u.username || '—'}</div>
+              <div class="text-xs muted2">${u.nickname || u.fullName || ''}</div>
+            </td>
+            <td class="p-3">
+              <div class="font-extrabold">${r.coins} coin</div>
+              <div class="text-xs muted2">${r.amountSom} so‘m</div>
+            </td>
+            <td class="p-3 text-xs muted2">${fmtDate(r.createdAt)}</td>
+            <td class="p-3">
+              <a class="underline font-extrabold" target="_blank" href="${r.screenshotUrl || '#'}">Screenshot</a>
+            </td>
+            <td class="p-3">
+              <div class="flex gap-2 justify-end">
+                <button class="approve btn-primary text-white rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${r._id}">Tasdiqlash</button>
+                <button class="reject glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${r._id}">Rad</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('content').innerHTML = tableWrap(`
+        <thead>
+          <tr class="text-left text-xs muted2">
+            <th class="p-3">Foydalanuvchi</th>
+            <th class="p-3">So‘rov</th>
+            <th class="p-3">Sana</th>
+            <th class="p-3">Proof</th>
+            <th class="p-3 text-right">Amal</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      `);
+
+      document.querySelectorAll('.approve').forEach(b => b.onclick = ()=> approveTopup(b.dataset.id));
+      document.querySelectorAll('.reject').forEach(b => b.onclick = ()=> rejectTopup(b.dataset.id));
+      pagerShow(false, page);
+    }
+
+    async function approveTopup(id){
+      modal.show({
+        title: "Top-up tasdiqlash",
+        sub: "Ixtiyoriy admin izohini kiriting",
+        okText: "Tasdiqlash",
+        bodyHTML: `
+          <label class="text-xs font-extrabold muted">Admin izohi (ixtiyoriy)</label>
+          <textarea id="note" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3" placeholder="Masalan: To‘lov tasdiqlandi."></textarea>
+          <div class="mt-3 text-xs muted2">Tasdiqlansa coin foydalanuvchi balansiga qo‘shiladi.</div>
+        `,
+        onOk: async ()=>{
+          const adminNote = document.getElementById('note').value || '';
+          const {res, j} = await api(`/api/admin/topup-requests/${id}/approve`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ adminNote })
+          });
+          if(!res.ok) return toast(j?.error || "Tasdiqlab bo‘lmadi", 'error');
+          toast("Tasdiqlandi. Balans yangilandi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    async function rejectTopup(id){
+      modal.show({
+        title: "Top-up rad etish",
+        sub: "Rad etish sababi (ixtiyoriy)",
+        okText: "Rad etish",
+        bodyHTML: `
+          <label class="text-xs font-extrabold muted">Sabab</label>
+          <textarea id="note" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3" placeholder="Masalan: Screenshot noaniq."></textarea>
+        `,
+        onOk: async ()=>{
+          const adminNote = document.getElementById('note').value || 'Rad etildi';
+          const {res, j} = await api(`/api/admin/topup-requests/${id}/reject`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ adminNote })
+          });
+          if(!res.ok) return toast(j?.error || "Rad etib bo‘lmadi", 'error');
+          toast("Rad etildi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    // USERS
+    async function loadUsers(q){
+      const {res, j} = await api(`/api/admin/users?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Users yuklanmadi", 'error');
+      const list = j.users || [];
+      const total = j.total || 0;
+      window.usersCache = Object.fromEntries(list.map(u=>[u._id,u]));
+
+      if(!list.length){
+        document.getElementById('content').innerHTML = `<div class="text-sm muted2">Topilmadi.</div>`;
+        pagerShow(page>1, page);
+        return;
+      }
+
+      const rows = list.map(u => `
+        <tr class="row border-b border-white/10">
+          <td class="p-3">
+            <div class="flex items-center gap-3">
+              <img src="${u.avatar||''}" class="w-9 h-9 rounded-xl object-cover border border-white/20" onerror="this.style.display='none'"/>
+              <div class="min-w-0">
+                <div class="font-extrabold truncate">${u.username}</div>
+                <div class="text-xs muted2 truncate">${u.nickname||u.fullName||''}</div>
+              </div>
+            </div>
+          </td>
+          <td class="p-3 text-xs muted2">${u.university||'—'}</td>
+          <td class="p-3"><span class="font-extrabold">${u.coins||0}</span> <span class="text-xs muted2">coin</span></td>
+          <td class="p-3 text-xs">${(() => {
+            const rr = String((u.isAdmin ? 'admin' : (u.role || 'student')) || 'student').toLowerCase();
+            const roleClass = rr === 'admin'
+              ? 'bg-emerald-500/15 text-emerald-500'
+              : (rr === 'organizer'
+                ? 'bg-cyan-500/15 text-cyan-400'
+                : (rr === 'teacher' ? 'bg-amber-500/15 text-amber-400' : 'bg-slate-500/15 text-slate-400'));
+            return `<span class="px-2 py-1 rounded-lg ${roleClass} font-extrabold">${rr}</span>`;
+          })()}</td>
+          <td class="p-3 text-right">
+            <div class="flex justify-end gap-2">
+              <button class="edit glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}"><i class="fa-solid fa-pen mr-2"></i>Tahrir</button>
+              <button class="coin btn-primary text-white rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}"><i class="fa-solid fa-coins mr-2"></i>Coin</button>
+              <button class="del glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}" data-name="${u.username}"><i class="fa-solid fa-trash mr-2"></i>O‘chirish</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('content').innerHTML = `
+        <div class="mb-4 flex justify-end">
+          <button id="newOrganizerBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-xs font-extrabold glow-ring">
+            <i class="fa-solid fa-user-shield mr-2"></i>Organizer yaratish
+          </button>
+        </div>
+        ${tableWrap(`
+          <thead><tr class="text-left text-xs muted2">
+            <th class="p-3">User</th><th class="p-3">Universitet</th><th class="p-3">Coin</th><th class="p-3">Role</th><th class="p-3 text-right">Amal</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        `)}
+      `;
+
+      document.querySelectorAll('.coin').forEach(b=> b.onclick = ()=> openCoinModal(b.dataset.id));
+      document.querySelectorAll('.edit').forEach(b=> b.onclick = ()=> openEditUser(b.dataset.id));
+      document.querySelectorAll('.del').forEach(b=> b.onclick = ()=> delUser(b.dataset.id, b.dataset.name));
+      const newOrganizerBtn = document.getElementById('newOrganizerBtn');
+      if(newOrganizerBtn) newOrganizerBtn.onclick = ()=> openCreateOrganizerModal();
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+    function openCoinModal(userId){
+      modal.show({
+        title: "Coin balansini o‘zgartirish",
+        sub: "Delta qo‘shish yoki SetTo bilan aniq qiymat berish",
+        okText: "Saqlash",
+        bodyHTML: `
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-extrabold muted">Delta (+/-)</label>
+              <input id="delta" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" type="number" value="0"/>
+              <div class="text-xs muted2 mt-1">Masalan: +50 yoki -10</div>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">SetTo (ixtiyoriy)</label>
+              <input id="setTo" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" type="number" placeholder="Masalan: 1200"/>
+              <div class="text-xs muted2 mt-1">Kiritilsa delta e’tiborsiz</div>
+            </div>
+          </div>
+        `,
+        onOk: async ()=>{
+          const delta = Number(document.getElementById('delta').value || 0);
+          const setToRaw = document.getElementById('setTo').value;
+          const payload = (setToRaw !== '' && setToRaw !== null) ? { setTo: Number(setToRaw) } : { delta };
+          const {res, j} = await api(`/api/admin/users/${userId}/coins`, {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) return toast(j?.error || "Coin yangilanmadi", 'error');
+          toast("Coin yangilandi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    function openCreateOrganizerModal(){
+      modal.show({
+        title: "Organizer yaratish",
+        sub: "Login/parol faqat admin tomonidan beriladi. Organizer faqat tanlangan fakultetni boshqaradi.",
+        okText: "Yaratish",
+        bodyHTML: `
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Full name *</label>
+              <input id="orgFullName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: Azizbek Organizer"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Username *</label>
+              <input id="orgUsername" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="masalan: organizer_qdtu"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Password *</label>
+              <div class="flex gap-2 mt-2">
+                <input id="orgPassword" type="text" class="field w-full rounded-2xl px-4 py-3 text-sm" placeholder="kamida 6 belgi"/>
+                <button id="orgGenPass" type="button" class="glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold">Generate</button>
+              </div>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Universitet *</label>
+              <select id="orgUniversity" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2">
+                <option value="" selected disabled>Universitetni tanlang</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Fakultet *</label>
+              <select id="orgFaculty" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" disabled>
+                <option value="" selected disabled>Fakultetni tanlang</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Telefon (ixtiyoriy)</label>
+              <input id="orgPhone" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="+998..."/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Email (ixtiyoriy)</label>
+              <input id="orgEmail" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="name@example.com"/>
+            </div>
+          </div>
+        `,
+        onOk: async ()=>{
+          const payload = {
+            fullName: document.getElementById('orgFullName').value.trim(),
+            username: document.getElementById('orgUsername').value.trim(),
+            password: document.getElementById('orgPassword').value,
+            university: document.getElementById('orgUniversity').value.trim(),
+            faculty: document.getElementById('orgFaculty').value.trim(),
+            phone: document.getElementById('orgPhone').value.trim(),
+            email: document.getElementById('orgEmail').value.trim()
+          };
+          if(!payload.fullName || !payload.username || !payload.password || !payload.university || !payload.faculty){
+            return toast("Majburiy maydonlarni to‘ldiring.", 'error');
+          }
+
+          const {res, j} = await api('/api/admin/organizers', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) return toast(j?.error || "Organizer yaratilmadi", 'error');
+          toast(`Organizer yaratildi: @${j?.organizer?.username || payload.username}`, 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+
+      const genPass = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+        let out = '';
+        for(let i=0;i<10;i++) out += chars[Math.floor(Math.random()*chars.length)];
+        document.getElementById('orgPassword').value = out;
+      };
+
+      const loadOrgUniversities = async () => {
+        const sel = document.getElementById('orgUniversity');
+        sel.innerHTML = '<option value="" selected disabled>Universitetni tanlang</option>';
+        const r = await fetch('/api/catalog/universities');
+        const j = await r.json().catch(()=>({}));
+        (j.universities || []).forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u.name;
+          opt.textContent = u.name;
+          sel.appendChild(opt);
+        });
+      };
+
+      const loadOrgFaculties = async (uni) => {
+        const sel = document.getElementById('orgFaculty');
+        sel.innerHTML = '<option value="" selected disabled>Fakultetni tanlang</option>';
+        sel.disabled = true;
+        if(!uni) return;
+        const r = await fetch('/api/catalog/faculties?university='+encodeURIComponent(uni));
+        const j = await r.json().catch(()=>({}));
+        const list = Array.isArray(j.faculties) ? j.faculties : [];
+        list.forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        });
+        sel.disabled = list.length === 0;
+      };
+
+      setTimeout(async () => {
+        const uniSel = document.getElementById('orgUniversity');
+        const genBtn = document.getElementById('orgGenPass');
+        if(genBtn){
+          genBtn.onclick = genPass;
+          if(!document.getElementById('orgPassword').value) genPass();
+        }
+        await loadOrgUniversities().catch(()=>null);
+        uniSel.onchange = () => loadOrgFaculties(uniSel.value).catch(()=>null);
+      }, 0);
+    }
+
+    function openEditUser(userId){
+      const u = (window.usersCache && window.usersCache[userId]) || {};
+      const username = u.username || userId;
+      const mutedIso = u.mutedUntil ? new Date(u.mutedUntil).toISOString().slice(0,16) : '';
+      modal.show({
+        title: "User moderatsiya",
+        sub: `${username} • Ban/Mute/Role/Verified`,
+        okText: "Saqlash",
+        bodyHTML: `
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-extrabold muted">Full name</label>
+              <input id="fullName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Ism familiya" value="${escapeHtml(u.fullName||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Nickname</label>
+              <input id="nickname" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Nickname" value="${escapeHtml(u.nickname||'')}"/>
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold muted">Email</label>
+              <input id="email" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="email@..." value="${escapeHtml(u.email||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Telefon</label>
+              <input id="phone" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="+998..." value="${escapeHtml(u.phone||'')}"/>
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold muted">Universitet</label>
+              <input id="university" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Universitet" value="${escapeHtml(u.university||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Fakultet</label>
+              <input id="faculty" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Fakultet" value="${escapeHtml(u.faculty||'')}"/>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Guruh (studyGroup)</label>
+              <input id="studyGroup" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: MMT-520-25" value="${escapeHtml(u.studyGroup||'')}"/>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Avatar URL</label>
+              <input id="avatar" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="https://..." value="${escapeHtml(u.avatar||'')}"/>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Bio</label>
+              <textarea id="bio" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3" placeholder="Bio...">${escapeHtml(u.bio||'')}</textarea>
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold muted">Role</label>
+              <select id="role" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2">
+                <option value="student" ${String(u.role||'student')==='student'?'selected':''}>student</option>
+                <option value="teacher" ${String(u.role||'')==='teacher'?'selected':''}>teacher</option>
+                <option value="organizer" ${String(u.role||'')==='organizer'?'selected':''}>organizer</option>
+                <option value="admin" ${String(u.role||'')==='admin'?'selected':''}>admin</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2 mt-6">
+              <input id="verified" type="checkbox" class="scale-110" ${u.verified?'checked':''}>
+              <label for="verified" class="text-sm font-extrabold">Verified</label>
+            </div>
+
+            <div class="sm:col-span-2 flex items-center gap-2">
+              <input id="isAdmin" type="checkbox" class="scale-110" ${u.isAdmin?'checked':''}>
+              <label for="isAdmin" class="text-sm font-extrabold">isAdmin flag</label>
+              <span class="text-xs muted2">Role=admin bilan birga ishlatish mumkin.</span>
+            </div>
+
+            <div class="sm:col-span-2 glass rounded-2xl p-4">
+              <div class="font-extrabold">Mute (xabar yozishni vaqtincha bloklash)</div>
+              <div class="text-xs muted2 mt-1">Muddat tugagach avtomatik ochiladi. Hozir: <span class="font-extrabold">${mutedIso||'—'}</span></div>
+              <div class="grid sm:grid-cols-2 gap-3 mt-3">
+                <div>
+                  <label class="text-xs font-extrabold muted">Mute minutes</label>
+                  <input id="muteMinutes" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" type="number" min="0" placeholder="Masalan: 60"/>
+                </div>
+                <div class="flex items-center gap-2 mt-6">
+                  <input id="unmute" type="checkbox" class="scale-110">
+                  <label for="unmute" class="text-sm font-extrabold">Unmute</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="sm:col-span-2 glass rounded-2xl p-4 border border-red-500/30">
+              <div class="font-extrabold text-red-400">Ban (akkauntni bloklash)</div>
+              <div class="text-xs muted2 mt-1">Ban bo‘lsa user token bilan ham kira olmaydi.</div>
+              <div class="flex items-center gap-2 mt-3">
+                <input id="banned" type="checkbox" class="scale-110" ${u.banned?'checked':''}>
+                <label for="banned" class="text-sm font-extrabold">Banned</label>
+              </div>
+              <div class="mt-3">
+                <label class="text-xs font-extrabold muted">Ban reason</label>
+                <textarea id="banReason" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="2" placeholder="Sabab...">${escapeHtml(u.banReason||'')}</textarea>
+              </div>
+            </div>
+          </div>
+        `,
+        onOk: async ()=>{
+          const muteMinutes = Number(document.getElementById('muteMinutes').value || 0);
+          const unmute = document.getElementById('unmute').checked;
+
+          const payload = {
+            fullName: document.getElementById('fullName').value,
+            nickname: document.getElementById('nickname').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            university: document.getElementById('university').value,
+            faculty: document.getElementById('faculty').value,
+            studyGroup: document.getElementById('studyGroup').value,
+            avatar: document.getElementById('avatar').value,
+            bio: document.getElementById('bio').value,
+            role: document.getElementById('role').value,
+            verified: document.getElementById('verified').checked,
+            isAdmin: document.getElementById('isAdmin').checked,
+            banned: document.getElementById('banned').checked,
+            banReason: document.getElementById('banReason').value
+          };
+
+          if (unmute) payload.mutedUntil = null;
+          else if (muteMinutes > 0) payload.mutedUntil = new Date(Date.now() + muteMinutes*60*1000).toISOString();
+
+          const {res, j} = await api(`/api/admin/users/${userId}`, {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) return toast(j?.error || "User yangilanmadi", 'error');
+          toast("User saqlandi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    async function delUser(userId, username){
+      modal.show({
+        title: "Foydalanuvchini o‘chirish",
+        sub: `Bu amal qaytarilmaydi: ${username}`,
+        okText: "O‘chirish",
+        bodyHTML: `<div class="text-sm muted2">
+          <div class="glass rounded-2xl p-4">
+            <div class="font-extrabold text-red-500">Diqqat!</div>
+            <div class="mt-2">User va uning xabarlari/postlari (best-effort) o‘chiriladi.</div>
+          </div>
+        </div>`,
+        onOk: async ()=>{
+          const {res, j} = await api(`/api/admin/users/${userId}`, { method:'DELETE' });
+          if(!res.ok) return toast(j?.error || "O‘chirish muvaffaqiyatsiz", 'error');
+          toast("O‘chirildi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    // CHANNELS/GROUPS/SERVICES/PMS generic
+    async function loadChannels(q){
+      const {res, j} = await api(`/api/admin/channels?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Kanallar yuklanmadi", 'error');
+      renderSimpleList(j.channels||[], j.total||0, 'channels');
+    }
+    async function loadGroups(q){
+      const {res, j} = await api(`/api/admin/groups?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Guruhlar yuklanmadi", 'error');
+      renderSimpleList(j.groups||[], j.total||0, 'groups');
+    }
+
+    // GROUP MESSAGES (moderation)
+    let gmGroupId = '';
+    async function loadGroupMessagesTab(q){
+      // Load groups for selector (best-effort)
+      const {res: grRes, j: grJ} = await api(`/api/admin/groups?page=1&limit=200&q=`);
+      const groups = grJ?.groups || [];
+      if(!gmGroupId && groups[0]) gmGroupId = groups[0]._id;
+
+      const sel = `<div class="flex flex-col lg:flex-row gap-3 lg:items-end justify-between">
+        <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+          <div>
+            <div class="text-xs muted2 font-extrabold mb-1">Guruh tanlang</div>
+            <select id="gmGroup" class="field rounded-2xl px-4 py-3 text-sm w-[320px] max-w-full">
+              ${groups.map(g=>`<option value="${g._id}" ${String(g._id)===String(gmGroupId)?'selected':''}>${escapeHtml(g.title||g.name||g._id)}</option>`).join('')}
+            </select>
+          </div>
+          <button id="gmReload" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow-ring">Yuklash</button>
+        </div>
+        <div class="text-xs muted2">Qidirish yuqoridagi qidiruv maydonidan ishlaydi. (audit log bor)</div>
+      </div>`;
+
+      if(!gmGroupId){
+        document.getElementById('content').innerHTML = sel + `<div class="mt-4 text-sm muted2">Guruh topilmadi.</div>`;
+        pagerShow(false, page);
+        return;
+      }
+
+      const {res, j} = await api(`/api/admin/group-messages?groupId=${gmGroupId}&q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Guruh xabarlari yuklanmadi", 'error');
+
+      const items = j.items || [];
+      const total = j.total || 0;
+
+      const rows = items.map(m=>`
+        <tr class="row border-b border-white/10">
+          <td class="p-3 text-xs muted2">${fmtDate(m.createdAt)}</td>
+          <td class="p-3">
+            <div class="font-extrabold text-sm">${escapeHtml((m.sender && (m.sender.fullName||m.sender.username)) || '—')}</div>
+            <div class="text-xs muted2">@${escapeHtml((m.sender && m.sender.username) || '')} <span class="font-mono">${escapeHtml(String(m.senderId||''))}</span></div>
+          </td>
+          <td class="p-3 text-sm">${escapeHtml((m.text||'').toString()) || '<span class="muted2">—</span>'}</td>
+          <td class="p-3 text-right">
+            <button class="gmDel glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${m._id}">
+              <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('content').innerHTML = sel + `<div class="mt-4">` + tableWrap(`
+        <thead><tr class="text-left text-xs muted2">
+          <th class="p-3">Sana</th><th class="p-3">Yuboruvchi</th><th class="p-3">Matn</th><th class="p-3 text-right">Amal</th>
+        </tr></thead>
+        <tbody>${rows || ''}</tbody>
+      `) + `</div>` + (items.length?'' : `<div class="text-sm muted2 mt-3">Xabar yo‘q.</div>`);
+
+      document.getElementById('gmGroup')?.addEventListener('change', (e)=>{ gmGroupId = e.target.value; page = 1; loadList(); });
+      document.getElementById('gmReload')?.addEventListener('click', ()=>{ page = 1; loadList(); });
+
+      document.querySelectorAll('.gmDel').forEach(b=>{
+        b.onclick = async ()=>{
+          const id = b.dataset.id;
+          const {res2, j2} = await api(`/api/admin/group-messages/${id}`, { method:'DELETE' });
+          if(!res2.ok) return toast(j2?.error || "O‘chirish xatosi", 'error');
+          toast("O‘chirildi.", 'success');
+          await loadOverview();
+          await loadList();
+        };
+      });
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+    // CHANNEL POSTS (moderation)
+    let cpChannelId = '';
+    async function loadChannelPostsTab(q){
+      const {res: chRes, j: chJ} = await api(`/api/admin/channels?page=1&limit=200&q=`);
+      const chans = chJ?.channels || [];
+      if(!cpChannelId && chans[0]) cpChannelId = chans[0]._id;
+
+      const sel = `<div class="flex flex-col lg:flex-row gap-3 lg:items-end justify-between">
+        <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+          <div>
+            <div class="text-xs muted2 font-extrabold mb-1">Kanal tanlang</div>
+            <select id="cpChannel" class="field rounded-2xl px-4 py-3 text-sm w-[320px] max-w-full">
+              ${chans.map(c=>`<option value="${c._id}" ${String(c._id)===String(cpChannelId)?'selected':''}>${escapeHtml(c.title||c.name||c._id)}</option>`).join('')}
+            </select>
+          </div>
+          <button id="cpReload" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow-ring">Yuklash</button>
+        </div>
+        <div class="text-xs muted2">Qidirish: title/content bo‘yicha. (audit log bor)</div>
+      </div>`;
+
+      if(!cpChannelId){
+        document.getElementById('content').innerHTML = sel + `<div class="mt-4 text-sm muted2">Kanal topilmadi.</div>`;
+        pagerShow(false, page);
+        return;
+      }
+
+      const {res, j} = await api(`/api/admin/channel-posts?channelId=${cpChannelId}&q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Kanal postlari yuklanmadi", 'error');
+
+      const items = j.items || [];
+      const total = j.total || 0;
+
+      const rows = items.map(p=>`
+        <tr class="row border-b border-white/10">
+          <td class="p-3 text-xs muted2">${fmtDate(p.createdAt)}</td>
+          <td class="p-3">
+            <div class="font-extrabold">${escapeHtml(p.title||'—')}</div>
+            <div class="text-xs muted2 truncate" style="max-width:520px">${escapeHtml((p.content||'').toString()).slice(0,140)}</div>
+          </td>
+          <td class="p-3 text-xs">${escapeHtml(String(p.authorId||p.userId||'—'))}</td>
+          <td class="p-3 text-right">
+            <button class="cpDel glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${p._id}">
+              <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('content').innerHTML = sel + `<div class="mt-4">` + tableWrap(`
+        <thead><tr class="text-left text-xs muted2">
+          <th class="p-3">Sana</th><th class="p-3">Post</th><th class="p-3">AuthorId</th><th class="p-3 text-right">Amal</th>
+        </tr></thead>
+        <tbody>${rows || ''}</tbody>
+      `) + `</div>` + (items.length?'' : `<div class="text-sm muted2 mt-3">Post yo‘q.</div>`);
+
+      document.getElementById('cpChannel')?.addEventListener('change', (e)=>{ cpChannelId = e.target.value; page = 1; loadList(); });
+      document.getElementById('cpReload')?.addEventListener('click', ()=>{ page = 1; loadList(); });
+
+      document.querySelectorAll('.cpDel').forEach(b=>{
+        b.onclick = async ()=>{
+          const id = b.dataset.id;
+          const {res2, j2} = await api(`/api/admin/channel-posts/${id}`, { method:'DELETE' });
+          if(!res2.ok) return toast(j2?.error || "O‘chirish xatosi", 'error');
+          toast("O‘chirildi.", 'success');
+          await loadOverview();
+          await loadList();
+        };
+      });
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+    async function loadServices(q){
+      const {res, j} = await api(`/api/admin/services?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Xizmatlar yuklanmadi", 'error');
+      renderSimpleList(j.services||[], j.total||0, 'services');
+    }
+    async function loadPMs(q){
+      const {res, j} = await api(`/api/admin/conversations?q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Suhbatlar yuklanmadi", 'error');
+      renderPMs(j.items||[], j.total||0);
+    }
+
+    async function openThread(a, b, label){
+      // Load first page of thread into modal (pagination inside modal can be added later)
+      const {res, j} = await api(`/api/admin/conversations/${a}/${b}/messages?page=1&limit=50`);
+      if(!res.ok) return toast(j?.error || "Yozishmalar yuklanmadi", 'error');
+
+      const msgs = j.items || [];
+      const rows = msgs.map(m => {
+        const who = String(m.senderId) === String(a) ? 'A' : 'B';
+        const text = (m.text||'').toString();
+        const safe = escapeHtml(text);
+        return `
+          <div class="glass rounded-2xl p-3 mb-2">
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-xs muted2 font-extrabold">${who} • ${fmtDate(m.createdAt)}</div>
+              <button class="delPmMsg glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold glow-ring" data-id="${m._id}">
+                <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+              </button>
+            </div>
+            <div class="mt-2 text-sm">${safe || '<span class="muted2">—</span>'}</div>
+          </div>
+        `;
+      }).join('');
+
+      modal.show({
+        title: "Shaxsiy yozishmalar",
+        sub: label || `${a} ↔ ${b} (audit log yuritiladi)`,
+        okText: "Yopish",
+        bodyHTML: `
+          <div class="text-xs muted2 mb-3">
+            Eslatma: bu bo‘lim moderatsiya va xavfsizlik uchun. Kirishlar audit log’ga yoziladi.
+          </div>
+          <div style="max-height:60vh; overflow:auto">${rows || '<div class="text-sm muted2">Xabar yo‘q.</div>'}</div>
+        `,
+        onOk: async ()=>{}
+      });
+      // turn modal ok into close-only
+      modal.ok.onclick = ()=> modal.hide();
+
+      document.querySelectorAll('.delPmMsg').forEach(b=>{
+        b.onclick = async ()=>{
+          const id = b.dataset.id;
+          const {res2, j2} = await api(`/api/admin/private-messages/${id}`, { method:'DELETE' });
+          if(!res2.ok) return toast(j2?.error || "O‘chirish xatosi", 'error');
+          toast("O‘chirildi.", 'success');
+          // refresh thread
+          modal.hide();
+          await openThread(a,b,label);
+          await loadOverview();
+          await loadList();
+        };
+      });
+    }
+
+
+    function renderPMs(list, total){
+      if(!list.length){
+        document.getElementById('content').innerHTML = `<div class="text-sm muted2">Topilmadi.</div>`;
+        pagerShow(total>limit, page);
+        return;
+      }
+
+      const rows = list.map(x => {
+        const a = x.a, b = x.b;
+        const ua = x.userA || {};
+        const ub = x.userB || {};
+        const nameA = escapeHtml(ua.fullName || ua.username || a);
+        const nameB = escapeHtml(ub.fullName || ub.username || b);
+        const last = escapeHtml((x.lastText||'').slice(0,80));
+        const label = `${nameA} ↔ ${nameB}`;
+
+        return `
+          <tr class="row border-b border-white/10">
+            <td class="p-3">
+              <div class="font-extrabold">${label}</div>
+              <div class="text-xs muted2">A: <span class="font-mono">${a}</span> • B: <span class="font-mono">${b}</span></div>
+            </td>
+            <td class="p-3 text-xs muted2">
+              <div class="font-extrabold">So‘nggi xabar</div>
+              <div>${last || '—'}</div>
+              <div class="mt-1">${fmtDate(x.lastAt)}</div>
+            </td>
+            <td class="p-3 text-right">
+              <button class="openThread btn-primary text-white rounded-xl px-3 py-2 text-xs font-extrabold glow-ring"
+                data-a="${a}" data-b="${b}" data-label="${label}">
+                <i class="fa-solid fa-eye mr-2"></i>Ko‘rish
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('content').innerHTML = tableWrap(`
+        <thead><tr class="text-left text-xs muted2">
+          <th class="p-3">Suhbat (kim-kim)</th>
+          <th class="p-3">Oxirgi aktivlik</th>
+          <th class="p-3 text-right">Amal</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      `);
+
+      document.querySelectorAll('.openThread').forEach(b=>{
+        b.onclick = ()=> openThread(b.dataset.a, b.dataset.b, b.dataset.label);
+      });
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+
+    
+    // SIMPLE LIST renderer (channels/groups/services)
+    function renderSimpleList(list, total, type){
+      window.simpleCache = window.simpleCache || {};
+      window.simpleCache[type] = Object.fromEntries((list||[]).map(x=>[x._id, x]));
+
+      if(!list.length){
+        document.getElementById('content').innerHTML = `<div class="text-sm muted2">Topilmadi.</div>`;
+        pagerShow(total>limit, page);
+        return;
+      }
+
+      const cols = type==='services'
+        ? `<th class="p-3">Xizmat</th><th class="p-3">Narx</th><th class="p-3">Sana</th><th class="p-3 text-right">Amal</th>`
+        : `<th class="p-3">${type==='channels'?'Kanal':'Guruh'}</th><th class="p-3">Public</th><th class="p-3">Sana</th><th class="p-3 text-right">Amal</th>`;
+
+      const rows = (list||[]).map(x=>{
+        if(type==='services'){
+          return `
+            <tr class="row border-b border-white/10">
+              <td class="p-3">
+                <div class="font-extrabold">${escapeHtml(x.title||x.name||'—')}</div>
+                <div class="text-xs muted2 truncate" style="max-width:560px">${escapeHtml(x.description||'')}</div>
+              </td>
+              <td class="p-3 text-sm"><span class="font-extrabold">${escapeHtml(String(x.price||x.priceSom||'—'))}</span></td>
+              <td class="p-3 text-xs muted2">${fmtDate(x.createdAt)}</td>
+              <td class="p-3 text-right">
+                <button class="delItem glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-type="${type}" data-id="${x._id}">
+                  <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+                </button>
+              </td>
+            </tr>
+          `;
+        }
+
+        const title = escapeHtml(x.name || x.title || '—');
+        const uname = escapeHtml(x.username || '');
+        const pub = x.isPublic ? '<span class="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-500 font-extrabold text-xs">Public</span>'
+                               : '<span class="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 font-extrabold text-xs">Private</span>';
+
+        return `
+          <tr class="row border-b border-white/10">
+            <td class="p-3">
+              <div class="flex items-center gap-3">
+                <img src="${x.avatar||''}" class="w-9 h-9 rounded-xl object-cover border border-white/20" onerror="this.style.display='none'"/>
+                <div class="min-w-0">
+                  <div class="font-extrabold truncate">${title}</div>
+                  <div class="text-xs muted2 truncate">@${uname}</div>
+                </div>
+              </div>
+            </td>
+            <td class="p-3 text-xs">${pub}</td>
+            <td class="p-3 text-xs muted2">${fmtDate(x.createdAt)}</td>
+            <td class="p-3 text-right">
+              <div class="flex justify-end gap-2">
+                <button class="editItem glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-type="${type}" data-id="${x._id}">
+                  <i class="fa-solid fa-pen mr-2"></i>Tahrir
+                </button>
+                <button class="delItem glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-type="${type}" data-id="${x._id}">
+                  <i class="fa-solid fa-trash mr-2"></i>O‘chirish
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('content').innerHTML = tableWrap(`
+        <thead><tr class="text-left text-xs muted2">${cols}</tr></thead>
+        <tbody>${rows}</tbody>
+      `);
+
+      document.querySelectorAll('.delItem').forEach(b=>{
+        b.onclick = ()=> delItem(b.dataset.type, b.dataset.id);
+      });
+      document.querySelectorAll('.editItem').forEach(b=>{
+        b.onclick = ()=> openEditSimple(b.dataset.type, b.dataset.id);
+      });
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+    function openEditSimple(type, id){
+      if(type==='groups') return openEditGroup(id);
+      if(type==='channels') return openEditChannel(id);
+      toast('Bu turdagi obyekt uchun tahrirlash yo‘q.', 'info');
+    }
+
+    function openEditGroup(groupId){
+      const g = (window.simpleCache?.groups && window.simpleCache.groups[groupId]) || {};
+      modal.show({
+        title: "Guruhni tahrirlash",
+        sub: `${escapeHtml(g.name||'—')} • @${escapeHtml(g.username||'')}`,
+        okText: "Saqlash",
+        bodyHTML: `
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Name</label>
+              <input id="gName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(g.name||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Username</label>
+              <input id="gUsername" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="masalan: group_1" value="${escapeHtml(g.username||'')}"/>
+              <div class="text-xs muted2 mt-1">Faqat a-z, 0-9, _, ., -</div>
+            </div>
+            <div class="flex items-center gap-2 mt-7">
+              <input id="gPublic" type="checkbox" class="scale-110" ${g.isPublic?'checked':''}>
+              <label for="gPublic" class="text-sm font-extrabold">Public</label>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Description</label>
+              <textarea id="gDesc" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3">${escapeHtml(g.description||'')}</textarea>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Avatar URL</label>
+              <input id="gAvatar" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="https://..." value="${escapeHtml(g.avatar||'')}"/>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Preview image</label>
+              <input id="gPreview" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="https://..." value="${escapeHtml(g.previewImage||'')}"/>
+            </div>
+          </div>
+        `,
+        onOk: async ()=>{
+          const payload = {
+            name: document.getElementById('gName').value,
+            username: document.getElementById('gUsername').value,
+            description: document.getElementById('gDesc').value,
+            avatar: document.getElementById('gAvatar').value,
+            previewImage: document.getElementById('gPreview').value,
+            isPublic: document.getElementById('gPublic').checked
+          };
+          const {res, j} = await api(`/api/admin/groups/${groupId}`, {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) return toast(j?.error || "Guruh saqlanmadi", 'error');
+          toast("Guruh yangilandi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    function openEditChannel(channelId){
+      const c = (window.simpleCache?.channels && window.simpleCache.channels[channelId]) || {};
+      modal.show({
+        title: "Kanalni tahrirlash",
+        sub: `${escapeHtml(c.name||'—')} • @${escapeHtml(c.username||'')}`,
+        okText: "Saqlash",
+        bodyHTML: `
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Name</label>
+              <input id="cName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(c.name||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Username</label>
+              <input id="cUsername" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="masalan: channel_1" value="${escapeHtml(c.username||'')}"/>
+              <div class="text-xs muted2 mt-1">Faqat a-z, 0-9, _, ., -</div>
+            </div>
+            <div class="flex items-center gap-2 mt-7">
+              <input id="cPublic" type="checkbox" class="scale-110" ${c.isPublic?'checked':''}>
+              <label for="cPublic" class="text-sm font-extrabold">Public</label>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Description</label>
+              <textarea id="cDesc" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3">${escapeHtml(c.description||'')}</textarea>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Avatar URL</label>
+              <input id="cAvatar" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="https://..." value="${escapeHtml(c.avatar||'')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Category</label>
+              <input id="cCategory" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(c.category||'other')}"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">University</label>
+              <input id="cUni" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(c.university||'')}"/>
+            </div>
+          </div>
+        `,
+        onOk: async ()=>{
+          const payload = {
+            name: document.getElementById('cName').value,
+            username: document.getElementById('cUsername').value,
+            description: document.getElementById('cDesc').value,
+            avatar: document.getElementById('cAvatar').value,
+            category: document.getElementById('cCategory').value,
+            university: document.getElementById('cUni').value,
+            isPublic: document.getElementById('cPublic').checked
+          };
+          const {res, j} = await api(`/api/admin/channels/${channelId}`, {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) return toast(j?.error || "Kanal saqlanmadi", 'error');
+          toast("Kanal yangilandi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    // GROUP LESSONS (recordings) tab
+    let glGroupId = '';
+    async function loadLessonsTab(q){
+      const {res: grRes, j: grJ} = await api(`/api/admin/groups?page=1&limit=200&q=`);
+      const groups = grJ?.groups || [];
+      if(!glGroupId && groups[0]) glGroupId = groups[0]._id;
+
+      const sel = `<div class="flex flex-col lg:flex-row gap-3 lg:items-end justify-between">
+        <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+          <div>
+            <div class="text-xs muted2 font-extrabold mb-1">Guruh tanlang</div>
+            <select id="glGroup" class="field rounded-2xl px-4 py-3 text-sm w-[320px] max-w-full">
+              ${groups.map(g=>`<option value="${g._id}" ${String(g._id)===String(glGroupId)?'selected':''}>${escapeHtml(g.name||g.title||g._id)}</option>`).join('')}
+            </select>
+          </div>
+          <button id="glReload" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow-ring">Yuklash</button>
+        </div>
+        <div class="text-xs muted2">Qidirish: title bo‘yicha. Recording link bo‘lsa “Ko‘rish” chiqadi.</div>
+      </div>`;
+
+      if(!glGroupId){
+        document.getElementById('content').innerHTML = sel + `<div class="mt-4 text-sm muted2">Guruh topilmadi.</div>`;
+        pagerShow(false, page);
+        return;
+      }
+
+      const {res, j} = await api(`/api/admin/group-lessons?groupId=${glGroupId}&q=${encodeURIComponent(q||'')}&page=${page}&limit=${limit}`);
+      if(!res.ok) return toast(j?.error || "Darslar yuklanmadi", 'error');
+
+      const items = j.items || [];
+      const total = j.total || 0;
+
+      const rows = items.map(x=>{
+        const host = x.host || {};
+        const hostLabel = escapeHtml(host.fullName || host.username || (x.hostId||'—'));
+        const rec = x.recordingUrl ? `<a class="underline font-extrabold" target="_blank" href="${x.recordingUrl}">Ko‘rish</a>` : `<span class="muted2">—</span>`;
+        const dur = x.recordingDurationSec ? `${Math.round(x.recordingDurationSec)}s` : '—';
+        const recActions = x.recordingUrl
+          ? `<button class="pill px-3 py-1 text-xs font-extrabold bg-red-500/20 border border-red-300/40" onclick="delGroupLessonRecording('${x._id}')">Yozuvni o‘chirish</button>`
+          : `<span class="text-xs muted2">—</span>`;
+        return `
+          <tr class="row border-b border-white/10">
+            <td class="p-3 text-xs muted2">${fmtDate(x.startedAt || x.createdAt)}</td>
+            <td class="p-3">
+              <div class="font-extrabold">${escapeHtml(x.title||'—')}</div>
+              <div class="text-xs muted2">${escapeHtml(x.status||'—')} • mode: ${escapeHtml(x.mode||'')}</div>
+            </td>
+            <td class="p-3">
+              <div class="font-extrabold">${hostLabel}</div>
+              <div class="text-xs muted2">@${escapeHtml(host.username||'')}</div>
+            </td>
+            <td class="p-3 text-xs">${dur}</td>
+            <td class="p-3">${rec}</td>
+            <td class="p-3">${recActions}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('content').innerHTML = sel + `<div class="mt-4">` + tableWrap(`
+        <thead><tr class="text-left text-xs muted2">
+          <th class="p-3">Boshlanish</th><th class="p-3">Dars</th><th class="p-3">Host</th><th class="p-3">Duration</th><th class="p-3">Recording</th><th class="p-3">Amal</th>
+        </tr></thead>
+        <tbody>${rows || ''}</tbody>
+      `) + `</div>` + (items.length?'' : `<div class="text-sm muted2 mt-3">Dars yo‘q.</div>`);
+
+      document.getElementById('glGroup')?.addEventListener('change', (e)=>{ glGroupId = e.target.value; page = 1; loadList(); });
+      document.getElementById('glReload')?.addEventListener('click', ()=>{ page = 1; loadList(); });
+
+      const hasMore = (page*limit) < total;
+      pagerShow(total>limit, page);
+      document.getElementById('prevBtn').disabled = page<=1;
+      document.getElementById('nextBtn').disabled = !hasMore;
+    }
+
+
+async function delItem(type, id){
+      const endpoint = type==='channels' ? `/api/admin/channels/${id}` :
+                       type==='groups' ? `/api/admin/groups/${id}` :
+                       type==='services' ? `/api/admin/services/${id}` : '';
+      if(!endpoint) return;
+      modal.show({
+        title: "O‘chirishni tasdiqlang",
+        sub: "Bu amal qaytarilmaydi.",
+        okText: "O‘chirish",
+        bodyHTML: `<div class="glass rounded-2xl p-4 text-sm muted2">
+          ID: <span class="font-mono font-extrabold">${id}</span>
+        </div>`,
+        onOk: async ()=>{
+          const {res, j} = await api(endpoint, { method:'DELETE' });
+          if(!res.ok) return toast(j?.error || "O‘chirish xatosi", 'error');
+          toast("O‘chirildi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    async function delGroupLessonRecording(lessonId){
+      modal.show({
+        title: "Yozuvni o‘chirish",
+        sub: "Faqat video yozuv o‘chadi, dars metama’lumoti qoladi.",
+        okText: "O‘chirish",
+        bodyHTML: `<div class="glass rounded-2xl p-4 text-sm muted2">
+          Lesson ID: <span class="font-mono font-extrabold">${lessonId}</span>
+        </div>`,
+        onOk: async ()=>{
+          const {res, j} = await api(`/api/admin/group-lessons/${lessonId}/recording`, { method:'DELETE' });
+          if(!res.ok) return toast(j?.error || "Yozuv o‘chirilmadi", 'error');
+          toast("Yozuv o‘chirildi.", 'success');
+          await loadList();
+        }
+      });
+    }
+
+    async function delPM(id){
+      modal.show({
+        title: "Xabarni o‘chirish",
+        sub: "Moderatsiya uchun. Qaytarilmaydi.",
+        okText: "O‘chirish",
+        bodyHTML: `<div class="glass rounded-2xl p-4 text-sm muted2">ID: <span class="font-mono font-extrabold">${id}</span></div>`,
+        onOk: async ()=>{
+          const {res, j} = await api(`/api/admin/private-messages/${id}`, { method:'DELETE' });
+          if(!res.ok) return toast(j?.error || "O‘chirish xatosi", 'error');
+          toast("O‘chirildi.", 'success');
+          await loadOverview();
+          await loadList();
+        }
+      });
+    }
+
+    // UI wiring
+    document.querySelectorAll('.tab').forEach(b => b.onclick = ()=> setTab(b.dataset.tab));
+    document.getElementById('refreshBtn').onclick = ()=> loadList();
+    document.getElementById('q').addEventListener('keydown', (e)=>{ if(e.key==='Enter') loadList(); });
+
+    document.getElementById('prevBtn').onclick = ()=>{ if(page>1){ page--; loadList(); } };
+    document.getElementById('nextBtn').onclick = ()=>{ page++; loadList(); };
+    document.getElementById('logoutBtn').onclick = ()=>{ localStorage.removeItem('token'); window.location.href='/login.html'; };
+
+    ensureAdmin();
+  
+
+    // =================== REALTIME TAB (ADMIN) ===================
+    let adminSocket = null;
+    let realtimeBound = false;
+
+    function realtimeHTML(){
+      return `
+        <div class="grid lg:grid-cols-3 gap-4">
+          <div class="glass rounded-3xl p-5 g-border">
+            <div class="text-xs muted2">Online</div>
+            <div class="mt-1 text-3xl font-black" id="rtOnlineCount">—</div>
+            <div class="mt-3 text-xs muted2">Oxirgi yangilanish: <span id="rtUpdatedAt">—</span></div>
+          </div>
+          <div class="glass rounded-3xl p-5 g-border">
+            <div class="text-xs muted2">1v1 qo‘ng‘iroqlar</div>
+            <div class="mt-1 text-3xl font-black"><span id="rtPrivateCallsCount">—</span></div>
+            <div class="mt-3 text-xs muted2">Shaxsiy call’lar</div>
+          </div>
+          <div class="glass rounded-3xl p-5 g-border">
+            <div class="text-xs muted2">Guruh / Kanal</div>
+            <div class="mt-1 text-3xl font-black"><span id="rtGroupCallsCount">—</span> / <span id="rtChannelLivesCount">—</span></div>
+            <div class="mt-3 text-xs muted2">Guruh call / Channel live</div>
+          </div>
+        </div>
+
+        <div class="mt-6 grid lg:grid-cols-2 gap-4">
+          <div class="glass rounded-3xl p-5 g-border">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="text-lg font-extrabold"><i class="fa-solid fa-user-clock mr-2"></i>Online foydalanuvchilar</h3>
+              <button class="pill px-4 py-2 text-sm font-extrabold glow-ring" id="rtRefreshBtn"><i class="fa-solid fa-rotate mr-2"></i>Refresh</button>
+            </div>
+            <div class="mt-4 overflow-auto">
+              <table class="w-full text-sm">
+                <thead class="text-left muted2">
+                  <tr>
+                    <th class="py-2 pr-3">UserID</th>
+                    <th class="py-2 pr-3">Sockets</th>
+                    <th class="py-2 pr-3">Last active</th>
+                    <th class="py-2 pr-3">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="rtOnlineTable" class="divide-y divide-white/10"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-5 g-border">
+            <h3 class="text-lg font-extrabold"><i class="fa-solid fa-phone-volume mr-2"></i>1v1 qo‘ng‘iroqlar (real-time)</h3>
+            <div class="mt-4 overflow-auto">
+              <table class="w-full text-sm">
+                <thead class="text-left muted2">
+                  <tr>
+                    <th class="py-2 pr-3">CallID</th>
+                    <th class="py-2 pr-3">Type</th>
+                    <th class="py-2 pr-3">Status</th>
+                    <th class="py-2 pr-3">Caller → Receiver</th>
+                  </tr>
+                </thead>
+                <tbody id="rtPrivateCallsTable" class="divide-y divide-white/10"></tbody>
+              </table>
+            </div>
+
+            <div class="mt-6">
+              <h3 class="text-lg font-extrabold"><i class="fa-solid fa-users mr-2"></i>Guruh call’lar</h3>
+              <div class="mt-3 overflow-auto">
+                <table class="w-full text-sm">
+                  <thead class="text-left muted2">
+                    <tr>
+                      <th class="py-2 pr-3">GroupID</th>
+                      <th class="py-2 pr-3">Type</th>
+                      <th class="py-2 pr-3">Participants</th>
+                      <th class="py-2 pr-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rtGroupCallsTable" class="divide-y divide-white/10"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <h3 class="text-lg font-extrabold"><i class="fa-solid fa-tower-broadcast mr-2"></i>Channel live</h3>
+              <div class="mt-3 overflow-auto">
+                <table class="w-full text-sm">
+                  <thead class="text-left muted2">
+                    <tr>
+                      <th class="py-2 pr-3">ChannelID</th>
+                      <th class="py-2 pr-3">Host</th>
+                      <th class="py-2 pr-3">Viewers</th>
+                      <th class="py-2 pr-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rtChannelLivesTable" class="divide-y divide-white/10"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 glass rounded-3xl p-5 g-border">
+          <h3 class="text-lg font-extrabold"><i class="fa-solid fa-terminal mr-2"></i>Admin log</h3>
+          <div id="rtLog" class="mt-3 text-xs muted2 whitespace-pre-wrap"></div>
+        </div>
+      `;
+    }
+
+    async function loadRealtime(){
+      pagerShow(false, page);
+      document.getElementById('content').innerHTML = realtimeHTML();
+      bindRealtime();
+      await rtRefresh();
+    }
+
+    function bindRealtime(){
+      if(realtimeBound) return;
+      realtimeBound = true;
+
+      const refreshBtn = document.getElementById('rtRefreshBtn');
+      if(refreshBtn) refreshBtn.onclick = ()=> rtRefresh();
+
+      startAdminSocket();
+      // polling fallback
+      setInterval(() => {
+        const activeTab = document.querySelector('.tab.active')?.getAttribute('data-tab');
+        if (activeTab === 'realtime') rtRefresh();
+      }, 3000);
+    }
+
+    function rtLog(line){
+      const log = document.getElementById('rtLog');
+      if(!log) return;
+      const t = new Date().toLocaleTimeString();
+      log.textContent = `[${t}] ${line}
+  ` + (log.textContent || '');
+    }
+
+    function escapeHtml(s){
+      return String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m]));
+    }
+
+    function fmtTS(ts){
+      try { return new Date(ts).toLocaleString(); } catch(e){ return String(ts||''); }
+    }
+
+    async function rtRefresh(){
+      const activeTab = document.querySelector('.tab.active')?.getAttribute('data-tab');
+      if(activeTab !== 'realtime') return;
+
+      const {res, j} = await api('/api/admin/realtime');
+      if(!res.ok){
+        rtLog(`❌ realtime yuklanmadi: ${j?.error || res.status}`);
+        return;
+      }
+
+      document.getElementById('rtOnlineCount').textContent = j?.counts?.onlineUsers ?? '—';
+      document.getElementById('rtUpdatedAt').textContent = fmtTS(j?.timestamp || Date.now());
+      document.getElementById('rtPrivateCallsCount').textContent = j?.counts?.activePrivateCalls ?? '—';
+      document.getElementById('rtGroupCallsCount').textContent = j?.counts?.activeGroupCalls ?? '—';
+      document.getElementById('rtChannelLivesCount').textContent = j?.counts?.activeChannelLives ?? '—';
+
+      // Online users
+      const onlineBody = document.getElementById('rtOnlineTable');
+      if(onlineBody){
+        const rows = (j.onlineUsers || []).map(u=>{
+          const uid = escapeHtml(u.userId);
+          const sockets = escapeHtml(u.socketsCount);
+          const last = fmtTS(u.lastActive);
+          return `
+            <tr class="border-t border-white/10">
+              <td class="py-2 pr-3 font-mono text-xs">${uid}</td>
+              <td class="py-2 pr-3">${sockets}</td>
+              <td class="py-2 pr-3 text-xs muted2">${escapeHtml(last)}</td>
+              <td class="py-2 pr-3">
+                <button class="pill px-3 py-1 text-xs font-extrabold glow-ring" onclick="adminKickUser('${uid}')">Kick</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        onlineBody.innerHTML = rows || `<tr><td class="py-3 text-xs muted2" colspan="4">Hozircha online yo‘q.</td></tr>`;
+      }
+
+      // Private calls
+      const pcBody = document.getElementById('rtPrivateCallsTable');
+      if(pcBody){
+        const rows = (j.activePrivateCalls || []).map(c=>{
+          return `
+            <tr class="border-t border-white/10">
+              <td class="py-2 pr-3 font-mono text-xs">${escapeHtml(c.callId)}</td>
+              <td class="py-2 pr-3">${escapeHtml(c.type)}</td>
+              <td class="py-2 pr-3">${escapeHtml(c.status)}</td>
+              <td class="py-2 pr-3 font-mono text-xs">${escapeHtml(c.callerId)} → ${escapeHtml(c.receiverId)}</td>
+            </tr>
+          `;
+        }).join('');
+        pcBody.innerHTML = rows || `<tr><td class="py-3 text-xs muted2" colspan="4">Aktiv 1v1 call yo‘q.</td></tr>`;
+      }
+
+      // Group calls
+      const gcBody = document.getElementById('rtGroupCallsTable');
+      if(gcBody){
+        const rows = (j.activeGroupCalls || []).map(g=>{
+          const gid = escapeHtml(g.groupId);
+          const parts = escapeHtml((g.participants||[]).length);
+          return `
+            <tr class="border-t border-white/10">
+              <td class="py-2 pr-3 font-mono text-xs">${gid}</td>
+              <td class="py-2 pr-3">${escapeHtml(g.callType)}</td>
+              <td class="py-2 pr-3">${parts}</td>
+              <td class="py-2 pr-3">
+                <button class="pill px-3 py-1 text-xs font-extrabold" onclick="adminJoinGroupCall('${gid}')">Join (Observer)</button>
+                <button class="pill px-3 py-1 text-xs font-extrabold glow-ring" onclick="adminEndGroupCall('${gid}')">End</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        gcBody.innerHTML = rows || `<tr><td class="py-3 text-xs muted2" colspan="4">Aktiv group call yo‘q.</td></tr>`;
+      }
+
+      // Channel lives
+      const clBody = document.getElementById('rtChannelLivesTable');
+      if(clBody){
+        const rows = (j.activeChannelLives || []).map(live=>{
+          const cid = escapeHtml(live.channelId);
+          const host = escapeHtml(live.hostId);
+          const viewers = escapeHtml(live.viewersCount || (live.viewers||[]).length);
+          return `
+            <tr class="border-t border-white/10">
+              <td class="py-2 pr-3 font-mono text-xs">${cid}</td>
+              <td class="py-2 pr-3 font-mono text-xs">${host}</td>
+              <td class="py-2 pr-3">${viewers}</td>
+              <td class="py-2 pr-3">
+                <button class="pill px-3 py-1 text-xs font-extrabold glow-ring" onclick="adminStopChannelLive('${cid}')">Stop</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        clBody.innerHTML = rows || `<tr><td class="py-3 text-xs muted2" colspan="4">Aktiv live yo‘q.</td></tr>`;
+      }
+    }
+
+    async function adminKickUser(userId){
+      const {res, j} = await api(`/api/admin/users/${encodeURIComponent(userId)}/kick`, { method:'POST' });
+      if(!res.ok) return toast(j?.error || 'Kick bo‘lmadi', 'error');
+      toast('User kicked', 'success');
+      rtRefresh();
+    }
+
+    async function adminJoinGroupCall(groupId){
+      try{
+        const gid = encodeURIComponent(String(groupId||''));
+        if(!gid) return;
+        // Open group page in observer mode (no camera/mic). Admin will still appear in participants list.
+        window.open(`/group.html?id=${gid}&observer=1&autoJoin=1`, '_blank');
+      }catch(e){ console.error(e); }
+    }
+
+async function adminEndGroupCall(groupId){
+      const {res, j} = await api(`/api/admin/group-calls/${encodeURIComponent(groupId)}/end`, { method:'POST' });
+      if(!res.ok) return toast(j?.error || 'End bo‘lmadi', 'error');
+      toast('Group call ended', 'success');
+      rtRefresh();
+    }
+
+    async function adminStopChannelLive(channelId){
+      const {res, j} = await api(`/api/admin/channel-lives/${encodeURIComponent(channelId)}/stop`, { method:'POST' });
+      if(!res.ok) return toast(j?.error || 'Stop bo‘lmadi', 'error');
+      toast('Live stopped', 'success');
+      rtRefresh();
+    }
+
+    // ==================== CATALOG (Universities/Faculties/Programs) ====================
+    let catState = { uni: '', faculty: '', studyType: '' };
+
+    async function loadCatalog(q){
+      // q: free-text university filter
+      const {res, j} = await api(`/api/admin/catalog/universities?q=${encodeURIComponent(q||'')}`);
+      if(!res.ok) return toast(j?.error || 'Katalog yuklanmadi', 'error');
+      const unis = j.universities || [];
+
+      const uniOptions = unis.map(u => `<option value="${escapeHtml(u.name)}" ${u.name===catState.uni?'selected':''}>${escapeHtml(u.name)}</option>`).join('');
+      const body = `
+        <div class="grid lg:grid-cols-5 gap-4">
+          <div class="glass rounded-2xl p-4">
+            <div class="font-black">Universitetlar</div>
+            <div class="text-xs muted2 mt-1">Qo‘shish / o‘chirish / nomini almashtirish</div>
+            <div class="mt-3 flex gap-2">
+              <input id="newUni" class="field rounded-xl px-3 py-2 text-sm flex-1" placeholder="Masalan: Qarshi Davlat Texnika Universiteti"/>
+              <button id="addUniBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Qo‘shish</button>
+            </div>
+            <div class="mt-3">
+              <select id="uniSel" class="field w-full rounded-xl px-3 py-2 text-sm">${uniOptions || '<option value="">—</option>'}</select>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <button id="renameUniBtn" class="glass btn-ghost rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Rename</button>
+              <button id="delUniBtn" class="glass btn-ghost rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">O‘chirish</button>
+            </div>
+          </div>
+
+          <div class="glass rounded-2xl p-4">
+            <div class="font-black">Fakultetlar</div>
+            <div class="text-xs muted2 mt-1">Tanlangan universitet bo‘yicha</div>
+            <div class="mt-3 flex gap-2">
+              <input id="newFac" class="field rounded-xl px-3 py-2 text-sm flex-1" placeholder="Masalan: Axborot texnologiyalari"/>
+              <button id="addFacBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Qo‘shish</button>
+            </div>
+            <div id="facList" class="mt-3 text-sm"></div>
+          </div>
+
+          <div class="glass rounded-2xl p-4">
+            <div class="font-black">O‘quv turlari</div>
+            <div class="text-xs muted2 mt-1">Tanlangan universitet + fakultet bo‘yicha</div>
+            <div class="mt-3 flex gap-2">
+              <input id="newStudyType" class="field rounded-xl px-3 py-2 text-sm flex-1" placeholder="Masalan: Kunduzgi"/>
+              <button id="addStudyTypeBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Qo‘shish</button>
+            </div>
+            <div class="mt-3">
+              <input id="typeQ" class="field w-full rounded-xl px-3 py-2 text-sm" placeholder="Qidirish (o‘quv turi)"/>
+            </div>
+            <div id="typeList" class="mt-3 text-sm"></div>
+          </div>
+
+          <div class="glass rounded-2xl p-4">
+            <div class="font-black">O‘quv guruhlari</div>
+            <div class="text-xs muted2 mt-1">Tanlangan universitet + fakultet + o‘quv turi bo‘yicha</div>
+            <div class="mt-2 text-xs muted2">Tanlangan tur: <span id="selectedTypeLabel" class="font-extrabold">${escapeHtml(catState.studyType || '—')}</span></div>
+            <div class="mt-3 flex gap-2">
+              <input id="newStudyGroup" class="field rounded-xl px-3 py-2 text-sm flex-1" placeholder="Masalan: MMT-520-25"/>
+              <button id="addStudyGroupBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Qo‘shish</button>
+            </div>
+            <div class="mt-3">
+              <input id="sgQ" class="field w-full rounded-xl px-3 py-2 text-sm" placeholder="Qidirish (o‘quv guruhi)"/>
+            </div>
+            <div id="sgList" class="mt-3 text-sm"></div>
+          </div>
+
+          <div class="glass rounded-2xl p-4">
+            <div class="font-black">Yo‘nalishlar (Programs)</div>
+            <div class="text-xs muted2 mt-1">Universitet + fakultet bo‘yicha</div>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <input id="progCode" class="field rounded-xl px-3 py-2 text-sm" placeholder="Kod (ixtiyoriy)"/>
+              <input id="progName" class="field rounded-xl px-3 py-2 text-sm" placeholder="Yo‘nalish nomi"/>
+              <button id="addProgBtn" class="col-span-2 btn-primary text-white rounded-xl px-4 py-2 text-sm font-extrabold glow-ring">Yo‘nalish qo‘shish</button>
+            </div>
+            <div class="mt-3">
+              <input id="progQ" class="field w-full rounded-xl px-3 py-2 text-sm" placeholder="Qidirish (yo‘nalish/kod)"/>
+            </div>
+            <div id="progList" class="mt-3 text-sm"></div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('content').innerHTML = body;
+      pagerShow(false, page);
+
+      // init selection
+      const uniSel = document.getElementById('uniSel');
+      if(!catState.uni) catState.uni = uniSel.value || '';
+      uniSel.onchange = () => { catState.uni = uniSel.value; catState.faculty=''; catState.studyType=''; loadCatalog(document.getElementById('q').value.trim()); };
+
+      document.getElementById('addUniBtn').onclick = async () => {
+        const name = document.getElementById('newUni').value.trim();
+        if(!name) return toast('Universitet nomini kiriting', 'error');
+        const {res, j} = await api('/api/admin/catalog/universities', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+        if(!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        toast('Universitet qo‘shildi', 'success');
+        catState.uni = name;
+        loadCatalog(document.getElementById('q').value.trim());
+      };
+
+      document.getElementById('renameUniBtn').onclick = async () => {
+        const oldName = catState.uni;
+        if(!oldName) return toast('Universitet tanlang', 'error');
+        modal.show({
+          title: 'Universitet nomini almashtirish',
+          sub: oldName,
+          okText: 'Saqlash',
+          bodyHTML: `<label class="text-xs font-extrabold muted">Yangi nom</label><input id="newName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(oldName)}"/>`,
+          onOk: async ()=>{
+            const name = document.getElementById('newName').value.trim();
+            const {res, j} = await api(`/api/admin/catalog/universities/${encodeURIComponent(oldName)}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+            if(!res.ok) return toast(j?.error || 'Rename bo‘lmadi', 'error');
+            toast('Yangilandi', 'success');
+            catState.uni = name;
+            loadCatalog(document.getElementById('q').value.trim());
+          }
+        });
+      };
+
+      document.getElementById('delUniBtn').onclick = async () => {
+        const name = catState.uni;
+        if(!name) return toast('Universitet tanlang', 'error');
+        modal.show({
+          title: 'Universitetni o‘chirish',
+          sub: 'Katalogdan o‘chadi (userlar o‘chirilmaydi).',
+          okText: 'O‘chirish',
+          bodyHTML: `<div class="text-sm muted2">Universitet: <span class="font-extrabold">${escapeHtml(name)}</span></div>`,
+          onOk: async ()=>{
+            const {res, j} = await api(`/api/admin/catalog/universities/${encodeURIComponent(name)}`, { method:'DELETE' });
+            if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            toast('O‘chirildi', 'success');
+            catState.uni = '';
+            catState.faculty='';
+            catState.studyType='';
+            loadCatalog(document.getElementById('q').value.trim());
+          }
+        });
+      };
+
+      // Faculties list
+      await renderFaculties();
+      // Study types list
+      await renderStudyTypes();
+      // Study groups list
+      await renderStudyGroups();
+      // Programs list
+      await renderPrograms();
+
+      document.getElementById('addFacBtn').onclick = async ()=>{
+        if(!catState.uni) return toast('Avval universitet tanlang', 'error');
+        const faculty = document.getElementById('newFac').value.trim();
+        if(!faculty) return toast('Fakultet nomini kiriting', 'error');
+        const {res, j} = await api('/api/admin/catalog/faculties', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ university: catState.uni, faculty }) });
+        if(!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        toast('Fakultet qo‘shildi', 'success');
+        document.getElementById('newFac').value='';
+        await renderFaculties();
+        await renderStudyTypes();
+      };
+
+      document.getElementById('addProgBtn').onclick = async ()=>{
+        if(!catState.uni) return toast('Universitet tanlang', 'error');
+        if(!catState.faculty) return toast('Fakultet tanlang (pastda)', 'error');
+        const code = document.getElementById('progCode').value.trim();
+        const name = document.getElementById('progName').value.trim();
+        if(!name) return toast('Yo‘nalish nomini kiriting', 'error');
+        const {res, j} = await api('/api/admin/catalog/programs', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ university: catState.uni, faculty: catState.faculty, code, name }) });
+        if(!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        toast('Yo‘nalish qo‘shildi', 'success');
+        document.getElementById('progCode').value='';
+        document.getElementById('progName').value='';
+        await renderPrograms();
+      };
+
+      document.getElementById('addStudyGroupBtn').onclick = async ()=>{
+        if(!catState.uni) return toast('Universitet tanlang', 'error');
+        if(!catState.faculty) return toast('Fakultet tanlang (pastda)', 'error');
+        if(!catState.studyType) return toast('O‘quv turini tanlang (pastda)', 'error');
+        const name = document.getElementById('newStudyGroup').value.trim();
+        if(!name) return toast('O‘quv guruhi nomini kiriting', 'error');
+        const {res, j} = await api('/api/admin/catalog/study-groups', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ university: catState.uni, faculty: catState.faculty, studyType: catState.studyType, name })
+        });
+        if(!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        toast('O‘quv guruhi qo‘shildi', 'success');
+        document.getElementById('newStudyGroup').value = '';
+        await renderStudyGroups();
+      };
+
+      document.getElementById('addStudyTypeBtn').onclick = async ()=>{
+        if(!catState.uni) return toast('Universitet tanlang', 'error');
+        if(!catState.faculty) return toast('Fakultet tanlang (pastda)', 'error');
+        const name = document.getElementById('newStudyType').value.trim();
+        if(!name) return toast('O‘quv turi nomini kiriting', 'error');
+        const {res, j} = await api('/api/admin/catalog/study-types', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ university: catState.uni, faculty: catState.faculty, name })
+        });
+        if(!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        toast('O‘quv turi qo‘shildi', 'success');
+        document.getElementById('newStudyType').value = '';
+        await renderStudyTypes();
+        await renderStudyGroups();
+      };
+
+      document.getElementById('progQ').oninput = ()=>{ clearTimeout(loadCatalog._t); loadCatalog._t = setTimeout(()=> renderPrograms(), 250); };
+      document.getElementById('newStudyType').addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('addStudyTypeBtn').click(); });
+      document.getElementById('typeQ').oninput = ()=>{ clearTimeout(loadCatalog._ty); loadCatalog._ty = setTimeout(()=> renderStudyTypes(), 250); };
+      document.getElementById('sgQ').oninput = ()=>{ clearTimeout(loadCatalog._sgt); loadCatalog._sgt = setTimeout(()=> renderStudyGroups(), 250); };
+
+      async function renderFaculties(){
+        const facListEl = document.getElementById('facList');
+        if(!catState.uni){ facListEl.innerHTML = '<div class="text-xs muted2">Universitet tanlanmagan.</div>'; return; }
+        const {res, j} = await api(`/api/admin/catalog/faculties?university=${encodeURIComponent(catState.uni)}`);
+        if(!res.ok) { facListEl.innerHTML = '<div class="text-xs text-red-500">Xatolik</div>'; return; }
+        const facs = j.faculties || [];
+        if(!facs.length){ facListEl.innerHTML = '<div class="text-xs muted2">Fakultet yo‘q.</div>'; return; }
+        facListEl.innerHTML = facs.map(f=>{
+          const active = f===catState.faculty;
+          return `
+            <div class="flex items-center justify-between gap-2 p-2 rounded-xl ${active?'bg-indigo-500/15 border border-indigo-400/30':'border border-white/10'}">
+              <button class="pickFac text-left flex-1 font-extrabold" data-fac="${escapeHtml(f)}">${escapeHtml(f)}</button>
+              <div class="flex items-center gap-1">
+                <button class="renFac glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-fac="${escapeHtml(f)}"><i class="fa-solid fa-pen"></i></button>
+                <button class="delFac glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-fac="${escapeHtml(f)}"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </div>`;
+        }).join('');
+        facListEl.querySelectorAll('.pickFac').forEach(b=> b.onclick = ()=>{ catState.faculty=b.dataset.fac; catState.studyType=''; renderFaculties(); renderStudyTypes(); renderStudyGroups(); renderPrograms(); });
+        facListEl.querySelectorAll('.renFac').forEach(b=> b.onclick = async ()=>{
+          const oldFaculty = b.dataset.fac;
+          modal.show({
+            title:'Fakultet nomini almashtirish',
+            sub: `${catState.uni} / ${oldFaculty}`,
+            okText:'Saqlash',
+            bodyHTML:`<label class="text-xs font-extrabold muted">Yangi nom</label><input id="newFacultyName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(oldFaculty)}"/>`,
+            onOk: async ()=>{
+              const newFaculty = document.getElementById('newFacultyName').value.trim();
+              const {res, j} = await api('/api/admin/catalog/faculties', {
+                method:'PATCH',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ university: catState.uni, oldFaculty, newFaculty })
+              });
+              if(!res.ok) return toast(j?.error || 'Tahrirlanmadi', 'error');
+              toast('Yangilandi', 'success');
+              if(catState.faculty===oldFaculty) catState.faculty = newFaculty;
+              await renderFaculties();
+              await renderStudyTypes();
+              await renderStudyGroups();
+              await renderPrograms();
+            }
+          });
+        });
+        facListEl.querySelectorAll('.delFac').forEach(b=> b.onclick = async ()=>{
+          const faculty = b.dataset.fac;
+          modal.show({
+            title:'Fakultetni o‘chirish',
+            sub: `${catState.uni} / ${faculty}`,
+            okText:'O‘chirish',
+            bodyHTML:`<div class="text-sm muted2">Fakultet o‘chiriladi va shu fakultetdagi yo‘nalishlar ham tozalanadi.</div>`,
+            onOk: async ()=>{
+              const {res, j} = await api('/api/admin/catalog/faculties', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ university: catState.uni, faculty }) });
+              if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+              toast('O‘chirildi', 'success');
+              if(catState.faculty===faculty){ catState.faculty=''; catState.studyType=''; }
+              await renderFaculties();
+              await renderStudyTypes();
+              await renderStudyGroups();
+              await renderPrograms();
+            }
+          });
+        });
+      }
+
+      async function renderStudyTypes(){
+        const el = document.getElementById('typeList');
+        if(!el) return;
+        const selectedLabelEl = document.getElementById('selectedTypeLabel');
+        const setSelectedLabel = ()=>{
+          if(selectedLabelEl) selectedLabelEl.textContent = catState.studyType || '—';
+        };
+        if(!catState.uni || !catState.faculty){
+          el.innerHTML = '<div class="text-xs muted2">Universitet va fakultet tanlang.</div>';
+          catState.studyType = '';
+          setSelectedLabel();
+          return;
+        }
+
+        const q = (document.getElementById('typeQ')?.value || '').trim();
+        const {res, j} = await api(`/api/admin/catalog/study-types?university=${encodeURIComponent(catState.uni)}&faculty=${encodeURIComponent(catState.faculty)}&q=${encodeURIComponent(q)}`);
+        if(!res.ok){ el.innerHTML = '<div class="text-xs text-red-500">Xatolik</div>'; return; }
+        const list = Array.isArray(j.studyTypes) ? j.studyTypes : [];
+        if(!list.length){
+          catState.studyType = '';
+          el.innerHTML = '<div class="text-xs muted2">O‘quv turi topilmadi.</div>';
+          setSelectedLabel();
+          await renderStudyGroups();
+          return;
+        }
+        if(!catState.studyType || !list.some(t => (t.name||'') === catState.studyType)){
+          catState.studyType = String(list[0].name || '').trim();
+        }
+        setSelectedLabel();
+
+        el.innerHTML = list.map(item => {
+          const name = String(item?.name || '').trim();
+          const active = name === catState.studyType;
+          return `
+            <div class="typeRow flex items-center justify-between gap-2 p-2 rounded-xl cursor-pointer ${active?'bg-cyan-500/15 border border-cyan-400/30':'border border-white/10'}" data-name="${escapeHtml(name)}">
+              <button class="pickType text-left flex-1 font-extrabold" data-name="${escapeHtml(name)}">${escapeHtml(name)}</button>
+              <div class="flex items-center gap-1">
+                <button class="renType glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-id="${escapeHtml(item._id)}" data-name="${escapeHtml(name)}"><i class="fa-solid fa-pen"></i></button>
+                <button class="delType glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-id="${escapeHtml(item._id)}"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        el.querySelectorAll('.typeRow').forEach(row => row.onclick = (ev)=>{
+          if(ev.target.closest('.renType') || ev.target.closest('.delType')) return;
+          catState.studyType = row.dataset.name || '';
+          renderStudyTypes();
+          renderStudyGroups();
+        });
+        el.querySelectorAll('.pickType').forEach(b=> b.onclick = (ev)=>{ ev.stopPropagation(); catState.studyType = b.dataset.name || ''; renderStudyTypes(); renderStudyGroups(); });
+        el.querySelectorAll('.renType').forEach(b=> b.onclick = async ()=>{
+          const id = b.dataset.id;
+          const oldName = b.dataset.name || '';
+          modal.show({
+            title:'O‘quv turini tahrirlash',
+            sub: `${catState.uni} / ${catState.faculty}`,
+            okText:'Saqlash',
+            bodyHTML:`<label class="text-xs font-extrabold muted">Yangi nom</label><input id="newTypeName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(oldName)}"/>`,
+            onOk: async ()=>{
+              const name = document.getElementById('newTypeName').value.trim();
+              if(!name) return toast('Nomni kiriting', 'error');
+              const {res, j} = await api(`/api/admin/catalog/study-types/${encodeURIComponent(id)}`, {
+                method:'PATCH',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ university: catState.uni, faculty: catState.faculty, name })
+              });
+              if(!res.ok) return toast(j?.error || 'Tahrirlanmadi', 'error');
+              if(catState.studyType === oldName) catState.studyType = name;
+              toast('Yangilandi', 'success');
+              await renderStudyTypes();
+              await renderStudyGroups();
+            }
+          });
+        });
+        el.querySelectorAll('.delType').forEach(b=> b.onclick = async ()=>{
+          const id = b.dataset.id;
+          modal.show({
+            title:'O‘quv turini o‘chirish',
+            sub:'Bu turga bog‘liq o‘quv guruhlar ham katalogdan o‘chadi.',
+            okText:'O‘chirish',
+            bodyHTML:`<div class="text-sm muted2">ID: <span class="font-mono font-extrabold">${escapeHtml(id)}</span></div>`,
+            onOk: async ()=>{
+              const {res, j} = await api(`/api/admin/catalog/study-types/${encodeURIComponent(id)}`, { method:'DELETE' });
+              if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+              toast('O‘chirildi', 'success');
+              await renderStudyTypes();
+              await renderStudyGroups();
+            }
+          });
+        });
+      }
+
+      async function renderStudyGroups(){
+        const el = document.getElementById('sgList');
+        if(!el) return;
+        const selectedLabelEl = document.getElementById('selectedTypeLabel');
+        if(selectedLabelEl) selectedLabelEl.textContent = catState.studyType || '—';
+        if(!catState.uni || !catState.faculty || !catState.studyType){
+          el.innerHTML = '<div class="text-xs muted2">Universitet, fakultet va o‘quv turini tanlang.</div>';
+          return;
+        }
+        const q = (document.getElementById('sgQ')?.value || '').trim();
+        const {res, j} = await api(`/api/admin/catalog/study-groups?university=${encodeURIComponent(catState.uni)}&faculty=${encodeURIComponent(catState.faculty)}&studyType=${encodeURIComponent(catState.studyType)}&q=${encodeURIComponent(q)}`);
+        if(!res.ok){ el.innerHTML = '<div class="text-xs text-red-500">Xatolik</div>'; return; }
+        const list = Array.isArray(j.studyGroups) ? j.studyGroups : [];
+        if(!list.length){
+          el.innerHTML = '<div class="text-xs muted2">O‘quv guruhlari topilmadi.</div>';
+          return;
+        }
+        el.innerHTML = list.map(item => `
+          <div class="flex items-center justify-between gap-2 p-2 rounded-xl border border-white/10">
+            <div>
+              <div class="font-extrabold truncate">${escapeHtml(item.name || '-')}</div>
+              <div class="text-xs muted2">${escapeHtml(item.studyType || catState.studyType || '-')}</div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button class="renSg glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-id="${escapeHtml(item._id)}" data-name="${escapeHtml(item.name||'')}"><i class="fa-solid fa-pen"></i></button>
+              <button class="delSg glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-id="${escapeHtml(item._id)}"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+        `).join('');
+
+        el.querySelectorAll('.renSg').forEach(btn => btn.onclick = async ()=>{
+          const id = btn.dataset.id;
+          const oldName = btn.dataset.name || '';
+          modal.show({
+            title:'O‘quv guruhini tahrirlash',
+            sub: `${catState.uni} / ${catState.faculty}`,
+            okText:'Saqlash',
+            bodyHTML:`<label class="text-xs font-extrabold muted">Yangi nom</label><input id="newSgName" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" value="${escapeHtml(oldName)}"/>`,
+            onOk: async ()=>{
+              const name = document.getElementById('newSgName').value.trim();
+              if(!name) return toast('Nomni kiriting', 'error');
+              const {res, j} = await api(`/api/admin/catalog/study-groups/${encodeURIComponent(id)}`, {
+                method:'PATCH',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ university: catState.uni, faculty: catState.faculty, studyType: catState.studyType, name })
+              });
+              if(!res.ok) return toast(j?.error || 'Tahrirlanmadi', 'error');
+              toast('Yangilandi', 'success');
+              await renderStudyGroups();
+            }
+          });
+        });
+
+        el.querySelectorAll('.delSg').forEach(btn => btn.onclick = async ()=>{
+          const id = btn.dataset.id;
+          modal.show({
+            title:'O‘quv guruhini o‘chirish',
+            sub:'Bu faqat katalogdan o‘chadi.',
+            okText:'O‘chirish',
+            bodyHTML:`<div class="text-sm muted2">ID: <span class="font-mono font-extrabold">${escapeHtml(id)}</span></div>`,
+            onOk: async ()=>{
+              const {res, j} = await api(`/api/admin/catalog/study-groups/${encodeURIComponent(id)}`, { method:'DELETE' });
+              if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+              toast('O‘chirildi', 'success');
+              await renderStudyGroups();
+            }
+          });
+        });
+      }
+
+      async function renderPrograms(){
+        const el = document.getElementById('progList');
+        if(!catState.uni || !catState.faculty){ el.innerHTML = '<div class="text-xs muted2">Universitet va fakultet tanlang.</div>'; return; }
+        const qq = (document.getElementById('progQ')?.value || '').trim();
+        const {res, j} = await api(`/api/admin/catalog/programs?university=${encodeURIComponent(catState.uni)}&faculty=${encodeURIComponent(catState.faculty)}&q=${encodeURIComponent(qq)}`);
+        if(!res.ok) { el.innerHTML = '<div class="text-xs text-red-500">Xatolik</div>'; return; }
+        const list = j.programs || [];
+        if(!list.length){ el.innerHTML = '<div class="text-xs muted2">Yo‘nalish topilmadi.</div>'; return; }
+        el.innerHTML = list.map(p=>`
+          <div class="flex items-center justify-between gap-2 p-2 rounded-xl border border-white/10">
+            <div class="min-w-0">
+              <div class="font-extrabold truncate">${escapeHtml(p.name)}</div>
+              <div class="text-xs muted2">${escapeHtml(p.code||'—')} • <span class="font-mono">${escapeHtml(p._id)}</span></div>
+            </div>
+            <button class="delProg glass btn-ghost rounded-xl px-3 py-1 text-xs font-extrabold" data-id="${escapeHtml(p._id)}"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `).join('');
+        el.querySelectorAll('.delProg').forEach(b=> b.onclick = async ()=>{
+          const id = b.dataset.id;
+          modal.show({
+            title:'Yo‘nalishni o‘chirish',
+            sub: 'Bu faqat katalogdan o‘chadi.',
+            okText:'O‘chirish',
+            bodyHTML:`<div class="text-sm muted2">ID: <span class="font-mono font-extrabold">${escapeHtml(id)}</span></div>`,
+            onOk: async ()=>{
+              const {res, j} = await api(`/api/admin/catalog/programs/${encodeURIComponent(id)}`, { method:'DELETE' });
+              if(!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+              toast('O‘chirildi', 'success');
+              await renderPrograms();
+            }
+          });
+        });
+      }
+    }
+
+    // ==================== BROADCAST (Notifications) ====================
+    async function loadBroadcast(){
+      document.getElementById('content').innerHTML = `
+        <div class="glass rounded-2xl p-5 max-w-3xl">
+          <div class="font-black text-lg">Xabarnoma yuborish</div>
+          <div class="text-xs muted2 mt-1">In-app notification sifatida boradi. Target bo‘sh bo‘lsa — hamma userlarga.</div>
+          <div class="mt-4 grid sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Sarlavha</label>
+              <input id="bTitle" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: Dars 1 soatdan keyin boshlanadi"/>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Matn</label>
+              <textarea id="bBody" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="4" placeholder="Xabar matni..."></textarea>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Universitet (ixtiyoriy)</label>
+              <input id="bUni" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: Qarshi DTU"/>
+            </div>
+            <div>
+              <label class="text-xs font-extrabold muted">Fakultet (ixtiyoriy)</label>
+              <input id="bFac" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: Moliya"/>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold muted">Guruh (studyGroup) (ixtiyoriy)</label>
+              <input id="bGroup" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" placeholder="Masalan: MMT-520-25"/>
+            </div>
+            <div class="sm:col-span-2 flex items-center gap-2">
+              <button id="bSend" class="btn-primary text-white rounded-2xl px-5 py-3 text-sm font-extrabold glow-ring">Yuborish</button>
+              <div class="text-xs muted2" id="bResult"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      pagerShow(false, page);
+      document.getElementById('bSend').onclick = async ()=>{
+        const payload = {
+          title: document.getElementById('bTitle').value.trim(),
+          body: document.getElementById('bBody').value.trim(),
+          university: document.getElementById('bUni').value.trim(),
+          faculty: document.getElementById('bFac').value.trim(),
+          studyGroup: document.getElementById('bGroup').value.trim(),
+        };
+        const {res, j} = await api('/api/admin/broadcast', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        if(!res.ok) return toast(j?.error || 'Yuborilmadi', 'error');
+        const n = j.created ?? 0;
+        document.getElementById('bResult').textContent = `Yuborildi: ${n} user`;
+        toast(`Yuborildi: ${n} user`, 'success');
+      };
+    }
+
+    // ==================== SUPPORT TAB ====================
+    let supportSelectedUserId = '';
+    async function loadSupportAdminTab(q){
+      const {res, j} = await api(`/api/admin/support/threads?q=${encodeURIComponent(q||'')}`);
+      if(!res.ok) return toast(j?.error || 'Support threadlar yuklanmadi', 'error');
+      const items = j.items || [];
+      const rows = items.map(x=>{
+        const u = x.user || {};
+        const name = escapeHtml(u.fullName || u.username || x.userId || 'User');
+        const uname = escapeHtml(u.username || '');
+        const last = escapeHtml((x.lastText || '').slice(0, 120));
+        const unread = Number(x.unreadForAdmin || 0);
+        return `
+          <tr class="row border-b border-white/10">
+            <td class="p-3">
+              <div class="font-extrabold">${name}</div>
+              <div class="text-xs muted2">@${uname} • <span class="font-mono">${escapeHtml(String(x.userId||''))}</span></div>
+            </td>
+            <td class="p-3 text-xs muted2">
+              <div>${last || '—'}</div>
+              <div class="mt-1">${fmtDate(x.lastAt)}</div>
+            </td>
+            <td class="p-3 text-right">
+              <div class="flex justify-end items-center gap-2">
+                ${unread>0 ? `<span class="px-2 py-1 rounded-lg bg-red-500/20 border border-red-400/30 text-red-300 text-xs font-extrabold">${unread} unread</span>` : ''}
+                <button class="openSupport btn-primary text-white rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-user="${x.userId}" data-name="${name}">
+                  <i class="fa-solid fa-reply mr-2"></i>Javob
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('content').innerHTML = tableWrap(`
+        <thead><tr class="text-left text-xs muted2">
+          <th class="p-3">Foydalanuvchi</th>
+          <th class="p-3">Oxirgi xabar</th>
+          <th class="p-3 text-right">Amal</th>
+        </tr></thead>
+        <tbody>${rows || ''}</tbody>
+      `) + (!items.length ? `<div class="text-sm muted2 mt-3">Support xabarlar hozircha yo'q.</div>` : '');
+
+      pagerShow(false, page);
+      document.querySelectorAll('.openSupport').forEach(b=> b.onclick = ()=> openSupportThread(b.dataset.user, b.dataset.name));
+    }
+
+    async function openSupportThread(userId, name){
+      supportSelectedUserId = String(userId || '');
+      if(!supportSelectedUserId) return;
+      const {res, j} = await api(`/api/admin/support/threads/${encodeURIComponent(supportSelectedUserId)}/messages`);
+      if(!res.ok) return toast(j?.error || 'Thread yuklanmadi', 'error');
+      const msgs = j.messages || [];
+      const rows = msgs.map(m=>{
+        const who = m.senderRole === 'admin' ? 'Admin' : 'User';
+        const whoCls = m.senderRole === 'admin' ? 'text-amber-300' : 'text-cyan-300';
+        return `
+          <div class="glass rounded-2xl p-3 mb-2">
+            <div class="text-xs font-extrabold ${whoCls}">${who} • ${fmtDate(m.createdAt)}</div>
+            <div class="mt-1 text-sm">${escapeHtml(m.text || '')}</div>
+          </div>
+        `;
+      }).join('');
+      const supportEmptyHtml = '<div class="text-sm muted2">Xabar yo\'q.</div>';
+
+      modal.show({
+        title: "Support thread",
+        sub: `${name || 'User'} • ${escapeHtml(supportSelectedUserId)}`,
+        okText: "Yuborish",
+        bodyHTML: `
+          <div class="text-xs muted2 mb-2">Foydalanuvchiga javob shu chat widgetga unread bo'lib tushadi.</div>
+          <div style="max-height:50vh; overflow:auto" id="supportThreadBody">${rows || supportEmptyHtml}</div>
+          <div class="mt-3">
+            <label class="text-xs font-extrabold muted">Javob</label>
+            <textarea id="supportReplyText" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" rows="3" placeholder="Javob matni..."></textarea>
+          </div>
+        `,
+        onOk: async ()=>{
+          const text = (document.getElementById('supportReplyText')?.value || '').trim();
+          if(!text) return toast('Javob matnini kiriting', 'error');
+          const {res: r2, j: j2} = await api(`/api/admin/support/threads/${encodeURIComponent(supportSelectedUserId)}/reply`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ text })
+          });
+          if(!r2.ok) return toast(j2?.error || 'Javob yuborilmadi', 'error');
+          await api(`/api/admin/support/threads/${encodeURIComponent(supportSelectedUserId)}/read`, { method:'POST' });
+          toast('Javob yuborildi', 'success');
+          await loadSupportAdminTab(document.getElementById('q').value.trim());
+        }
+      });
+
+      await api(`/api/admin/support/threads/${encodeURIComponent(supportSelectedUserId)}/read`, { method:'POST' });
+    }
+
+    function startAdminSocket(){
+      if(adminSocket || typeof io === 'undefined') return;
+      adminSocket = io({ auth: { token: token() } });
+
+      adminSocket.on('connect', () => rtLog('✅ socket connected'));
+      adminSocket.on('disconnect', () => rtLog('🔌 socket disconnected'));
+
+      adminSocket.on('admin:ready', () => {
+        rtLog('🛡️ admin room joined');
+        rtRefresh();
+      });
+
+      adminSocket.on('admin:userOnline', (p) => { rtLog(`🟢 online: ${escapeHtml(p.userId)}`); rtRefresh(); });
+      adminSocket.on('admin:userOffline', (p) => { rtLog(`⚪ offline: ${escapeHtml(p.userId)}`); rtRefresh(); });
+      adminSocket.on('admin:privateCallUpdate', (p) => { rtLog(`📞 privateCall ${escapeHtml(p.action)}: ${escapeHtml(p.callId)}`); rtRefresh(); });
+      adminSocket.on('admin:groupCallUpdate', (p) => { rtLog(`👥 groupCall ${escapeHtml(p.action)}: ${escapeHtml(p.groupId)}`); rtRefresh(); });
+      adminSocket.on('admin:channelLiveUpdate', (p) => { rtLog(`📡 live ${escapeHtml(p.action)}: ${escapeHtml(p.channelId)}`); rtRefresh(); });
+      adminSocket.on('admin:action', (p) => { rtLog(`⚙️ action: ${escapeHtml(JSON.stringify(p))}`); rtRefresh(); });
+      adminSocket.on('admin:support:new', () => {
+        if (tab === 'support') loadSupportAdminTab(document.getElementById('q').value.trim());
+      });
+      adminSocket.on('admin:support:updated', () => {
+        if (tab === 'support') loadSupportAdminTab(document.getElementById('q').value.trim());
+      });
+    }
+
+    // ==================== INIT / WIRING ====================
+    function wireUI(){
+      // Tabs
+      document.querySelectorAll('.tab').forEach(b=>{
+        b.addEventListener('click', ()=> setTab(b.dataset.tab));
+      });
+
+      // Refresh
+      document.getElementById('refreshBtn').addEventListener('click', ()=> loadList());
+
+      // Search (Enter)
+      document.getElementById('q').addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter') loadList();
+      });
+
+      // Pager
+      document.getElementById('prevBtn').addEventListener('click', ()=>{ if(page>1){ page--; loadList(); } });
+      document.getElementById('nextBtn').addEventListener('click', ()=>{ page++; loadList(); });
+
+      // Logout
+      document.getElementById('logoutBtn').addEventListener('click', ()=>{
+        localStorage.removeItem('token');
+        window.location.href = '/login.html';
+      });
+
+      // Close modal on backdrop
+      document.getElementById('modal').addEventListener('click', (e)=>{
+        if(e.target && e.target.id === 'modal') modal.hide();
+      });
+    }
+
+    // Boot
+    window.addEventListener('DOMContentLoaded', async ()=>{
+      try{
+        wireUI();
+        await ensureAdmin();
+      }catch(err){
+        console.error(err);
+        toast('Admin tekshiruvida xatolik (console ni tekshiring).', 'error');
+        document.getElementById('meAdmin').textContent = 'Xatolik';
+      }
+    });
+</script>
+  <script src="/ui-actions-menu.js" defer></script>
+  <script src="/global-assistant.js" defer></script>
+</body>
+</html>
+
+
+
