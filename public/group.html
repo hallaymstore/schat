@@ -1490,14 +1490,182 @@ button,a{ -webkit-tap-highlight-color: transparent; }
       body: JSON.stringify({
         filename: item.filename || `lesson_${item.lessonId}.webm`,
         title: item.title || '',
-        totalBytes: Number(item.blob?.size || 0),
-        mimeType: item.blob?.type || 'video/webm',
-        chunkSize: Number(item.chunkSize || 1024 * 1024)
+        totalBytes: Number(item.blob?.size || item.totalBytes || 0),
+        mimeType: item.mimeType || item.blob?.type || 'video/webm',
+        chunkSize: Number(item.chunkSize || 1024 * 1024),
+        streaming: !!item.streaming
       })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || `session http ${res.status}`);
     return data || {};
+  }
+
+  let _liveRecordingUpload = {
+    sessionId: '',
+    lessonId: '',
+    token: '',
+    uploadedBytes: 0,
+    chunkSize: 1024 * 1024,
+    title: '',
+    filename: '',
+    mimeType: 'video/webm',
+    streaming: false,
+    failed: false,
+    completed: false,
+    warned: false,
+    hadChunks: false,
+    queue: Promise.resolve()
+  };
+
+  function resetLiveRecordingUploadState(){
+    _liveRecordingUpload = {
+      sessionId: '',
+      lessonId: '',
+      token: '',
+      uploadedBytes: 0,
+      chunkSize: 1024 * 1024,
+      title: '',
+      filename: '',
+      mimeType: 'video/webm',
+      streaming: false,
+      failed: false,
+      completed: false,
+      warned: false,
+      hadChunks: false,
+      queue: Promise.resolve()
+    };
+  }
+
+  async function ensureLiveRecordingUploadSession(meta = {}){
+    const lessonId = String(meta.lessonId || _liveRecordingUpload.lessonId || '');
+    const token = String(localStorage.getItem('token') || meta.token || _liveRecordingUpload.token || '').trim();
+    if (!lessonId || !token) return null;
+    if (_liveRecordingUpload.sessionId && !_liveRecordingUpload.failed) {
+      _liveRecordingUpload.lessonId = lessonId;
+      _liveRecordingUpload.token = token;
+      if (meta.title) _liveRecordingUpload.title = String(meta.title || '');
+      if (meta.filename) _liveRecordingUpload.filename = String(meta.filename || '');
+      if (meta.mimeType) _liveRecordingUpload.mimeType = String(meta.mimeType || '');
+      return _liveRecordingUpload;
+    }
+
+    const sess = await startOrResumeRecordingSession({
+      lessonId,
+      title: meta.title || _liveRecordingUpload.title || '',
+      filename: meta.filename || _liveRecordingUpload.filename || `lesson_${lessonId}.webm`,
+      mimeType: meta.mimeType || _liveRecordingUpload.mimeType || 'video/webm',
+      chunkSize: Number(meta.chunkSize || _liveRecordingUpload.chunkSize || 1024 * 1024),
+      streaming: true,
+      totalBytes: 0
+    }, token);
+
+    _liveRecordingUpload.sessionId = String(sess.sessionId || '');
+    _liveRecordingUpload.lessonId = lessonId;
+    _liveRecordingUpload.token = token;
+    _liveRecordingUpload.uploadedBytes = Math.max(0, Number(sess.uploadedBytes || 0));
+    _liveRecordingUpload.chunkSize = Math.max(256 * 1024, Number(sess.chunkSize || _liveRecordingUpload.chunkSize || 1024 * 1024));
+    _liveRecordingUpload.title = String(meta.title || _liveRecordingUpload.title || '');
+    _liveRecordingUpload.filename = String(meta.filename || _liveRecordingUpload.filename || `lesson_${lessonId}.webm`);
+    _liveRecordingUpload.mimeType = String(meta.mimeType || _liveRecordingUpload.mimeType || 'video/webm');
+    _liveRecordingUpload.streaming = true;
+    _liveRecordingUpload.failed = false;
+    _liveRecordingUpload.completed = false;
+    return _liveRecordingUpload;
+  }
+
+  function markLiveRecordingUploadFailed(err){
+    _liveRecordingUpload.failed = true;
+    if (_liveRecordingUpload.warned) return;
+    _liveRecordingUpload.warned = true;
+    console.warn('live recording upload fallback:', err?.message || err || 'failed');
+    try { notify("Serverga live yozuv uzatish uzildi, local fallback saqlanmoqda.", 'warn'); } catch(_) {}
+  }
+
+  function queueLiveRecordingChunkUpload(chunkBlob, meta = {}){
+    if (!chunkBlob || !chunkBlob.size) return Promise.resolve(false);
+    if (_liveRecordingUpload.failed || _liveRecordingUpload.completed) return Promise.resolve(false);
+
+    const task = async () => {
+      const lessonId = String(meta.lessonId || _liveRecordingUpload.lessonId || '');
+      const title = String(meta.title || _liveRecordingUpload.title || '');
+      const filename = String(meta.filename || _liveRecordingUpload.filename || `lesson_${lessonId}.webm`);
+      const mimeType = String(meta.mimeType || _liveRecordingUpload.mimeType || chunkBlob.type || 'video/webm');
+      const durationSec = Math.max(0, Math.round(Number(meta.durationSec || 0)));
+      const token = String(localStorage.getItem('token') || _liveRecordingUpload.token || '').trim();
+      if (!lessonId || !token) throw new Error('live recording session auth missing');
+
+      await ensureLiveRecordingUploadSession({ lessonId, token, title, filename, mimeType });
+      const startByte = Math.max(0, Number(_liveRecordingUpload.uploadedBytes || 0));
+      const sessionId = String(_liveRecordingUpload.sessionId || '');
+      if (!sessionId) throw new Error('live recording session missing');
+
+      const chunkRes = await fetch(`/api/group-lessons/${encodeURIComponent(lessonId)}/recording/session/${encodeURIComponent(sessionId)}/chunk`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/octet-stream',
+          'x-start-byte': String(startByte),
+          'x-duration-sec': String(durationSec)
+        },
+        body: chunkBlob
+      });
+      const chunkData = await chunkRes.json().catch(() => ({}));
+      if (chunkRes.status === 409 && Number.isFinite(Number(chunkData?.expectedStart))) {
+        const expectedStart = Math.max(0, Number(chunkData.expectedStart || 0));
+        if (expectedStart >= (startByte + Number(chunkBlob.size || 0))) {
+          _liveRecordingUpload.uploadedBytes = expectedStart;
+          _liveRecordingUpload.hadChunks = true;
+          return true;
+        }
+        throw new Error(chunkData?.error || 'live chunk offset mismatch');
+      }
+      if (!chunkRes.ok) throw new Error(chunkData?.error || `live chunk http ${chunkRes.status}`);
+
+      _liveRecordingUpload.uploadedBytes = Math.max(startByte + Number(chunkBlob.size || 0), Number(chunkData?.uploadedBytes || 0));
+      _liveRecordingUpload.hadChunks = true;
+      return true;
+    };
+
+    _liveRecordingUpload.queue = Promise.resolve(_liveRecordingUpload.queue)
+      .then(task)
+      .catch((err) => {
+        markLiveRecordingUploadFailed(err);
+        return false;
+      });
+    return _liveRecordingUpload.queue;
+  }
+
+  async function finalizeLiveRecordingUpload(durationSec = 0, opts = {}){
+    try {
+      await Promise.resolve(_liveRecordingUpload.queue);
+    } catch (_) {}
+
+    if (_liveRecordingUpload.failed || _liveRecordingUpload.completed) {
+      return { ok: false, skipped: true, reason: _liveRecordingUpload.completed ? 'completed' : 'failed' };
+    }
+    const lessonId = String(opts.lessonId || _liveRecordingUpload.lessonId || '');
+    const sessionId = String(_liveRecordingUpload.sessionId || '');
+    const token = String(localStorage.getItem('token') || _liveRecordingUpload.token || '').trim();
+    if (!lessonId || !sessionId || !token || !_liveRecordingUpload.hadChunks || Number(_liveRecordingUpload.uploadedBytes || 0) < 1) {
+      return { ok: false, skipped: true, reason: 'empty' };
+    }
+
+    const finRes = await fetch(`/api/group-lessons/${encodeURIComponent(lessonId)}/recording/session/${encodeURIComponent(sessionId)}/complete`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: String(opts.title || _liveRecordingUpload.title || ''),
+        durationSec: Math.max(0, Math.round(Number(durationSec || 0)))
+      })
+    });
+    const fin = await finRes.json().catch(() => ({}));
+    if (!finRes.ok) throw new Error(fin?.error || `live complete http ${finRes.status}`);
+    _liveRecordingUpload.completed = true;
+    return { ok: true, data: fin };
   }
 
   async function uploadQueuedRecordingByChunks(item, token, onProgress){
@@ -7218,7 +7386,10 @@ async function startScreenWithCam() {
                     return notify('Bu brauzer Recording-ni qo\'llab-quvvatlamaydi (MediaRecorder yo\'q). Tavsiya: Android/PC Chrome. iOS Safari uchun server-side recorder kerak.', 'warn');
                 }
 
-                if (!_recordingAutoRestart) _recordingChunks = [];
+                if (!_recordingAutoRestart) {
+                    _recordingChunks = [];
+                    resetLiveRecordingUploadState();
+                }
 
                 // 1) Try direct stream recording with best supported mime
                 const mimeCandidates = [
@@ -7261,6 +7432,17 @@ async function startScreenWithCam() {
                     return notify("1-stage yozuv oqimi tayyor bo'lmadi", 'err');
                 }
 
+                try {
+                    await ensureLiveRecordingUploadSession({
+                        lessonId: groupCall.lessonId,
+                        title: _title || '',
+                        filename: `lesson_${groupCall.lessonId}.webm`,
+                        mimeType: mimeType || 'video/webm'
+                    });
+                } catch (liveSessionErr) {
+                    console.warn('ensureLiveRecordingUploadSession failed:', liveSessionErr);
+                }
+
                 // Canvas-based stage stream is the primary recorder source so dual-stage is always preserved.
                 try {
                     _recorder = new MediaRecorder(recordingStream, recorderOptions);
@@ -7278,7 +7460,19 @@ async function startScreenWithCam() {
 
                 _recorder.ondataavailable = (ev) => {
                     try {
-                        if (ev.data && ev.data.size > 0) _recordingChunks.push(ev.data);
+                        if (ev.data && ev.data.size > 0) {
+                            _recordingChunks.push(ev.data);
+                            const approxLiveDuration = _recordingStartedAtMs
+                                ? Math.max(1, Math.round((Date.now() - _recordingStartedAtMs) / 1000))
+                                : 0;
+                            queueLiveRecordingChunkUpload(ev.data, {
+                                lessonId: groupCall.lessonId,
+                                title: (document.getElementById('lessonTitleInput')?.value || '').trim(),
+                                filename: `lesson_${groupCall.lessonId}.webm`,
+                                mimeType: (_recorder && _recorder.mimeType) ? _recorder.mimeType : (mimeType || 'video/webm'),
+                                durationSec: approxLiveDuration
+                            }).catch(() => {});
+                        }
                     } catch(_) {}
                 };
 
@@ -7349,10 +7543,28 @@ async function startScreenWithCam() {
                             ? Math.max(1, Math.round((Date.now() - _recordingStartedAtMs) / 1000))
                             : 0;
                         _recordingStartedAtMs = 0;
-                        await uploadRecording(blob, approxDurationSec);
+                        let savedOnServer = false;
+                        try {
+                            const liveFinal = await finalizeLiveRecordingUpload(approxDurationSec, {
+                                lessonId: groupCall.lessonId,
+                                title: (document.getElementById('lessonTitleInput')?.value || '').trim()
+                            });
+                            savedOnServer = !!liveFinal?.ok;
+                        } catch (liveFinalizeErr) {
+                            console.warn('finalizeLiveRecordingUpload failed:', liveFinalizeErr);
+                        }
+
+                        if (!savedOnServer) {
+                            await uploadRecording(blob, approxDurationSec);
+                        } else {
+                            _recordingChunks = [];
+                            try { notify('Dars yozuvi serverda saqlandi', 'ok'); } catch(_) {}
+                        }
+                        resetLiveRecordingUploadState();
                         try{ const ti=document.getElementById('lessonTitleInput'); if(ti) ti.disabled = false; }catch(e){}
                     } catch (e) {
                         console.error('Recording stop/upload error:', e);
+                        try { resetLiveRecordingUploadState(); } catch(_) {}
                         notify('Recording saqlashda xatolik: ' + (e?.message || e) + ' (keyin avtomatik urinamiz)', 'warn');
                     }
                 };

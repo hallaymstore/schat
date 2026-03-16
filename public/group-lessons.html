@@ -256,6 +256,25 @@ function canImportLessonToCourse(lesson){
   return !!(meId && hostId && meId === hostId);
 }
 
+function canViewAttendanceLesson(lesson){
+  if (typeof lesson?.attendanceVisible === 'boolean') return !!lesson.attendanceVisible;
+  const role = String(currentUser?.role || '').toLowerCase();
+  const meId = String(currentUser?._id || currentUser?.id || '');
+  const hostId = String(lesson?.host?.userId || '');
+  if (role === 'admin') return true;
+  if (role === 'teacher' && meId && hostId && meId === hostId) return true;
+  if (role === 'organizer') {
+    const myUni = String(currentUser?.university || '').trim().toLowerCase();
+    const myFaculty = String(currentUser?.faculty || '').trim().toLowerCase();
+    const groupUni = String(lesson?.group?.university || '').trim().toLowerCase();
+    const groupFaculty = String(lesson?.group?.faculty || '').trim().toLowerCase();
+    if (!myUni || !groupUni || myUni !== groupUni) return false;
+    if (!myFaculty) return true;
+    return !!groupFaculty && myFaculty === groupFaculty;
+  }
+  return false;
+}
+
 async function addLessonToCourse(lessonId){
   const lesson = lessonMap.get(String(lessonId));
   if(!lesson || !lesson.recordingUrl){
@@ -441,7 +460,7 @@ async function showAttendance(lessonId){
       headers: { 'Authorization': `Bearer ${getToken()}` }
     });
     if(!res.ok){
-      body.innerHTML = `<div class="muted">Davomatni ko‘rsatib bo‘lmadi (HTTP ${res.status}). Bu funksiya faqat o‘qituvchi (host) uchun.</div>`;
+      body.innerHTML = `<div class="muted">Davomatni ko‘rsatib bo‘lmadi (HTTP ${res.status}). Bu funksiya faqat darsni o‘tgan o‘qituvchi, admin yoki fakultet organizer uchun.</div>`;
       return;
     }
     const data = await res.json();
@@ -615,6 +634,9 @@ async function load(){
       : '';
 
     const title = (l.title && String(l.title).trim()) ? String(l.title).trim() : 'Live dars';
+    const attendanceBtn = canViewAttendanceLesson(l)
+      ? `<button class="btn" onclick="showAttendance('${l._id}')">📋 Davomat</button>`
+      : '';
 
     div.innerHTML = `
       <div class="flex items-start justify-between gap-3 flex-wrap">
@@ -636,7 +658,7 @@ async function load(){
         <div class="text-sm flex gap-2 items-center flex-wrap justify-end">
           ${rec}
           ${importBtn}
-          <button class="btn" onclick="showAttendance('${l._id}')">📋 Davomat</button>
+          ${attendanceBtn}
         </div>
       </div>
     `;
@@ -653,6 +675,3 @@ load();
   <script src="/global-assistant.js" defer></script>
 </body>
 </html>
-
-
-

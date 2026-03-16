@@ -1678,6 +1678,166 @@ async function cleanupStaleRecordingSessions() {
   }
 }
 
+function computeLessonDurationSec(lesson, nowMs = Date.now()) {
+  try {
+    const startedMs = lesson?.startedAt ? new Date(lesson.startedAt).getTime() : 0;
+    const endedMs = lesson?.endedAt ? new Date(lesson.endedAt).getTime() : 0;
+    const endPointMs = (endedMs && endedMs > startedMs) ? endedMs : Number(nowMs || Date.now());
+    if (!startedMs || endPointMs < startedMs) return 0;
+    return Math.max(0, Math.round((endPointMs - startedMs) / 1000));
+  } catch (_) {
+    return 0;
+  }
+}
+
+async function closeOpenLessonAttendance(lessonId, opts = {}) {
+  try {
+    const leftAt = opts.leftAt instanceof Date ? opts.leftAt : new Date();
+    const rawUserIds = Array.isArray(opts.userIds) ? opts.userIds.map(String).filter(Boolean) : [];
+    const query = { lessonId, leftAt: null };
+    if (rawUserIds.length) query.userId = { $in: rawUserIds };
+    const atts = await GroupAttendance.find(query).select('_id joinedAt').lean().catch(() => []);
+    if (!atts.length) return 0;
+    const ops = atts.map((att) => {
+      const joinedMs = att?.joinedAt ? new Date(att.joinedAt).getTime() : 0;
+      const durationSec = joinedMs ? Math.max(0, Math.round((leftAt.getTime() - joinedMs) / 1000)) : 0;
+      return {
+        updateOne: {
+          filter: { _id: att._id },
+          update: { $set: { leftAt, durationSec } }
+        }
+      };
+    });
+    await GroupAttendance.bulkWrite(ops, { ordered: false }).catch(() => null);
+    return ops.length;
+  } catch (_) {
+    return 0;
+  }
+}
+
+async function bestEffortFinalizeLessonRecordingSession(lessonInput, opts = {}) {
+  try {
+    const lesson = (lessonInput && lessonInput._id)
+      ? lessonInput
+      : await GroupLesson.findById(String(lessonInput || '')).lean().catch(() => null);
+    if (!lesson?._id) return { ok: false, skipped: 'lesson_missing' };
+
+    const latest = await GroupLessonUploadSession.findOne({
+      lessonId: lesson._id,
+      status: { $in: ['uploading', 'uploaded', 'processing', 'completed', 'failed'] }
+    }).sort({ updatedAt: -1 });
+    if (!latest) return { ok: false, skipped: 'session_missing' };
+
+    if (String(latest.status || '') === 'completed' && String(latest.recordingUrl || '').trim()) {
+      if (!String(lesson.recordingUrl || '').trim()) {
+        await GroupLesson.updateOne({ _id: lesson._id }, {
+          $set: {
+            recordingUrl: String(latest.recordingUrl || ''),
+            recordingPublicId: String(latest.recordingPublicId || ''),
+            recordingBytes: Number(latest.recordingBytes || 0),
+            recordingDurationSec: Math.max(0, Math.round(Number(latest.recordingDurationSec || 0)))
+          }
+        }).catch(() => null);
+      }
+      return { ok: true, resumed: true, recordingUrl: String(latest.recordingUrl || '') };
+    }
+
+    const tempPath = String(latest.tempPath || '').trim();
+    const uploadedBytes = Math.max(0, Number(latest.uploadedBytes || 0));
+    if (!tempPath || uploadedBytes < 1) return { ok: false, skipped: 'empty_session' };
+
+    const fsx = require('fs');
+    try {
+      await fsx.promises.stat(tempPath);
+    } catch (_) {
+      await GroupLessonUploadSession.updateOne(
+        { _id: latest._id },
+        { $set: { status: 'failed', error: 'temp file missing', lastSeenAt: new Date() } }
+      ).catch(() => null);
+      return { ok: false, skipped: 'temp_missing' };
+    }
+
+    let session = latest;
+    if (String(latest.status || '') !== 'processing') {
+      const locked = await GroupLessonUploadSession.findOneAndUpdate(
+        { _id: latest._id, status: { $in: ['uploading', 'uploaded', 'failed'] } },
+        { $set: { status: 'processing', lastSeenAt: new Date(), error: '' } },
+        { new: true }
+      ).catch(() => null);
+      if (!locked) {
+        const fresh = await GroupLessonUploadSession.findById(latest._id).lean().catch(() => null);
+        if (String(fresh?.status || '') === 'completed' && String(fresh?.recordingUrl || '').trim()) {
+          return { ok: true, resumed: true, recordingUrl: String(fresh.recordingUrl || '') };
+        }
+        return { ok: false, skipped: 'processing' };
+      }
+      session = locked;
+    }
+
+    const fallbackDurationSec = Math.max(
+      0,
+      Math.round(Number(
+        opts.durationSec
+        || session.recordingDurationSec
+        || computeLessonDurationSec(lesson)
+        || 0
+      ))
+    );
+    const incomingTitle = cleanText(opts.title || session.title || lesson.title, 120);
+    const uploadResult = await finalizeLessonRecordingFromPath({
+      lesson,
+      filePath: tempPath,
+      incomingTitle,
+      fallbackDurationSec
+    });
+
+    session.status = 'completed';
+    session.completedAt = new Date();
+    session.lastSeenAt = new Date();
+    session.recordingUrl = uploadResult.secure_url || uploadResult.url || '';
+    session.recordingPublicId = uploadResult.public_id || '';
+    session.recordingBytes = uploadResult.bytes || 0;
+    session.recordingDurationSec = Math.max(0, Math.round(Number(uploadResult.duration || fallbackDurationSec || 0)));
+    await session.save();
+
+    return {
+      ok: true,
+      recordingUrl: session.recordingUrl,
+      durationSec: Number(session.recordingDurationSec || 0),
+      resumed: false
+    };
+  } catch (e) {
+    console.warn('bestEffortFinalizeLessonRecordingSession warn:', e?.message || e);
+    return { ok: false, skipped: 'finalize_failed', error: String(e?.message || e || 'finalize_failed') };
+  }
+}
+
+async function endGroupLessonLifecycle(groupId, callId, opts = {}) {
+  try {
+    const lesson = await GroupLesson.findOne({ groupId, callId }).lean().catch(() => null);
+    if (!lesson?._id) return { ok: false, lesson: null };
+    const endedAt = opts.endedAt instanceof Date ? opts.endedAt : new Date();
+
+    await GroupLesson.updateOne(
+      { _id: lesson._id },
+      { $set: { status: 'ended', endedAt } }
+    ).catch(() => null);
+
+    await closeOpenLessonAttendance(lesson._id, { leftAt: endedAt, userIds: opts.userIds || [] }).catch(() => null);
+    lessonControllers.delete(String(lesson._id));
+
+    const durationSec = computeLessonDurationSec({ startedAt: lesson.startedAt, endedAt });
+    const recording = await bestEffortFinalizeLessonRecordingSession(
+      { ...lesson, endedAt },
+      { durationSec, title: lesson.title }
+    );
+    return { ok: true, lesson: { ...lesson, endedAt, status: 'ended' }, recording };
+  } catch (e) {
+    console.warn('endGroupLessonLifecycle warn:', e?.message || e);
+    return { ok: false, error: String(e?.message || e || 'lesson_end_failed') };
+  }
+}
+
 // GroupAttendance: join/leave tracking per lesson
 const GroupAttendanceSchema = new mongoose.Schema({
   lessonId: { type: mongoose.Schema.Types.ObjectId, ref: 'GroupLesson', required: true, index: true },
@@ -2525,8 +2685,19 @@ app.get('/api/group-lessons', authenticateToken, async (req, res) => {
     const groupId = String(req.query.groupId || '');
     if (!groupId) return res.status(400).json({ error: 'groupId required' });
 
-    const ok = await isGroupMember(groupId, req.userId);
-    if (!ok) return res.status(403).json({ error: 'Access denied' });
+    const group = await Group.findById(groupId).select('isPublic members university faculty studyType studyGroup name username').lean();
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+
+    const me = await User.findById(req.userId).select('fullName username role isAdmin university faculty').lean().catch(() => null);
+    const role = String(me?.role || '').toLowerCase();
+    const isAdmin = !!(me?.isAdmin || role === 'admin');
+    const isScopedOrganizer = canUserModerateGroupByScope(me, group);
+    const isMember = !!(group.isPublic || (group.members || []).some((m) => String(m) === String(req.userId)));
+    const isHostTeacher = !!(await GroupLesson.exists({ groupId, hostId: req.userId }).catch(() => null));
+
+    if (!(isMember || isAdmin || isScopedOrganizer || isHostTeacher)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     const lessons = await GroupLesson.find({ groupId }).sort({ startedAt: -1 }).limit(200).lean();
     const hostIds = Array.from(new Set(lessons.map(x => String(x.hostId)).filter(Boolean)));
@@ -2545,18 +2716,25 @@ app.get('/api/group-lessons', authenticateToken, async (req, res) => {
         endedAt: l.endedAt,
         recordingUrl: l.recordingUrl || '',
         recordingDurationSec: Math.max(0, Math.round(Number(l.recordingDurationSec || 0))),
-        liveDurationSec: (() => {
-          try {
-            const a = l.startedAt ? new Date(l.startedAt).getTime() : 0;
-            const b = l.endedAt ? new Date(l.endedAt).getTime() : 0;
-            if (!a || !b || b < a) return 0;
-            return Math.max(0, Math.round((b - a) / 1000));
-          } catch(e){ return 0; }
-        })(),
+        liveDurationSec: computeLessonDurationSec(l),
+        attendanceVisible: !!(
+          isAdmin
+          || isScopedOrganizer
+          || String(l.hostId || '') === String(req.userId)
+        ),
         host: (() => {
           const h = hmap.get(String(l.hostId));
           return h ? { userId: String(h._id), fullName: h.fullName, username: h.username, role: h.role } : { userId: String(l.hostId), fullName: 'Teacher', username: '', role: 'teacher' };
-        })()
+        })(),
+        group: {
+          _id: String(group._id),
+          name: group.name || '',
+          username: group.username || '',
+          university: group.university || '',
+          faculty: group.faculty || '',
+          studyType: group.studyType || '',
+          studyGroup: group.studyGroup || ''
+        }
       }))
     });
   } catch (e) {
@@ -2580,13 +2758,13 @@ app.get('/api/group-lessons/download', authenticateToken, async (req, res) => {
     const lesson = await GroupLesson.findOne({ recordingUrl }).select('groupId recordingUrl hostId').lean();
     if (!lesson) return res.status(404).json({ error: 'Recording not found' });
 
-    let ok = await isGroupMember(String(lesson.groupId || ''), req.userId);
-    if (!ok) {
-      const viewer = await User.findById(req.userId).select('role isAdmin').lean();
-      const isAdmin = !!viewer?.isAdmin || String(viewer?.role || '').toLowerCase() === 'admin';
-      const isHost = String(lesson.hostId || '') === String(req.userId || '');
-      ok = !!(isAdmin || isHost);
-    }
+    const group = await Group.findById(String(lesson.groupId || '')).select('isPublic members university faculty').lean().catch(() => null);
+    const viewer = await User.findById(req.userId).select('role isAdmin university faculty').lean().catch(() => null);
+    const isMember = !!(group && (group.isPublic || (group.members || []).some((m) => String(m) === String(req.userId))));
+    const isAdmin = !!viewer?.isAdmin || String(viewer?.role || '').toLowerCase() === 'admin';
+    const isHost = String(lesson.hostId || '') === String(req.userId || '');
+    const isScopedOrganizer = canUserModerateGroupByScope(viewer, group);
+    let ok = !!(isMember || isAdmin || isHost || isScopedOrganizer);
     if (!ok) return res.status(403).json({ error: 'Access denied' });
 
     const recUrl = String(lesson.recordingUrl || '');
@@ -2634,16 +2812,21 @@ app.get('/api/group-lessons/:lessonId/attendance', authenticateToken, attachUser
     const lesson = await GroupLesson.findById(lessonId).lean();
     if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
 
-    const role = String(req.userRole || '').toLowerCase();
     const isHost = String(lesson.hostId) === String(req.userId);
-
-    // Teacher-only gate (host teacher or admin)
-    if (!(role === 'admin' || isHost)) return res.status(403).json({ error: 'Teacher only' });
 
     // Host/admin should be allowed even if they are not in members (common in real use),
     // but for safety we still validate group existence.
-    const group = await Group.findById(String(lesson.groupId)).select('isPublic members').lean();
+    const group = await Group.findById(String(lesson.groupId)).select('isPublic members university faculty').lean();
     if (!group) return res.status(404).json({ error: 'Group not found' });
+
+    const me = await User.findById(req.userId).select('role isAdmin university faculty username').lean().catch(() => null);
+    const role = String(me?.role || req.userRole || '').toLowerCase();
+    const isAdmin = !!(me?.isAdmin || role === 'admin');
+    const isScopedOrganizer = canUserModerateGroupByScope(me, group);
+
+    if (!(isAdmin || isHost || isScopedOrganizer)) {
+      return res.status(403).json({ error: 'Attendance is visible only to lesson teacher, admin, or scoped organizer' });
+    }
 
     // For public groups, ok. For private groups, host/admin already allowed above.
     // (If you ever want to restrict admins too, add membership check here.)
@@ -2660,10 +2843,7 @@ app.get('/api/group-lessons/:lessonId/attendance', authenticateToken, attachUser
     const joined = [];
     const absent = [];
     const nowMs = Date.now();
-    const lessonStartedMs = lesson?.startedAt ? new Date(lesson.startedAt).getTime() : nowMs;
-    const lessonEndedMs = lesson?.endedAt ? new Date(lesson.endedAt).getTime() : 0;
-    const lessonEndPointMs = (lessonEndedMs && lessonEndedMs > lessonStartedMs) ? lessonEndedMs : nowMs;
-    const lessonDurationSec = Math.max(0, Math.floor((lessonEndPointMs - lessonStartedMs) / 1000));
+    const lessonDurationSec = computeLessonDurationSec(lesson, nowMs);
 
     for (const u of members) {
       const a = attMap.get(String(u._id));
@@ -2813,9 +2993,14 @@ app.post('/api/group-lessons/:lessonId/recording/session', authenticateToken, at
     const isHost = String(lesson.hostId) === String(req.userId);
     if (!(role === 'admin' || isHost)) return res.status(403).json({ error: 'Only host teacher can upload recording' });
 
+    const streaming = String(req.body?.streaming || '').toLowerCase() === 'true' || req.body?.streaming === true || req.body?.streaming === 1;
     const totalBytes = Math.max(0, Number(req.body?.totalBytes || 0));
-    if (!Number.isFinite(totalBytes) || totalBytes < 1) return res.status(400).json({ error: 'totalBytes required' });
-    if (totalBytes > 3 * 1024 * 1024 * 1024) return res.status(400).json({ error: 'Recording too large' });
+    if (!streaming && (!Number.isFinite(totalBytes) || totalBytes < 1)) {
+      return res.status(400).json({ error: 'totalBytes required' });
+    }
+    if (!streaming && totalBytes > 3 * 1024 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Recording too large' });
+    }
 
     const incomingTitle = String(req.body?.title || '').trim().slice(0, 120);
     const mimeType = String(req.body?.mimeType || 'video/webm').trim() || 'video/webm';
@@ -2834,7 +3019,8 @@ app.post('/api/group-lessons/:lessonId/recording/session', authenticateToken, at
 
     if (session) {
       // If size mismatches, create a new session instead of corrupting offsets.
-      if (Number(session.totalBytes || 0) !== Math.round(totalBytes)) {
+      const sessionIsStreaming = !(Number(session.totalBytes || 0) > 0);
+      if ((!streaming && Number(session.totalBytes || 0) !== Math.round(totalBytes)) || (streaming && !sessionIsStreaming)) {
         session = null;
       } else {
         session.lastSeenAt = new Date();
@@ -2854,7 +3040,7 @@ app.post('/api/group-lessons/:lessonId/recording/session', authenticateToken, at
         fileName,
         mimeType,
         title: incomingTitle,
-        totalBytes: Math.round(totalBytes),
+        totalBytes: streaming ? 0 : Math.round(totalBytes),
         uploadedBytes: 0,
         chunkSize,
         tempPath: tmpPath,
@@ -2869,7 +3055,8 @@ app.post('/api/group-lessons/:lessonId/recording/session', authenticateToken, at
       uploadedBytes: Number(session.uploadedBytes || 0),
       totalBytes: Number(session.totalBytes || 0),
       chunkSize: Number(session.chunkSize || chunkSize),
-      status: String(session.status || 'uploading')
+      status: String(session.status || 'uploading'),
+      streaming: !(Number(session.totalBytes || 0) > 0)
     });
   } catch (e) {
     console.error('POST /api/group-lessons/:lessonId/recording/session error:', e);
@@ -2903,7 +3090,8 @@ app.get('/api/group-lessons/:lessonId/recording/session', authenticateToken, att
         totalBytes: Number(session.totalBytes || 0),
         chunkSize: Number(session.chunkSize || 1024 * 1024),
         status: String(session.status || ''),
-        recordingUrl: String(session.recordingUrl || '')
+        recordingUrl: String(session.recordingUrl || ''),
+        streaming: !(Number(session.totalBytes || 0) > 0)
       }
     });
   } catch (e) {
@@ -2963,7 +3151,17 @@ app.patch('/api/group-lessons/:lessonId/recording/session/:sessionId/chunk',
       await fsp.appendFile(tmpPath, buf);
 
       session.uploadedBytes = expectedStart + buf.length;
-      session.status = session.uploadedBytes >= Number(session.totalBytes || 0) ? 'uploaded' : 'uploading';
+      const streaming = !(Number(session.totalBytes || 0) > 0);
+      const rawDurationSec = Number(req.headers['x-duration-sec'] || req.query.durationSec || 0);
+      if (Number.isFinite(rawDurationSec) && rawDurationSec > 0) {
+        session.recordingDurationSec = Math.max(
+          Math.round(Number(session.recordingDurationSec || 0)),
+          Math.round(rawDurationSec)
+        );
+      }
+      session.status = streaming
+        ? 'uploading'
+        : (session.uploadedBytes >= Number(session.totalBytes || 0) ? 'uploaded' : 'uploading');
       session.lastSeenAt = new Date();
       session.error = '';
       await session.save();
@@ -2971,7 +3169,14 @@ app.patch('/api/group-lessons/:lessonId/recording/session/:sessionId/chunk',
       const total = Number(session.totalBytes || 0);
       const uploaded = Number(session.uploadedBytes || 0);
       const percent = total > 0 ? Math.max(0, Math.min(100, Math.round((uploaded / total) * 100))) : 0;
-      return res.json({ ok: true, uploadedBytes: uploaded, totalBytes: total, percent, complete: uploaded >= total });
+      return res.json({
+        ok: true,
+        uploadedBytes: uploaded,
+        totalBytes: total,
+        percent,
+        complete: total > 0 ? uploaded >= total : false,
+        streaming
+      });
     } catch (e) {
       console.error('PATCH /api/group-lessons/:lessonId/recording/session/:sessionId/chunk error:', e);
       return res.status(500).json({ error: 'Failed to upload chunk' });
@@ -3007,11 +3212,15 @@ app.post('/api/group-lessons/:lessonId/recording/session/:sessionId/complete', a
       });
     }
 
-    if (Number(session.uploadedBytes || 0) < Number(session.totalBytes || 0)) {
+    const totalBytes = Number(session.totalBytes || 0);
+    const readyToFinalize = totalBytes > 0
+      ? Number(session.uploadedBytes || 0) >= totalBytes
+      : Number(session.uploadedBytes || 0) > 0;
+    if (!readyToFinalize) {
       return res.status(409).json({
         error: 'Upload not finished',
         uploadedBytes: Number(session.uploadedBytes || 0),
-        totalBytes: Number(session.totalBytes || 0)
+        totalBytes
       });
     }
 
@@ -4931,6 +5140,8 @@ socket.on('lessonTransferControl', async (data) => {
         console.warn('GroupLesson create skipped:', e?.message || e);
       }
 
+      socket._activeGroupCall = { groupId: String(groupId), callId: String(call.callId) };
+
       socket.emit('groupCallStarted', {
         groupId,
         callId: call.callId,
@@ -5025,6 +5236,8 @@ adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId),
       if (lesson && lesson._id) {
         await GroupAttendance.updateOne({ lessonId: lesson._id, groupId, userId: socket.userId }, { $setOnInsert: { joinedAt: new Date() } }, { upsert: true }).catch(()=>{});
       }
+
+      socket._activeGroupCall = { groupId: String(groupId), callId: String(callId) };
 
       socket.emit('groupCallJoined', {
         groupId,
@@ -5271,9 +5484,11 @@ io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
   async function leaveGroupCallInternal(groupId, userId, reason) {
     try {
       const call = activeGroupCalls.get(groupId);
+      const lesson = call?.callId
+        ? await GroupLesson.findOne({ groupId, callId: call.callId }).select('_id hostId startedAt endedAt title').lean().catch(() => null)
+        : null;
       // Attendance: mark user left (if this call is linked to a GroupLesson)
       try {
-        const lesson = await GroupLesson.findOne({ groupId, callId: call?.callId }).select('_id').lean().catch(()=>null);
         if (lesson && lesson._id) {
           const att = await GroupAttendance.findOne({ lessonId: lesson._id, userId }).select('_id joinedAt').lean().catch(()=>null);
           if (att && att._id) {
@@ -5288,6 +5503,7 @@ io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
 
       if (!call) return;
       if (call.participants) call.participants.delete(userId);
+      const isLessonHostLeaving = !!(lesson && String(lesson.hostId || '') === String(userId));
 
       // Stage cleanup: if pinned user/owner left, update stage and broadcast
       try {
@@ -5318,32 +5534,52 @@ io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
 
 
       const participantsArr = Array.from(call.participants || []);
+      if (isLessonHostLeaving) {
+        activeGroupCalls.delete(groupId);
+        const endedAt = new Date();
+        await endGroupLessonLifecycle(groupId, call.callId, {
+          endedAt,
+          userIds: [String(userId), ...participantsArr.map(String)]
+        });
+        io.to(getGroupRoomName(groupId)).emit('groupCallEnded', {
+          groupId,
+          callId: call.callId,
+          reason: 'teacher_left',
+          timestamp: endedAt.getTime()
+        });
+        adminEmit('admin:groupCallUpdate', {
+          action: 'ended',
+          groupId: String(groupId),
+          callId: String(call.callId),
+          reason: 'teacher_left',
+          endedBy: String(userId),
+          participants: participantsArr.map(String),
+          timestamp: endedAt.getTime()
+        });
+        return;
+      }
+
       io.to(getGroupRoomName(groupId)).emit('groupCallUserLeft', {
         groupId,
         callId: call.callId,
         userId,
         reason: reason || 'left',
         participants: participantsArr
-      })
-      adminEmit('admin:groupCallUpdate', { action: 'left', groupId: String(groupId), callId: String(call.callId), userId: String(userId), reason: reason || 'left', participants: participantsArr.map(String), timestamp: Date.now() });;
+      });
+      adminEmit('admin:groupCallUpdate', { action: 'left', groupId: String(groupId), callId: String(call.callId), userId: String(userId), reason: reason || 'left', participants: participantsArr.map(String), timestamp: Date.now() });
 
       // End call if nobody left
       if (participantsArr.length === 0) {
         activeGroupCalls.delete(groupId);
-        // Mark GroupLesson ended (if exists)
-        try {
-          const lesson = await GroupLesson.findOne({ groupId, callId: call.callId }).select('_id').lean().catch(()=>null);
-          if (lesson && lesson._id) {
-            await GroupLesson.updateOne({ _id: lesson._id }, { $set: { status: 'ended', endedAt: new Date() } }).catch(()=>{});
-          }
-        } catch(e) {}
+        const endedAt = new Date();
+        await endGroupLessonLifecycle(groupId, call.callId, { endedAt, userIds: [String(userId)] });
         io.to(getGroupRoomName(groupId)).emit('groupCallEnded', {
           groupId,
           callId: call.callId,
           reason: 'empty',
-          timestamp: Date.now()
+          timestamp: endedAt.getTime()
         });
-        adminEmit('admin:groupCallUpdate', { action: 'ended', groupId: String(groupId), callId: String(call.callId), reason: 'empty', timestamp: Date.now() });
+        adminEmit('admin:groupCallUpdate', { action: 'ended', groupId: String(groupId), callId: String(call.callId), reason: 'empty', timestamp: endedAt.getTime() });
       } else {
         activeGroupCalls.set(groupId, call);
       }
@@ -5416,12 +5652,14 @@ socket.on('groupCallLeave', async (data) => {
       if (!call || String(call.callId) !== callId) return;
 
       await leaveGroupCallInternal(groupId, socket.userId, 'left');
+      socket._activeGroupCall = null;
     } catch (e) {
       console.error('groupCallLeave error:', e);
     }
   });
 
   socket.on('groupCallEnd', (data) => {
+    (async () => {
     try {
       if (!socket.userId) return;
       const groupId = String(data?.groupId || '');
@@ -5437,17 +5675,30 @@ socket.on('groupCallLeave', async (data) => {
       }
 
       activeGroupCalls.delete(groupId);
+      socket._activeGroupCall = null;
+      const participantIds = Array.from(call.participants || []).map(String);
+      const endedAt = new Date();
+      await endGroupLessonLifecycle(groupId, callId, { endedAt, userIds: participantIds });
       io.to(getGroupRoomName(groupId)).emit('groupCallEnded', {
         groupId,
         callId,
         reason: 'ended_by_starter',
-        timestamp: Date.now()
+        timestamp: endedAt.getTime()
+      });
+      adminEmit('admin:groupCallUpdate', {
+        action: 'ended',
+        groupId: String(groupId),
+        callId: String(callId),
+        reason: 'ended_by_starter',
+        endedBy: String(socket.userId),
+        timestamp: endedAt.getTime()
       });
 
     } catch (e) {
       console.error('groupCallEnd error:', e);
       socket.emit('groupCallError', { error: 'Failed to end call' });
     }
+    })();
   });
 
   // ==================== ZAKOVAT (Host-centric anti-cheat mode) ====================
@@ -6815,9 +7066,12 @@ socket.on('chat:live', ({ liveId, text }) => {
             }
           }
         } catch (_) {}
-        for (const [gid, call] of activeGroupCalls.entries()) {
-          if (call && call.participants && call.participants.has(socket.userId)) {
-            await leaveGroupCallInternal(String(gid), String(socket.userId), 'disconnect');
+        const activeCall = socket._activeGroupCall || null;
+        if (activeCall?.groupId && activeCall?.callId) {
+          const gid = String(activeCall.groupId);
+          const call = activeGroupCalls.get(gid);
+          if (call && String(call.callId || '') === String(activeCall.callId || '') && call.participants && call.participants.has(socket.userId)) {
+            await leaveGroupCallInternal(gid, String(socket.userId), 'disconnect');
           }
         }
       }
