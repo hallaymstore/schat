@@ -524,6 +524,11 @@
     background: #000;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
   }
+  #teacherStage.stage-dual .stage-slot{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   #teacherStage .stage-slot-primary{
     z-index: 1;
   }
@@ -548,8 +553,18 @@
     object-fit: cover;
     background: #000;
   }
+  #teacherStage.stage-dual .stage-slot > .video-tile{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    min-width: 0;
+    min-height: 0;
+  }
   #teacherStage.stage-dual .stage-slot video{
-    object-fit: cover;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
   }
   #teacherStage .stage-slot.speaker-spotlight{
     border-color: rgba(251,191,36,.88);
@@ -6310,23 +6325,20 @@ function removeVideoTile(userId) {
 
             if (secondaryReady) {
                 const gap = Math.max(10, Math.round(W * 0.012));
-                const leftW = Math.round((W - gap) * 0.62);
+                const leftW = Math.round((W - gap) * 0.5);
                 const rightW = W - gap - leftW;
                 const leftX = 0;
                 const rightX = leftW + gap;
-                const useContainPrimary = !!groupCall.isScreenSharing;
 
                 if (primaryReady || fallbackMain) {
                     const mainSource = primaryReady ? primary : fallbackMain;
-                    const drew = useContainPrimary
-                        ? drawContainOnCanvas(ctx, mainSource, leftX, 0, leftW, H, false, true)
-                        : drawCoverOnCanvas(ctx, mainSource, leftX, 0, leftW, H, false);
+                    const drew = drawContainOnCanvas(ctx, mainSource, leftX, 0, leftW, H, false, true);
                     if (!drew) drawRecordingPlaceholder(ctx, leftX, 0, leftW, H, "O'qituvchi");
                 } else {
                     drawRecordingPlaceholder(ctx, leftX, 0, leftW, H, "O'qituvchi");
                 }
 
-                if (!drawCoverOnCanvas(ctx, secondary, rightX, 0, rightW, H, false)) {
+                if (!drawContainOnCanvas(ctx, secondary, rightX, 0, rightW, H, false, true)) {
                     drawRecordingPlaceholder(ctx, rightX, 0, rightW, H, 'Talaba');
                 }
 
@@ -8041,84 +8053,86 @@ function bindTeacherStageZoomHandlers() {
         zoomTeacherStageBy(e.deltaY < 0 ? 0.18 : -0.18, { anchorClientX: e.clientX, anchorClientY: e.clientY });
     }, { passive: false });
 
-    const touchDist = (a, b) => Math.hypot(Number(a?.clientX || 0) - Number(b?.clientX || 0), Number(a?.clientY || 0) - Number(b?.clientY || 0));
-    const touchMid = (a, b) => ({ x: (Number(a?.clientX || 0) + Number(b?.clientX || 0)) / 2, y: (Number(a?.clientY || 0) + Number(b?.clientY || 0)) / 2 });
+    if (!window.PointerEvent) {
+        const touchDist = (a, b) => Math.hypot(Number(a?.clientX || 0) - Number(b?.clientX || 0), Number(a?.clientY || 0) - Number(b?.clientY || 0));
+        const touchMid = (a, b) => ({ x: (Number(a?.clientX || 0) + Number(b?.clientX || 0)) / 2, y: (Number(a?.clientY || 0) + Number(b?.clientY || 0)) / 2 });
 
-    viewport.addEventListener('touchstart', (e) => {
-        if (shouldIgnoreTeacherStageZoomTarget(e.target)) return;
-        if (e.touches.length >= 2) {
-            const a = e.touches[0];
-            const b = e.touches[1];
-            teacherStageZoom.touchMode = 'pinch';
-            teacherStageZoom.pinchStartDist = touchDist(a, b) || 1;
-            teacherStageZoom.pinchStartScale = Number(teacherStageZoom.scale || 1);
-            teacherStageZoom.pinchStartX = Number(teacherStageZoom.x || 0);
-            teacherStageZoom.pinchStartY = Number(teacherStageZoom.y || 0);
-            e.preventDefault();
-            return;
-        }
-        if (e.touches.length === 1) {
-            const t = e.touches[0];
-            teacherStageZoom.touchMode = teacherStageZoom.scale > 1.001 ? 'drag' : 'tap';
-            teacherStageZoom.dragStartX = Number(t.clientX || 0) - Number(teacherStageZoom.x || 0);
-            teacherStageZoom.dragStartY = Number(t.clientY || 0) - Number(teacherStageZoom.y || 0);
-        }
-    }, { passive: false });
-
-    viewport.addEventListener('touchmove', (e) => {
-        if (shouldIgnoreTeacherStageZoomTarget(e.target)) return;
-        if (e.touches.length >= 2) {
-            const a = e.touches[0];
-            const b = e.touches[1];
-            const rect = viewport.getBoundingClientRect();
-            const dist = touchDist(a, b) || teacherStageZoom.pinchStartDist || 1;
-            const mid = touchMid(a, b);
-            const nextScale = Math.max(
-                teacherStageZoom.minScale,
-                Math.min(teacherStageZoom.maxScale, Number(teacherStageZoom.pinchStartScale || 1) * (dist / Math.max(1, teacherStageZoom.pinchStartDist || 1)))
-            );
-            const ratio = nextScale / Math.max(1, Number(teacherStageZoom.pinchStartScale || 1));
-            const anchorX = mid.x - rect.left - (rect.width / 2);
-            const anchorY = mid.y - rect.top - (rect.height / 2);
-            teacherStageZoom.scale = nextScale;
-            teacherStageZoom.x = (Number(teacherStageZoom.pinchStartX || 0) * ratio) + (anchorX * (1 - ratio));
-            teacherStageZoom.y = (Number(teacherStageZoom.pinchStartY || 0) * ratio) + (anchorY * (1 - ratio));
-            viewport.classList.add('is-dragging');
-            applyTeacherStageZoom();
-            e.preventDefault();
-            return;
-        }
-        if (e.touches.length === 1 && teacherStageZoom.scale > 1.001) {
-            const t = e.touches[0];
-            teacherStageZoom.x = Number(t.clientX || 0) - Number(teacherStageZoom.dragStartX || 0);
-            teacherStageZoom.y = Number(t.clientY || 0) - Number(teacherStageZoom.dragStartY || 0);
-            viewport.classList.add('is-dragging');
-            applyTeacherStageZoom();
-            e.preventDefault();
-        }
-    }, { passive: false });
-
-    viewport.addEventListener('touchend', (e) => {
-        viewport.classList.remove('is-dragging');
-        if (shouldIgnoreTeacherStageZoomTarget(e.target)) return;
-        if (e.touches.length === 0 && e.changedTouches.length === 1) {
-            const t = e.changedTouches[0];
-            const now = Date.now();
-            const dx = Math.abs(Number(t.clientX || 0) - Number(teacherStageZoom.lastTapX || 0));
-            const dy = Math.abs(Number(t.clientY || 0) - Number(teacherStageZoom.lastTapY || 0));
-            if ((now - Number(teacherStageZoom.lastTapAt || 0)) < 320 && dx < 28 && dy < 28) {
-                if (teacherStageZoom.scale > 1.15) resetTeacherStageZoom();
-                else setTeacherStageZoomScale(2.1, { anchorClientX: t.clientX, anchorClientY: t.clientY });
-                teacherStageZoom.lastTapAt = 0;
-            } else {
-                teacherStageZoom.lastTapAt = now;
-                teacherStageZoom.lastTapX = Number(t.clientX || 0);
-                teacherStageZoom.lastTapY = Number(t.clientY || 0);
+        viewport.addEventListener('touchstart', (e) => {
+            if (shouldIgnoreTeacherStageZoomTarget(e.target)) return;
+            if (e.touches.length >= 2) {
+                const a = e.touches[0];
+                const b = e.touches[1];
+                teacherStageZoom.touchMode = 'pinch';
+                teacherStageZoom.pinchStartDist = touchDist(a, b) || 1;
+                teacherStageZoom.pinchStartScale = Number(teacherStageZoom.scale || 1);
+                teacherStageZoom.pinchStartX = Number(teacherStageZoom.x || 0);
+                teacherStageZoom.pinchStartY = Number(teacherStageZoom.y || 0);
+                e.preventDefault();
+                return;
             }
-        }
-        teacherStageZoom.touchMode = '';
-        applyTeacherStageZoom();
-    }, { passive: false });
+            if (e.touches.length === 1) {
+                const t = e.touches[0];
+                teacherStageZoom.touchMode = teacherStageZoom.scale > 1.001 ? 'drag' : 'tap';
+                teacherStageZoom.dragStartX = Number(t.clientX || 0) - Number(teacherStageZoom.x || 0);
+                teacherStageZoom.dragStartY = Number(t.clientY || 0) - Number(teacherStageZoom.y || 0);
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (shouldIgnoreTeacherStageZoomTarget(e.target)) return;
+            if (e.touches.length >= 2) {
+                const a = e.touches[0];
+                const b = e.touches[1];
+                const rect = viewport.getBoundingClientRect();
+                const dist = touchDist(a, b) || teacherStageZoom.pinchStartDist || 1;
+                const mid = touchMid(a, b);
+                const nextScale = Math.max(
+                    teacherStageZoom.minScale,
+                    Math.min(teacherStageZoom.maxScale, Number(teacherStageZoom.pinchStartScale || 1) * (dist / Math.max(1, teacherStageZoom.pinchStartDist || 1)))
+                );
+                const ratio = nextScale / Math.max(1, Number(teacherStageZoom.pinchStartScale || 1));
+                const anchorX = mid.x - rect.left - (rect.width / 2);
+                const anchorY = mid.y - rect.top - (rect.height / 2);
+                teacherStageZoom.scale = nextScale;
+                teacherStageZoom.x = (Number(teacherStageZoom.pinchStartX || 0) * ratio) + (anchorX * (1 - ratio));
+                teacherStageZoom.y = (Number(teacherStageZoom.pinchStartY || 0) * ratio) + (anchorY * (1 - ratio));
+                viewport.classList.add('is-dragging');
+                applyTeacherStageZoom();
+                e.preventDefault();
+                return;
+            }
+            if (e.touches.length === 1 && teacherStageZoom.scale > 1.001) {
+                const t = e.touches[0];
+                teacherStageZoom.x = Number(t.clientX || 0) - Number(teacherStageZoom.dragStartX || 0);
+                teacherStageZoom.y = Number(t.clientY || 0) - Number(teacherStageZoom.dragStartY || 0);
+                viewport.classList.add('is-dragging');
+                applyTeacherStageZoom();
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchend', (e) => {
+            viewport.classList.remove('is-dragging');
+            if (shouldIgnoreTeacherStageZoomTarget(e.target)) return;
+            if (e.touches.length === 0 && e.changedTouches.length === 1) {
+                const t = e.changedTouches[0];
+                const now = Date.now();
+                const dx = Math.abs(Number(t.clientX || 0) - Number(teacherStageZoom.lastTapX || 0));
+                const dy = Math.abs(Number(t.clientY || 0) - Number(teacherStageZoom.lastTapY || 0));
+                if ((now - Number(teacherStageZoom.lastTapAt || 0)) < 320 && dx < 28 && dy < 28) {
+                    if (teacherStageZoom.scale > 1.15) resetTeacherStageZoom();
+                    else setTeacherStageZoomScale(2.1, { anchorClientX: t.clientX, anchorClientY: t.clientY });
+                    teacherStageZoom.lastTapAt = 0;
+                } else {
+                    teacherStageZoom.lastTapAt = now;
+                    teacherStageZoom.lastTapX = Number(t.clientX || 0);
+                    teacherStageZoom.lastTapY = Number(t.clientY || 0);
+                }
+            }
+            teacherStageZoom.touchMode = '';
+            applyTeacherStageZoom();
+        }, { passive: false });
+    }
 }
 
 function updateTeacherFullscreenButtonState(){
@@ -9991,11 +10005,15 @@ async function toggleMute() {
 
   function buildTileMap(){
     const ownerId = str(typeof getOwnerTeacherStageId === 'function' ? getOwnerTeacherStageId() : '');
+    const meId = str(typeof myUserId === 'function' ? myUserId() : (currentUser?._id || ''));
 
     const tiles = Array.from(document.querySelectorAll('[id^="tile_"]'));
     const map = new Map();
     for(const tile of tiles){
       let logical = str(tile.dataset.uid) || str(tile.id).replace('tile_','');
+      if(logical === 'local' && meId){
+        logical = meId;
+      }
       // If local tile is still "local", map it to ownerId when I'm the owner teacher
       if(logical === 'local' && ownerId){
         // If this tile looks like "Siz" (local) or muted video, treat as owner
