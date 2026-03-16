@@ -1260,14 +1260,15 @@
     #uploadHint{ font-size: 9px !important; line-height: 1.2; }
     #groupCallTopBar{ padding: 10px !important; }
     #groupCallVideoLayout{ padding: 8px !important; }
-    #teacherStageWrap{ flex-basis: 42%; max-height: 42%; min-height: 138px; padding-bottom: 6px; }
-    #teacherStage{ height: 100%; min-height: 150px; aspect-ratio:16 / 9 !important; }
+    #teacherStageWrap{ flex-basis: 48%; max-height: 48%; min-height: 168px; padding-bottom: 6px; }
+    #teacherStage{ height: 100%; min-height: 168px; aspect-ratio:16 / 9 !important; }
     #teacherStage.stage-dual{ grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:6px; }
     #teacherStage.stage-dual #teacherStageSurface{ grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:6px; }
-    #teacherStageZoomHud{ right:8px; bottom:56px; gap:4px; padding:5px; }
-    #teacherStageZoomHud button{ min-width:30px; height:30px; font-size:12px; }
-    #teacherStageZoomLabel{ min-width:46px; font-size:11px; }
-    #teacherStageZoomHint{ left:8px; bottom:56px; padding:6px 8px; font-size:10px; max-width:44vw; line-height:1.2; }
+    #teacherStage .stage-slot{ border-radius: 12px; }
+    #teacherStageZoomHud{ right:8px; bottom:10px; gap:4px; padding:6px; background: rgba(0,0,0,.66); }
+    #teacherStageZoomHud button{ min-width:34px; height:34px; font-size:13px; }
+    #teacherStageZoomLabel{ min-width:48px; font-size:11px; }
+    #teacherStageZoomHint{ left:8px; bottom:10px; padding:6px 8px; font-size:10px; max-width:52vw; line-height:1.2; background: rgba(0,0,0,.58); }
     #studentsScrollArea{ margin-top: 6px; padding-right: 2px; }
     #studentsGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 6px !important; }
     #studentsGrid > [id^="tile_"]{ height: 88px !important; min-height: 88px !important; max-height: 96px !important; }
@@ -2888,12 +2889,12 @@ function setupSocket() {
         const AUDIO_CONSTRAINTS = buildGroupAudioConstraints();
         // Back-compat alias (some older code referenced audioConstraints)
         const audioConstraints = AUDIO_CONSTRAINTS;
-        const GROUP_REMOTE_AUDIO_BASE_VOLUME = 0.62;
-        const GROUP_REMOTE_AUDIO_NON_STAGE_VOLUME = 0;
-        const GROUP_REMOTE_AUDIO_MIC_ON_STAGE_VOLUME = 0.16;
-        const GROUP_REMOTE_AUDIO_MIC_ON_NON_STAGE_VOLUME = 0;
-        const GROUP_REMOTE_AUDIO_DUCK_VOLUME = 0.02;
-        const GROUP_REMOTE_AUDIO_HARD_DUCK_VOLUME = 0;
+        const GROUP_REMOTE_AUDIO_BASE_VOLUME = 0.96;
+        const GROUP_REMOTE_AUDIO_NON_STAGE_VOLUME = 0.44;
+        const GROUP_REMOTE_AUDIO_MIC_ON_STAGE_VOLUME = 0.68;
+        const GROUP_REMOTE_AUDIO_MIC_ON_NON_STAGE_VOLUME = 0.18;
+        const GROUP_REMOTE_AUDIO_DUCK_VOLUME = 0.36;
+        const GROUP_REMOTE_AUDIO_HARD_DUCK_VOLUME = 0.14;
         const GROUP_FEEDBACK_GUARD = {
             activeTrackId: '',
             sourceTrack: null,
@@ -2908,8 +2909,8 @@ function setupSocket() {
             hardMuteUntil: 0,
             hitCount: 0,
             lastHitAt: 0,
-            threshold: 0.009,
-            holdMs: 680
+            threshold: 0.018,
+            holdMs: 320
         };
 // ==================== GROUP CALL (WebRTC Mesh) ====================
         let groupCall = {
@@ -4577,8 +4578,8 @@ function markGroupFeedbackHit(rms) {
         }
         GROUP_FEEDBACK_GUARD.lastHitAt = now;
         GROUP_FEEDBACK_GUARD.hitCount = Number(GROUP_FEEDBACK_GUARD.hitCount || 0) + 1;
-        if (Number(rms || 0) >= (GROUP_FEEDBACK_GUARD.threshold * 2.8) && hasAudibleRemoteAudio() && GROUP_FEEDBACK_GUARD.hitCount >= 3) {
-            GROUP_FEEDBACK_GUARD.hardMuteUntil = now + 1800;
+        if (Number(rms || 0) >= (GROUP_FEEDBACK_GUARD.threshold * 3.3) && hasAudibleRemoteAudio() && GROUP_FEEDBACK_GUARD.hitCount >= 5) {
+            GROUP_FEEDBACK_GUARD.hardMuteUntil = now + 1100;
         }
     } catch(_) {}
 }
@@ -5497,7 +5498,10 @@ try {
             const sGrid = document.getElementById('studentsGrid');
             const uid = String(userId);
 
-            if (isStageVisibleUserId(uid)) return tStage || sGrid;
+            if (isStageVisibleUserId(uid)) {
+                const zoomStage = (typeof ensureTeacherStageZoomStructure === 'function') ? ensureTeacherStageZoomStructure() : null;
+                return zoomStage?.surface || document.getElementById('teacherStageSurface') || tStage || sGrid;
+            }
             return sGrid || tStage;
         }
 
@@ -5571,7 +5575,7 @@ const video = tile.querySelector('video');
                     const isPortrait = !!(w > 0 && h > 0 && h > w);
                     tile.classList.toggle('is-portrait', isPortrait);
                     tile.classList.toggle('is-landscape', !isPortrait);
-                    if (tile.parentElement && tile.parentElement.id === 'teacherStage') {
+                    if (tile.closest('#teacherStage, #teacherStageSurface, .stage-slot')) {
                         refreshTeacherStageAspect(v);
                     }
                 } catch (_) {}
@@ -5594,12 +5598,15 @@ const video = tile.querySelector('video');
                 setTimeout(() => applyAspectByVideo(video), 500);
             }
 
-            const container = getTileContainerFor(userId);
+            const container = (typeof window.getTileContainerFor === 'function')
+                ? window.getTileContainerFor(userId)
+                : getTileContainerFor(userId);
             if (container) {
                 if (!tile.parentElement || tile.parentElement !== container) {
                     container.appendChild(tile);
                 }
-                tile.style.height = (container.id === 'teacherStage') ? '100%' : 'auto';
+                const inStageHost = !!container.closest?.('#teacherStage') || container.id === 'teacherStageSurface' || container.id === 'teacherStage';
+                tile.style.height = inStageHost ? '100%' : 'auto';
             }
 
             ensureStagePlaceholder();
@@ -7848,6 +7855,11 @@ function ensureTeacherStageZoomStructure() {
         viewport.appendChild(surface);
         tStage.appendChild(viewport);
     }
+    Array.from(tStage.children).forEach((child) => {
+        if (child !== viewport) {
+            try { child.remove(); } catch(_) {}
+        }
+    });
     bindTeacherStageZoomHandlers();
     applyTeacherStageZoom();
     return { viewport, surface };
@@ -8027,6 +8039,85 @@ function bindTeacherStageZoomHandlers() {
         if (!(e.ctrlKey || e.metaKey || teacherStageZoom.scale > 1.001)) return;
         e.preventDefault();
         zoomTeacherStageBy(e.deltaY < 0 ? 0.18 : -0.18, { anchorClientX: e.clientX, anchorClientY: e.clientY });
+    }, { passive: false });
+
+    const touchDist = (a, b) => Math.hypot(Number(a?.clientX || 0) - Number(b?.clientX || 0), Number(a?.clientY || 0) - Number(b?.clientY || 0));
+    const touchMid = (a, b) => ({ x: (Number(a?.clientX || 0) + Number(b?.clientX || 0)) / 2, y: (Number(a?.clientY || 0) + Number(b?.clientY || 0)) / 2 });
+
+    viewport.addEventListener('touchstart', (e) => {
+        if (shouldIgnoreTeacherStageZoomTarget(e.target)) return;
+        if (e.touches.length >= 2) {
+            const a = e.touches[0];
+            const b = e.touches[1];
+            teacherStageZoom.touchMode = 'pinch';
+            teacherStageZoom.pinchStartDist = touchDist(a, b) || 1;
+            teacherStageZoom.pinchStartScale = Number(teacherStageZoom.scale || 1);
+            teacherStageZoom.pinchStartX = Number(teacherStageZoom.x || 0);
+            teacherStageZoom.pinchStartY = Number(teacherStageZoom.y || 0);
+            e.preventDefault();
+            return;
+        }
+        if (e.touches.length === 1) {
+            const t = e.touches[0];
+            teacherStageZoom.touchMode = teacherStageZoom.scale > 1.001 ? 'drag' : 'tap';
+            teacherStageZoom.dragStartX = Number(t.clientX || 0) - Number(teacherStageZoom.x || 0);
+            teacherStageZoom.dragStartY = Number(t.clientY || 0) - Number(teacherStageZoom.y || 0);
+        }
+    }, { passive: false });
+
+    viewport.addEventListener('touchmove', (e) => {
+        if (shouldIgnoreTeacherStageZoomTarget(e.target)) return;
+        if (e.touches.length >= 2) {
+            const a = e.touches[0];
+            const b = e.touches[1];
+            const rect = viewport.getBoundingClientRect();
+            const dist = touchDist(a, b) || teacherStageZoom.pinchStartDist || 1;
+            const mid = touchMid(a, b);
+            const nextScale = Math.max(
+                teacherStageZoom.minScale,
+                Math.min(teacherStageZoom.maxScale, Number(teacherStageZoom.pinchStartScale || 1) * (dist / Math.max(1, teacherStageZoom.pinchStartDist || 1)))
+            );
+            const ratio = nextScale / Math.max(1, Number(teacherStageZoom.pinchStartScale || 1));
+            const anchorX = mid.x - rect.left - (rect.width / 2);
+            const anchorY = mid.y - rect.top - (rect.height / 2);
+            teacherStageZoom.scale = nextScale;
+            teacherStageZoom.x = (Number(teacherStageZoom.pinchStartX || 0) * ratio) + (anchorX * (1 - ratio));
+            teacherStageZoom.y = (Number(teacherStageZoom.pinchStartY || 0) * ratio) + (anchorY * (1 - ratio));
+            viewport.classList.add('is-dragging');
+            applyTeacherStageZoom();
+            e.preventDefault();
+            return;
+        }
+        if (e.touches.length === 1 && teacherStageZoom.scale > 1.001) {
+            const t = e.touches[0];
+            teacherStageZoom.x = Number(t.clientX || 0) - Number(teacherStageZoom.dragStartX || 0);
+            teacherStageZoom.y = Number(t.clientY || 0) - Number(teacherStageZoom.dragStartY || 0);
+            viewport.classList.add('is-dragging');
+            applyTeacherStageZoom();
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    viewport.addEventListener('touchend', (e) => {
+        viewport.classList.remove('is-dragging');
+        if (shouldIgnoreTeacherStageZoomTarget(e.target)) return;
+        if (e.touches.length === 0 && e.changedTouches.length === 1) {
+            const t = e.changedTouches[0];
+            const now = Date.now();
+            const dx = Math.abs(Number(t.clientX || 0) - Number(teacherStageZoom.lastTapX || 0));
+            const dy = Math.abs(Number(t.clientY || 0) - Number(teacherStageZoom.lastTapY || 0));
+            if ((now - Number(teacherStageZoom.lastTapAt || 0)) < 320 && dx < 28 && dy < 28) {
+                if (teacherStageZoom.scale > 1.15) resetTeacherStageZoom();
+                else setTeacherStageZoomScale(2.1, { anchorClientX: t.clientX, anchorClientY: t.clientY });
+                teacherStageZoom.lastTapAt = 0;
+            } else {
+                teacherStageZoom.lastTapAt = now;
+                teacherStageZoom.lastTapX = Number(t.clientX || 0);
+                teacherStageZoom.lastTapY = Number(t.clientY || 0);
+            }
+        }
+        teacherStageZoom.touchMode = '';
+        applyTeacherStageZoom();
     }, { passive: false });
 }
 
@@ -9713,7 +9804,7 @@ async function toggleMute() {
             <button type="button" onclick="zoomTeacherStageBy(0.25)" title="Kattalashtirish">+</button>
             <button type="button" onclick="resetTeacherStageZoom()" title="Reset">1:1</button>
           </div>
-          <div id="teacherStageZoomHint">Pinch qilib kattalashtiring, keyin surib ko'ring</div>
+          <div id="teacherStageZoomHint">Telefonda pinch yoki 2 marta bosib kattalashtiring, keyin suring</div>
           <div class="px-2 pb-2">
             <div id="stageCaptionInlineBar" class="hidden" aria-live="polite">
               <div id="stageCaptionInlineText"></div>
@@ -10011,6 +10102,11 @@ async function toggleMute() {
       ? ensureTeacherStageZoomStructure()
       : { viewport: null, surface: tStage };
     const stageSurface = zoomStage?.surface || tStage;
+    Array.from(tStage.children || []).forEach((child) => {
+      if (child !== zoomStage?.viewport) {
+        try { child.remove(); } catch(_) {}
+      }
+    });
 
     // If pinned user tile is missing => clear pin and broadcast if I'm owner teacher
     if(pinnedId && !tileMap.get(pinnedId)){
@@ -10087,9 +10183,14 @@ async function toggleMute() {
     const sGrid = document.getElementById('studentsGrid');
     const uid = str(userId);
     const stageIds = computeStageUserIds();
-    if(stageIds.includes(uid)) return tStage || sGrid;
+    if(stageIds.includes(uid)) {
+      const zoomStage = (typeof ensureTeacherStageZoomStructure === 'function') ? ensureTeacherStageZoomStructure() : null;
+      return zoomStage?.surface || document.getElementById('teacherStageSurface') || tStage || sGrid;
+    }
     return sGrid || tStage;
   };
+  try { getTileContainerFor = window.getTileContainerFor; } catch(_) {}
+  try { renderGroupCallLayout = window.renderGroupCallLayout; } catch(_) {}
 
   // When we receive pin/unpin events, force instant relayout (twice)
   try{
