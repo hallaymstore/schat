@@ -2,13 +2,26 @@
   const TOKEN_KEY = 'token';
   const THEME_KEY = 'theme';
   const DEFAULT_THEMES = [
-    { id: 'auto', label: 'AI tanlaydi', mood: 'Mavzuga qarab eng mos uslubni tanlaydi.' },
-    { id: 'teal-minimal', label: 'Teal Minimal', mood: 'Oq fon, rasmiy va juda toza korinish.' },
-    { id: 'executive-white', label: 'Executive White', mood: 'Formal, boardroom uslubi, minimal chiziqlar.' },
-    { id: 'midnight-teal', label: 'Midnight Teal', mood: 'Qora fon va och teal aksentlar.' },
-    { id: 'blueprint-grid', label: 'Blueprint Grid', mood: 'Akademik, texnik va gridga tayangan dizayn.' },
-    { id: 'editorial-warm', label: 'Editorial Warm', mood: 'Storytelling va jurnalsimon yumshoq dizayn.' },
-    { id: 'campus-card', label: 'Campus Card', mood: 'Talabalar uchun qulay, kartali va zamonaviy.' }
+    { id: 'auto', label: 'AI tanlaydi', mood: 'Mavzuga qarab eng mos uslub va rangni tanlaydi.', swatches: ['#0F8F83', '#C79A3B', '#E46A3A'] },
+    { id: 'teal-minimal', label: 'Teal Minimal', mood: 'Oq fon, rasmiy va juda toza korinish.', swatches: ['#0F8F83', '#D8ECE8', '#FBFFFE'] },
+    { id: 'executive-white', label: 'Executive White', mood: 'Formal, boardroom uslubi, minimal chiziqlar.', swatches: ['#0A6F66', '#203D3B', '#FFFFFF'] },
+    { id: 'midnight-teal', label: 'Midnight Teal', mood: 'Qora fon va och teal aksentlar.', swatches: ['#77D0C4', '#102D30', '#081C1E'] },
+    { id: 'blueprint-grid', label: 'Blueprint Grid', mood: 'Akademik, texnik va gridga tayangan dizayn.', swatches: ['#126D82', '#EFF8F7', '#1B3D3A'] },
+    { id: 'editorial-warm', label: 'Editorial Warm', mood: 'Storytelling va jurnalsimon issiq dizayn.', swatches: ['#B76B3A', '#FCFAF6', '#3F3B34'] },
+    { id: 'campus-card', label: 'Campus Card', mood: 'Talabalar uchun qulay, kartali va zamonaviy.', swatches: ['#149F92', '#F5FBFA', '#122826'] },
+    { id: 'heritage-royal', label: 'Heritage Royal', mood: 'Tarix, biografiya va rasmiy meros mavzulari uchun royal uslub.', swatches: ['#C79A3B', '#1D2F52', '#F7F0E1'] },
+    { id: 'forest-emerald', label: 'Forest Emerald', mood: 'Tabiat, sogliq va eco mavzulariga mos tinch palitra.', swatches: ['#2F8F6B', '#F3FAF6', '#153E33'] },
+    { id: 'sunset-signal', label: 'Sunset Signal', mood: 'Marketing, event va energiyali mavzular uchun issiq palitra.', swatches: ['#E46A3A', '#FFF7EF', '#5A2418'] },
+    { id: 'berry-luxe', label: 'Berry Luxe', mood: 'Creative, madaniyat va storytelling uchun berry/plum dizayn.', swatches: ['#A14C7A', '#FCF4F8', '#402236'] },
+    { id: 'graphite-coral', label: 'Graphite Coral', mood: 'Strategiya, product va premium dark taqdimotlar uchun.', swatches: ['#F06B5D', '#1C232B', '#F6EDEA'] }
+  ];
+  const DEFAULT_COLOR_MOODS = [
+    { id: 'auto', label: 'AI rang tanlaydi', note: 'Mavzuga mos palitra o‘zi tanlanadi.', swatches: ['#0F8F83', '#C79A3B', '#E46A3A'] },
+    { id: 'cool', label: 'Sovuq', note: 'Ko‘k, teal va professional ohanglar.', swatches: ['#126D82', '#0F8F83', '#77D0C4'] },
+    { id: 'warm', label: 'Issiq', note: 'Orange, berry va editorial yo‘nalish.', swatches: ['#E46A3A', '#B76B3A', '#A14C7A'] },
+    { id: 'dark', label: 'To‘q', note: 'Dark premium va kuchli kontrast.', swatches: ['#081C1E', '#1C232B', '#F06B5D'] },
+    { id: 'royal', label: 'Royal', note: 'Navy, gold va tarixiy kayfiyat.', swatches: ['#1D2F52', '#C79A3B', '#F7F0E1'] },
+    { id: 'fresh', label: 'Fresh', note: 'Yashil, mint va campusga mos.', swatches: ['#2F8F6B', '#149F92', '#F3FAF6'] }
   ];
   const SLIDE_TEXT = {
     uz: {
@@ -60,6 +73,7 @@
     me: null,
     themes: DEFAULT_THEMES.slice(),
     selectedStyle: 'auto',
+    selectedColorMood: 'auto',
     decks: [],
     currentDeck: null,
     currentIndex: 0,
@@ -83,6 +97,7 @@
     slideCountInput: document.getElementById('slideCountInput'),
     slideCountValue: document.getElementById('slideCountValue'),
     styleGrid: document.getElementById('styleGrid'),
+    colorMoodGrid: document.getElementById('colorMoodGrid'),
     demoDeckBtn: document.getElementById('demoDeckBtn'),
     resetPromptBtn: document.getElementById('resetPromptBtn'),
     refreshHistoryBtn: document.getElementById('refreshHistoryBtn'),
@@ -381,9 +396,14 @@
     list.forEach((item) => {
       const id = String(item && item.id || '').trim();
       if (!id) return;
-      map.set(id, { id, label: String(item.label || id), mood: String(item.mood || '') });
+      map.set(id, {
+        id,
+        label: String(item.label || id),
+        mood: String(item.mood || ''),
+        swatches: Array.isArray(item && item.swatches) ? item.swatches.slice(0, 4) : (map.get(id)?.swatches || [])
+      });
     });
-    state.themes = [{ id: 'auto', label: 'AI tanlaydi', mood: 'Mavzuga qarab eng mos uslubni tanlaydi.' }]
+    state.themes = [{ id: 'auto', label: 'AI tanlaydi', mood: 'Mavzuga qarab eng mos uslub va rangni tanlaydi.', swatches: ['#0F8F83', '#C79A3B', '#E46A3A'] }]
       .concat(Array.from(map.values()).filter((item) => item.id !== 'auto'));
   }
 
@@ -402,12 +422,19 @@
     };
   }
 
+  function renderSwatches(swatches, className) {
+    const items = Array.isArray(swatches) ? swatches.filter(Boolean).slice(0, 4) : [];
+    if (!items.length) return '';
+    return `<div class="${className}">${items.map((color) => `<span style="background:${escapeHtml(color)}"></span>`).join('')}</div>`;
+  }
+
   function renderStyleGrid() {
     els.styleGrid.innerHTML = state.themes.map((theme) => {
       const active = state.selectedStyle === theme.id ? ' active' : '';
       return `
         <button class="style-card${active}" type="button" data-style-id="${escapeHtml(theme.id)}">
           <strong>${escapeHtml(theme.label)}</strong>
+          ${renderSwatches(theme.swatches, 'style-swatches')}
           <span>${escapeHtml(theme.mood || 'Premium va sodda korinish.')}</span>
         </button>
       `;
@@ -416,6 +443,26 @@
       btn.addEventListener('click', () => {
         state.selectedStyle = btn.getAttribute('data-style-id') || 'auto';
         renderStyleGrid();
+      });
+    });
+  }
+
+  function renderColorMoodGrid() {
+    if (!els.colorMoodGrid) return;
+    els.colorMoodGrid.innerHTML = DEFAULT_COLOR_MOODS.map((tone) => {
+      const active = state.selectedColorMood === tone.id ? ' active' : '';
+      return `
+        <button class="tone-card${active}" type="button" data-tone-id="${escapeHtml(tone.id)}">
+          <strong>${escapeHtml(tone.label)}</strong>
+          ${renderSwatches(tone.swatches, 'tone-swatches')}
+          <span>${escapeHtml(tone.note || '')}</span>
+        </button>
+      `;
+    }).join('');
+    els.colorMoodGrid.querySelectorAll('[data-tone-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.selectedColorMood = btn.getAttribute('data-tone-id') || 'auto';
+        renderColorMoodGrid();
       });
     });
   }
@@ -856,6 +903,7 @@
     const result = await api('/api/slides?limit=24');
     mergeThemePresets(result.themePresets);
     renderStyleGrid();
+    renderColorMoodGrid();
     state.decks = Array.isArray(result.decks) ? result.decks : [];
     renderHistory();
     if (!state.currentDeck && state.decks.length) {
@@ -926,11 +974,13 @@
           audience,
           language,
           slideCount,
-          styleRequested: state.selectedStyle
+          styleRequested: state.selectedStyle,
+          colorMood: state.selectedColorMood
         })
       });
       mergeThemePresets(result.themePresets);
       renderStyleGrid();
+      renderColorMoodGrid();
       const deck = result.deck || null;
       if (!deck) throw new Error('Deck empty');
       state.currentDeck = deck;
@@ -1217,7 +1267,9 @@
     if (!els.promptInput.value.trim()) els.promptInput.value = buildWelcomePrompt();
     if (!els.audienceInput.value.trim()) els.audienceInput.value = defaultAudience();
     state.selectedStyle = 'campus-card';
+    state.selectedColorMood = 'fresh';
     renderStyleGrid();
+    renderColorMoodGrid();
     await generateDeck(true);
   }
 
@@ -1247,6 +1299,10 @@
         state.selectedStyle = 'campus-card';
         renderStyleGrid();
       }
+      if (!state.selectedColorMood || state.selectedColorMood === 'auto') {
+        state.selectedColorMood = 'fresh';
+        renderColorMoodGrid();
+      }
       await generateDeck(true);
     });
     els.resetPromptBtn.addEventListener('click', () => {
@@ -1256,7 +1312,9 @@
       els.slideCountInput.value = '6';
       els.slideCountValue.textContent = '6';
       state.selectedStyle = 'auto';
+      state.selectedColorMood = 'auto';
       renderStyleGrid();
+      renderColorMoodGrid();
     });
     els.refreshHistoryBtn.addEventListener('click', async () => { await loadHistory(); showToast('Tarix yangilandi.'); });
     els.prevSlideBtn.addEventListener('click', () => moveSlide(-1));
@@ -1291,6 +1349,7 @@
   async function init() {
     syncThemeButton();
     renderStyleGrid();
+    renderColorMoodGrid();
     bindEvents();
     renderDeck();
     await loadProfile();

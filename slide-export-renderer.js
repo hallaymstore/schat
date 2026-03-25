@@ -5,9 +5,15 @@ const THEME_TOKENS = {
   'executive-white': { bg: 'FFFFFF', surface: 'F4F8F7', text: '203D3B', strong: '102422', muted: '5A6C69', accent: '0A6F66', accentText: 'FFFFFF', border: 'DEE8E6' },
   'midnight-teal': { bg: '081C1E', surface: '102D30', text: 'DFFAF5', strong: 'EFFDFA', muted: 'A7D8D0', accent: '77D0C4', accentText: '062422', border: '214447' },
   'blueprint-grid': { bg: 'EFF8F7', surface: 'FFFFFF', text: '1B3D3A', strong: '0F2725', muted: '5A7774', accent: '126D82', accentText: 'FFFFFF', border: 'D9E8E7' },
-  'editorial-warm': { bg: 'FCFAF6', surface: 'FFFFFF', text: '3F3B34', strong: '25211B', muted: '6D665D', accent: '0F8F83', accentText: 'FFFFFF', border: 'E9E1D4' },
-  'campus-card': { bg: 'F5FBFA', surface: 'FFFFFF', text: '1E3F3C', strong: '122826', muted: '58706C', accent: '149F92', accentText: 'FFFFFF', border: 'DBECE9' }
+  'editorial-warm': { bg: 'FCFAF6', surface: 'FFFFFF', text: '3F3B34', strong: '25211B', muted: '6D665D', accent: 'B76B3A', accentText: 'FFFFFF', border: 'E9E1D4' },
+  'campus-card': { bg: 'F5FBFA', surface: 'FFFFFF', text: '1E3F3C', strong: '122826', muted: '58706C', accent: '149F92', accentText: 'FFFFFF', border: 'DBECE9' },
+  'heritage-royal': { bg: 'F7F0E1', surface: 'FFF9F0', text: '1D2F52', strong: '10203F', muted: '6A5B46', accent: 'C79A3B', accentText: 'FFFFFF', border: 'E7D8BC' },
+  'forest-emerald': { bg: 'F3FAF6', surface: 'FFFFFF', text: '173C34', strong: '0F291F', muted: '587067', accent: '2F8F6B', accentText: 'FFFFFF', border: 'D9ECE2' },
+  'sunset-signal': { bg: 'FFF7EF', surface: 'FFFFFF', text: '5A2418', strong: '3D170F', muted: '8C5A4D', accent: 'E46A3A', accentText: 'FFFFFF', border: 'F1D6C8' },
+  'berry-luxe': { bg: 'FCF4F8', surface: 'FFFFFF', text: '45243A', strong: '2E1627', muted: '7B5A6C', accent: 'A14C7A', accentText: 'FFFFFF', border: 'EBD7E3' },
+  'graphite-coral': { bg: '1C232B', surface: '273039', text: 'F6EDEA', strong: 'FFF8F5', muted: 'C7B7B2', accent: 'F06B5D', accentText: '1C232B', border: '3D4A54' }
 };
+const DARK_THEME_IDS = new Set(['midnight-teal', 'graphite-coral']);
 
 const COPY = {
   uz: { sourceLabel: 'Manbalar', nextStep: 'Keyingi qadam', slideWord: 'Slide' },
@@ -307,8 +313,8 @@ function buildSlideSvgMarkup(deck, slide, index, totalSlides) {
 
   add(`<rect x="0" y="0" width="${W}" height="${H}" fill="${colors.bg}" />`);
   add(`<rect x="0" y="0" width="${W}" height="${H}" fill="url(#${gridId})" />`);
-  add(`<circle cx="${W - 180}" cy="130" r="210" fill="${colors.accent}" fill-opacity="${deck && deck.themeId === 'midnight-teal' ? 0.12 : 0.06}" />`);
-  add(`<circle cx="${W - 70}" cy="${H - 80}" r="120" fill="${colors.accent}" fill-opacity="${deck && deck.themeId === 'midnight-teal' ? 0.1 : 0.05}" />`);
+  add(`<circle cx="${W - 180}" cy="130" r="210" fill="${colors.accent}" fill-opacity="${DARK_THEME_IDS.has(String(deck && deck.themeId || '')) ? 0.12 : 0.06}" />`);
+  add(`<circle cx="${W - 70}" cy="${H - 80}" r="120" fill="${colors.accent}" fill-opacity="${DARK_THEME_IDS.has(String(deck && deck.themeId || '')) ? 0.1 : 0.05}" />`);
   add(`<rect x="38" y="38" width="${W - 76}" height="${H - 76}" rx="34" fill="none" stroke="${colors.border}" stroke-opacity="0.72" stroke-width="2" />`);
   add(`<text x="${pad}" y="58" fill="${colors.accent}" font-size="18" font-weight="700" letter-spacing="1.5" font-family="Arial, Helvetica, sans-serif" dominant-baseline="hanging">${svgEscape(cleanText(deck && deck.themeLabel || 'HALLAYM AI', 80).toUpperCase())}</text>`);
   add(`<text x="${W - pad}" y="58" fill="${colors.muted}" font-size="18" font-weight="700" text-anchor="end" font-family="Arial, Helvetica, sans-serif" dominant-baseline="hanging">${svgEscape(countText)}</text>`);

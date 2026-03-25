@@ -2662,14 +2662,20 @@ const SLIDE_AI_RATE_WINDOW_MS = Math.max(10_000, Number(process.env.SLIDE_AI_RAT
 const SLIDE_AI_RATE_MAX = Math.max(2, Number(process.env.SLIDE_AI_RATE_MAX || 12));
 const SLIDE_LAYOUTS = ['cover', 'agenda', 'content', 'split', 'quote', 'timeline', 'metrics', 'closing'];
 const SLIDE_THEME_PRESETS = [
-  { id: 'teal-minimal', label: 'Teal Minimal', mood: 'bright, premium, clean, official' },
-  { id: 'executive-white', label: 'Executive White', mood: 'formal, boardroom, minimalist' },
-  { id: 'midnight-teal', label: 'Midnight Teal', mood: 'dark, premium, high contrast' },
-  { id: 'blueprint-grid', label: 'Blueprint Grid', mood: 'academic, technical, structured' },
-  { id: 'editorial-warm', label: 'Editorial Warm', mood: 'storytelling, elegant, human-centered' },
-  { id: 'campus-card', label: 'Campus Card', mood: 'friendly, student-focused, modern cards' }
+  { id: 'teal-minimal', label: 'Teal Minimal', mood: 'bright, premium, clean, official', tones: ['cool', 'fresh'], swatches: ['#0F8F83', '#D8ECE8', '#FBFFFE'] },
+  { id: 'executive-white', label: 'Executive White', mood: 'formal, boardroom, minimalist', tones: ['neutral', 'cool'], swatches: ['#0A6F66', '#203D3B', '#FFFFFF'] },
+  { id: 'midnight-teal', label: 'Midnight Teal', mood: 'dark, premium, high contrast', tones: ['dark', 'cool'], swatches: ['#77D0C4', '#102D30', '#081C1E'] },
+  { id: 'blueprint-grid', label: 'Blueprint Grid', mood: 'academic, technical, structured', tones: ['cool', 'royal'], swatches: ['#126D82', '#EFF8F7', '#1B3D3A'] },
+  { id: 'editorial-warm', label: 'Editorial Warm', mood: 'storytelling, elegant, warm editorial', tones: ['warm', 'neutral'], swatches: ['#B76B3A', '#FCFAF6', '#3F3B34'] },
+  { id: 'campus-card', label: 'Campus Card', mood: 'friendly, student-focused, modern cards', tones: ['fresh', 'cool'], swatches: ['#149F92', '#F5FBFA', '#122826'] },
+  { id: 'heritage-royal', label: 'Heritage Royal', mood: 'historical, ceremonial, navy and gold', tones: ['royal', 'neutral'], swatches: ['#C79A3B', '#1D2F52', '#F7F0E1'] },
+  { id: 'forest-emerald', label: 'Forest Emerald', mood: 'nature, health, eco, calm', tones: ['fresh', 'earth'], swatches: ['#2F8F6B', '#F3FAF6', '#153E33'] },
+  { id: 'sunset-signal', label: 'Sunset Signal', mood: 'energetic, bold, marketing-ready', tones: ['warm', 'vibrant'], swatches: ['#E46A3A', '#FFF7EF', '#5A2418'] },
+  { id: 'berry-luxe', label: 'Berry Luxe', mood: 'creative, cultural, elegant plum', tones: ['warm', 'royal'], swatches: ['#A14C7A', '#FCF4F8', '#402236'] },
+  { id: 'graphite-coral', label: 'Graphite Coral', mood: 'strategy, product, dark neutral with coral', tones: ['dark', 'neutral'], swatches: ['#F06B5D', '#1C232B', '#F6EDEA'] }
 ];
 const SLIDE_THEME_MAP = new Map(SLIDE_THEME_PRESETS.map((item) => [item.id, item]));
+const SLIDE_COLOR_MOODS = new Set(['auto', 'cool', 'warm', 'dark', 'royal', 'fresh', 'earth', 'vibrant', 'neutral']);
 const SLIDE_GENERATION_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -2783,6 +2789,107 @@ function normalizeSlideStudioLanguage(value) {
   if (v === 'en' || v === 'english') return 'en';
   if (v === 'ru' || v === 'russian') return 'ru';
   return 'uz';
+}
+
+function normalizeSlideColorMood(value) {
+  const v = String(value || '').trim().toLowerCase();
+  return SLIDE_COLOR_MOODS.has(v) ? v : 'auto';
+}
+
+function addSlideThemeScore(scores, themeId, amount) {
+  if (!scores.has(themeId)) return;
+  scores.set(themeId, Number(scores.get(themeId) || 0) + Number(amount || 0));
+}
+
+function pickAutoSlideThemeId({ prompt, research, colorMood }) {
+  const tone = normalizeSlideColorMood(colorMood);
+  const haystack = [
+    cleanText(prompt, 500),
+    cleanText(research?.query, 200),
+    cleanText(research?.title, 200),
+    cleanText(research?.summary, 1600)
+  ].join(' ').toLowerCase();
+  const scores = new Map(SLIDE_THEME_PRESETS.map((item) => [item.id, 0]));
+
+  if (tone !== 'auto') {
+    SLIDE_THEME_PRESETS.forEach((theme) => {
+      if (Array.isArray(theme?.tones) && theme.tones.includes(tone)) addSlideThemeScore(scores, theme.id, 4);
+    });
+  }
+
+  const award = (pattern, winners) => {
+    if (!pattern.test(haystack)) return;
+    winners.forEach(([themeId, points]) => addSlideThemeScore(scores, themeId, points));
+  };
+
+  award(/\b(tarix|history|empire|civilization|amir temur|temur|biography|hayoti|legacy|meros|culture|madaniyat|king|queen|dynasty|medieval|samarkand)\b/i, [
+    ['heritage-royal', 8],
+    ['editorial-warm', 4],
+    ['executive-white', 2]
+  ]);
+  award(/\b(ai|sun['’]?iy intellekt|artificial intelligence|machine learning|technology|texnolog|engineering|physics|mathematics|math|science|robot|software|dasturlash|code|cyber)\b/i, [
+    ['blueprint-grid', 8],
+    ['graphite-coral', 4],
+    ['midnight-teal', 3]
+  ]);
+  award(/\b(student|education|ta['’]?lim|edu|school|university|kurs|lesson|teacher|o['’]?qituv|campus|academy)\b/i, [
+    ['campus-card', 8],
+    ['teal-minimal', 4],
+    ['executive-white', 2]
+  ]);
+  award(/\b(health|medicine|medical|biology|eco|ecology|agriculture|nature|tabiat|green|sog['’]?liq|farm|environment)\b/i, [
+    ['forest-emerald', 8],
+    ['teal-minimal', 3],
+    ['editorial-warm', 2]
+  ]);
+  award(/\b(finance|business|startup|strategy|market|marketing|sales|brand|product|economy|bank|management)\b/i, [
+    ['executive-white', 7],
+    ['graphite-coral', 5],
+    ['sunset-signal', 3]
+  ]);
+  award(/\b(art|design|fashion|music|literature|adabiyot|media|story|storytelling|creative|san['’]?at|culture)\b/i, [
+    ['berry-luxe', 7],
+    ['editorial-warm', 6],
+    ['sunset-signal', 2]
+  ]);
+  award(/\b(sport|event|festival|promo|launch|motivation|campaign|energy|concert)\b/i, [
+    ['sunset-signal', 8],
+    ['graphite-coral', 3],
+    ['berry-luxe', 2]
+  ]);
+  award(/\b(law|policy|government|davlat|politics|legal|administration|public service)\b/i, [
+    ['executive-white', 6],
+    ['heritage-royal', 4],
+    ['blueprint-grid', 2]
+  ]);
+
+  const defaultByTone = {
+    auto: 'campus-card',
+    cool: 'blueprint-grid',
+    warm: 'editorial-warm',
+    dark: 'graphite-coral',
+    royal: 'heritage-royal',
+    fresh: 'forest-emerald',
+    earth: 'forest-emerald',
+    vibrant: 'sunset-signal',
+    neutral: 'executive-white'
+  };
+
+  let winner = defaultByTone[tone] || 'campus-card';
+  let bestScore = Number(scores.get(winner) || 0);
+  scores.forEach((score, themeId) => {
+    if (score > bestScore) {
+      bestScore = score;
+      winner = themeId;
+    }
+  });
+  return winner;
+}
+
+function resolveSlideThemeId({ styleRequested, prompt, research, colorMood }) {
+  return SLIDE_THEME_MAP.has(styleRequested)
+    ? styleRequested
+    : pickAutoSlideThemeId({ prompt, research, colorMood });
 }
 
 const slideTranslateCache = new Map();
@@ -4195,8 +4302,8 @@ function createFallbackSlideDeck({ prompt, slideCount, themeId, watermark, resea
   };
 }
 
-function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, watermark, research, language }) {
-  const fallbackThemeId = SLIDE_THEME_MAP.has(styleRequested) ? styleRequested : 'teal-minimal';
+function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, colorMood, watermark, research, language }) {
+  const fallbackThemeId = resolveSlideThemeId({ styleRequested, prompt, research, colorMood });
   const themeId = SLIDE_THEME_MAP.has(raw?.theme_id) ? raw.theme_id : fallbackThemeId;
   const theme = SLIDE_THEME_MAP.get(themeId) || SLIDE_THEME_PRESETS[0];
   const desiredCount = clampSlideCount(slideCount);
@@ -4306,20 +4413,24 @@ async function requestGroqSlideDeckJson({ systemPrompt, userMessage }) {
   throw new Error(lastErr || 'Groq slide generation failed');
 }
 
-async function generateSlideDeckWithGroq({ user, prompt, audience, language, styleRequested, slideCount }) {
+async function generateSlideDeckWithGroq({ user, prompt, audience, language, styleRequested, colorMood, slideCount }) {
   {
     const finalLanguageValue = normalizeSlideStudioLanguage(language);
     const finalCountValue = clampSlideCount(slideCount);
     const finalStyleValue = SLIDE_THEME_MAP.has(styleRequested) ? styleRequested : 'auto';
+    const finalColorMoodValue = normalizeSlideColorMood(colorMood);
     const watermarkValue = `${cleanText(user?.fullName || user?.username || 'Foydalanuvchi', 80)} tayyorladi | by HALLAYM`;
     const research = await researchSlideTopic(prompt, finalLanguageValue);
     const themeHintsValue = SLIDE_THEME_PRESETS
-      .map((item) => `- ${item.id}: ${item.label} (${item.mood})`)
+      .map((item) => `- ${item.id}: ${item.label} (${item.mood}; tones: ${(item.tones || []).join(', ')})`)
       .join('\n');
     const languageHintValue = finalLanguageValue === 'en' ? 'English' : (finalLanguageValue === 'ru' ? 'Russian' : 'Uzbek');
     const styleHintValue = finalStyleValue === 'auto'
       ? 'Choose the most appropriate theme for the topic.'
       : `Prefer this theme id if it fits: ${finalStyleValue}.`;
+    const colorHintValue = finalColorMoodValue === 'auto'
+      ? 'Let the color palette follow the topic naturally. Do not default to teal.'
+      : `Prefer a ${finalColorMoodValue} color direction if it fits the topic while keeping the result elegant.`;
     const researchDigest = buildResearchDigest(research);
     const slidePlan = buildSlideResearchPlan({
       prompt,
@@ -4344,7 +4455,9 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
       'Use varied layouts across the deck so consecutive slides do not feel repetitive.',
       'First slide must work like a strong cover. Last slide must work like a strong closing slide.',
       'Use body text plus bullets or structured blocks so each slide feels complete.',
+      'Use topic-appropriate accent colors for headers, chips, callouts, and cards instead of repeating the same teal palette.',
       styleHintValue,
+      colorHintValue,
       'Allowed themes:',
       themeHintsValue
     ].join('\n');
@@ -4372,6 +4485,7 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
         prompt,
         slideCount: finalCountValue,
         styleRequested: finalStyleValue,
+        colorMood: finalColorMoodValue,
         watermark: watermarkValue,
         research,
         language: finalLanguageValue
@@ -4387,7 +4501,12 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
         : (Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 10) : []);
       return deck;
     } catch (e) {
-      const fallbackThemeId = SLIDE_THEME_MAP.has(finalStyleValue) ? finalStyleValue : 'teal-minimal';
+      const fallbackThemeId = resolveSlideThemeId({
+        styleRequested: finalStyleValue,
+        prompt,
+        research,
+        colorMood: finalColorMoodValue
+      });
       let deck = createFallbackSlideDeck({
         prompt,
         slideCount: finalCountValue,
@@ -4527,8 +4646,13 @@ const SLIDE_THEME_TOKENS = {
   'executive-white': { bg: 'FFFFFF', surface: 'F4F8F7', text: '203D3B', strong: '102422', muted: '5A6C69', accent: '0A6F66', accentText: 'FFFFFF', border: 'DEE8E6' },
   'midnight-teal': { bg: '081C1E', surface: '102D30', text: 'DFFAF5', strong: 'EFFDFA', muted: 'A7D8D0', accent: '77D0C4', accentText: '062422', border: '214447' },
   'blueprint-grid': { bg: 'EFF8F7', surface: 'FFFFFF', text: '1B3D3A', strong: '0F2725', muted: '5A7774', accent: '126D82', accentText: 'FFFFFF', border: 'D9E8E7' },
-  'editorial-warm': { bg: 'FCFAF6', surface: 'FFFFFF', text: '3F3B34', strong: '25211B', muted: '6D665D', accent: '0F8F83', accentText: 'FFFFFF', border: 'E9E1D4' },
-  'campus-card': { bg: 'F5FBFA', surface: 'FFFFFF', text: '1E3F3C', strong: '122826', muted: '58706C', accent: '149F92', accentText: 'FFFFFF', border: 'DBECE9' }
+  'editorial-warm': { bg: 'FCFAF6', surface: 'FFFFFF', text: '3F3B34', strong: '25211B', muted: '6D665D', accent: 'B76B3A', accentText: 'FFFFFF', border: 'E9E1D4' },
+  'campus-card': { bg: 'F5FBFA', surface: 'FFFFFF', text: '1E3F3C', strong: '122826', muted: '58706C', accent: '149F92', accentText: 'FFFFFF', border: 'DBECE9' },
+  'heritage-royal': { bg: 'F7F0E1', surface: 'FFF9F0', text: '1D2F52', strong: '10203F', muted: '6A5B46', accent: 'C79A3B', accentText: 'FFFFFF', border: 'E7D8BC' },
+  'forest-emerald': { bg: 'F3FAF6', surface: 'FFFFFF', text: '173C34', strong: '0F291F', muted: '587067', accent: '2F8F6B', accentText: 'FFFFFF', border: 'D9ECE2' },
+  'sunset-signal': { bg: 'FFF7EF', surface: 'FFFFFF', text: '5A2418', strong: '3D170F', muted: '8C5A4D', accent: 'E46A3A', accentText: 'FFFFFF', border: 'F1D6C8' },
+  'berry-luxe': { bg: 'FCF4F8', surface: 'FFFFFF', text: '45243A', strong: '2E1627', muted: '7B5A6C', accent: 'A14C7A', accentText: 'FFFFFF', border: 'EBD7E3' },
+  'graphite-coral': { bg: '1C232B', surface: '273039', text: 'F6EDEA', strong: 'FFF8F5', muted: 'C7B7B2', accent: 'F06B5D', accentText: '1C232B', border: '3D4A54' }
 };
 
 function getSlideThemeTokens(themeId) {
@@ -4789,6 +4913,7 @@ app.post('/api/slides/generate', authenticateToken, async (req, res) => {
     const language = normalizeSlideStudioLanguage(req.body?.language);
     const styleRequestedRaw = cleanText(req.body?.styleRequested || req.body?.style || req.body?.themeId, 64);
     const styleRequested = SLIDE_THEME_MAP.has(styleRequestedRaw) ? styleRequestedRaw : 'auto';
+    const colorMood = normalizeSlideColorMood(req.body?.colorMood || req.body?.color || req.body?.palette);
     const slideCount = clampSlideCount(req.body?.slideCount);
 
     const me = await User.findById(userId)
@@ -4803,6 +4928,7 @@ app.post('/api/slides/generate', authenticateToken, async (req, res) => {
       audience,
       language,
       styleRequested,
+      colorMood,
       slideCount
     });
 
