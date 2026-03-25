@@ -148,6 +148,125 @@
       .replace(/\)/g, '%29');
   }
 
+  function safeDownloadBaseName(value) {
+    return String(value || 'hallaym-slide-deck')
+      .replace(/[<>:"/\\|?*\x00-\x1F]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'hallaym-slide-deck';
+  }
+
+  function deepClone(value) {
+    return value ? JSON.parse(JSON.stringify(value)) : value;
+  }
+
+  function isRemoteHttpUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return false;
+    try {
+      const parsed = new URL(raw, window.location.origin);
+      return /^https?:$/i.test(parsed.protocol) && parsed.origin !== window.location.origin;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('FileReader failed'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function fetchExportAssetDataUrl(url) {
+    const raw = String(url || '').trim();
+    if (!raw || !isRemoteHttpUrl(raw)) return raw;
+    const response = await fetch(`/api/slides/export-asset?url=${encodeURIComponent(raw)}`, {
+      headers: { Authorization: `Bearer ${state.token}` }
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Export asset yuklanmadi');
+    }
+    const blob = await response.blob();
+    return blobToDataUrl(blob);
+  }
+
+  async function buildExportDeckSnapshot(deck) {
+    const cloned = deepClone(deck) || {};
+    const remoteUrls = Array.from(new Set(
+      []
+        .concat(String(cloned.heroImageUrl || '').trim() ? [String(cloned.heroImageUrl || '').trim()] : [])
+        .concat(Array.isArray(cloned.slides) ? cloned.slides.map((slide) => String(slide && slide.imageUrl || '').trim()) : [])
+        .filter((url) => isRemoteHttpUrl(url))
+    ));
+    if (!remoteUrls.length) return cloned;
+
+    const assetMap = new Map();
+    await Promise.all(remoteUrls.map(async (url) => {
+      try {
+        assetMap.set(url, await fetchExportAssetDataUrl(url));
+      } catch (_) {
+        assetMap.set(url, url);
+      }
+    }));
+
+    if (assetMap.has(cloned.heroImageUrl)) cloned.heroImageUrl = assetMap.get(cloned.heroImageUrl) || cloned.heroImageUrl;
+    if (Array.isArray(cloned.slides)) {
+      cloned.slides = cloned.slides.map((slide) => {
+        const next = Object.assign({}, slide);
+        if (assetMap.has(next.imageUrl)) next.imageUrl = assetMap.get(next.imageUrl) || next.imageUrl;
+        return next;
+      });
+    }
+    return cloned;
+  }
+
+  function waitForFrames(count) {
+    let remaining = Math.max(1, Number(count || 1));
+    return new Promise((resolve) => {
+      const step = () => {
+        remaining -= 1;
+        if (remaining <= 0) return resolve();
+        return window.requestAnimationFrame(step);
+      };
+      window.requestAnimationFrame(step);
+    });
+  }
+
+  function preloadImage(url) {
+    return new Promise((resolve) => {
+      const src = String(url || '').trim();
+      if (!src) return resolve();
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.referrerPolicy = 'no-referrer';
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = src;
+    });
+  }
+
+  async function warmDeckImages(deck, slides) {
+    const urls = Array.from(new Set(
+      []
+        .concat(String(deck && deck.heroImageUrl || '').trim() ? [String(deck.heroImageUrl).trim()] : [])
+        .concat(Array.isArray(slides) ? slides.map((slide) => slideImageUrl(deck, slide)) : [])
+        .filter(Boolean)
+    ));
+    await Promise.all(urls.map((url) => preloadImage(url)));
+    if (document.fonts && document.fonts.ready) {
+      await Promise.race([
+        document.fonts.ready.catch(() => null),
+        new Promise((resolve) => window.setTimeout(resolve, 1400))
+      ]);
+    }
+    await waitForFrames(2);
+  }
+
   function normalizeSourceLinks(list) {
     if (!Array.isArray(list)) return [];
     return Array.from(new Set(list.map((item) => String(item || '').trim()).filter(Boolean))).slice(0, 3);
@@ -863,6 +982,141 @@
     }
   }
 
+  function downloadBlob(blob, fileName) {
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(href), 1000);
+  }
+
+  async function captureDeckSlideImages(deck, onProgress) {
+    if (!window.html2canvas) {
+      throw new Error('html2canvas yuklanmagan');
+    }
+    const exportDeck = await buildExportDeckSnapshot(deck);
+    const slides = Array.isArray(exportDeck && exportDeck.slides) ? exportDeck.slides : [];
+    if (!slides.length) {
+      throw new Error('Export uchun slide topilmadi');
+    }
+    await warmDeckImages(exportDeck, slides);
+
+    const sandbox = document.createElement('div');
+    sandbox.style.position = 'fixed';
+    sandbox.style.left = '-20000px';
+    sandbox.style.top = '0';
+    sandbox.style.width = '1600px';
+    sandbox.style.padding = '0';
+    sandbox.style.zIndex = '-1';
+    sandbox.style.pointerEvents = 'none';
+    sandbox.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(sandbox);
+
+    try {
+      const images = [];
+      for (let index = 0; index < slides.length; index += 1) {
+        if (typeof onProgress === 'function') onProgress(index, slides.length);
+        sandbox.innerHTML = `<div class="slide-stage">${renderSlideMarkup(exportDeck, slides[index], index)}</div>`;
+        const stage = sandbox.firstElementChild;
+        const canvasEl = stage && stage.querySelector('.slide-canvas');
+        if (!stage || !canvasEl) throw new Error('Slide render topilmadi');
+
+        stage.style.padding = '0';
+        stage.style.border = '0';
+        stage.style.background = 'transparent';
+        stage.style.boxShadow = 'none';
+        canvasEl.style.width = '1600px';
+        canvasEl.style.height = '900px';
+        canvasEl.style.maxHeight = 'none';
+
+        await warmDeckImages(exportDeck, [slides[index]]);
+        const canvas = await window.html2canvas(canvasEl, {
+          backgroundColor: null,
+          useCORS: true,
+          allowTaint: false,
+          scale: 2,
+          logging: false,
+          width: 1600,
+          height: 900,
+          windowWidth: 1600,
+          windowHeight: 900
+        });
+        images.push(canvas.toDataURL('image/png', 1));
+        sandbox.innerHTML = '';
+      }
+      if (typeof onProgress === 'function') onProgress(slides.length, slides.length);
+      return images;
+    } finally {
+      sandbox.remove();
+    }
+  }
+
+  async function downloadDeckFromPreview(format, btn) {
+    const safeTitle = safeDownloadBaseName(state.currentDeck && state.currentDeck.title);
+    const slideImages = await captureDeckSlideImages(state.currentDeck, (index, total) => {
+      if (!btn || !total) return;
+      const current = Math.min(index + 1, total);
+      btn.innerHTML = format === 'pdf'
+        ? `<i class="fa-solid fa-spinner fa-spin"></i> PDF ${current}/${total}`
+        : `<i class="fa-solid fa-spinner fa-spin"></i> PPTX ${current}/${total}`;
+    });
+
+    if (format === 'pdf') {
+      const jsPDFCtor = window.jspdf && window.jspdf.jsPDF;
+      if (!jsPDFCtor) throw new Error('jsPDF yuklanmagan');
+      const pdf = new jsPDFCtor({
+        orientation: 'landscape',
+        unit: 'pt',
+        format: [960, 540],
+        compress: true
+      });
+      slideImages.forEach((dataUri, index) => {
+        if (index > 0) pdf.addPage([960, 540], 'landscape');
+        pdf.addImage(dataUri, 'PNG', 0, 0, 960, 540, undefined, 'FAST');
+      });
+      pdf.save(`${safeTitle}.pdf`);
+      return;
+    }
+
+    const PptxCtor = window.PptxGenJS || window.pptxgen || (window.pptxgenjs && window.pptxgenjs.PptxGenJS);
+    if (!PptxCtor || typeof PptxCtor !== 'function') {
+      throw new Error('PPTX generator yuklanmagan');
+    }
+    const pptx = new PptxCtor();
+    pptx.layout = 'LAYOUT_WIDE';
+    pptx.author = 'HALLAYM AI';
+    pptx.company = 'HALLAYM';
+    pptx.subject = String(state.currentDeck && state.currentDeck.title || '').trim();
+    pptx.title = String(state.currentDeck && state.currentDeck.title || '').trim();
+    pptx.lang = deckLanguage(state.currentDeck);
+    slideImages.forEach((dataUri) => {
+      const slide = pptx.addSlide();
+      slide.addImage({
+        data: dataUri,
+        x: 0,
+        y: 0,
+        w: 13.333,
+        h: 7.5
+      });
+    });
+    await pptx.writeFile({ fileName: `${safeTitle}.pptx` });
+  }
+
+  async function downloadDeckFromServer(format) {
+    const response = await fetch(`/api/slides/${encodeURIComponent(state.currentDeck._id)}/export.${format}`, {
+      headers: { Authorization: `Bearer ${state.token}` }
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `Export failed (${response.status})`);
+    }
+    const blob = await response.blob();
+    downloadBlob(blob, `${safeDownloadBaseName(state.currentDeck.title)}.${format}`);
+  }
+
   async function downloadDeck(format) {
     if (!state.currentDeck || !state.currentDeck._id) {
       showToast('Avval deck tayyorlang.', 'error');
@@ -874,23 +1128,15 @@
       ? '<i class="fa-solid fa-spinner fa-spin"></i> PDF...'
       : '<i class="fa-solid fa-spinner fa-spin"></i> PPTX...');
     try {
-      const response = await fetch(`/api/slides/${encodeURIComponent(state.currentDeck._id)}/export.${format}`, {
-        headers: { Authorization: `Bearer ${state.token}` }
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || `Export failed (${response.status})`);
+      try {
+        await downloadDeckFromPreview(format, btn);
+      } catch (previewError) {
+        console.error(`Preview export failed for ${format}:`, previewError);
+        btn.innerHTML = format === 'pdf'
+          ? '<i class="fa-solid fa-spinner fa-spin"></i> PDF server export...'
+          : '<i class="fa-solid fa-spinner fa-spin"></i> PPTX server export...';
+        await downloadDeckFromServer(format);
       }
-      const blob = await response.blob();
-      const href = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const safeTitle = String(state.currentDeck.title || 'hallaym-slide-deck').replace(/[<>:"/\\|?*\x00-\x1F]+/g, ' ').trim().replace(/\s+/g, '-');
-      a.href = href;
-      a.download = `${safeTitle || 'hallaym-slide-deck'}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(href);
       showToast(format === 'pdf' ? 'PDF yuklab olindi.' : 'PPTX yuklab olindi.', 'success');
     } catch (error) {
       showToast(error.message || 'Yuklab olib bo\'lmadi.', 'error');

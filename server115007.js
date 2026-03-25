@@ -12,6 +12,7 @@ const cloudinary = require('cloudinary').v2;
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { Readable, Writable } = require('stream');
 const { v4: uuidv4 } = require('uuid');
+const { renderDeckSlidePngBuffers } = require('./slide-export-renderer');
 // const { AccessToken } = require('livekit-server-sdk'); // (disabled) using pure WebRTC signaling now
 const cors = require('cors');
 const path = require('path');
@@ -4547,9 +4548,11 @@ function sanitizeDownloadName(value, ext = '') {
 
 function guessImageMimeType(url, contentType) {
   const explicit = String(contentType || '').toLowerCase();
+  if (explicit.includes('svg')) return 'image/svg+xml';
   if (explicit.includes('png')) return 'image/png';
   if (explicit.includes('jpeg') || explicit.includes('jpg')) return 'image/jpeg';
   if (explicit.includes('webp')) return 'image/webp';
+  if (/\.svg(\?|$)/i.test(String(url || ''))) return 'image/svg+xml';
   if (/\.png(\?|$)/i.test(String(url || ''))) return 'image/png';
   if (/\.webp(\?|$)/i.test(String(url || ''))) return 'image/webp';
   return 'image/jpeg';
@@ -4558,6 +4561,32 @@ function guessImageMimeType(url, contentType) {
 function bufferToDataUri(buffer, mimeType) {
   if (!buffer || !buffer.length) return '';
   return `data:${mimeType};base64,${buffer.toString('base64')}`;
+}
+
+function isSafeSlideExportAssetUrl(rawUrl) {
+  const value = cleanText(rawUrl, 1000);
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    if (!/^https?:$/i.test(parsed.protocol)) return false;
+    const host = String(parsed.hostname || '').trim().toLowerCase();
+    if (!host) return false;
+    if (host === 'localhost' || host === '::1' || host.endsWith('.local')) return false;
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+      const octets = host.split('.').map((item) => Number(item));
+      if (octets.length !== 4 || octets.some((item) => !Number.isFinite(item) || item < 0 || item > 255)) return false;
+      if (octets[0] === 0 || octets[0] === 10 || octets[0] === 127) return false;
+      if (octets[0] === 169 && octets[1] === 254) return false;
+      if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return false;
+      if (octets[0] === 192 && octets[1] === 168) return false;
+    }
+    if (host.includes(':')) {
+      if (host === '::1' || host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe80')) return false;
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 async function loadImageAssetByUrl(imageUrl) {
@@ -4591,6 +4620,26 @@ async function loadDeckImageAssetMap(deck) {
 function resolveSlideAsset(assetMap, deck, slide) {
   const imageUrl = cleanText(slide?.imageUrl || deck?.heroImageUrl, 500);
   return imageUrl ? (assetMap.get(imageUrl) || null) : null;
+}
+
+function buildExportRenderDeck(deck, assetMap) {
+  const safeDeck = serializeSlideDeck(deck, true);
+  const out = Object.assign({}, safeDeck, {
+    heroImageDataUri: ''
+  });
+  const heroUrl = cleanText(safeDeck?.heroImageUrl, 500);
+  if (heroUrl && assetMap?.has(heroUrl)) {
+    out.heroImageDataUri = String(assetMap.get(heroUrl)?.dataUri || '');
+  }
+  out.slides = Array.isArray(safeDeck?.slides)
+    ? safeDeck.slides.map((slide) => {
+        const imageUrl = cleanText(slide?.imageUrl, 500);
+        return Object.assign({}, slide, {
+          imageDataUri: imageUrl && assetMap?.has(imageUrl) ? String(assetMap.get(imageUrl)?.dataUri || '') : ''
+        });
+      })
+    : [];
+  return out;
 }
 
 function buildSlideTextBlocks(slide) {
@@ -4628,192 +4677,38 @@ function composeSourceSummary(deck, slide) {
 
 async function buildSlideDeckPptxBuffer(deck) {
   const pptx = new PptxGenJS();
-  const palette = getSlideThemeTokens(deck?.themeId);
   const assetMap = await loadDeckImageAssetMap(deck);
+  const renderDeck = buildExportRenderDeck(deck, assetMap);
+  const slidePngs = await renderDeckSlidePngBuffers(renderDeck);
   pptx.layout = 'LAYOUT_WIDE';
   pptx.author = 'HALLAYM AI';
   pptx.company = 'HALLAYM';
   pptx.subject = cleanText(deck?.title, 180);
   pptx.title = cleanText(deck?.title, 180);
   pptx.lang = normalizeSlideStudioLanguage(deck?.language);
-
-  (Array.isArray(deck?.slides) ? deck.slides : []).forEach((slide, index) => {
+  slidePngs.forEach((buffer) => {
     const page = pptx.addSlide();
-    const blocks = buildSlideTextBlocks(slide);
-    const slideAsset = resolveSlideAsset(assetMap, deck, slide);
-    const hasMedia = !!slideAsset?.dataUri && !['agenda', 'quote'].includes(String(slide?.layout || 'content'));
-    const textWidth = hasMedia ? 7.35 : 11.7;
-    const mediaX = 8.3;
-    page.background = { color: palette.bg };
-
-    page.addText(cleanText(slide?.kicker || deck?.themeLabel || 'HALLAYM AI', 80), {
-      x: 0.6, y: 0.35, w: 3.2, h: 0.32, fontFace: 'Aptos', fontSize: 10, bold: true, color: palette.accent
-    });
-    page.addText(cleanText(slide?.title, 220) || `Slide ${index + 1}`, {
-      x: 0.6, y: 0.72, w: textWidth, h: 0.82, fontFace: 'Aptos Display', fontSize: index === 0 ? 25 : 22, bold: true, color: palette.strong, fit: 'shrink'
-    });
-    if (slide?.subtitle) {
-      page.addText(cleanText(slide.subtitle, 260), {
-        x: 0.6, y: 1.5, w: textWidth, h: 0.55, fontFace: 'Aptos', fontSize: 11.5, color: palette.muted, fit: 'shrink'
-      });
-    }
-
-    if (hasMedia) {
-      page.addShape('roundRect', {
-        x: mediaX, y: 0.72, w: 4.3, h: 2.85,
-        rectRadius: 0.12,
-        line: { color: palette.border, width: 1 },
-        fill: { color: palette.surface }
-      });
-      page.addImage({ data: slideAsset.dataUri, x: mediaX + 0.12, y: 0.84, w: 4.06, h: 2.18 });
-      if (slide?.imageCaption) {
-        page.addText(cleanText(slide.imageCaption, 140), {
-          x: mediaX + 0.18, y: 3.08, w: 3.9, h: 0.34, fontFace: 'Aptos', fontSize: 9.5, color: palette.muted, fit: 'shrink'
-        });
-      }
-    }
-
-    const bodyY = slide?.subtitle ? 2.12 : 1.7;
-    if (blocks.body) {
-      page.addText(blocks.body, {
-        x: 0.6, y: bodyY, w: textWidth, h: 1.0, fontFace: 'Aptos', fontSize: 12.5, color: palette.text, valign: 'top', fit: 'shrink'
-      });
-    }
-
-    if (slide?.layout === 'split' && (blocks.leftText || blocks.rightText)) {
-      page.addText(blocks.leftText || blocks.bulletText, {
-        x: 0.6, y: 3.05, w: hasMedia ? 3.45 : 5.6, h: 2.75, fontFace: 'Aptos', fontSize: 12, color: palette.text, breakLine: false, margin: 0.08,
-        fill: { color: palette.surface }, line: { color: palette.border }, fit: 'shrink'
-      });
-      page.addText(blocks.rightText || blocks.bulletText, {
-        x: hasMedia ? 4.2 : 6.3, y: 3.05, w: hasMedia ? 3.45 : 5.6, h: 2.75, fontFace: 'Aptos', fontSize: 12, color: palette.text, breakLine: false, margin: 0.08,
-        fill: { color: palette.surface }, line: { color: palette.border }, fit: 'shrink'
-      });
-    } else if (slide?.layout === 'metrics' && blocks.stats.length) {
-      blocks.stats.slice(0, 4).forEach((item, idx) => {
-        const col = idx % 2;
-        const row = Math.floor(idx / 2);
-        page.addText(`${item.value}\n${item.label}`, {
-          x: 0.6 + (col * 3.65), y: 3.0 + (row * 1.42), w: 3.2, h: 1.08, fontFace: 'Aptos Display',
-          fontSize: 16, bold: true, color: palette.strong, fill: { color: palette.surface }, line: { color: palette.border }, margin: 0.14, align: 'center', valign: 'mid', fit: 'shrink'
-        });
-      });
-    } else if (slide?.layout === 'timeline' && blocks.timeline.length) {
-      page.addText(blocks.timelineText, {
-        x: 0.75, y: 2.95, w: textWidth, h: 2.9, fontFace: 'Aptos', fontSize: 12, color: palette.text, margin: 0.12, fit: 'shrink'
-      });
-    } else if (slide?.layout === 'quote' && slide?.quote) {
-      page.addText(cleanText(slide.quote, 320), {
-        x: 0.9, y: 2.1, w: 11.2, h: 2.7, fontFace: 'Aptos Display', fontSize: 22, italic: true, color: palette.strong, align: 'center', valign: 'mid', fit: 'shrink'
-      });
-      if (slide?.quoteAuthor) {
-        page.addText(cleanText(slide.quoteAuthor, 120), {
-          x: 0.9, y: 4.85, w: 11.2, h: 0.35, fontFace: 'Aptos', fontSize: 12, color: palette.muted, align: 'center'
-        });
-      }
-    } else if (blocks.bulletText) {
-      page.addText(blocks.bulletText, {
-        x: 0.75, y: 2.95, w: textWidth, h: 2.85, fontFace: 'Aptos', fontSize: 12, color: palette.text, margin: 0.08, fit: 'shrink'
-      });
-    }
-
-    const footerText = `${cleanText(deck?.watermark, 180)} | ${index + 1}/${(deck?.slides || []).length}`;
-    page.addText(footerText, {
-      x: 0.6, y: 6.85, w: 7.5, h: 0.25, fontFace: 'Aptos', fontSize: 10, color: palette.muted
-    });
-    page.addText(composeSourceSummary(deck, slide), {
-      x: 6.6, y: 6.85, w: 6.1, h: 0.25, fontFace: 'Aptos', fontSize: 9, color: palette.muted, align: 'right'
+    page.addImage({
+      data: bufferToDataUri(buffer, 'image/png'),
+      x: 0,
+      y: 0,
+      w: 13.333,
+      h: 7.5
     });
   });
-
   return pptx.write({ outputType: 'nodebuffer' });
 }
 
 async function streamSlideDeckPdf(res, deck) {
-  const palette = getSlideThemeTokens(deck?.themeId);
   const assetMap = await loadDeckImageAssetMap(deck);
-  const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 32 });
+  const renderDeck = buildExportRenderDeck(deck, assetMap);
+  const slidePngs = await renderDeckSlidePngBuffers(renderDeck);
+  const doc = new PDFDocument({ size: [1280, 720], margin: 0 });
   doc.pipe(res);
-
-  const slides = Array.isArray(deck?.slides) ? deck.slides : [];
-  slides.forEach((slide, index) => {
-    if (index > 0) doc.addPage();
-    const blocks = buildSlideTextBlocks(slide);
-    const slideAsset = resolveSlideAsset(assetMap, deck, slide);
-    const hasMedia = !!slideAsset?.buffer && !['agenda', 'quote'].includes(String(slide?.layout || 'content'));
-    const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
-
-    doc.rect(0, 0, pageWidth, pageHeight).fill(`#${palette.bg}`);
-    doc.fillColor(`#${palette.accent}`).fontSize(10).font('Helvetica-Bold').text(cleanText(slide?.kicker || deck?.themeLabel || 'HALLAYM AI', 80), 40, 34);
-    doc.fillColor(`#${palette.strong}`).fontSize(index === 0 ? 24 : 21).font('Helvetica-Bold').text(cleanText(slide?.title, 220) || `Slide ${index + 1}`, 40, 56, {
-      width: hasMedia ? 470 : 720
-    });
-    doc.fillColor(`#${palette.muted}`).fontSize(11).font('Helvetica');
-    if (slide?.subtitle) {
-      doc.text(cleanText(slide.subtitle, 260), 40, 98, {
-        width: hasMedia ? 470 : 720
-      });
-    }
-
-    if (hasMedia) {
-      try {
-        doc.roundedRect(545, 50, 220, 170, 18).fillAndStroke(`#${palette.surface}`, `#${palette.border}`);
-        doc.image(slideAsset.buffer, 557, 60, { fit: [196, 118], align: 'center', valign: 'center' });
-        if (slide?.imageCaption) {
-          doc.fillColor(`#${palette.muted}`).fontSize(9).font('Helvetica')
-            .text(cleanText(slide.imageCaption, 140), 557, 188, { width: 196, align: 'left' });
-        }
-      } catch (_) {}
-    }
-
-    let cursorY = slide?.subtitle ? 136 : 112;
-    if (blocks.body) {
-      doc.fillColor(`#${palette.text}`).fontSize(11.5).font('Helvetica').text(blocks.body, 40, cursorY, { width: hasMedia ? 470 : 720, align: 'left' });
-      cursorY = doc.y + 14;
-    }
-
-    if (slide?.layout === 'split' && (blocks.leftBullets.length || blocks.rightBullets.length)) {
-      doc.roundedRect(40, cursorY - 4, hasMedia ? 220 : 240, 198, 16).fillAndStroke(`#${palette.surface}`, `#${palette.border}`);
-      doc.roundedRect(hasMedia ? 278 : 305, cursorY - 4, hasMedia ? 220 : 240, 198, 16).fillAndStroke(`#${palette.surface}`, `#${palette.border}`);
-      doc.font('Helvetica-Bold').fillColor(`#${palette.strong}`).text(cleanText(slide?.leftTitle, 80) || 'Left', 54, cursorY + 10, { width: hasMedia ? 190 : 210 });
-      doc.font('Helvetica').fillColor(`#${palette.text}`).fontSize(11).text(blocks.leftText || blocks.bulletText, 54, cursorY + 30, { width: hasMedia ? 190 : 210, height: 150 });
-      doc.font('Helvetica-Bold').fillColor(`#${palette.strong}`).text(cleanText(slide?.rightTitle, 80) || 'Right', hasMedia ? 292 : 319, cursorY + 10, { width: hasMedia ? 190 : 210 });
-      doc.font('Helvetica').fillColor(`#${palette.text}`).fontSize(11).text(blocks.rightText || blocks.bulletText, hasMedia ? 292 : 319, cursorY + 30, { width: hasMedia ? 190 : 210, height: 150 });
-    } else if (slide?.layout === 'metrics' && blocks.stats.length) {
-      blocks.stats.slice(0, 4).forEach((item, idx) => {
-        const col = idx % 2;
-        const row = Math.floor(idx / 2);
-        const x = 40 + (col * 220);
-        const y = cursorY + (row * 82);
-        doc.roundedRect(x, y, 194, 64, 14).fillAndStroke(`#${palette.surface}`, `#${palette.border}`);
-        doc.fillColor(`#${palette.strong}`).fontSize(18).font('Helvetica-Bold').text(item.value, x + 10, y + 12, { width: 174, align: 'center' });
-        doc.fillColor(`#${palette.muted}`).fontSize(10).font('Helvetica').text(item.label, x + 10, y + 36, { width: 174, align: 'center' });
-      });
-    } else if (slide?.layout === 'timeline' && blocks.timeline.length) {
-      blocks.timeline.forEach((item, idx) => {
-        const y = cursorY + (idx * 58);
-        doc.circle(52, y + 9, 7).fill(`#${palette.accent}`);
-        doc.fillColor(`#${palette.strong}`).fontSize(12).font('Helvetica-Bold').text(item.title, 70, y, { width: hasMedia ? 430 : 650 });
-        doc.fillColor(`#${palette.text}`).fontSize(10.5).font('Helvetica').text(item.detail, 70, y + 16, { width: hasMedia ? 430 : 650 });
-      });
-    } else if (slide?.layout === 'quote' && slide?.quote) {
-      doc.fillColor(`#${palette.accent}`).fontSize(50).font('Helvetica-Bold').text('"', 40, cursorY - 6);
-      doc.fillColor(`#${palette.strong}`).fontSize(20).font('Helvetica-Bold').text(cleanText(slide.quote, 320), 74, cursorY, { width: 650, align: 'center' });
-      if (slide?.quoteAuthor) {
-        doc.fillColor(`#${palette.muted}`).fontSize(12).font('Helvetica').text(cleanText(slide.quoteAuthor, 120), 40, doc.y + 12, { width: 700, align: 'center' });
-      }
-    } else if (blocks.bullets.length) {
-      doc.font('Helvetica').fillColor(`#${palette.text}`).fontSize(11).text(blocks.bulletText, 46, cursorY, { width: hasMedia ? 470 : 720 });
-    }
-
-    const footerY = pageHeight - 42;
-    doc.fillColor(`#${palette.muted}`).fontSize(10).font('Helvetica')
-      .text(cleanText(deck?.watermark, 180), 40, footerY, { width: 260 })
-      .text(composeSourceSummary(deck, slide), 270, footerY, { width: 450, align: 'right' })
-      .text(`${index + 1}/${slides.length}`, 730, footerY, { width: 50, align: 'right' });
+  slidePngs.forEach((buffer, index) => {
+    if (index > 0) doc.addPage({ size: [1280, 720], margin: 0 });
+    doc.image(buffer, 0, 0, { width: 1280, height: 720 });
   });
-
   doc.end();
 }
 
@@ -5011,6 +4906,31 @@ app.get('/api/slides/:deckId/export.pdf', authenticateToken, async (req, res) =>
       return res.status(500).json({ error: 'Failed to export PDF' });
     }
     res.end();
+  }
+});
+
+app.get('/api/slides/export-asset', authenticateToken, async (req, res) => {
+  try {
+    const imageUrl = cleanText(req.query?.url, 1000);
+    if (!isSafeSlideExportAssetUrl(imageUrl)) {
+      return res.status(400).json({ error: 'Invalid asset url' });
+    }
+    const out = await fetchBinaryWithTimeout(imageUrl, {
+      timeoutMs: 15000,
+      headers: {
+        Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+      }
+    });
+    const mimeType = guessImageMimeType(imageUrl, out?.contentType);
+    if (!/^image\//i.test(mimeType)) {
+      return res.status(400).json({ error: 'Asset is not an image' });
+    }
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'private, max-age=900');
+    return res.end(out?.buffer || Buffer.alloc(0));
+  } catch (e) {
+    console.error('GET /api/slides/export-asset error:', e);
+    return res.status(500).json({ error: 'Failed to load export asset' });
   }
 });
 
