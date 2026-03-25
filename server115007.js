@@ -3048,6 +3048,10 @@ function buildResearchDigest(research) {
   if (!research) return '';
   const lines = [];
   if (research.summary) lines.push(`Summary: ${research.summary}`);
+  (research.entries || []).slice(0, 4).forEach((entry, idx) => {
+    if (!entry?.summary) return;
+    lines.push(`Source ${idx + 1} (${entry.lang || 'web'}): ${entry.summary}`);
+  });
   (research.sections || []).slice(0, 4).forEach((item, idx) => {
     const heading = cleanText(item?.heading, 120) || `Section ${idx + 1}`;
     const text = truncateBySentence(item?.text, 520);
@@ -3117,35 +3121,239 @@ async function researchSlideTopic(prompt, language) {
     for (const lang of langOrder) {
       const hit = await lookupWikipediaEntry(lang, query);
       if (hit && hit.summary) {
-        results.push(hit);
+        const duplicate = results.some((item) => item.title === hit.title && item.lang === hit.lang);
+        if (!duplicate) results.push(hit);
       }
-      if (results.length >= 2) break;
+      if (results.length >= 4) break;
     }
-    if (results.length >= 2) break;
+    if (results.length >= 4) break;
   }
 
   if (!results.length) return null;
   const primary = results[0];
-  const secondary = results[1] && results[1].title !== primary.title ? results[1] : null;
+  const summaries = results.map((item) => item.summary).filter(Boolean);
+  const mergedSections = [];
+  const seenHeadings = new Set();
+  results.forEach((entry) => {
+    (entry.sections || []).forEach((section) => {
+      const key = String(section?.heading || '').trim().toLowerCase();
+      if (!key || seenHeadings.has(key)) return;
+      seenHeadings.add(key);
+      mergedSections.push({
+        heading: cleanText(section?.heading, 120),
+        text: truncateBySentence(section?.text, 700),
+        sourceLink: entry.sourceLink
+      });
+    });
+  });
 
   return {
     query: primary.query,
-    summary: truncateBySentence(
-      [primary.summary, secondary?.summary || ''].filter(Boolean).join(' '),
-      1400
-    ),
-    heroImageUrl: primary.heroImageUrl || secondary?.heroImageUrl || '',
-    sourceLinks: Array.from(new Set([primary.sourceLink, secondary?.sourceLink].filter(Boolean))).slice(0, 3),
-    sections: []
-      .concat(primary.sections || [])
-      .concat(secondary?.sections || [])
-      .slice(0, 5)
-      .map((item) => ({
-        heading: cleanText(item?.heading, 120),
-        text: truncateBySentence(item?.text, 700)
-      }))
-      .filter((item) => item.heading && item.text)
+    summary: truncateBySentence(summaries.join(' '), 1600),
+    heroImageUrl: results.find((item) => item.heroImageUrl)?.heroImageUrl || '',
+    sourceLinks: Array.from(new Set(results.map((item) => item.sourceLink).filter(Boolean))).slice(0, 6),
+    sections: mergedSections.slice(0, 8).filter((item) => item.heading && item.text),
+    entries: results.slice(0, 4).map((item) => ({
+      lang: item.lang,
+      title: item.title,
+      summary: truncateBySentence(item.summary, 700),
+      sourceLink: item.sourceLink
+    }))
   };
+}
+
+function looksLikeBiographyTopic(prompt, research) {
+  const src = `${prompt || ''} ${(research?.summary || '')} ${(research?.sections || []).map((item) => item.heading).join(' ')}`.toLowerCase();
+  return /(kim|hayoti|shajar|yosh|vafot|meros|biography|life|legacy|history|tarix|person|ruler|leader|amir temur|temur)/i.test(src);
+}
+
+function pickResearchSections(sections, matchers, usedTitles, limit = 1) {
+  const out = [];
+  for (const section of sections || []) {
+    const heading = String(section?.heading || '').toLowerCase();
+    const text = String(section?.text || '').toLowerCase();
+    if (!heading && !text) continue;
+    if (usedTitles.has(heading)) continue;
+    const ok = matchers.some((matcher) => matcher.test(heading) || matcher.test(text));
+    if (!ok) continue;
+    out.push(section);
+    usedTitles.add(heading);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function deriveTimelineFromSections(sections) {
+  return (sections || []).slice(0, 4).map((section) => ({
+    title: cleanText(section?.heading, 120),
+    detail: truncateBySentence(section?.text, 180)
+  })).filter((item) => item.title && item.detail);
+}
+
+function buildSlideResearchPlan({ prompt, slideCount, research }) {
+  const total = clampSlideCount(slideCount);
+  const sections = Array.isArray(research?.sections) ? research.sections.filter((item) => item?.heading || item?.text) : [];
+  const usedTitles = new Set();
+  const isBiography = looksLikeBiographyTopic(prompt, research);
+  const title = cleanText(research?.query, 120) || cleanText(prompt, 120) || 'Mavzu';
+  const plan = [];
+
+  plan.push({
+    layout: 'cover',
+    title: title,
+    subtitle: cleanText(research?.summary, 220) || `${title} haqida qisqa kirish`,
+    body: truncateBySentence(research?.summary, 420),
+    bullets: splitTextToBullets(research?.summary, { maxItems: 4, maxLen: 120 }),
+    callout: 'Asosiy g\'oya va nimani bilib chiqish ko\'rsatiladi.'
+  });
+
+  if (total > 1) {
+    plan.push({
+      layout: 'agenda',
+      title: 'Taqdimot rejasi',
+      subtitle: '',
+      body: '',
+      bullets: [],
+      callout: 'Har bir slide alohida mantiqiy bo\'limni yoritadi.'
+    });
+  }
+
+  const categoryDefs = isBiography
+    ? [
+        { title: 'Kelib chiqishi va davri', layout: 'content', matchers: [/umumiy|tavsif|origin|background|ism|shajara|kelib/i] },
+        { title: 'Yoshlik va shakllanish', layout: 'split', matchers: [/yosh|yoshlik|oil|family|childhood|early/i] },
+        { title: 'Yuksalish bosqichi', layout: 'timeline', matchers: [/rise|career|power|hokim|yuksal|boshlanish|turning/i] },
+        { title: 'Asosiy yurishlar va yutuqlar', layout: 'metrics', matchers: [/campaign|harbiy|jangi|yutuq|achievement|expansion|davlat/i] },
+        { title: 'Boshqaruv va ta\'sir', layout: 'split', matchers: [/boshqar|reform|policy|culture|impact|ta.sir|mamlakat/i] },
+        { title: 'Meros va xotira', layout: 'quote', matchers: [/legacy|meros|vafot|memory|xotira|after/i] }
+      ]
+    : [
+        { title: 'Asosiy tushuncha', layout: 'content', matchers: [/umumiy|kirish|overview|intro|definition/i] },
+        { title: 'Qanday ishlaydi', layout: 'split', matchers: [/qanday|how|process|principle|working/i] },
+        { title: 'Bosqichlar', layout: 'timeline', matchers: [/bosqich|step|phase|timeline/i] },
+        { title: 'Muhim ko\'rsatkichlar', layout: 'metrics', matchers: [/fact|number|stat|impact|foyda|natija/i] },
+        { title: 'Misollar va qo\'llanish', layout: 'split', matchers: [/example|use|case|misol|qo.llanish/i] },
+        { title: 'Yakuniy xulosa', layout: 'quote', matchers: [/summary|conclusion|xulosa|future|lesson/i] }
+      ];
+
+  for (const category of categoryDefs) {
+    if (plan.length >= total - 1) break;
+    const matched = pickResearchSections(sections, category.matchers, usedTitles, category.layout === 'timeline' ? 3 : 2);
+    const relevant = matched.length ? matched : pickResearchSections(sections, [/.+/], usedTitles, category.layout === 'timeline' ? 3 : 1);
+    if (!relevant.length) continue;
+
+    const combinedText = relevant.map((item) => item.text).filter(Boolean).join(' ');
+    const bullets = splitTextToBullets(combinedText, { maxItems: category.layout === 'metrics' ? 4 : 5, maxLen: 120 });
+    plan.push({
+      layout: category.layout,
+      title: cleanText(relevant[0]?.heading, 160) || category.title,
+      subtitle: category.title,
+      body: truncateBySentence(combinedText, category.layout === 'quote' ? 240 : 520),
+      bullets,
+      timeline: category.layout === 'timeline' ? deriveTimelineFromSections(relevant) : [],
+      stats: category.layout === 'metrics'
+        ? bullets.slice(0, 4).map((item, idx) => ({ label: cleanText(item, 60), value: `${idx + 1}` }))
+        : [],
+      quote: category.layout === 'quote' ? truncateBySentence(combinedText, 240) : '',
+      callout: cleanText(relevant.map((item) => item.heading).filter(Boolean).join(' | '), 180)
+    });
+  }
+
+  while (plan.length < total - 1 && sections.length) {
+    const next = sections.find((item) => !usedTitles.has(String(item?.heading || '').toLowerCase()));
+    if (!next) break;
+    usedTitles.add(String(next?.heading || '').toLowerCase());
+    plan.push({
+      layout: plan.length % 2 === 0 ? 'content' : 'split',
+      title: cleanText(next?.heading, 160) || `Bo'lim ${plan.length}`,
+      subtitle: '',
+      body: truncateBySentence(next?.text, 520),
+      bullets: splitTextToBullets(next?.text, { maxItems: 5, maxLen: 120 }),
+      callout: ''
+    });
+  }
+
+  const closingBullets = splitTextToBullets(research?.summary, { maxItems: 3, maxLen: 120 });
+  plan.push({
+    layout: 'closing',
+    title: isBiography ? `${title} merosi` : 'Yakuniy xulosa',
+    subtitle: 'Asosiy xabar',
+    body: '',
+    bullets: closingBullets.length ? closingBullets : ['Asosiy fikrni takrorlang', 'Muhim xulosani ayting', 'Savol-javobga o\'ting'],
+    callout: 'Taqdimotni yakunlaydigan qisqa va kuchli xabar.'
+  });
+
+  const trimmed = plan.slice(0, total);
+  if (trimmed[1] && trimmed[1].layout === 'agenda') {
+    trimmed[1].bullets = trimmed.slice(2).map((item) => cleanText(item.title, 100)).filter(Boolean).slice(0, 6);
+  }
+  return trimmed;
+}
+
+function renderSlidePlanForPrompt(plan) {
+  return (plan || []).map((item, idx) => {
+    const parts = [
+      `Slide ${idx + 1}`,
+      `layout=${item.layout || 'content'}`,
+      `title=${cleanText(item.title, 160)}`,
+      item.subtitle ? `subtitle=${cleanText(item.subtitle, 160)}` : '',
+      item.body ? `body=${truncateBySentence(item.body, 220)}` : '',
+      Array.isArray(item.bullets) && item.bullets.length ? `bullets=${item.bullets.join(' | ')}` : '',
+      Array.isArray(item.timeline) && item.timeline.length ? `timeline=${item.timeline.map((row) => `${row.title}: ${row.detail}`).join(' | ')}` : '',
+      Array.isArray(item.stats) && item.stats.length ? `stats=${item.stats.map((row) => `${row.label}: ${row.value}`).join(' | ')}` : '',
+      item.callout ? `callout=${cleanText(item.callout, 160)}` : ''
+    ].filter(Boolean);
+    return parts.join(' ; ');
+  }).join('\n');
+}
+
+function enhanceDeckWithPlan(deck, plan, research) {
+  const safeDeck = Object.assign({}, deck || {});
+  const rawSlides = Array.isArray(safeDeck.slides) ? safeDeck.slides.map((item) => Object.assign({}, item)) : [];
+  const desiredCount = clampSlideCount(rawSlides.length || plan?.length || 6);
+  const planRows = Array.isArray(plan) ? plan : [];
+  const enhancedSlides = [];
+
+  for (let i = 0; i < Math.max(desiredCount, planRows.length); i += 1) {
+    const sourceSlide = rawSlides[i] || {};
+    const planRow = planRows[i] || {};
+    const bullets = Array.isArray(sourceSlide.bullets) && sourceSlide.bullets.length
+      ? sourceSlide.bullets
+      : (Array.isArray(planRow.bullets) ? planRow.bullets : []);
+    const layout = (planRow.layout && SLIDE_LAYOUTS.includes(planRow.layout))
+      ? planRow.layout
+      : (SLIDE_LAYOUTS.includes(sourceSlide.layout) ? sourceSlide.layout : 'content');
+
+    const leftRight = splitListInHalf(bullets);
+    enhancedSlides.push({
+      order: i + 1,
+      layout,
+      kicker: cleanText(sourceSlide.kicker || planRow.kicker || '', 120),
+      title: cleanText(sourceSlide.title, 220) || cleanText(planRow.title, 220) || `Slide ${i + 1}`,
+      subtitle: cleanText(sourceSlide.subtitle, 260) || cleanText(planRow.subtitle, 260),
+      body: cleanText(sourceSlide.body, 1000) || cleanText(planRow.body, 1000),
+      bullets: normalizeStringList(bullets, { maxItems: 6, maxLen: 160 }),
+      leftTitle: cleanText(sourceSlide.leftTitle, 120) || (layout === 'split' ? 'Asosiy nuqtalar' : ''),
+      leftBullets: normalizeStringList(sourceSlide.leftBullets?.length ? sourceSlide.leftBullets : leftRight.left, { maxItems: 5, maxLen: 160 }),
+      rightTitle: cleanText(sourceSlide.rightTitle, 120) || (layout === 'split' ? 'Davomi' : ''),
+      rightBullets: normalizeStringList(sourceSlide.rightBullets?.length ? sourceSlide.rightBullets : leftRight.right, { maxItems: 5, maxLen: 160 }),
+      stats: normalizeStatsList(sourceSlide.stats?.length ? sourceSlide.stats : planRow.stats),
+      timeline: normalizeTimelineList(sourceSlide.timeline?.length ? sourceSlide.timeline : planRow.timeline),
+      quote: cleanText(sourceSlide.quote, 320) || cleanText(planRow.quote, 320),
+      quoteAuthor: cleanText(sourceSlide.quoteAuthor, 120),
+      callout: cleanText(sourceSlide.callout, 220) || cleanText(planRow.callout, 220),
+      speakerNote: cleanText(sourceSlide.speakerNote, 400) || cleanText(planRow.body || research?.summary, 400)
+    });
+  }
+
+  safeDeck.slides = ensureSlideVariety(enhancedSlides.slice(0, desiredCount), desiredCount);
+  safeDeck.summary = cleanText(safeDeck.summary, 600) || cleanText(research?.summary, 600);
+  safeDeck.heroImageUrl = cleanText(safeDeck.heroImageUrl || research?.heroImageUrl, 500);
+  safeDeck.researchSummary = cleanText(safeDeck.researchSummary || research?.summary, 1800);
+  safeDeck.sourceLinks = Array.isArray(safeDeck.sourceLinks) && safeDeck.sourceLinks.length
+    ? safeDeck.sourceLinks.slice(0, 6)
+    : (Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 6) : []);
+  return safeDeck;
 }
 
 function createFallbackSlideDeck({ prompt, slideCount, themeId, watermark, research }) {
@@ -3253,7 +3461,7 @@ function createFallbackSlideDeck({ prompt, slideCount, themeId, watermark, resea
       watermark,
       heroImageUrl: cleanText(research?.heroImageUrl, 500),
       researchSummary: cleanText(research?.summary, 1800),
-      sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : [],
+      sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 6) : [],
       generationMode: 'fallback',
       slides: ensureSlideVariety(generatedSlides.slice(0, clampSlideCount(slideCount)), slideCount)
     };
@@ -3412,7 +3620,7 @@ function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, wa
     watermark,
     heroImageUrl: cleanText(research?.heroImageUrl, 500),
     researchSummary: cleanText(research?.summary, 1800),
-    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : [],
+    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 6) : [],
     generationMode: 'ai',
     slides: variedSlides
   };
@@ -3481,12 +3689,19 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
       ? 'Choose the most appropriate theme for the topic.'
       : `Prefer this theme id if it fits: ${finalStyleValue}.`;
     const researchDigest = buildResearchDigest(research);
+    const slidePlan = buildSlideResearchPlan({
+      prompt,
+      slideCount: finalCountValue,
+      research
+    });
+    const slidePlanText = renderSlidePlanForPrompt(slidePlan);
     const systemPromptValue = [
       'You are HALLAYM AI and you create rich, premium, visually varied slide decks for a university web app.',
       `Write all slide text in ${languageHintValue}.`,
       'Return only structured deck JSON. Do not include markdown, code fences, or explanations.',
       'Do not mention Groq, providers, prompts, JSON, or internal tooling anywhere in the slide text.',
       'The deck must be content-rich, not a thin outline.',
+      'Distribute information across the full deck. Do not dump most facts into slide 1.',
       'Each middle slide should teach something concrete with facts, names, dates, places, reasons, or outcomes when relevant.',
       'For biography or history topics, cover origin, early life, major turning points, achievements, impact, legacy, and memorable facts.',
       'Use varied layouts across the deck so consecutive slides do not feel repetitive.',
@@ -3502,6 +3717,7 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
       `Slide count: ${finalCountValue}`,
       `Requested style: ${finalStyleValue}`,
       researchDigest ? `Research notes:\n${researchDigest}` : 'Research notes: no external notes found, use general knowledge carefully.',
+      slidePlanText ? `Slide plan:\n${slidePlanText}` : '',
       research?.sourceLinks?.length ? `Sources:\n${research.sourceLinks.join('\n')}` : '',
       'Make the structure presentation-ready, modern, visually clear, and informative.',
       'Prefer a different useful layout on most slides.'
@@ -3512,31 +3728,33 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
         systemPrompt: systemPromptValue,
         userMessage: userMessageValue
       });
-      const deck = normalizeSlideDeckPayload(parsed, {
+      let deck = normalizeSlideDeckPayload(parsed, {
         prompt,
         slideCount: finalCountValue,
         styleRequested: finalStyleValue,
         watermark: watermarkValue,
         research
       });
+      deck = enhanceDeckWithPlan(deck, slidePlan, research);
       deck.aiProvider = 'hallaym-ai';
       deck.aiModel = cleanText(model, 120);
       deck.generationMode = generationMode || deck.generationMode || 'ai';
       deck.heroImageUrl = cleanText(deck.heroImageUrl || research?.heroImageUrl, 500);
       deck.researchSummary = cleanText(deck.researchSummary || research?.summary, 1800);
       deck.sourceLinks = Array.isArray(deck.sourceLinks) && deck.sourceLinks.length
-        ? deck.sourceLinks.slice(0, 3)
-        : (Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : []);
+        ? deck.sourceLinks.slice(0, 6)
+        : (Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 6) : []);
       return deck;
     } catch (e) {
       const fallbackThemeId = SLIDE_THEME_MAP.has(finalStyleValue) ? finalStyleValue : 'teal-minimal';
-      const deck = createFallbackSlideDeck({
+      let deck = createFallbackSlideDeck({
         prompt,
         slideCount: finalCountValue,
         themeId: fallbackThemeId,
         watermark: watermarkValue,
         research
       });
+      deck = enhanceDeckWithPlan(deck, slidePlan, research);
       deck.aiProvider = 'hallaym-ai';
       deck.aiModel = 'fallback';
       deck.generationMode = 'fallback';
@@ -3624,7 +3842,7 @@ function serializeSlideDeck(deck, { includeSlides = true } = {}) {
     watermark: cleanText(src.watermark, 200),
     heroImageUrl: cleanText(src.heroImageUrl, 500),
     researchSummary: cleanText(src.researchSummary, 1800),
-    sourceLinks: Array.isArray(src.sourceLinks) ? src.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 3) : [],
+    sourceLinks: Array.isArray(src.sourceLinks) ? src.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 6) : [],
     aiProvider: cleanText(src.aiProvider, 32),
     aiModel: cleanText(src.aiModel, 120),
     generationMode: cleanText(src.generationMode, 32) || 'ai',
@@ -4016,7 +4234,7 @@ app.post('/api/slides/generate', authenticateToken, async (req, res) => {
       watermark: cleanText(deck.watermark, 200),
       heroImageUrl: cleanText(deck.heroImageUrl, 500),
       researchSummary: cleanText(deck.researchSummary, 1800),
-      sourceLinks: Array.isArray(deck.sourceLinks) ? deck.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 3) : [],
+      sourceLinks: Array.isArray(deck.sourceLinks) ? deck.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 6) : [],
       aiProvider: cleanText(deck.aiProvider, 32) || 'hallaym-ai',
       aiModel: cleanText(deck.aiModel, 120),
       generationMode: cleanText(deck.generationMode, 32) || 'ai',

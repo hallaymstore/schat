@@ -394,6 +394,12 @@
                 ${buildPointList(rightBullets.length ? rightBullets : (slide && slide.bullets || []))}
               </div>
             ` : ''}
+            ${heroImageUrl ? `
+              <div class="surface-card media-panel" style="background-image:url('${escapeHtml(heroImageUrl)}')">
+                <strong>${escapeHtml(slide && slide.title || deck && deck.title || 'Slide')}</strong>
+                <span>${escapeHtml(slide && slide.subtitle || deck && deck.summary || '')}</span>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -452,7 +458,7 @@
       content = `
         <div class="slide-body">
           <span class="slide-kicker">${kicker}</span>
-          <div class="content-grid${bullets.length ? '' : ' single'}">
+          <div class="content-grid${bullets.length || heroImageUrl ? '' : ' single'}">
             <div style="display:grid;gap:16px;align-content:start;">
               <h3 class="slide-title medium">${title}</h3>
               ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
@@ -460,6 +466,12 @@
               ${callout}
             </div>
             ${bullets.length ? `<div class="surface-card">${buildPointList(bullets)}</div>` : ''}
+            ${heroImageUrl ? `
+              <div class="surface-card media-panel" style="background-image:url('${escapeHtml(heroImageUrl)}')">
+                <strong>${escapeHtml(deck && deck.themeLabel || 'Visual')}</strong>
+                <span>${escapeHtml(deck && deck.summary || '')}</span>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
