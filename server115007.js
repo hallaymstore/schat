@@ -2722,6 +2722,9 @@ const SLIDE_GENERATION_SCHEMA = {
           },
           quote: { type: 'string' },
           quote_author: { type: 'string' },
+          image_url: { type: 'string' },
+          image_caption: { type: 'string' },
+          source_links: { type: 'array', items: { type: 'string' } },
           callout: { type: 'string' },
           speaker_note: { type: 'string' }
         },
@@ -2740,6 +2743,9 @@ const SLIDE_GENERATION_SCHEMA = {
           'timeline',
           'quote',
           'quote_author',
+          'image_url',
+          'image_caption',
+          'source_links',
           'callout',
           'speaker_note'
         ]
@@ -2776,6 +2782,193 @@ function normalizeSlideStudioLanguage(value) {
   if (v === 'en' || v === 'english') return 'en';
   if (v === 'ru' || v === 'russian') return 'ru';
   return 'uz';
+}
+
+const slideTranslateCache = new Map();
+const SLIDE_COPY = {
+  uz: {
+    defaultTopic: 'Mavzu',
+    defaultDeckTitle: 'Yangi taqdimot',
+    coverCallout: 'Asosiy g‘oya va bu taqdimotdan nima olinishi ko‘rsatiladi.',
+    agendaKicker: 'Reja',
+    agendaTitle: 'Taqdimot rejasi',
+    agendaCallout: 'Har bir slide alohida mantiqiy bo‘limni yoritadi.',
+    closingKicker: 'Xulosa',
+    closingTitle: 'Yakuniy xulosa',
+    closingSubtitle: 'Asosiy xabar',
+    closingCallout: 'Taqdimotni yakunlaydigan qisqa va kuchli xabar.',
+    coverSubtitleSuffix: 'haqida qisqa kirish',
+    splitLeftTitle: 'Asosiy nuqtalar',
+    splitRightTitle: 'Davomi',
+    nextStep: 'Keyingi qadam',
+    sourceLabel: 'Manbalar',
+    coverNote: 'Mazmun internet manbalari va HALLAYM AI tahlili asosida yig‘ildi.',
+    fallbackSubtitle: 'Mavzu bo‘yicha tushunarli va tayyor taqdimot',
+    fallbackDeckSubtitle: 'HALLAYM AI tomonidan tayyorlangan taqdimot',
+    fallbackDeckSummary: 'Asosiy mazmun tartibli slide ko‘rinishida jamlandi.',
+    fallbackClosingTitle: 'Yakuniy xabar',
+    fallbackClosingSubtitle: 'Asosiy g‘oya va keyingi fikr',
+    fallbackDraftSubtitle: 'AI servis band bo‘lsa ham ishga tayyor draft',
+    fallbackDraftSummary: 'Asosiy mazmunni sodda va ko‘rgazmali qilib bosqichma-bosqich taqdim eting.',
+    fallbackAgendaTitle: 'Nimani ko‘rib chiqamiz?',
+    fallbackContentTitle: 'Muhim nuqtalar',
+    fallbackContentBody: 'Bu yerga mavzu bo‘yicha AI generatsiya qilgan asosiy mazmun joylashadi.',
+    fallbackRegenerate: 'Ma’lumotlar kerak bo‘lsa deckni qayta generatsiya qiling.',
+    fallbackSpeakerIntro: 'Kirish, maqsad va nimani ko‘rib chiqishingizni ayting.',
+    fallbackSpeakerAgenda: 'Tomoshabinga deck strukturasini qisqa ayting.',
+    fallbackSpeakerContent: 'Misol yoki dalil bilan tushuntiring.',
+    fallbackSpeakerClosing: 'Yakuniy slide auditoriyani keyingi qadamga olib borishi kerak.',
+    bodyLeftHint: 'Mazmunni chap tarafda qisqa blok bilan tushuntiring.',
+    calloutRightHint: 'Qisqa dalillar, misollar yoki keyingi qadamlar shu yerda turadi.',
+    themeDeckLabel: 'HALLAYM AI deck',
+    deckSummaryFallback: 'HALLAYM Slide Studio bu deckni presentation-ready ko‘rinishda tayyorladi.',
+    agendaHint: 'Ushbu qismni qisqa va aniq tushuntiring.',
+    visualLabel: 'Vizual',
+    biography: [
+      { title: 'Kelib chiqishi va davri', subtitle: 'Shaxsning paydo bo‘lishi va tarixiy fon' },
+      { title: 'Yoshlik va shakllanish', subtitle: 'Shakllanish bosqichi va dastlabki ta’sirlar' },
+      { title: 'Yuksalish bosqichi', subtitle: 'Burilish nuqtalari va hokimiyatga kelish' },
+      { title: 'Asosiy yurishlar va yutuqlar', subtitle: 'Muhim voqealar, yurishlar va natijalar' },
+      { title: 'Boshqaruv va ta’sir', subtitle: 'Siyosat, madaniyat va ta’sir doirasi' },
+      { title: 'Meros va xotira', subtitle: 'Tarixiy baho va bugungi xotira' }
+    ],
+    generic: [
+      { title: 'Asosiy tushuncha', subtitle: 'Mavzuning mazmuni va mohiyati' },
+      { title: 'Qanday ishlaydi', subtitle: 'Jarayon, tamoyil yoki mexanizm' },
+      { title: 'Bosqichlar', subtitle: 'Ketma-ket rivojlanish yoki timeline' },
+      { title: 'Muhim ko‘rsatkichlar', subtitle: 'Raqamlar, faktlar va ta’sir' },
+      { title: 'Misollar va qo‘llanish', subtitle: 'Amaliy ko‘rinish va natijalar' },
+      { title: 'Yakuniy xulosa', subtitle: 'Asosiy xabar va eslab qolish kerak bo‘lgan nuqta' }
+    ]
+  },
+  en: {
+    defaultTopic: 'Topic',
+    defaultDeckTitle: 'New Presentation',
+    coverCallout: 'Show the main idea and what the audience will learn.',
+    agendaKicker: 'Agenda',
+    agendaTitle: 'Presentation Plan',
+    agendaCallout: 'Each slide should cover one clear logical section.',
+    closingKicker: 'Closing',
+    closingTitle: 'Final Takeaway',
+    closingSubtitle: 'Core message',
+    closingCallout: 'A short, strong final message for the audience.',
+    coverSubtitleSuffix: 'quick overview',
+    splitLeftTitle: 'Key points',
+    splitRightTitle: 'More detail',
+    nextStep: 'Next step',
+    sourceLabel: 'Sources',
+    coverNote: 'Content was assembled from web sources and HALLAYM AI analysis.',
+    fallbackSubtitle: 'A clear and presentation-ready overview of the topic',
+    fallbackDeckSubtitle: 'A presentation prepared by HALLAYM AI',
+    fallbackDeckSummary: 'The main content was organized into a clean slide sequence.',
+    fallbackClosingTitle: 'Final message',
+    fallbackClosingSubtitle: 'Main idea and next thought',
+    fallbackDraftSubtitle: 'A ready draft even when the AI service is busy',
+    fallbackDraftSummary: 'Present the main content step by step in a simple and visual way.',
+    fallbackAgendaTitle: 'What will we cover?',
+    fallbackContentTitle: 'Key points',
+    fallbackContentBody: 'The main AI-generated content for the topic appears here.',
+    fallbackRegenerate: 'If you need more detail, generate the deck again.',
+    fallbackSpeakerIntro: 'Introduce the topic, the goal, and what the audience will see.',
+    fallbackSpeakerAgenda: 'Briefly explain the structure of the deck.',
+    fallbackSpeakerContent: 'Explain it with an example or a supporting fact.',
+    fallbackSpeakerClosing: 'The final slide should lead the audience to a clear next step.',
+    bodyLeftHint: 'Explain the idea in a short block on the left.',
+    calloutRightHint: 'Put concise facts, examples, or next actions here.',
+    themeDeckLabel: 'HALLAYM AI deck',
+    deckSummaryFallback: 'HALLAYM Slide Studio prepared this deck in a presentation-ready format.',
+    agendaHint: 'Explain this section briefly and clearly.',
+    visualLabel: 'Visual',
+    biography: [
+      { title: 'Origins and Historical Context', subtitle: 'Where the person came from and the setting around them' },
+      { title: 'Early Life and Formation', subtitle: 'Formative years and early influences' },
+      { title: 'Rise to Power', subtitle: 'Turning points and path to influence' },
+      { title: 'Major Campaigns and Achievements', subtitle: 'Key events, victories, and outcomes' },
+      { title: 'Leadership and Impact', subtitle: 'Policy, culture, and sphere of influence' },
+      { title: 'Legacy and Memory', subtitle: 'Historical assessment and long-term remembrance' }
+    ],
+    generic: [
+      { title: 'Core Idea', subtitle: 'Meaning and scope of the topic' },
+      { title: 'How It Works', subtitle: 'Process, mechanism, or principle' },
+      { title: 'Stages', subtitle: 'Ordered development or timeline' },
+      { title: 'Key Metrics', subtitle: 'Numbers, facts, and impact' },
+      { title: 'Examples and Use Cases', subtitle: 'Practical application and outcomes' },
+      { title: 'Final Summary', subtitle: 'Main takeaway to remember' }
+    ]
+  },
+  ru: {
+    defaultTopic: 'Тема',
+    defaultDeckTitle: 'Новая презентация',
+    coverCallout: 'Покажите главную идею и то, что аудитория узнает из презентации.',
+    agendaKicker: 'План',
+    agendaTitle: 'План презентации',
+    agendaCallout: 'Каждый слайд должен раскрывать один понятный логический блок.',
+    closingKicker: 'Итог',
+    closingTitle: 'Главный вывод',
+    closingSubtitle: 'Ключевая мысль',
+    closingCallout: 'Короткое и сильное финальное сообщение для аудитории.',
+    coverSubtitleSuffix: 'краткий обзор',
+    splitLeftTitle: 'Ключевые пункты',
+    splitRightTitle: 'Детали',
+    nextStep: 'Следующий шаг',
+    sourceLabel: 'Источники',
+    coverNote: 'Содержание собрано из веб-источников и анализа HALLAYM AI.',
+    fallbackSubtitle: 'Понятная и готовая к показу презентация по теме',
+    fallbackDeckSubtitle: 'Презентация, подготовленная HALLAYM AI',
+    fallbackDeckSummary: 'Основное содержание собрано в последовательную структуру слайдов.',
+    fallbackClosingTitle: 'Финальное сообщение',
+    fallbackClosingSubtitle: 'Главная мысль и следующий акцент',
+    fallbackDraftSubtitle: 'Готовый черновик даже если AI-сервис временно занят',
+    fallbackDraftSummary: 'Представьте основное содержание просто, наглядно и поэтапно.',
+    fallbackAgendaTitle: 'Что мы рассмотрим?',
+    fallbackContentTitle: 'Ключевые пункты',
+    fallbackContentBody: 'Здесь будет размещено основное содержание, сгенерированное AI по теме.',
+    fallbackRegenerate: 'Если нужно больше данных, заново сгенерируйте deck.',
+    fallbackSpeakerIntro: 'Кратко обозначьте тему, цель и структуру презентации.',
+    fallbackSpeakerAgenda: 'Коротко объясните структуру deck.',
+    fallbackSpeakerContent: 'Объясните через пример или подтверждающий факт.',
+    fallbackSpeakerClosing: 'Последний слайд должен подвести аудиторию к понятному следующему шагу.',
+    bodyLeftHint: 'Кратко объясните идею в левом блоке.',
+    calloutRightHint: 'Здесь разместите короткие факты, примеры или дальнейшие шаги.',
+    themeDeckLabel: 'deck HALLAYM AI',
+    deckSummaryFallback: 'HALLAYM Slide Studio подготовила этот deck в удобном для показа формате.',
+    agendaHint: 'Объясните этот раздел кратко и ясно.',
+    visualLabel: 'Визуал',
+    biography: [
+      { title: 'Происхождение и исторический контекст', subtitle: 'Откуда происходит личность и в какой среде она появилась' },
+      { title: 'Ранние годы и становление', subtitle: 'Формирующий этап и первые влияния' },
+      { title: 'Путь к власти', subtitle: 'Переломные моменты и рост влияния' },
+      { title: 'Крупные походы и достижения', subtitle: 'Ключевые события, победы и результаты' },
+      { title: 'Управление и влияние', subtitle: 'Политика, культура и масштаб воздействия' },
+      { title: 'Наследие и память', subtitle: 'Историческая оценка и современная память' }
+    ],
+    generic: [
+      { title: 'Основная идея', subtitle: 'Смысл и охват темы' },
+      { title: 'Как это работает', subtitle: 'Процесс, механизм или принцип' },
+      { title: 'Этапы', subtitle: 'Последовательное развитие или таймлайн' },
+      { title: 'Ключевые показатели', subtitle: 'Цифры, факты и влияние' },
+      { title: 'Примеры и применение', subtitle: 'Практическая форма и результаты' },
+      { title: 'Итоговое резюме', subtitle: 'Главная мысль, которую стоит запомнить' }
+    ]
+  }
+};
+
+function getSlideCopy(language) {
+  return SLIDE_COPY[normalizeSlideStudioLanguage(language)] || SLIDE_COPY.uz;
+}
+
+function shortenByWords(text, { maxWords = 28, maxChars = 220 } = {}) {
+  const src = cleanText(text, Math.max(maxChars * 2, maxChars));
+  if (!src) return '';
+  const words = src.split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords && src.length <= maxChars) return src;
+  const out = [];
+  for (const word of words) {
+    const next = out.length ? `${out.join(' ')} ${word}` : word;
+    if (out.length >= maxWords || next.length > maxChars) break;
+    out.push(word);
+  }
+  return cleanText(out.join(' '), maxChars);
 }
 
 function parseJsonObjectLoose(text) {
@@ -2897,13 +3090,24 @@ function buildResearchQueries(prompt) {
   if (!src) return [];
   const stripped = src
     .replace(/[?!.:,;()[\]{}"']/g, ' ')
-    .replace(/\b(kim|nima|qanday|qachon|qaerda|qayerda|haqida|hayoti|slayd|slide|taqdimot|tayyorla|tayyorlab|ber|batafsil|presentation|about|life|history|details)\b/gi, ' ')
+    .replace(/\b(kim|nima|qanday|qachon|qaerda|qayerda|haqida|hayoti|slayd|slide|taqdimot|tayyorla|tayyorlab|ber|batafsil|presentation|about|life|history|details|prepare|create|deck|ppt|pptx)\b/gi, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim();
-  const values = [stripped, src]
-    .map((item) => cleanText(item, 140))
-    .filter(Boolean);
-  return Array.from(new Set(values)).slice(0, 3);
+  const base = cleanText(stripped || src, 140);
+  const values = [base, cleanText(src, 140)].filter(Boolean);
+  const biographyLike = /(kim|hayot|biography|life|tarix|history|person|amir temur|temur|leader|ruler)/i.test(src);
+  if (base) {
+    if (biographyLike) {
+      values.push(`${base} history`);
+      values.push(`${base} legacy`);
+      values.push(`${base} campaigns`);
+    } else {
+      values.push(`${base} overview`);
+      values.push(`${base} examples`);
+      values.push(`${base} impact`);
+    }
+  }
+  return Array.from(new Set(values.map((item) => cleanText(item, 140)).filter(Boolean))).slice(0, 4);
 }
 
 async function fetchJsonWithTimeout(url, { timeoutMs = 9000, headers = {} } = {}) {
@@ -2948,6 +3152,256 @@ async function fetchBinaryWithTimeout(url, { timeoutMs = 9000, headers = {} } = 
     };
   } finally {
     clearTimeout(timer);
+  }
+}
+
+async function fetchTextWithTimeout(url, { timeoutMs = 9000, headers = {} } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      headers: Object.assign(
+        {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'User-Agent': 'HALLAYM-Slide-Studio/1.0'
+        },
+        headers || {}
+      ),
+      redirect: 'follow',
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function translateSlideText(text, targetLang, sourceLang = 'auto') {
+  const clean = cleanText(text, 5000);
+  const target = normalizeSlideStudioLanguage(targetLang);
+  const sourceRaw = String(sourceLang || 'auto').trim().toLowerCase();
+  const source = sourceRaw === 'auto' ? 'auto' : normalizeSlideStudioLanguage(sourceRaw);
+  if (!clean) return '';
+  if (source !== 'auto' && source === target) return clean;
+
+  const key = `${source}|${target}|${clean}`;
+  if (slideTranslateCache.has(key)) return String(slideTranslateCache.get(key) || clean);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  let translated = clean;
+  try {
+    const url = new URL('https://translate.googleapis.com/translate_a/single');
+    url.searchParams.set('client', 'gtx');
+    url.searchParams.set('sl', source || 'auto');
+    url.searchParams.set('tl', target);
+    url.searchParams.set('dt', 't');
+    url.searchParams.set('q', clean);
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'HALLAYM-Slide-Studio/1.0'
+      },
+      signal: controller.signal
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data?.[0])) {
+        translated = data[0]
+          .map((row) => Array.isArray(row) ? String(row[0] || '') : '')
+          .join('')
+          .trim() || clean;
+      }
+    }
+  } catch (_) {
+    translated = clean;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  slideTranslateCache.set(key, translated);
+  if (slideTranslateCache.size > 1500) {
+    const first = slideTranslateCache.keys().next().value;
+    if (first) slideTranslateCache.delete(first);
+  }
+  return translated;
+}
+
+async function translateSlideList(list, targetLang, sourceLang = 'auto') {
+  if (!Array.isArray(list) || !list.length) return [];
+  const rows = await Promise.all(list.map((item) => translateSlideText(item, targetLang, sourceLang)));
+  return rows.map((item) => cleanText(item, 500)).filter(Boolean);
+}
+
+function resolveRelativeUrl(baseUrl, maybeUrl) {
+  const raw = String(maybeUrl || '').trim();
+  if (!raw) return '';
+  try {
+    return new URL(raw, baseUrl).toString();
+  } catch (_) {
+    return '';
+  }
+}
+
+function extractHtmlMeta(html, key) {
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${key}["'][^>]+content=["']([^"']+)["']`, 'i'),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${key}["']`, 'i'),
+    new RegExp(`<meta[^>]+name=["']${key}["'][^>]+content=["']([^"']+)["']`, 'i'),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${key}["']`, 'i')
+  ];
+  for (const pattern of patterns) {
+    const match = String(html || '').match(pattern);
+    const value = decodeHtmlEntities(match?.[1] || '');
+    if (value) return cleanText(value, 500);
+  }
+  return '';
+}
+
+function extractHtmlTitle(html) {
+  const og = extractHtmlMeta(html, 'og:title');
+  if (og) return cleanText(og, 180);
+  const match = String(html || '').match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  return cleanText(stripHtmlToText(match?.[1] || ''), 180);
+}
+
+function extractHtmlLang(html) {
+  const match = String(html || '').match(/<html[^>]+lang=["']([^"']+)["']/i);
+  const value = String(match?.[1] || '').trim().toLowerCase();
+  if (value.startsWith('ru')) return 'ru';
+  if (value.startsWith('en')) return 'en';
+  if (value.startsWith('uz')) return 'uz';
+  return 'auto';
+}
+
+function looksLikeJunkParagraph(text) {
+  const src = String(text || '').trim().toLowerCase();
+  if (!src) return true;
+  return /cookie|privacy|subscribe|newsletter|all rights reserved|javascript|enable browser|advertisement|share on|terms of use|privacy policy|copyright/.test(src);
+}
+
+function extractReadableParagraphs(html, { maxParagraphs = 4, maxChars = 1500 } = {}) {
+  const out = [];
+  const seen = new Set();
+  const regex = /<(p|li)[^>]*>([\s\S]*?)<\/\1>/gi;
+  let match;
+  while ((match = regex.exec(String(html || '')))) {
+    const text = cleanText(stripHtmlToText(match[0]), 700);
+    const key = text.toLowerCase();
+    if (!text || text.length < 80 || looksLikeJunkParagraph(text) || seen.has(key)) continue;
+    out.push(text);
+    seen.add(key);
+    if (out.length >= maxParagraphs) break;
+  }
+
+  if (!out.length) {
+    stripHtmlToText(html)
+      .split(/\n{2,}/)
+      .map((item) => cleanText(item, 700))
+      .filter((item) => item.length >= 90 && !looksLikeJunkParagraph(item))
+      .slice(0, maxParagraphs)
+      .forEach((item) => out.push(item));
+  }
+
+  const merged = [];
+  let total = 0;
+  for (const row of out) {
+    if ((total + row.length) > maxChars) break;
+    merged.push(row);
+    total += row.length;
+  }
+  return merged;
+}
+
+function extractHeadingSectionsFromHtml(html, baseUrl) {
+  const out = [];
+  const seen = new Set();
+  const regex = /<(h2|h3)[^>]*>([\s\S]*?)<\/\1>([\s\S]*?)(?=<h2\b|<h3\b|<\/article>|<\/main>|<\/body>|$)/gi;
+  let match;
+  while ((match = regex.exec(String(html || '')))) {
+    const heading = cleanText(stripHtmlToText(match[2] || ''), 140);
+    const text = truncateBySentence(extractReadableParagraphs(match[3] || '', { maxParagraphs: 2, maxChars: 900 }).join(' '), 700);
+    const key = heading.toLowerCase();
+    if (!heading || !text || heading.length < 3 || seen.has(key)) continue;
+    if (/references|external links|see also|notes|bibliography|related articles|источники|ссылки|примечания|manbalar|havolalar/i.test(heading)) continue;
+    seen.add(key);
+    out.push({
+      heading,
+      text,
+      sourceLink: baseUrl
+    });
+    if (out.length >= 4) break;
+  }
+  return out;
+}
+
+function decodeSearchResultUrl(rawHref) {
+  const href = decodeHtmlEntities(String(rawHref || '').trim());
+  if (!href) return '';
+  try {
+    const absolute = href.startsWith('//') ? `https:${href}` : href;
+    const url = new URL(absolute, 'https://duckduckgo.com');
+    const uddg = url.searchParams.get('uddg');
+    const out = uddg ? decodeURIComponent(uddg) : url.toString();
+    return /^https?:\/\//i.test(out) ? out : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function isBlockedResearchUrl(url) {
+  const src = String(url || '').trim();
+  if (!/^https?:\/\//i.test(src)) return true;
+  return /\.(pdf|docx?|pptx?|xlsx?|zip)(\?|$)/i.test(src)
+    || /duckduckgo\.com|google\.com|youtube\.com|youtu\.be|facebook\.com|instagram\.com|x\.com|twitter\.com|tiktok\.com|linkedin\.com|pinterest\.com|reddit\.com/i.test(src);
+}
+
+async function searchDuckDuckGoResults(query) {
+  const html = await fetchTextWithTimeout(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, { timeoutMs: 9000 });
+  const out = [];
+  const seen = new Set();
+  const regexes = [
+    /class="result__a"[^>]+href="([^"]+)"/gi,
+    /class='result__a'[^>]+href='([^']+)'/gi,
+    /<a[^>]+href="([^"]+)"[^>]*>\s*<span[^>]*class="result__type"/gi
+  ];
+
+  for (const regex of regexes) {
+    let match;
+    while ((match = regex.exec(html))) {
+      const url = decodeSearchResultUrl(match[1]);
+      if (!url || seen.has(url) || isBlockedResearchUrl(url)) continue;
+      seen.add(url);
+      out.push(url);
+      if (out.length >= 6) return out;
+    }
+  }
+  return out;
+}
+
+async function scrapeWebResearchEntry(url) {
+  if (isBlockedResearchUrl(url)) return null;
+  try {
+    const html = await fetchTextWithTimeout(url, { timeoutMs: 9500 });
+    const title = extractHtmlTitle(html);
+    const description = extractHtmlMeta(html, 'description') || extractHtmlMeta(html, 'og:description');
+    const paragraphs = extractReadableParagraphs(html, { maxParagraphs: 4, maxChars: 1500 });
+    const summary = truncateBySentence([description, paragraphs.join(' ')].filter(Boolean).join(' '), 1000);
+    if (!title || !summary) return null;
+    const imageUrl = resolveRelativeUrl(url, extractHtmlMeta(html, 'og:image') || extractHtmlMeta(html, 'twitter:image'));
+    const lang = extractHtmlLang(html);
+    return {
+      lang,
+      query: title,
+      title,
+      summary,
+      heroImageUrl: cleanText(imageUrl, 500),
+      sourceLink: cleanText(url, 500),
+      sections: extractHeadingSectionsFromHtml(html, url)
+    };
+  } catch (_) {
+    return null;
   }
 }
 
@@ -3044,6 +3498,60 @@ async function lookupWikipediaEntry(lang, query) {
   }
 }
 
+function buildResearchImagePool(entries) {
+  const out = [];
+  const seen = new Set();
+  (entries || []).forEach((entry) => {
+    const imageUrl = cleanText(entry?.heroImageUrl, 500);
+    const sourceLink = cleanText(entry?.sourceLink, 500);
+    const caption = cleanText(entry?.title || entry?.query || '', 160);
+    if (!imageUrl || !/^https?:\/\//i.test(imageUrl)) return;
+    const key = imageUrl.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({
+      url: imageUrl,
+      caption,
+      sourceLink,
+      sourceTitle: caption
+    });
+  });
+  return out.slice(0, 12);
+}
+
+async function translateResearchToLanguage(research, targetLang) {
+  if (!research) return null;
+  const language = normalizeSlideStudioLanguage(targetLang);
+  const out = Object.assign({}, research);
+  out.query = await translateSlideText(research.query || '', language, 'auto');
+  out.summary = await translateSlideText(research.summary || '', language, 'auto');
+  out.sections = await Promise.all((research.sections || []).map(async (section) => ({
+    heading: await translateSlideText(section?.heading || '', language, 'auto'),
+    text: await translateSlideText(section?.text || '', language, 'auto'),
+    sourceLink: cleanText(section?.sourceLink, 500),
+    sourceTitle: await translateSlideText(section?.sourceTitle || '', language, 'auto')
+  })));
+  out.entries = await Promise.all((research.entries || []).map(async (entry) => ({
+    lang: normalizeSlideStudioLanguage(entry?.lang),
+    title: await translateSlideText(entry?.title || '', language, 'auto'),
+    summary: await translateSlideText(entry?.summary || '', language, 'auto'),
+    sourceLink: cleanText(entry?.sourceLink, 500)
+  })));
+  out.imagePool = Array.isArray(research.imagePool)
+    ? research.imagePool.map((item) => ({
+        url: cleanText(item?.url, 500),
+        caption: cleanText(item?.caption, 160),
+        sourceLink: cleanText(item?.sourceLink, 500),
+        sourceTitle: cleanText(item?.sourceTitle, 160)
+      })).filter((item) => item.url)
+    : [];
+  out.sourceLinks = Array.isArray(research.sourceLinks)
+    ? research.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 10)
+    : [];
+  out.heroImageUrl = cleanText(research.heroImageUrl, 500);
+  return out;
+}
+
 function buildResearchDigest(research) {
   if (!research) return '';
   const lines = [];
@@ -3107,34 +3615,46 @@ function ensureSlideVariety(slides, desiredCount) {
 
 async function researchSlideTopic(prompt, language) {
   const queries = buildResearchQueries(prompt);
+  const targetLang = normalizeSlideStudioLanguage(language);
   if (!queries.length) return null;
 
   const langOrder = Array.from(new Set([
-    normalizeSlideStudioLanguage(language),
+    targetLang,
     'en',
     'uz',
     'ru'
   ]));
 
-  const results = [];
+  const wikiResults = [];
   for (const query of queries) {
-    for (const lang of langOrder) {
-      const hit = await lookupWikipediaEntry(lang, query);
-      if (hit && hit.summary) {
-        const duplicate = results.some((item) => item.title === hit.title && item.lang === hit.lang);
-        if (!duplicate) results.push(hit);
-      }
-      if (results.length >= 4) break;
-    }
-    if (results.length >= 4) break;
+    const hits = await Promise.all(langOrder.map((lang) => lookupWikipediaEntry(lang, query).catch(() => null)));
+    hits.forEach((hit) => {
+      if (!hit || !hit.summary) return;
+      const duplicate = wikiResults.some((item) => item.title === hit.title && item.lang === hit.lang);
+      if (!duplicate) wikiResults.push(hit);
+    });
+    if (wikiResults.length >= 6) break;
   }
 
-  if (!results.length) return null;
-  const primary = results[0];
-  const summaries = results.map((item) => item.summary).filter(Boolean);
+  const webResultUrls = [];
+  const searchGroups = await Promise.all(queries.slice(0, 3).map((query) => searchDuckDuckGoResults(query).catch(() => [])));
+  searchGroups.flat().forEach((url) => {
+    if (!url || webResultUrls.includes(url)) return;
+    webResultUrls.push(url);
+  });
+  const webResults = (await Promise.all(webResultUrls.slice(0, 5).map((url) => scrapeWebResearchEntry(url))))
+    .filter((item) => item && item.summary);
+
+  const allResults = []
+    .concat(wikiResults.slice(0, 6))
+    .concat(webResults.slice(0, 4));
+  if (!allResults.length) return null;
+
+  const primary = allResults[0];
+  const summaries = allResults.map((item) => item.summary).filter(Boolean);
   const mergedSections = [];
   const seenHeadings = new Set();
-  results.forEach((entry) => {
+  allResults.forEach((entry) => {
     (entry.sections || []).forEach((section) => {
       const key = String(section?.heading || '').trim().toLowerCase();
       if (!key || seenHeadings.has(key)) return;
@@ -3142,29 +3662,33 @@ async function researchSlideTopic(prompt, language) {
       mergedSections.push({
         heading: cleanText(section?.heading, 120),
         text: truncateBySentence(section?.text, 700),
-        sourceLink: entry.sourceLink
+        sourceLink: cleanText(section?.sourceLink || entry.sourceLink, 500),
+        sourceTitle: cleanText(entry?.title, 160)
       });
     });
   });
 
-  return {
-    query: primary.query,
-    summary: truncateBySentence(summaries.join(' '), 1600),
-    heroImageUrl: results.find((item) => item.heroImageUrl)?.heroImageUrl || '',
-    sourceLinks: Array.from(new Set(results.map((item) => item.sourceLink).filter(Boolean))).slice(0, 6),
-    sections: mergedSections.slice(0, 8).filter((item) => item.heading && item.text),
-    entries: results.slice(0, 4).map((item) => ({
+  const research = {
+    query: cleanText(primary.query || primary.title || prompt, 140),
+    summary: truncateBySentence(summaries.join(' '), 1800),
+    heroImageUrl: allResults.find((item) => item.heroImageUrl)?.heroImageUrl || '',
+    sourceLinks: Array.from(new Set(allResults.map((item) => item.sourceLink).filter(Boolean))).slice(0, 10),
+    sections: mergedSections.slice(0, 10).filter((item) => item.heading && item.text),
+    entries: allResults.slice(0, 8).map((item) => ({
       lang: item.lang,
       title: item.title,
-      summary: truncateBySentence(item.summary, 700),
+      summary: truncateBySentence(item.summary, 720),
       sourceLink: item.sourceLink
-    }))
+    })),
+    imagePool: buildResearchImagePool(allResults)
   };
+
+  return translateResearchToLanguage(research, targetLang);
 }
 
 function looksLikeBiographyTopic(prompt, research) {
   const src = `${prompt || ''} ${(research?.summary || '')} ${(research?.sections || []).map((item) => item.heading).join(' ')}`.toLowerCase();
-  return /(kim|hayoti|shajar|yosh|vafot|meros|biography|life|legacy|history|tarix|person|ruler|leader|amir temur|temur)/i.test(src);
+  return /(kim|hayoti|shajar|yosh|vafot|meros|biography|life|legacy|history|tarix|person|ruler|leader|amir temur|temur|биограф|жизн|наслед|правител|истор)/i.test(src);
 }
 
 function pickResearchSections(sections, matchers, usedTitles, limit = 1) {
@@ -3190,51 +3714,164 @@ function deriveTimelineFromSections(sections) {
   })).filter((item) => item.title && item.detail);
 }
 
-function buildSlideResearchPlan({ prompt, slideCount, research }) {
+function getSlideCategoryDefinitions(isBiography, language) {
+  const copy = getSlideCopy(language);
+  const localized = isBiography ? copy.biography : copy.generic;
+  const matchers = isBiography
+    ? [
+        [/umumiy|tavsif|origin|background|ism|shajara|kelib|происх|контекст|описан|обзор/i],
+        [/yosh|yoshlik|oil|family|childhood|early|ранн|детств|семь|становл/i],
+        [/rise|career|power|hokim|yuksal|boshlanish|turning|власт|карьер|путь|перелом/i],
+        [/campaign|harbiy|jangi|yutuq|achievement|expansion|davlat|поход|битв|достиж|импер/i],
+        [/boshqar|reform|policy|culture|impact|ta.sir|mamlakat|управл|реформ|влиян|культур/i],
+        [/legacy|meros|vafot|memory|xotira|after|наслед|памят|итог|последств/i]
+      ]
+    : [
+        [/umumiy|kirish|overview|intro|definition|общ|введ|определ|обзор/i],
+        [/qanday|how|process|principle|working|как|процесс|механизм|принцип/i],
+        [/bosqich|step|phase|timeline|этап|стад|таймлайн|последоват/i],
+        [/fact|number|stat|impact|foyda|natija|показат|цифр|факт|влиян/i],
+        [/example|use|case|misol|qo.llanish|пример|применен|сценар/i],
+        [/summary|conclusion|xulosa|future|lesson|итог|вывод|резюме|урок/i]
+      ];
+  return localized.map((item, index) => ({
+    title: item.title,
+    subtitle: item.subtitle,
+    layout: ['content', 'split', 'timeline', 'metrics', 'split', 'quote'][index] || 'content',
+    matchers: matchers[index] || [/.+/]
+  }));
+}
+
+function trimTimelineRows(rows, maxRows = 4) {
+  return normalizeTimelineList(rows).slice(0, maxRows).map((item) => ({
+    title: shortenByWords(item.title, { maxWords: 7, maxChars: 70 }),
+    detail: shortenByWords(item.detail, { maxWords: 16, maxChars: 110 })
+  })).filter((item) => item.title && item.detail);
+}
+
+function trimStatsRows(rows, maxRows = 4) {
+  return normalizeStatsList(rows).slice(0, maxRows).map((item) => ({
+    label: shortenByWords(item.label, { maxWords: 7, maxChars: 52 }),
+    value: shortenByWords(item.value, { maxWords: 5, maxChars: 28 })
+  })).filter((item) => item.label && item.value);
+}
+
+function fitSlideToAspect(slide, language) {
+  const copy = getSlideCopy(language);
+  const layout = String(slide?.layout || 'content');
+  const safe = Object.assign({}, slide || {});
+  const originalBody = cleanText(safe.body, 1000);
+  safe.title = shortenByWords(safe.title, { maxWords: layout === 'cover' ? 9 : 11, maxChars: layout === 'cover' ? 66 : 88 });
+  safe.subtitle = shortenByWords(safe.subtitle, { maxWords: 18, maxChars: 160 });
+  safe.callout = shortenByWords(safe.callout, { maxWords: 18, maxChars: 130 });
+  safe.kicker = cleanText(safe.kicker, 80);
+  safe.quoteAuthor = shortenByWords(safe.quoteAuthor, { maxWords: 8, maxChars: 80 });
+  safe.imageCaption = shortenByWords(safe.imageCaption, { maxWords: 12, maxChars: 110 });
+
+  if (layout === 'cover') {
+    safe.body = shortenByWords(safe.body, { maxWords: 34, maxChars: 260 });
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 74 }).map((item) => shortenByWords(item, { maxWords: 10, maxChars: 74 }));
+  } else if (layout === 'agenda') {
+    safe.body = '';
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 6, maxLen: 62 }).map((item) => shortenByWords(item, { maxWords: 8, maxChars: 62 }));
+  } else if (layout === 'split') {
+    safe.body = shortenByWords(safe.body, { maxWords: 24, maxChars: 180 }) || copy.bodyLeftHint;
+    safe.leftBullets = normalizeStringList(safe.leftBullets, { maxItems: 4, maxLen: 78 }).map((item) => shortenByWords(item, { maxWords: 11, maxChars: 78 }));
+    safe.rightBullets = normalizeStringList(safe.rightBullets, { maxItems: 4, maxLen: 78 }).map((item) => shortenByWords(item, { maxWords: 11, maxChars: 78 }));
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 78 }).map((item) => shortenByWords(item, { maxWords: 11, maxChars: 78 }));
+    safe.leftTitle = shortenByWords(safe.leftTitle || copy.splitLeftTitle, { maxWords: 6, maxChars: 54 });
+    safe.rightTitle = shortenByWords(safe.rightTitle || copy.splitRightTitle, { maxWords: 6, maxChars: 54 });
+  } else if (layout === 'timeline') {
+    safe.body = shortenByWords(safe.body, { maxWords: 18, maxChars: 140 });
+    safe.timeline = trimTimelineRows(safe.timeline, 4);
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 84 }).map((item) => shortenByWords(item, { maxWords: 12, maxChars: 84 }));
+  } else if (layout === 'metrics') {
+    safe.body = shortenByWords(safe.body, { maxWords: 18, maxChars: 140 });
+    safe.stats = trimStatsRows(safe.stats, 4);
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 58 }).map((item) => shortenByWords(item, { maxWords: 8, maxChars: 58 }));
+  } else if (layout === 'quote') {
+    safe.body = '';
+    safe.quote = shortenByWords(safe.quote || originalBody || safe.title, { maxWords: 30, maxChars: 220 });
+  } else if (layout === 'closing') {
+    safe.body = shortenByWords(safe.body, { maxWords: 20, maxChars: 150 });
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 78 }).map((item) => shortenByWords(item, { maxWords: 11, maxChars: 78 }));
+  } else {
+    safe.body = shortenByWords(safe.body, { maxWords: 26, maxChars: 200 });
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 5, maxLen: 80 }).map((item) => shortenByWords(item, { maxWords: 11, maxChars: 80 }));
+  }
+
+  safe.sourceLinks = Array.isArray(safe.sourceLinks)
+    ? safe.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 3)
+    : [];
+  safe.imageUrl = cleanText(safe.imageUrl, 500);
+  safe.leftBullets = normalizeStringList(safe.leftBullets, { maxItems: 4, maxLen: 80 });
+  safe.rightBullets = normalizeStringList(safe.rightBullets, { maxItems: 4, maxLen: 80 });
+  return safe;
+}
+
+function tokenizeForMatch(text) {
+  return Array.from(new Set(String(text || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+    .split(/\s+/)
+    .filter((item) => item && item.length >= 4)));
+}
+
+function pickImageForSlide(slide, imagePool, usedUrls = new Set()) {
+  const pool = Array.isArray(imagePool) ? imagePool.filter((item) => item?.url) : [];
+  if (!pool.length) return null;
+  const tokens = tokenizeForMatch([
+    slide?.title,
+    slide?.subtitle,
+    slide?.body,
+    slide?.kicker,
+    slide?.quote
+  ].filter(Boolean).join(' '));
+
+  let best = null;
+  for (const item of pool) {
+    const haystack = `${item.caption || ''} ${item.sourceTitle || ''}`.toLowerCase();
+    const score = tokens.reduce((sum, token) => sum + (haystack.includes(token) ? 2 : 0), 0)
+      + (usedUrls.has(item.url) ? -3 : 0);
+    if (!best || score > best.score) best = { item, score };
+  }
+
+  if (best?.item) return best.item;
+  return pool.find((item) => !usedUrls.has(item.url)) || pool[0] || null;
+}
+
+function buildSlideResearchPlan({ prompt, slideCount, research, language }) {
   const total = clampSlideCount(slideCount);
   const sections = Array.isArray(research?.sections) ? research.sections.filter((item) => item?.heading || item?.text) : [];
   const usedTitles = new Set();
   const isBiography = looksLikeBiographyTopic(prompt, research);
-  const title = cleanText(research?.query, 120) || cleanText(prompt, 120) || 'Mavzu';
+  const copy = getSlideCopy(language);
+  const title = cleanText(research?.query, 120) || cleanText(prompt, 120) || copy.defaultTopic;
   const plan = [];
 
   plan.push({
     layout: 'cover',
     title: title,
-    subtitle: cleanText(research?.summary, 220) || `${title} haqida qisqa kirish`,
+    subtitle: cleanText(research?.summary, 220) || `${title} ${copy.coverSubtitleSuffix}`,
     body: truncateBySentence(research?.summary, 420),
     bullets: splitTextToBullets(research?.summary, { maxItems: 4, maxLen: 120 }),
-    callout: 'Asosiy g\'oya va nimani bilib chiqish ko\'rsatiladi.'
+    callout: copy.coverCallout,
+    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : []
   });
 
   if (total > 1) {
     plan.push({
       layout: 'agenda',
-      title: 'Taqdimot rejasi',
+      kicker: copy.agendaKicker,
+      title: copy.agendaTitle,
       subtitle: '',
       body: '',
       bullets: [],
-      callout: 'Har bir slide alohida mantiqiy bo\'limni yoritadi.'
+      callout: copy.agendaCallout
     });
   }
 
-  const categoryDefs = isBiography
-    ? [
-        { title: 'Kelib chiqishi va davri', layout: 'content', matchers: [/umumiy|tavsif|origin|background|ism|shajara|kelib/i] },
-        { title: 'Yoshlik va shakllanish', layout: 'split', matchers: [/yosh|yoshlik|oil|family|childhood|early/i] },
-        { title: 'Yuksalish bosqichi', layout: 'timeline', matchers: [/rise|career|power|hokim|yuksal|boshlanish|turning/i] },
-        { title: 'Asosiy yurishlar va yutuqlar', layout: 'metrics', matchers: [/campaign|harbiy|jangi|yutuq|achievement|expansion|davlat/i] },
-        { title: 'Boshqaruv va ta\'sir', layout: 'split', matchers: [/boshqar|reform|policy|culture|impact|ta.sir|mamlakat/i] },
-        { title: 'Meros va xotira', layout: 'quote', matchers: [/legacy|meros|vafot|memory|xotira|after/i] }
-      ]
-    : [
-        { title: 'Asosiy tushuncha', layout: 'content', matchers: [/umumiy|kirish|overview|intro|definition/i] },
-        { title: 'Qanday ishlaydi', layout: 'split', matchers: [/qanday|how|process|principle|working/i] },
-        { title: 'Bosqichlar', layout: 'timeline', matchers: [/bosqich|step|phase|timeline/i] },
-        { title: 'Muhim ko\'rsatkichlar', layout: 'metrics', matchers: [/fact|number|stat|impact|foyda|natija/i] },
-        { title: 'Misollar va qo\'llanish', layout: 'split', matchers: [/example|use|case|misol|qo.llanish/i] },
-        { title: 'Yakuniy xulosa', layout: 'quote', matchers: [/summary|conclusion|xulosa|future|lesson/i] }
-      ];
+  const categoryDefs = getSlideCategoryDefinitions(isBiography, language);
 
   for (const category of categoryDefs) {
     if (plan.length >= total - 1) break;
@@ -3247,7 +3884,7 @@ function buildSlideResearchPlan({ prompt, slideCount, research }) {
     plan.push({
       layout: category.layout,
       title: cleanText(relevant[0]?.heading, 160) || category.title,
-      subtitle: category.title,
+      subtitle: category.subtitle,
       body: truncateBySentence(combinedText, category.layout === 'quote' ? 240 : 520),
       bullets,
       timeline: category.layout === 'timeline' ? deriveTimelineFromSections(relevant) : [],
@@ -3255,7 +3892,8 @@ function buildSlideResearchPlan({ prompt, slideCount, research }) {
         ? bullets.slice(0, 4).map((item, idx) => ({ label: cleanText(item, 60), value: `${idx + 1}` }))
         : [],
       quote: category.layout === 'quote' ? truncateBySentence(combinedText, 240) : '',
-      callout: cleanText(relevant.map((item) => item.heading).filter(Boolean).join(' | '), 180)
+      callout: cleanText(relevant.map((item) => item.heading).filter(Boolean).join(' | '), 180),
+      sourceLinks: Array.from(new Set(relevant.map((item) => cleanText(item?.sourceLink, 500)).filter(Boolean))).slice(0, 3)
     });
   }
 
@@ -3265,22 +3903,31 @@ function buildSlideResearchPlan({ prompt, slideCount, research }) {
     usedTitles.add(String(next?.heading || '').toLowerCase());
     plan.push({
       layout: plan.length % 2 === 0 ? 'content' : 'split',
-      title: cleanText(next?.heading, 160) || `Bo'lim ${plan.length}`,
+      title: cleanText(next?.heading, 160) || (language === 'en' ? `Section ${plan.length}` : (language === 'ru' ? `Раздел ${plan.length}` : `Bo'lim ${plan.length}`)),
       subtitle: '',
       body: truncateBySentence(next?.text, 520),
       bullets: splitTextToBullets(next?.text, { maxItems: 5, maxLen: 120 }),
-      callout: ''
+      callout: '',
+      sourceLinks: next?.sourceLink ? [cleanText(next.sourceLink, 500)] : []
     });
   }
 
   const closingBullets = splitTextToBullets(research?.summary, { maxItems: 3, maxLen: 120 });
   plan.push({
     layout: 'closing',
-    title: isBiography ? `${title} merosi` : 'Yakuniy xulosa',
-    subtitle: 'Asosiy xabar',
+    kicker: copy.closingKicker,
+    title: isBiography ? (language === 'en' ? `${title} Legacy` : (language === 'ru' ? `Наследие ${title}` : `${title} merosi`)) : copy.closingTitle,
+    subtitle: copy.closingSubtitle,
     body: '',
-    bullets: closingBullets.length ? closingBullets : ['Asosiy fikrni takrorlang', 'Muhim xulosani ayting', 'Savol-javobga o\'ting'],
-    callout: 'Taqdimotni yakunlaydigan qisqa va kuchli xabar.'
+    bullets: closingBullets.length
+      ? closingBullets
+      : (language === 'en'
+          ? ['Repeat the main idea', 'State the most important takeaway', 'Move into questions']
+          : (language === 'ru'
+              ? ['Повторите главную мысль', 'Скажите ключевой вывод', 'Перейдите к вопросам']
+              : ['Asosiy fikrni takrorlang', 'Muhim xulosani ayting', 'Savol-javobga o\'ting'])),
+    callout: copy.closingCallout,
+    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : []
   });
 
   const trimmed = plan.slice(0, total);
@@ -3309,10 +3956,13 @@ function renderSlidePlanForPrompt(plan) {
 
 function enhanceDeckWithPlan(deck, plan, research) {
   const safeDeck = Object.assign({}, deck || {});
+  const language = normalizeSlideStudioLanguage(safeDeck.language || 'uz');
+  const copy = getSlideCopy(language);
   const rawSlides = Array.isArray(safeDeck.slides) ? safeDeck.slides.map((item) => Object.assign({}, item)) : [];
   const desiredCount = clampSlideCount(rawSlides.length || plan?.length || 6);
   const planRows = Array.isArray(plan) ? plan : [];
   const enhancedSlides = [];
+  const usedImages = new Set();
 
   for (let i = 0; i < Math.max(desiredCount, planRows.length); i += 1) {
     const sourceSlide = rawSlides[i] || {};
@@ -3323,6 +3973,29 @@ function enhanceDeckWithPlan(deck, plan, research) {
     const layout = (planRow.layout && SLIDE_LAYOUTS.includes(planRow.layout))
       ? planRow.layout
       : (SLIDE_LAYOUTS.includes(sourceSlide.layout) ? sourceSlide.layout : 'content');
+    const imageCandidate = pickImageForSlide({
+      title: sourceSlide.title || planRow.title,
+      subtitle: sourceSlide.subtitle || planRow.subtitle,
+      body: sourceSlide.body || planRow.body,
+      kicker: sourceSlide.kicker || planRow.kicker,
+      quote: sourceSlide.quote || planRow.quote
+    }, research?.imagePool, usedImages);
+    const mergedSourceLinks = Array.from(new Set(
+      []
+        .concat(Array.isArray(sourceSlide.sourceLinks) ? sourceSlide.sourceLinks : [])
+        .concat(Array.isArray(planRow.sourceLinks) ? planRow.sourceLinks : [])
+        .concat(imageCandidate?.sourceLink ? [imageCandidate.sourceLink] : [])
+        .map((item) => cleanText(item, 500))
+        .filter(Boolean)
+    )).slice(0, 3);
+    const imageUrl = cleanText(
+      sourceSlide.imageUrl
+        || planRow.imageUrl
+        || imageCandidate?.url
+        || ((i === 0 || layout === 'cover') ? (safeDeck.heroImageUrl || research?.heroImageUrl) : ''),
+      500
+    );
+    if (imageUrl) usedImages.add(imageUrl);
 
     const leftRight = splitListInHalf(bullets);
     enhancedSlides.push({
@@ -3341,105 +4014,58 @@ function enhanceDeckWithPlan(deck, plan, research) {
       timeline: normalizeTimelineList(sourceSlide.timeline?.length ? sourceSlide.timeline : planRow.timeline),
       quote: cleanText(sourceSlide.quote, 320) || cleanText(planRow.quote, 320),
       quoteAuthor: cleanText(sourceSlide.quoteAuthor, 120),
+      imageUrl,
+      imageCaption: cleanText(sourceSlide.imageCaption, 160) || cleanText(planRow.imageCaption, 160) || cleanText(imageCandidate?.caption || imageCandidate?.sourceTitle || '', 160),
+      sourceLinks: mergedSourceLinks,
       callout: cleanText(sourceSlide.callout, 220) || cleanText(planRow.callout, 220),
       speakerNote: cleanText(sourceSlide.speakerNote, 400) || cleanText(planRow.body || research?.summary, 400)
     });
   }
 
-  safeDeck.slides = ensureSlideVariety(enhancedSlides.slice(0, desiredCount), desiredCount);
+  safeDeck.slides = ensureSlideVariety(enhancedSlides.slice(0, desiredCount), desiredCount).map((slide) => fitSlideToAspect(slide, language));
   safeDeck.summary = cleanText(safeDeck.summary, 600) || cleanText(research?.summary, 600);
-  safeDeck.heroImageUrl = cleanText(safeDeck.heroImageUrl || research?.heroImageUrl, 500);
+  safeDeck.heroImageUrl = cleanText(safeDeck.heroImageUrl || safeDeck.slides[0]?.imageUrl || research?.heroImageUrl, 500);
   safeDeck.researchSummary = cleanText(safeDeck.researchSummary || research?.summary, 1800);
-  safeDeck.sourceLinks = Array.isArray(safeDeck.sourceLinks) && safeDeck.sourceLinks.length
-    ? safeDeck.sourceLinks.slice(0, 6)
-    : (Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 6) : []);
+  safeDeck.sourceLinks = Array.from(new Set(
+    []
+      .concat(Array.isArray(safeDeck.sourceLinks) ? safeDeck.sourceLinks : [])
+      .concat(Array.isArray(research?.sourceLinks) ? research.sourceLinks : [])
+      .concat(safeDeck.slides.flatMap((slide) => Array.isArray(slide?.sourceLinks) ? slide.sourceLinks : []))
+      .map((item) => cleanText(item, 500))
+      .filter(Boolean)
+  )).slice(0, 10);
+  safeDeck.language = language;
+  safeDeck.watermark = cleanText(safeDeck.watermark, 200);
+  safeDeck.themeLabel = cleanText(safeDeck.themeLabel, 120) || copy.themeDeckLabel;
   return safeDeck;
 }
 
-function createFallbackSlideDeck({ prompt, slideCount, themeId, watermark, research }) {
-  {
-    const generatedTitle = cleanText(prompt, 80) || cleanText(research?.query, 80) || 'Yangi taqdimot';
-    const sections = Array.isArray(research?.sections)
-      ? research.sections.slice(0, Math.max(2, clampSlideCount(slideCount) - 2))
-      : [];
-    const agendaBullets = sections.length
-      ? sections.map((item) => cleanText(item.heading, 100)).filter(Boolean).slice(0, 5)
-      : ['Kirish', 'Asosiy mavzu', 'Muhim faktlar', 'Xulosa'];
-    const generatedSlides = [
-      {
-        order: 1,
-        layout: 'cover',
-        kicker: 'HALLAYM AI',
-        title: generatedTitle,
-        subtitle: cleanText(research?.summary, 220) || 'Mavzu bo\'yicha tushunarli va tayyor taqdimot',
-        body: '',
-        bullets: splitTextToBullets(research?.summary, { maxItems: 4, maxLen: 120 }),
-        leftTitle: '',
-        leftBullets: [],
-        rightTitle: '',
-        rightBullets: [],
-        stats: [],
-        timeline: [],
-        quote: '',
-        quoteAuthor: '',
-        callout: 'Mazmun internet manbalari va HALLAYM AI tahlili asosida yig\'ildi.',
-        speakerNote: 'Kirish qismida mavzu nega muhim ekanini qisqa tushuntiring.'
-      },
-      {
-        order: 2,
-        layout: 'agenda',
-        kicker: 'Reja',
-        title: 'Nimani ko\'rib chiqamiz?',
-        subtitle: '',
-        body: '',
-        bullets: agendaBullets,
-        leftTitle: '',
-        leftBullets: [],
-        rightTitle: '',
-        rightBullets: [],
-        stats: [],
-        timeline: [],
-        quote: '',
-        quoteAuthor: '',
-        callout: '',
-        speakerNote: 'Taqdimot strukturasini oldindan ayting.'
-      }
-    ];
+function createFallbackSlideDeck({ prompt, slideCount, themeId, watermark, research, language }) {
+  const lang = normalizeSlideStudioLanguage(language);
+  const copy = getSlideCopy(lang);
+  const generatedTitle = cleanText(prompt, 80) || cleanText(research?.query, 80) || copy.defaultDeckTitle;
+  const sections = Array.isArray(research?.sections)
+    ? research.sections.slice(0, Math.max(2, clampSlideCount(slideCount) - 2))
+    : [];
+  const agendaBullets = sections.length
+    ? sections.map((item) => cleanText(item.heading, 100)).filter(Boolean).slice(0, 5)
+    : (lang === 'en'
+        ? ['Introduction', 'Main ideas', 'Important facts', 'Takeaway']
+        : (lang === 'ru'
+            ? ['Введение', 'Основная тема', 'Важные факты', 'Итог']
+            : ['Kirish', 'Asosiy mavzu', 'Muhim faktlar', 'Xulosa']));
+  const imagePool = Array.isArray(research?.imagePool) ? research.imagePool : [];
+  const usedImages = new Set();
 
-    sections.forEach((item, idx) => {
-      const detailBullets = splitTextToBullets(item.text, { maxItems: 6, maxLen: 120 });
-      const parts = splitListInHalf(detailBullets);
-      generatedSlides.push({
-        order: generatedSlides.length + 1,
-        layout: idx % 2 === 0 ? 'content' : 'split',
-        kicker: cleanText(item.heading, 100) || 'Asosiy qism',
-        title: cleanText(item.heading, 180) || `Bo'lim ${idx + 1}`,
-        subtitle: '',
-        body: truncateBySentence(item.text, 520),
-        bullets: detailBullets,
-        leftTitle: 'Muhim faktlar',
-        leftBullets: parts.left,
-        rightTitle: 'Davomi',
-        rightBullets: parts.right,
-        stats: [],
-        timeline: [],
-        quote: '',
-        quoteAuthor: '',
-        callout: '',
-        speakerNote: 'Bo\'limni fakt va izoh bilan yoping.'
-      });
-    });
-
-    generatedSlides.push({
-      order: generatedSlides.length + 1,
-      layout: 'closing',
-      kicker: 'Xulosa',
-      title: 'Yakuniy xabar',
-      subtitle: 'Asosiy g\'oya va keyingi fikr',
+  const generatedSlides = [
+    {
+      order: 1,
+      layout: 'cover',
+      kicker: 'HALLAYM AI',
+      title: generatedTitle,
+      subtitle: cleanText(research?.summary, 220) || copy.fallbackSubtitle,
       body: '',
-      bullets: splitTextToBullets(research?.summary, { maxItems: 3, maxLen: 120 }).length
-        ? splitTextToBullets(research?.summary, { maxItems: 3, maxLen: 120 })
-        : ['Asosiy fikrni takrorlang', 'Muhim xulosani ayting', 'Savol-javobga o\'ting'],
+      bullets: splitTextToBullets(research?.summary, { maxItems: 4, maxLen: 120 }),
       leftTitle: '',
       leftBullets: [],
       rightTitle: '',
@@ -3448,132 +4074,133 @@ function createFallbackSlideDeck({ prompt, slideCount, themeId, watermark, resea
       timeline: [],
       quote: '',
       quoteAuthor: '',
-      callout: watermark,
-      speakerNote: 'Yakuniy slide auditoriyani bitta asosiy fikr bilan qoldirishi kerak.'
-    });
+      imageUrl: cleanText(research?.heroImageUrl, 500),
+      imageCaption: cleanText(research?.query || generatedTitle, 160),
+      sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : [],
+      callout: copy.coverNote,
+      speakerNote: lang === 'en'
+        ? 'Briefly explain why the topic matters before moving into the details.'
+        : (lang === 'ru'
+            ? 'Коротко объясните, почему тема важна, и затем переходите к деталям.'
+            : 'Kirish qismida mavzu nega muhim ekanini qisqa tushuntiring.')
+    },
+    {
+      order: 2,
+      layout: 'agenda',
+      kicker: copy.agendaKicker,
+      title: copy.fallbackAgendaTitle,
+      subtitle: '',
+      body: '',
+      bullets: agendaBullets,
+      leftTitle: '',
+      leftBullets: [],
+      rightTitle: '',
+      rightBullets: [],
+      stats: [],
+      timeline: [],
+      quote: '',
+      quoteAuthor: '',
+      imageUrl: '',
+      imageCaption: '',
+      sourceLinks: [],
+      callout: '',
+      speakerNote: lang === 'en'
+        ? 'Preview the structure so the audience knows what is coming.'
+        : (lang === 'ru'
+            ? 'Коротко покажите структуру, чтобы аудитория понимала ход презентации.'
+            : 'Taqdimot strukturasini oldindan ayting.')
+    }
+  ];
 
-    return {
-      title: generatedTitle,
-      subtitle: cleanText(research?.summary, 240) || 'HALLAYM AI tomonidan tayyorlangan taqdimot',
-      summary: cleanText(research?.summary, 600) || 'Asosiy mazmun tartibli slide ko\'rinishida jamlandi.',
-      themeId,
-      themeLabel: (SLIDE_THEME_MAP.get(themeId) || SLIDE_THEME_PRESETS[0]).label,
-      watermark,
-      heroImageUrl: cleanText(research?.heroImageUrl, 500),
-      researchSummary: cleanText(research?.summary, 1800),
-      sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 6) : [],
-      generationMode: 'fallback',
-      slides: ensureSlideVariety(generatedSlides.slice(0, clampSlideCount(slideCount)), slideCount)
-    };
-  }
-  const title = cleanText(prompt, 80) || 'Yangi taqdimot';
+  sections.forEach((item, idx) => {
+    const detailBullets = splitTextToBullets(item.text, { maxItems: 6, maxLen: 120 });
+    const parts = splitListInHalf(detailBullets);
+    const pickedImage = pickImageForSlide({ title: item.heading, body: item.text }, imagePool, usedImages);
+    if (pickedImage?.url) usedImages.add(pickedImage.url);
+    generatedSlides.push({
+      order: generatedSlides.length + 1,
+      layout: idx % 2 === 0 ? 'content' : 'split',
+      kicker: cleanText(item.heading, 100) || copy.fallbackContentTitle,
+      title: cleanText(item.heading, 180) || (lang === 'en' ? `Section ${idx + 1}` : (lang === 'ru' ? `Раздел ${idx + 1}` : `Bo'lim ${idx + 1}`)),
+      subtitle: '',
+      body: truncateBySentence(item.text, 520),
+      bullets: detailBullets,
+      leftTitle: lang === 'en' ? 'Important facts' : (lang === 'ru' ? 'Важные факты' : 'Muhim faktlar'),
+      leftBullets: parts.left,
+      rightTitle: copy.splitRightTitle,
+      rightBullets: parts.right,
+      stats: [],
+      timeline: [],
+      quote: '',
+      quoteAuthor: '',
+      imageUrl: cleanText(pickedImage?.url, 500),
+      imageCaption: cleanText(pickedImage?.caption || item.heading, 160),
+      sourceLinks: item?.sourceLink ? [cleanText(item.sourceLink, 500)] : [],
+      callout: '',
+      speakerNote: lang === 'en'
+        ? 'Close this section with one fact and one short explanation.'
+        : (lang === 'ru'
+            ? 'Завершите раздел одним фактом и одним коротким пояснением.'
+            : 'Bo‘limni fakt va izoh bilan yoping.')
+    });
+  });
+
+  generatedSlides.push({
+    order: generatedSlides.length + 1,
+    layout: 'closing',
+    kicker: copy.closingKicker,
+    title: copy.fallbackClosingTitle,
+    subtitle: copy.fallbackClosingSubtitle,
+    body: '',
+    bullets: splitTextToBullets(research?.summary, { maxItems: 3, maxLen: 120 }).length
+      ? splitTextToBullets(research?.summary, { maxItems: 3, maxLen: 120 })
+      : (lang === 'en'
+          ? ['Repeat the main idea', 'State the key takeaway', 'Move into Q&A']
+          : (lang === 'ru'
+              ? ['Повторите главную мысль', 'Озвучьте ключевой вывод', 'Перейдите к вопросам']
+              : ['Asosiy fikrni takrorlang', 'Muhim xulosani ayting', 'Savol-javobga o‘ting'])),
+    leftTitle: '',
+    leftBullets: [],
+    rightTitle: '',
+    rightBullets: [],
+    stats: [],
+    timeline: [],
+    quote: '',
+    quoteAuthor: '',
+    imageUrl: '',
+    imageCaption: '',
+    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : [],
+    callout: watermark,
+    speakerNote: lang === 'en'
+      ? 'Leave the audience with one clear closing thought.'
+      : (lang === 'ru'
+          ? 'Оставьте аудиторию с одной понятной финальной мыслью.'
+          : 'Yakuniy slide auditoriyani bitta asosiy fikr bilan qoldirishi kerak.')
+  });
+
   return {
-    title,
-    subtitle: 'AI servis band bo‘lsa ham ishga tayyor draft',
-    summary: 'Asosiy mazmunni sodda va ko‘rgazmali qilib bosqichma-bosqich taqdim eting.',
+    title: generatedTitle,
+    subtitle: cleanText(research?.summary, 240) || copy.fallbackDeckSubtitle,
+    summary: cleanText(research?.summary, 600) || copy.fallbackDeckSummary,
+    language: lang,
     themeId,
     themeLabel: (SLIDE_THEME_MAP.get(themeId) || SLIDE_THEME_PRESETS[0]).label,
     watermark,
+    heroImageUrl: cleanText(research?.heroImageUrl, 500),
+    researchSummary: cleanText(research?.summary, 1800),
+    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 10) : [],
     generationMode: 'fallback',
-    slides: [
-      {
-        order: 1,
-        layout: 'cover',
-        kicker: 'Taqdimot',
-        title,
-        subtitle: 'Mavzu bo‘yicha tezkor konspekt va asosiy yo‘nalishlar',
-        body: '',
-        bullets: [],
-        leftTitle: '',
-        leftBullets: [],
-        rightTitle: '',
-        rightBullets: [],
-        stats: [],
-        timeline: [],
-        quote: '',
-        quoteAuthor: '',
-        callout: 'Ma’lumotlar kerak bo‘lsa deckni qayta generatsiya qiling.',
-        speakerNote: 'Kirish, maqsad va nimani ko‘rib chiqishingizni ayting.'
-      },
-      {
-        order: 2,
-        layout: 'agenda',
-        kicker: 'Reja',
-        title: 'Nimani ko‘rib chiqamiz?',
-        subtitle: '',
-        body: '',
-        bullets: [
-          'Muammo yoki vazifa nimadan iborat',
-          'Asosiy g‘oyalar va yechimlar',
-          'Amaliy qadamlar',
-          'Kutiladigan natija'
-        ],
-        leftTitle: '',
-        leftBullets: [],
-        rightTitle: '',
-        rightBullets: [],
-        stats: [],
-        timeline: [],
-        quote: '',
-        quoteAuthor: '',
-        callout: '',
-        speakerNote: 'Tomoshabinga deck strukturasini qisqa ayting.'
-      },
-      {
-        order: 3,
-        layout: 'content',
-        kicker: 'Asosiy mazmun',
-        title: 'Muhim nuqtalar',
-        subtitle: '',
-        body: 'Bu yerga mavzu bo‘yicha AI generatsiya qilgan asosiy mazmun joylashadi.',
-        bullets: [
-          'Fikrlarni sodda ketma-ketlikda ayting',
-          'Har slide bitta asosiy g‘oyani tutsin',
-          'Ortiqcha matndan qoching'
-        ],
-        leftTitle: '',
-        leftBullets: [],
-        rightTitle: '',
-        rightBullets: [],
-        stats: [],
-        timeline: [],
-        quote: '',
-        quoteAuthor: '',
-        callout: '',
-        speakerNote: 'Misol yoki dalil bilan tushuntiring.'
-      },
-      {
-        order: Math.max(4, slideCount),
-        layout: 'closing',
-        kicker: 'Xulosa',
-        title: 'Yakuniy xabar',
-        subtitle: 'Keyingi qadamni aniq ayting',
-        body: '',
-        bullets: [
-          'Asosiy fikrni takrorlang',
-          'Qaror yoki harakatni belgilang',
-          'Savol-javobga o‘ting'
-        ],
-        leftTitle: '',
-        leftBullets: [],
-        rightTitle: '',
-        rightBullets: [],
-        stats: [],
-        timeline: [],
-        quote: '',
-        quoteAuthor: '',
-        callout: watermark,
-        speakerNote: 'Yakuniy slide auditoriyani keyingi qadamga olib borishi kerak.'
-      }
-    ]
+    slides: ensureSlideVariety(generatedSlides.slice(0, clampSlideCount(slideCount)), slideCount).map((slide) => fitSlideToAspect(slide, lang))
   };
 }
 
-function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, watermark, research }) {
+function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, watermark, research, language }) {
   const fallbackThemeId = SLIDE_THEME_MAP.has(styleRequested) ? styleRequested : 'teal-minimal';
   const themeId = SLIDE_THEME_MAP.has(raw?.theme_id) ? raw.theme_id : fallbackThemeId;
   const theme = SLIDE_THEME_MAP.get(themeId) || SLIDE_THEME_PRESETS[0];
   const desiredCount = clampSlideCount(slideCount);
+  const finalLanguage = normalizeSlideStudioLanguage(language);
+  const copy = getSlideCopy(finalLanguage);
   const safeSlides = Array.isArray(raw?.slides) ? raw.slides : [];
 
   const slides = safeSlides
@@ -3599,6 +4226,9 @@ function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, wa
         timeline: normalizeTimelineList(slide?.timeline),
         quote: cleanText(slide?.quote, 320),
         quoteAuthor: cleanText(slide?.quote_author, 120),
+        imageUrl: cleanText(slide?.image_url, 500),
+        imageCaption: cleanText(slide?.image_caption, 160),
+        sourceLinks: Array.isArray(slide?.source_links) ? slide.source_links.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 3) : [],
         callout: cleanText(slide?.callout, 220),
         speakerNote: cleanText(slide?.speaker_note, 400)
       };
@@ -3606,21 +4236,22 @@ function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, wa
     .filter((slide) => slide.title || slide.quote || slide.body || slide.bullets.length || slide.timeline.length || slide.stats.length);
 
   if (slides.length < 4) {
-    return createFallbackSlideDeck({ prompt, slideCount: desiredCount, themeId: fallbackThemeId, watermark, research });
+    return createFallbackSlideDeck({ prompt, slideCount: desiredCount, themeId: fallbackThemeId, watermark, research, language: finalLanguage });
   }
 
-  const variedSlides = ensureSlideVariety(slides, desiredCount);
+  const variedSlides = ensureSlideVariety(slides, desiredCount).map((slide) => fitSlideToAspect(slide, finalLanguage));
 
   return {
-    title: cleanText(raw?.deck_title, 200) || cleanText(prompt, 80) || 'Yangi taqdimot',
+    title: cleanText(raw?.deck_title, 200) || cleanText(prompt, 80) || copy.defaultDeckTitle,
     subtitle: cleanText(raw?.deck_subtitle, 240),
     summary: cleanText(raw?.summary, 600) || cleanText(research?.summary, 600),
+    language: finalLanguage,
     themeId,
     themeLabel: cleanText(raw?.theme_label, 120) || theme.label,
     watermark,
     heroImageUrl: cleanText(research?.heroImageUrl, 500),
     researchSummary: cleanText(research?.summary, 1800),
-    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 6) : [],
+    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 10) : [],
     generationMode: 'ai',
     slides: variedSlides
   };
@@ -3692,7 +4323,8 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
     const slidePlan = buildSlideResearchPlan({
       prompt,
       slideCount: finalCountValue,
-      research
+      research,
+      language: finalLanguageValue
     });
     const slidePlanText = renderSlidePlanForPrompt(slidePlan);
     const systemPromptValue = [
@@ -3704,6 +4336,10 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
       'Distribute information across the full deck. Do not dump most facts into slide 1.',
       'Each middle slide should teach something concrete with facts, names, dates, places, reasons, or outcomes when relevant.',
       'For biography or history topics, cover origin, early life, major turning points, achievements, impact, legacy, and memorable facts.',
+      'Assume every slide is a strict 16:9 canvas. Keep content compact enough to fit elegantly without overflow.',
+      'Use one relevant image or visual idea per slide when it improves understanding. Keep visuals smaller than the text area and integrated into the layout.',
+      'For each slide, fill image_url and image_caption when a relevant visual is available, and include per-slide source_links whenever possible.',
+      'All visible text must stay in the requested language only. Do not mix Uzbek, English, Russian, or any other language.',
       'Use varied layouts across the deck so consecutive slides do not feel repetitive.',
       'First slide must work like a strong cover. Last slide must work like a strong closing slide.',
       'Use body text plus bullets or structured blocks so each slide feels complete.',
@@ -3719,8 +4355,11 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
       researchDigest ? `Research notes:\n${researchDigest}` : 'Research notes: no external notes found, use general knowledge carefully.',
       slidePlanText ? `Slide plan:\n${slidePlanText}` : '',
       research?.sourceLinks?.length ? `Sources:\n${research.sourceLinks.join('\n')}` : '',
+      research?.imagePool?.length ? `Image candidates:\n${research.imagePool.map((item) => `${item.caption || 'visual'} | ${item.sourceLink || item.url}`).join('\n')}` : '',
       'Make the structure presentation-ready, modern, visually clear, and informative.',
-      'Prefer a different useful layout on most slides.'
+      'Prefer a different useful layout on most slides.',
+      'For each slide, place the right facts on the right page instead of repeating the same introduction.',
+      'Return source_links for each slide whenever possible.'
     ].filter(Boolean).join('\n\n');
 
     try {
@@ -3733,7 +4372,8 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
         slideCount: finalCountValue,
         styleRequested: finalStyleValue,
         watermark: watermarkValue,
-        research
+        research,
+        language: finalLanguageValue
       });
       deck = enhanceDeckWithPlan(deck, slidePlan, research);
       deck.aiProvider = 'hallaym-ai';
@@ -3742,8 +4382,8 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
       deck.heroImageUrl = cleanText(deck.heroImageUrl || research?.heroImageUrl, 500);
       deck.researchSummary = cleanText(deck.researchSummary || research?.summary, 1800);
       deck.sourceLinks = Array.isArray(deck.sourceLinks) && deck.sourceLinks.length
-        ? deck.sourceLinks.slice(0, 6)
-        : (Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 6) : []);
+        ? deck.sourceLinks.slice(0, 10)
+        : (Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 10) : []);
       return deck;
     } catch (e) {
       const fallbackThemeId = SLIDE_THEME_MAP.has(finalStyleValue) ? finalStyleValue : 'teal-minimal';
@@ -3752,7 +4392,8 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
         slideCount: finalCountValue,
         themeId: fallbackThemeId,
         watermark: watermarkValue,
-        research
+        research,
+        language: finalLanguageValue
       });
       deck = enhanceDeckWithPlan(deck, slidePlan, research);
       deck.aiProvider = 'hallaym-ai';
@@ -3842,7 +4483,7 @@ function serializeSlideDeck(deck, { includeSlides = true } = {}) {
     watermark: cleanText(src.watermark, 200),
     heroImageUrl: cleanText(src.heroImageUrl, 500),
     researchSummary: cleanText(src.researchSummary, 1800),
-    sourceLinks: Array.isArray(src.sourceLinks) ? src.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 6) : [],
+    sourceLinks: Array.isArray(src.sourceLinks) ? src.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 10) : [],
     aiProvider: cleanText(src.aiProvider, 32),
     aiModel: cleanText(src.aiModel, 120),
     generationMode: cleanText(src.generationMode, 32) || 'ai',
@@ -3868,6 +4509,9 @@ function serializeSlideDeck(deck, { includeSlides = true } = {}) {
           timeline: normalizeTimelineList(slide?.timeline),
           quote: cleanText(slide?.quote, 320),
           quoteAuthor: cleanText(slide?.quoteAuthor, 120),
+          imageUrl: cleanText(slide?.imageUrl, 500),
+          imageCaption: cleanText(slide?.imageCaption, 160),
+          sourceLinks: Array.isArray(slide?.sourceLinks) ? slide.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 3) : [],
           callout: cleanText(slide?.callout, 220),
           speakerNote: cleanText(slide?.speakerNote, 400)
         }))
@@ -3916,12 +4560,12 @@ function bufferToDataUri(buffer, mimeType) {
   return `data:${mimeType};base64,${buffer.toString('base64')}`;
 }
 
-async function loadDeckHeroAsset(deck) {
-  const imageUrl = cleanText(deck?.heroImageUrl, 500);
-  if (!imageUrl) return null;
+async function loadImageAssetByUrl(imageUrl) {
+  const url = cleanText(imageUrl, 500);
+  if (!url) return null;
   try {
-    const out = await fetchBinaryWithTimeout(imageUrl, { timeoutMs: 12000 });
-    const mimeType = guessImageMimeType(imageUrl, out?.contentType);
+    const out = await fetchBinaryWithTimeout(url, { timeoutMs: 12000 });
+    const mimeType = guessImageMimeType(url, out?.contentType);
     if (mimeType === 'image/webp') return null;
     return {
       buffer: out?.buffer || null,
@@ -3931,6 +4575,22 @@ async function loadDeckHeroAsset(deck) {
   } catch (_) {
     return null;
   }
+}
+
+async function loadDeckImageAssetMap(deck) {
+  const urls = Array.from(new Set(
+    []
+      .concat(cleanText(deck?.heroImageUrl, 500) ? [cleanText(deck.heroImageUrl, 500)] : [])
+      .concat((Array.isArray(deck?.slides) ? deck.slides : []).map((slide) => cleanText(slide?.imageUrl, 500)))
+      .filter(Boolean)
+  ));
+  const entries = await Promise.all(urls.map(async (url) => [url, await loadImageAssetByUrl(url)]));
+  return new Map(entries.filter((item) => item[0] && item[1]));
+}
+
+function resolveSlideAsset(assetMap, deck, slide) {
+  const imageUrl = cleanText(slide?.imageUrl || deck?.heroImageUrl, 500);
+  return imageUrl ? (assetMap.get(imageUrl) || null) : null;
 }
 
 function buildSlideTextBlocks(slide) {
@@ -3947,23 +4607,29 @@ function buildSlideTextBlocks(slide) {
     rightBullets,
     stats,
     timeline,
-    bulletText: bullets.map((item) => `• ${item}`).join('\n'),
-    leftText: leftBullets.map((item) => `• ${item}`).join('\n'),
-    rightText: rightBullets.map((item) => `• ${item}`).join('\n'),
+    bulletText: bullets.map((item) => `- ${item}`).join('\n'),
+    leftText: leftBullets.map((item) => `- ${item}`).join('\n'),
+    rightText: rightBullets.map((item) => `- ${item}`).join('\n'),
     statsText: stats.map((item) => `${item.label}: ${item.value}`).join('\n'),
     timelineText: timeline.map((item) => `${item.title}: ${item.detail}`).join('\n')
   };
 }
 
-function composeSourceSummary(deck) {
-  const links = Array.isArray(deck?.sourceLinks) ? deck.sourceLinks.filter(Boolean) : [];
-  return links.length ? `Manbalar: ${links.join(' | ')}` : 'Manbalar: HALLAYM AI research';
+function composeSourceSummary(deck, slide) {
+  const copy = getSlideCopy(deck?.language);
+  const links = Array.from(new Set(
+    []
+      .concat(Array.isArray(slide?.sourceLinks) ? slide.sourceLinks : [])
+      .concat(Array.isArray(deck?.sourceLinks) ? deck.sourceLinks : [])
+      .filter(Boolean)
+  )).slice(0, 3);
+  return links.length ? `${copy.sourceLabel}: ${links.join(' | ')}` : `${copy.sourceLabel}: HALLAYM AI research`;
 }
 
 async function buildSlideDeckPptxBuffer(deck) {
   const pptx = new PptxGenJS();
   const palette = getSlideThemeTokens(deck?.themeId);
-  const heroAsset = await loadDeckHeroAsset(deck);
+  const assetMap = await loadDeckImageAssetMap(deck);
   pptx.layout = 'LAYOUT_WIDE';
   pptx.author = 'HALLAYM AI';
   pptx.company = 'HALLAYM';
@@ -3974,54 +4640,71 @@ async function buildSlideDeckPptxBuffer(deck) {
   (Array.isArray(deck?.slides) ? deck.slides : []).forEach((slide, index) => {
     const page = pptx.addSlide();
     const blocks = buildSlideTextBlocks(slide);
+    const slideAsset = resolveSlideAsset(assetMap, deck, slide);
+    const hasMedia = !!slideAsset?.dataUri && !['agenda', 'quote'].includes(String(slide?.layout || 'content'));
+    const textWidth = hasMedia ? 7.35 : 11.7;
+    const mediaX = 8.3;
     page.background = { color: palette.bg };
 
     page.addText(cleanText(slide?.kicker || deck?.themeLabel || 'HALLAYM AI', 80), {
       x: 0.6, y: 0.35, w: 3.2, h: 0.32, fontFace: 'Aptos', fontSize: 10, bold: true, color: palette.accent
     });
     page.addText(cleanText(slide?.title, 220) || `Slide ${index + 1}`, {
-      x: 0.6, y: 0.75, w: heroAsset?.dataUri ? 7.6 : 12, h: 0.8, fontFace: 'Aptos Display', fontSize: index === 0 ? 26 : 24, bold: true, color: palette.strong, fit: 'shrink'
+      x: 0.6, y: 0.72, w: textWidth, h: 0.82, fontFace: 'Aptos Display', fontSize: index === 0 ? 25 : 22, bold: true, color: palette.strong, fit: 'shrink'
     });
     if (slide?.subtitle) {
       page.addText(cleanText(slide.subtitle, 260), {
-        x: 0.6, y: 1.55, w: heroAsset?.dataUri ? 7.4 : 12, h: 0.55, fontFace: 'Aptos', fontSize: 12, color: palette.muted
+        x: 0.6, y: 1.5, w: textWidth, h: 0.55, fontFace: 'Aptos', fontSize: 11.5, color: palette.muted, fit: 'shrink'
       });
     }
 
-    if (heroAsset?.dataUri && (index === 0 || slide?.layout === 'cover')) {
-      page.addImage({ data: heroAsset.dataUri, x: 9.2, y: 0.8, w: 3.6, h: 2.6 });
+    if (hasMedia) {
+      page.addShape('roundRect', {
+        x: mediaX, y: 0.72, w: 4.3, h: 2.85,
+        rectRadius: 0.12,
+        line: { color: palette.border, width: 1 },
+        fill: { color: palette.surface }
+      });
+      page.addImage({ data: slideAsset.dataUri, x: mediaX + 0.12, y: 0.84, w: 4.06, h: 2.18 });
+      if (slide?.imageCaption) {
+        page.addText(cleanText(slide.imageCaption, 140), {
+          x: mediaX + 0.18, y: 3.08, w: 3.9, h: 0.34, fontFace: 'Aptos', fontSize: 9.5, color: palette.muted, fit: 'shrink'
+        });
+      }
     }
 
-    const bodyY = slide?.subtitle ? 2.15 : 1.75;
+    const bodyY = slide?.subtitle ? 2.12 : 1.7;
     if (blocks.body) {
       page.addText(blocks.body, {
-        x: 0.6, y: bodyY, w: heroAsset?.dataUri && index === 0 ? 7.4 : 12, h: 1.25, fontFace: 'Aptos', fontSize: 14, color: palette.text, valign: 'top', fit: 'shrink'
+        x: 0.6, y: bodyY, w: textWidth, h: 1.0, fontFace: 'Aptos', fontSize: 12.5, color: palette.text, valign: 'top', fit: 'shrink'
       });
     }
 
     if (slide?.layout === 'split' && (blocks.leftText || blocks.rightText)) {
       page.addText(blocks.leftText || blocks.bulletText, {
-        x: 0.6, y: 3.2, w: 5.8, h: 2.4, fontFace: 'Aptos', fontSize: 13, color: palette.text, breakLine: false, margin: 0.08
+        x: 0.6, y: 3.05, w: hasMedia ? 3.45 : 5.6, h: 2.75, fontFace: 'Aptos', fontSize: 12, color: palette.text, breakLine: false, margin: 0.08,
+        fill: { color: palette.surface }, line: { color: palette.border }, fit: 'shrink'
       });
       page.addText(blocks.rightText || blocks.bulletText, {
-        x: 6.8, y: 3.2, w: 5.6, h: 2.4, fontFace: 'Aptos', fontSize: 13, color: palette.text, breakLine: false, margin: 0.08
+        x: hasMedia ? 4.2 : 6.3, y: 3.05, w: hasMedia ? 3.45 : 5.6, h: 2.75, fontFace: 'Aptos', fontSize: 12, color: palette.text, breakLine: false, margin: 0.08,
+        fill: { color: palette.surface }, line: { color: palette.border }, fit: 'shrink'
       });
     } else if (slide?.layout === 'metrics' && blocks.stats.length) {
       blocks.stats.slice(0, 4).forEach((item, idx) => {
         const col = idx % 2;
         const row = Math.floor(idx / 2);
         page.addText(`${item.value}\n${item.label}`, {
-          x: 0.6 + (col * 4.1), y: 3 + (row * 1.45), w: 3.7, h: 1.1, fontFace: 'Aptos Display',
-          fontSize: 18, bold: true, color: palette.strong, fill: { color: palette.surface }, line: { color: palette.border }, margin: 0.14, align: 'center', valign: 'mid'
+          x: 0.6 + (col * 3.65), y: 3.0 + (row * 1.42), w: 3.2, h: 1.08, fontFace: 'Aptos Display',
+          fontSize: 16, bold: true, color: palette.strong, fill: { color: palette.surface }, line: { color: palette.border }, margin: 0.14, align: 'center', valign: 'mid', fit: 'shrink'
         });
       });
     } else if (slide?.layout === 'timeline' && blocks.timeline.length) {
       page.addText(blocks.timelineText, {
-        x: 0.75, y: 3.0, w: 11.5, h: 2.6, fontFace: 'Aptos', fontSize: 13, color: palette.text, margin: 0.12
+        x: 0.75, y: 2.95, w: textWidth, h: 2.9, fontFace: 'Aptos', fontSize: 12, color: palette.text, margin: 0.12, fit: 'shrink'
       });
     } else if (slide?.layout === 'quote' && slide?.quote) {
       page.addText(cleanText(slide.quote, 320), {
-        x: 0.9, y: 2.4, w: 11.2, h: 2.3, fontFace: 'Aptos Display', fontSize: 24, italic: true, color: palette.strong, align: 'center', valign: 'mid'
+        x: 0.9, y: 2.1, w: 11.2, h: 2.7, fontFace: 'Aptos Display', fontSize: 22, italic: true, color: palette.strong, align: 'center', valign: 'mid', fit: 'shrink'
       });
       if (slide?.quoteAuthor) {
         page.addText(cleanText(slide.quoteAuthor, 120), {
@@ -4030,7 +4713,7 @@ async function buildSlideDeckPptxBuffer(deck) {
       }
     } else if (blocks.bulletText) {
       page.addText(blocks.bulletText, {
-        x: 0.75, y: 3.0, w: 11.2, h: 2.6, fontFace: 'Aptos', fontSize: 13, color: palette.text, margin: 0.08
+        x: 0.75, y: 2.95, w: textWidth, h: 2.85, fontFace: 'Aptos', fontSize: 12, color: palette.text, margin: 0.08, fit: 'shrink'
       });
     }
 
@@ -4038,7 +4721,7 @@ async function buildSlideDeckPptxBuffer(deck) {
     page.addText(footerText, {
       x: 0.6, y: 6.85, w: 7.5, h: 0.25, fontFace: 'Aptos', fontSize: 10, color: palette.muted
     });
-    page.addText(composeSourceSummary(deck), {
+    page.addText(composeSourceSummary(deck, slide), {
       x: 6.6, y: 6.85, w: 6.1, h: 0.25, fontFace: 'Aptos', fontSize: 9, color: palette.muted, align: 'right'
     });
   });
@@ -4048,78 +4731,87 @@ async function buildSlideDeckPptxBuffer(deck) {
 
 async function streamSlideDeckPdf(res, deck) {
   const palette = getSlideThemeTokens(deck?.themeId);
-  const heroAsset = await loadDeckHeroAsset(deck);
-  const doc = new PDFDocument({ size: 'A4', margin: 40 });
+  const assetMap = await loadDeckImageAssetMap(deck);
+  const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 32 });
   doc.pipe(res);
 
   const slides = Array.isArray(deck?.slides) ? deck.slides : [];
   slides.forEach((slide, index) => {
     if (index > 0) doc.addPage();
     const blocks = buildSlideTextBlocks(slide);
+    const slideAsset = resolveSlideAsset(assetMap, deck, slide);
+    const hasMedia = !!slideAsset?.buffer && !['agenda', 'quote'].includes(String(slide?.layout || 'content'));
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
 
     doc.rect(0, 0, pageWidth, pageHeight).fill(`#${palette.bg}`);
     doc.fillColor(`#${palette.accent}`).fontSize(10).font('Helvetica-Bold').text(cleanText(slide?.kicker || deck?.themeLabel || 'HALLAYM AI', 80), 40, 34);
     doc.fillColor(`#${palette.strong}`).fontSize(index === 0 ? 24 : 21).font('Helvetica-Bold').text(cleanText(slide?.title, 220) || `Slide ${index + 1}`, 40, 56, {
-      width: heroAsset?.buffer && (index === 0 || slide?.layout === 'cover') ? 320 : 515
+      width: hasMedia ? 470 : 720
     });
     doc.fillColor(`#${palette.muted}`).fontSize(11).font('Helvetica');
     if (slide?.subtitle) {
       doc.text(cleanText(slide.subtitle, 260), 40, 98, {
-        width: heroAsset?.buffer && (index === 0 || slide?.layout === 'cover') ? 320 : 515
+        width: hasMedia ? 470 : 720
       });
     }
 
-    if (heroAsset?.buffer && (index === 0 || slide?.layout === 'cover')) {
+    if (hasMedia) {
       try {
-        doc.image(heroAsset.buffer, 385, 52, { fit: [165, 120], align: 'center', valign: 'center' });
+        doc.roundedRect(545, 50, 220, 170, 18).fillAndStroke(`#${palette.surface}`, `#${palette.border}`);
+        doc.image(slideAsset.buffer, 557, 60, { fit: [196, 118], align: 'center', valign: 'center' });
+        if (slide?.imageCaption) {
+          doc.fillColor(`#${palette.muted}`).fontSize(9).font('Helvetica')
+            .text(cleanText(slide.imageCaption, 140), 557, 188, { width: 196, align: 'left' });
+        }
       } catch (_) {}
     }
 
-    let cursorY = slide?.subtitle ? 140 : 116;
+    let cursorY = slide?.subtitle ? 136 : 112;
     if (blocks.body) {
-      doc.fillColor(`#${palette.text}`).fontSize(12).font('Helvetica').text(blocks.body, 40, cursorY, { width: 510, align: 'left' });
+      doc.fillColor(`#${palette.text}`).fontSize(11.5).font('Helvetica').text(blocks.body, 40, cursorY, { width: hasMedia ? 470 : 720, align: 'left' });
       cursorY = doc.y + 14;
     }
 
     if (slide?.layout === 'split' && (blocks.leftBullets.length || blocks.rightBullets.length)) {
-      doc.font('Helvetica-Bold').fillColor(`#${palette.strong}`).text(cleanText(slide?.leftTitle, 80) || 'Asosiy qism', 40, cursorY, { width: 240 });
-      doc.font('Helvetica').fillColor(`#${palette.text}`).text(blocks.leftText || blocks.bulletText, 40, cursorY + 18, { width: 240 });
-      doc.font('Helvetica-Bold').fillColor(`#${palette.strong}`).text(cleanText(slide?.rightTitle, 80) || 'Davomi', 305, cursorY, { width: 240 });
-      doc.font('Helvetica').fillColor(`#${palette.text}`).text(blocks.rightText || blocks.bulletText, 305, cursorY + 18, { width: 240 });
+      doc.roundedRect(40, cursorY - 4, hasMedia ? 220 : 240, 198, 16).fillAndStroke(`#${palette.surface}`, `#${palette.border}`);
+      doc.roundedRect(hasMedia ? 278 : 305, cursorY - 4, hasMedia ? 220 : 240, 198, 16).fillAndStroke(`#${palette.surface}`, `#${palette.border}`);
+      doc.font('Helvetica-Bold').fillColor(`#${palette.strong}`).text(cleanText(slide?.leftTitle, 80) || 'Left', 54, cursorY + 10, { width: hasMedia ? 190 : 210 });
+      doc.font('Helvetica').fillColor(`#${palette.text}`).fontSize(11).text(blocks.leftText || blocks.bulletText, 54, cursorY + 30, { width: hasMedia ? 190 : 210, height: 150 });
+      doc.font('Helvetica-Bold').fillColor(`#${palette.strong}`).text(cleanText(slide?.rightTitle, 80) || 'Right', hasMedia ? 292 : 319, cursorY + 10, { width: hasMedia ? 190 : 210 });
+      doc.font('Helvetica').fillColor(`#${palette.text}`).fontSize(11).text(blocks.rightText || blocks.bulletText, hasMedia ? 292 : 319, cursorY + 30, { width: hasMedia ? 190 : 210, height: 150 });
     } else if (slide?.layout === 'metrics' && blocks.stats.length) {
       blocks.stats.slice(0, 4).forEach((item, idx) => {
         const col = idx % 2;
         const row = Math.floor(idx / 2);
-        const x = 40 + (col * 255);
+        const x = 40 + (col * 220);
         const y = cursorY + (row * 82);
-        doc.roundedRect(x, y, 225, 64, 14).fillAndStroke(`#${palette.surface}`, `#${palette.border}`);
-        doc.fillColor(`#${palette.strong}`).fontSize(18).font('Helvetica-Bold').text(item.value, x + 14, y + 12, { width: 197, align: 'center' });
-        doc.fillColor(`#${palette.muted}`).fontSize(11).font('Helvetica').text(item.label, x + 14, y + 36, { width: 197, align: 'center' });
+        doc.roundedRect(x, y, 194, 64, 14).fillAndStroke(`#${palette.surface}`, `#${palette.border}`);
+        doc.fillColor(`#${palette.strong}`).fontSize(18).font('Helvetica-Bold').text(item.value, x + 10, y + 12, { width: 174, align: 'center' });
+        doc.fillColor(`#${palette.muted}`).fontSize(10).font('Helvetica').text(item.label, x + 10, y + 36, { width: 174, align: 'center' });
       });
     } else if (slide?.layout === 'timeline' && blocks.timeline.length) {
       blocks.timeline.forEach((item, idx) => {
         const y = cursorY + (idx * 58);
         doc.circle(52, y + 9, 7).fill(`#${palette.accent}`);
-        doc.fillColor(`#${palette.strong}`).fontSize(12).font('Helvetica-Bold').text(item.title, 70, y, { width: 470 });
-        doc.fillColor(`#${palette.text}`).fontSize(11).font('Helvetica').text(item.detail, 70, y + 16, { width: 470 });
+        doc.fillColor(`#${palette.strong}`).fontSize(12).font('Helvetica-Bold').text(item.title, 70, y, { width: hasMedia ? 430 : 650 });
+        doc.fillColor(`#${palette.text}`).fontSize(10.5).font('Helvetica').text(item.detail, 70, y + 16, { width: hasMedia ? 430 : 650 });
       });
     } else if (slide?.layout === 'quote' && slide?.quote) {
       doc.fillColor(`#${palette.accent}`).fontSize(50).font('Helvetica-Bold').text('"', 40, cursorY - 6);
-      doc.fillColor(`#${palette.strong}`).fontSize(20).font('Helvetica-Bold').text(cleanText(slide.quote, 320), 74, cursorY, { width: 460, align: 'center' });
+      doc.fillColor(`#${palette.strong}`).fontSize(20).font('Helvetica-Bold').text(cleanText(slide.quote, 320), 74, cursorY, { width: 650, align: 'center' });
       if (slide?.quoteAuthor) {
-        doc.fillColor(`#${palette.muted}`).fontSize(12).font('Helvetica').text(cleanText(slide.quoteAuthor, 120), 40, doc.y + 12, { width: 500, align: 'center' });
+        doc.fillColor(`#${palette.muted}`).fontSize(12).font('Helvetica').text(cleanText(slide.quoteAuthor, 120), 40, doc.y + 12, { width: 700, align: 'center' });
       }
     } else if (blocks.bullets.length) {
-      doc.font('Helvetica').fillColor(`#${palette.text}`).fontSize(12).text(blocks.bulletText, 46, cursorY, { width: 500 });
+      doc.font('Helvetica').fillColor(`#${palette.text}`).fontSize(11).text(blocks.bulletText, 46, cursorY, { width: hasMedia ? 470 : 720 });
     }
 
     const footerY = pageHeight - 42;
     doc.fillColor(`#${palette.muted}`).fontSize(10).font('Helvetica')
       .text(cleanText(deck?.watermark, 180), 40, footerY, { width: 260 })
-      .text(composeSourceSummary(deck), 250, footerY, { width: 300, align: 'right' })
-      .text(`${index + 1}/${slides.length}`, 500, footerY, { width: 50, align: 'right' });
+      .text(composeSourceSummary(deck, slide), 270, footerY, { width: 450, align: 'right' })
+      .text(`${index + 1}/${slides.length}`, 730, footerY, { width: 50, align: 'right' });
   });
 
   doc.end();
@@ -4234,7 +4926,7 @@ app.post('/api/slides/generate', authenticateToken, async (req, res) => {
       watermark: cleanText(deck.watermark, 200),
       heroImageUrl: cleanText(deck.heroImageUrl, 500),
       researchSummary: cleanText(deck.researchSummary, 1800),
-      sourceLinks: Array.isArray(deck.sourceLinks) ? deck.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 6) : [],
+      sourceLinks: Array.isArray(deck.sourceLinks) ? deck.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 10) : [],
       aiProvider: cleanText(deck.aiProvider, 32) || 'hallaym-ai',
       aiModel: cleanText(deck.aiModel, 120),
       generationMode: cleanText(deck.generationMode, 32) || 'ai',
@@ -9053,6 +9745,9 @@ const SlideDeckSchema = new mongoose.Schema({
     }],
     quote: { type: String, default: '', trim: true, maxlength: 320 },
     quoteAuthor: { type: String, default: '', trim: true, maxlength: 120 },
+    imageUrl: { type: String, default: '', trim: true, maxlength: 500 },
+    imageCaption: { type: String, default: '', trim: true, maxlength: 160 },
+    sourceLinks: [{ type: String, trim: true, maxlength: 500 }],
     callout: { type: String, default: '', trim: true, maxlength: 220 },
     speakerNote: { type: String, default: '', trim: true, maxlength: 400 }
   }]

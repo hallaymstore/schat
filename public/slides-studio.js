@@ -10,6 +10,50 @@
     { id: 'editorial-warm', label: 'Editorial Warm', mood: 'Storytelling va jurnalsimon yumshoq dizayn.' },
     { id: 'campus-card', label: 'Campus Card', mood: 'Talabalar uchun qulay, kartali va zamonaviy.' }
   ];
+  const SLIDE_TEXT = {
+    uz: {
+      agendaHint: 'Ushbu qismni qisqa va aniq tushuntiring.',
+      splitLeftTitle: 'Asosiy nuqtalar',
+      splitRightTitle: 'Davomi',
+      splitBodyHint: 'Mazmunni chap tarafda qisqa blok bilan tushuntiring.',
+      splitAsideHint: 'Qisqa dalillar, misollar yoki keyingi qadamlar shu yerda turadi.',
+      themeDeckLabel: 'HALLAYM AI deck',
+      deckSummaryFallback: 'HALLAYM Slide Studio bu deckni presentation-ready ko‘rinishda tayyorladi.',
+      visualLabel: 'Vizual',
+      nextStep: 'Keyingi qadam',
+      speakerFallback: 'Bu slide uchun alohida speaker note kelmagan. Sarlavha va punktlar bo‘yicha qisqa izoh bering.',
+      sourceLabel: 'Manbalar',
+      slideWord: 'Slide'
+    },
+    en: {
+      agendaHint: 'Explain this section briefly and clearly.',
+      splitLeftTitle: 'Key points',
+      splitRightTitle: 'More detail',
+      splitBodyHint: 'Explain the idea in a short block on the left.',
+      splitAsideHint: 'Put concise facts, examples, or next actions here.',
+      themeDeckLabel: 'HALLAYM AI deck',
+      deckSummaryFallback: 'HALLAYM Slide Studio prepared this deck in a presentation-ready format.',
+      visualLabel: 'Visual',
+      nextStep: 'Next step',
+      speakerFallback: 'No separate speaker note was returned for this slide. Briefly explain the title and key points.',
+      sourceLabel: 'Sources',
+      slideWord: 'Slide'
+    },
+    ru: {
+      agendaHint: 'Кратко и понятно объясните этот раздел.',
+      splitLeftTitle: 'Ключевые пункты',
+      splitRightTitle: 'Детали',
+      splitBodyHint: 'Кратко объясните идею в левом блоке.',
+      splitAsideHint: 'Здесь разместите короткие факты, примеры или дальнейшие шаги.',
+      themeDeckLabel: 'deck HALLAYM AI',
+      deckSummaryFallback: 'HALLAYM Slide Studio подготовила этот deck в удобном для показа формате.',
+      visualLabel: 'Визуал',
+      nextStep: 'Следующий шаг',
+      speakerFallback: 'Для этого слайда отдельная заметка не пришла. Коротко объясните заголовок и ключевые пункты.',
+      sourceLabel: 'Источники',
+      slideWord: 'Слайд'
+    }
+  };
 
   const state = {
     token: localStorage.getItem(TOKEN_KEY) || '',
@@ -84,6 +128,52 @@
       .replace(/вЂў/g, '|')
       .replace(/вЂ™/g, "'")
       .replace(/вЂ/g, "'");
+  }
+
+  function deckLanguage(deck) {
+    const value = String(deck && deck.language || '').trim().toLowerCase();
+    if (value === 'en') return 'en';
+    if (value === 'ru') return 'ru';
+    return 'uz';
+  }
+
+  function slideText(deck) {
+    return SLIDE_TEXT[deckLanguage(deck)] || SLIDE_TEXT.uz;
+  }
+
+  function safeCssUrl(value) {
+    return encodeURI(String(value || '').trim())
+      .replace(/'/g, '%27')
+      .replace(/\(/g, '%28')
+      .replace(/\)/g, '%29');
+  }
+
+  function normalizeSourceLinks(list) {
+    if (!Array.isArray(list)) return [];
+    return Array.from(new Set(list.map((item) => String(item || '').trim()).filter(Boolean))).slice(0, 3);
+  }
+
+  function slideDensityClass(slide) {
+    const bullets = []
+      .concat(Array.isArray(slide && slide.bullets) ? slide.bullets : [])
+      .concat(Array.isArray(slide && slide.leftBullets) ? slide.leftBullets : [])
+      .concat(Array.isArray(slide && slide.rightBullets) ? slide.rightBullets : []);
+    const timeline = Array.isArray(slide && slide.timeline) ? slide.timeline : [];
+    const stats = Array.isArray(slide && slide.stats) ? slide.stats : [];
+    const score = Math.ceil(String(slide && slide.title || '').length / 20)
+      + Math.ceil(String(slide && slide.subtitle || '').length / 34)
+      + Math.ceil(String(slide && slide.body || '').length / 55)
+      + Math.ceil(String(slide && slide.quote || '').length / 70)
+      + bullets.length
+      + (timeline.length * 2)
+      + stats.length;
+    if (score >= 16) return 'dense';
+    if (score >= 11) return 'compact';
+    return '';
+  }
+
+  function slideImageUrl(deck, slide) {
+    return String(slide && slide.imageUrl || ((slide && slide.layout) === 'cover' ? (deck && deck.heroImageUrl || '') : '') || '').trim();
   }
 
   function showToast(message, type) {
@@ -284,26 +374,28 @@
     return `<div class="chip-list">${list.slice(0, 4).map((item) => `<div class="chip-item">${escapeHtml(item)}</div>`).join('')}</div>`;
   }
 
-  function buildAgendaList(list) {
+  function buildAgendaList(list, deck) {
+    const copy = slideText(deck);
     if (!Array.isArray(list) || !list.length) return '';
     return `<div class="agenda-grid">${list.map((item, index) => `
       <div class="agenda-item">
         <span class="agenda-index">${index + 1}</span>
         <div class="agenda-copy">
           <strong>${escapeHtml(item)}</strong>
-          <span>Ushbu qismni qisqa va aniq tushuntiring.</span>
+          <span>${escapeHtml(copy.agendaHint)}</span>
         </div>
       </div>
     `).join('')}</div>`;
   }
 
-  function buildTimeline(list) {
+  function buildTimeline(list, deck) {
+    const copy = slideText(deck);
     if (!Array.isArray(list) || !list.length) return '';
     return `<div class="timeline-list">${list.map((item, index) => `
       <div class="timeline-item">
         <span class="timeline-index">${index + 1}</span>
         <div class="timeline-copy">
-          <strong>${escapeHtml(item.title || 'Bosqich')}</strong>
+          <strong>${escapeHtml(item.title || `${copy.slideWord} ${index + 1}`)}</strong>
           <span>${escapeHtml(item.detail || '')}</span>
         </div>
       </div>
@@ -320,16 +412,35 @@
     `).join('')}</div>`;
   }
 
+  function buildMediaCard(deck, slide, options) {
+    const imageUrl = slideImageUrl(deck, slide);
+    if (!imageUrl) return '';
+    const copy = slideText(deck);
+    const className = String(options && options.className || '').trim();
+    const title = String(options && options.title || slide && slide.imageCaption || slide && slide.title || copy.visualLabel).trim();
+    const caption = String(options && options.caption || slide && slide.subtitle || deck && deck.summary || '').trim();
+    return `
+      <div class="surface-card media-panel${className ? ` ${className}` : ''}">
+        <div class="media-visual" style="background-image:url('${safeCssUrl(imageUrl)}')"></div>
+        <div class="media-copy">
+          <strong>${escapeHtml(title || copy.visualLabel)}</strong>
+          ${caption ? `<span>${escapeHtml(caption)}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
   function renderSlideMarkup(deck, slide, index) {
+    const copy = slideText(deck);
     const themeId = String(deck && deck.themeId || 'teal-minimal');
-    const title = escapeHtml(slide && slide.title || `Slide ${index + 1}`);
+    const title = escapeHtml(slide && slide.title || `${copy.slideWord} ${index + 1}`);
     const subtitle = escapeHtml(slide && slide.subtitle || deck && deck.subtitle || '');
-    const kicker = escapeHtml(slide && slide.kicker || deck && deck.themeLabel || 'Slide');
+    const kicker = escapeHtml(slide && slide.kicker || deck && deck.themeLabel || copy.slideWord);
     const body = escapeHtml(slide && slide.body || '');
     const callout = slide && slide.callout ? `<div class="callout-box">${escapeHtml(slide.callout)}</div>` : '';
     const watermark = escapeHtml(normalizeCopy(deck && deck.watermark || ''));
-    const heroImageUrl = String(deck && deck.heroImageUrl || '').trim();
     const layout = String(slide && slide.layout || 'content');
+    const density = slideDensityClass(slide);
     const countText = `${index + 1} / ${(deck && deck.slides && deck.slides.length) || 0}`;
     const topLine = `
       <div class="slide-topline">
@@ -344,132 +455,187 @@
         <div class="slide-body">
           <span class="slide-kicker">${kicker}</span>
           <div class="cover-grid">
-            <div style="display:grid;gap:16px;align-content:start;">
+            <div class="slide-col-stack">
               <h3 class="slide-title">${title}</h3>
               ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
               ${body ? `<p class="slide-paragraph">${body}</p>` : ''}
               ${buildChipList(slide && slide.bullets || [])}
               ${callout}
             </div>
-            <div class="cover-art">
-              ${heroImageUrl ? `<div class="cover-photo" style="background-image:url('${escapeHtml(heroImageUrl)}')"></div>` : ''}
-              <div class="surface-card">
-                <strong>${escapeHtml(deck && deck.themeLabel || 'HALLAYM AI deck')}</strong>
-                <span>${escapeHtml(deck && deck.summary || 'HALLAYM Slide Studio bu deckni presentation-ready korinishda tayyorladi.')}</span>
+            <div class="slide-col-stack">
+              ${buildMediaCard(deck, slide, {
+                className: 'media-hero',
+                title: slide && slide.imageCaption || slide && slide.title || copy.visualLabel,
+                caption: slide && slide.subtitle || deck && deck.summary || copy.deckSummaryFallback
+              })}
+              <div class="surface-card mini-note">
+                <strong>${escapeHtml(deck && deck.themeLabel || copy.themeDeckLabel)}</strong>
+                <span>${escapeHtml(deck && deck.summary || copy.deckSummaryFallback)}</span>
               </div>
             </div>
           </div>
         </div>
       `;
     } else if (layout === 'agenda') {
+      const mediaCard = buildMediaCard(deck, slide, {
+        className: 'media-sm',
+        title: slide && slide.imageCaption || copy.visualLabel,
+        caption: slide && slide.callout || deck && deck.summary || ''
+      });
       content = `
         <div class="slide-body">
           <span class="slide-kicker">${kicker}</span>
-          <h3 class="slide-title medium">${title}</h3>
-          ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
-          ${buildAgendaList(slide && slide.bullets || [])}
-          ${callout}
+          <div class="agenda-shell${mediaCard ? '' : ' single'}">
+            <div class="slide-col-stack">
+              <h3 class="slide-title medium">${title}</h3>
+              ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
+              ${buildAgendaList(slide && slide.bullets || [], deck)}
+              ${callout}
+            </div>
+            ${mediaCard ? `<div class="slide-col-stack">${mediaCard}</div>` : ''}
+          </div>
         </div>
       `;
     } else if (layout === 'split') {
-      const leftTitle = escapeHtml(slide && slide.leftTitle || 'Asosiy qism');
-      const rightTitle = escapeHtml(slide && slide.rightTitle || 'Muhim nuqtalar');
+      const leftTitle = escapeHtml(slide && slide.leftTitle || copy.splitLeftTitle);
+      const rightTitle = escapeHtml(slide && slide.rightTitle || copy.splitRightTitle);
       const leftBullets = Array.isArray(slide && slide.leftBullets) ? slide.leftBullets : [];
       const rightBullets = Array.isArray(slide && slide.rightBullets) ? slide.rightBullets : [];
+      const mediaCard = buildMediaCard(deck, slide, {
+        className: 'media-sm',
+        title: slide && slide.imageCaption || slide && slide.title || copy.visualLabel,
+        caption: slide && slide.subtitle || ''
+      });
+      const asideCard = (rightBullets.length || (slide && slide.callout)) ? `
+        <div class="surface-card">
+          <strong>${rightTitle}</strong>
+          <span>${escapeHtml(slide && slide.callout || copy.splitAsideHint)}</span>
+          ${buildPointList(rightBullets.length ? rightBullets : (slide && slide.bullets || []))}
+        </div>
+      ` : '';
       content = `
         <div class="slide-body">
           <span class="slide-kicker">${kicker}</span>
           <h3 class="slide-title medium">${title}</h3>
           ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
-          <div class="split-grid${(!leftBullets.length && !rightBullets.length) ? ' single' : ''}">
+          <div class="split-grid${(!leftBullets.length && !rightBullets.length && !mediaCard) ? ' single' : ''}">
             <div class="surface-card">
               <strong>${leftTitle}</strong>
-              <span>${body || 'Mazmunni chap tarafda qisqa blok bilan tushuntiring.'}</span>
+              <span>${body || escapeHtml(copy.splitBodyHint)}</span>
               ${buildPointList(leftBullets.length ? leftBullets : (slide && slide.bullets || []))}
             </div>
-            ${leftBullets.length || rightBullets.length ? `
-              <div class="surface-card">
-                <strong>${rightTitle}</strong>
-                <span>${escapeHtml(slide && slide.callout || 'Qisqa dalillar, misollar yoki actions.')}</span>
-                ${buildPointList(rightBullets.length ? rightBullets : (slide && slide.bullets || []))}
-              </div>
-            ` : ''}
-            ${heroImageUrl ? `
-              <div class="surface-card media-panel" style="background-image:url('${escapeHtml(heroImageUrl)}')">
-                <strong>${escapeHtml(slide && slide.title || deck && deck.title || 'Slide')}</strong>
-                <span>${escapeHtml(slide && slide.subtitle || deck && deck.summary || '')}</span>
-              </div>
-            ` : ''}
+            ${(asideCard || mediaCard) ? `<div class="slide-col-stack">${mediaCard}${asideCard}</div>` : ''}
           </div>
         </div>
       `;
     } else if (layout === 'quote') {
+      const mediaCard = buildMediaCard(deck, slide, {
+        className: 'media-sm',
+        title: slide && slide.imageCaption || copy.visualLabel,
+        caption: slide && slide.quoteAuthor || ''
+      });
       content = `
         <div class="slide-body">
-          <div class="quote-block">
-            <span class="quote-mark">"</span>
-            <p class="quote-text">${escapeHtml(slide && slide.quote || slide && slide.title || '')}</p>
-            ${slide && slide.quoteAuthor ? `<p class="quote-author">${escapeHtml(slide.quoteAuthor)}</p>` : ''}
-            ${callout}
+          <div class="quote-shell${mediaCard ? '' : ' single'}">
+            <div class="quote-block">
+              <span class="quote-mark">"</span>
+              <p class="quote-text">${escapeHtml(slide && slide.quote || slide && slide.title || '')}</p>
+              ${slide && slide.quoteAuthor ? `<p class="quote-author">${escapeHtml(slide.quoteAuthor)}</p>` : ''}
+              ${callout}
+            </div>
+            ${mediaCard ? `<div class="slide-col-stack">${mediaCard}</div>` : ''}
           </div>
         </div>
       `;
     } else if (layout === 'timeline') {
+      const mediaCard = buildMediaCard(deck, slide, {
+        className: 'media-sm',
+        title: slide && slide.imageCaption || copy.visualLabel,
+        caption: slide && slide.callout || ''
+      });
       content = `
         <div class="slide-body">
           <span class="slide-kicker">${kicker}</span>
-          <h3 class="slide-title medium">${title}</h3>
-          ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
-          ${buildTimeline(slide && slide.timeline || []) || buildPointList(slide && slide.bullets || [])}
+          <div class="timeline-grid${mediaCard ? '' : ' single'}">
+            <div class="slide-col-stack">
+              <h3 class="slide-title medium">${title}</h3>
+              ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
+              ${buildTimeline(slide && slide.timeline || [], deck) || buildPointList(slide && slide.bullets || [])}
+              ${callout}
+            </div>
+            ${mediaCard ? `<div class="slide-col-stack">${mediaCard}</div>` : ''}
+          </div>
         </div>
       `;
     } else if (layout === 'metrics') {
+      const mediaCard = buildMediaCard(deck, slide, {
+        className: 'media-sm',
+        title: slide && slide.imageCaption || copy.visualLabel,
+        caption: slide && slide.subtitle || ''
+      });
       content = `
         <div class="slide-body">
           <span class="slide-kicker">${kicker}</span>
-          <h3 class="slide-title medium">${title}</h3>
-          ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
-          ${buildStats(slide && slide.stats || []) || buildChipList(slide && slide.bullets || [])}
-          ${body ? `<p class="slide-paragraph">${body}</p>` : ''}
-          ${callout}
+          <div class="metrics-shell${mediaCard ? '' : ' single'}">
+            <div class="slide-col-stack">
+              <h3 class="slide-title medium">${title}</h3>
+              ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
+              ${buildStats(slide && slide.stats || []) || buildChipList(slide && slide.bullets || [])}
+              ${body ? `<p class="slide-paragraph">${body}</p>` : ''}
+              ${callout}
+            </div>
+            ${mediaCard ? `<div class="slide-col-stack">${mediaCard}</div>` : ''}
+          </div>
         </div>
       `;
     } else if (layout === 'closing') {
+      const mediaCard = buildMediaCard(deck, slide, {
+        className: 'media-sm',
+        title: slide && slide.imageCaption || copy.visualLabel,
+        caption: slide && slide.subtitle || deck && deck.summary || ''
+      });
       content = `
         <div class="slide-body">
           <span class="slide-kicker">${kicker}</span>
           <div class="closing-grid">
-            <div style="display:grid;gap:16px;align-content:start;">
+            <div class="slide-col-stack">
               <h3 class="slide-title">${title}</h3>
               ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
               ${body ? `<p class="slide-paragraph">${body}</p>` : ''}
               ${buildPointList(slide && slide.bullets || [])}
             </div>
-            <div class="surface-card" style="display:grid;gap:14px;align-content:start;">
-              <strong>Keyingi qadam</strong>
-              <span>${escapeHtml(slide && slide.callout || 'Yakuniy xulosa, action yoki savol-javob chaqiruvi shu yerda turadi.')}</span>
-              <div class="callout-box">${escapeHtml(deck && deck.watermark || '')}</div>
+            <div class="slide-col-stack">
+              ${mediaCard}
+              <div class="surface-card">
+                <strong>${escapeHtml(copy.nextStep)}</strong>
+                <span>${escapeHtml(slide && slide.callout || copy.splitAsideHint)}</span>
+                <div class="callout-box">${escapeHtml(deck && deck.watermark || '')}</div>
+              </div>
             </div>
           </div>
         </div>
       `;
     } else {
       const bullets = Array.isArray(slide && slide.bullets) ? slide.bullets : [];
+      const mediaCard = buildMediaCard(deck, slide, {
+        className: 'media-sm',
+        title: slide && slide.imageCaption || copy.visualLabel,
+        caption: slide && slide.subtitle || deck && deck.summary || ''
+      });
       content = `
         <div class="slide-body">
           <span class="slide-kicker">${kicker}</span>
-          <div class="content-grid${bullets.length || heroImageUrl ? '' : ' single'}">
-            <div style="display:grid;gap:16px;align-content:start;">
+          <div class="content-grid${bullets.length || mediaCard ? '' : ' single'}">
+            <div class="slide-col-stack">
               <h3 class="slide-title medium">${title}</h3>
               ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
               ${body ? `<p class="slide-paragraph">${body}</p>` : ''}
               ${callout}
             </div>
-            ${bullets.length ? `<div class="surface-card">${buildPointList(bullets)}</div>` : ''}
-            ${heroImageUrl ? `
-              <div class="surface-card media-panel" style="background-image:url('${escapeHtml(heroImageUrl)}')">
-                <strong>${escapeHtml(deck && deck.themeLabel || 'Visual')}</strong>
-                <span>${escapeHtml(deck && deck.summary || '')}</span>
+            ${(bullets.length || mediaCard) ? `
+              <div class="slide-col-stack">
+                ${bullets.length ? `<div class="surface-card">${buildPointList(bullets)}</div>` : ''}
+                ${mediaCard}
               </div>
             ` : ''}
           </div>
@@ -478,7 +644,7 @@
     }
 
     return `
-      <div class="slide-canvas" data-theme="${escapeHtml(themeId)}">
+      <div class="slide-canvas${density ? ` ${density}` : ''}" data-theme="${escapeHtml(themeId)}" data-layout="${escapeHtml(layout)}">
         <div class="slide-shell">
           ${topLine}
           ${content}
@@ -491,18 +657,21 @@
     `;
   }
 
-  function renderSources(deck) {
-    const links = Array.isArray(deck && deck.sourceLinks) ? deck.sourceLinks.filter(Boolean) : [];
+  function renderSources(deck, slide) {
+    const copy = slideText(deck);
+    const slideLinks = normalizeSourceLinks(slide && slide.sourceLinks || []);
+    const deckLinks = normalizeSourceLinks(deck && deck.sourceLinks || []).filter((link) => !slideLinks.includes(link));
+    const links = slideLinks.concat(deckLinks).slice(0, 6);
     if (!links.length) {
       els.sourcesWrap.innerHTML = '';
       return;
     }
     els.sourcesWrap.innerHTML = `
-      <p class="section-kicker" style="margin-top:4px;">Manbalar</p>
+      <p class="section-kicker" style="margin-top:4px;">${escapeHtml(copy.sourceLabel)}</p>
       ${links.map((link, index) => `
         <a class="source-link" href="${escapeHtml(link)}" target="_blank" rel="noreferrer noopener">
           <i class="fa-solid fa-link"></i>
-          <span>${escapeHtml(`Manba ${index + 1}: ${link}`)}</span>
+          <span>${escapeHtml(`${copy.sourceLabel} ${index + 1}: ${link}`)}</span>
         </a>
       `).join('')}
     `;
@@ -529,14 +698,15 @@
     if (state.currentIndex >= deck.slides.length) state.currentIndex = deck.slides.length - 1;
     if (state.currentIndex < 0) state.currentIndex = 0;
     const slide = deck.slides[state.currentIndex];
+    const copy = slideText(deck);
     els.deckTitle.textContent = deck.title || 'Yangi deck';
     els.deckSubtitle.textContent = deck.subtitle || deck.summary || 'AI taqdimot decki';
     renderDeckMeta(deck);
-    renderSources(deck);
+    renderSources(deck, slide);
     els.previewSlot.className = 'slide-stage';
     els.previewSlot.innerHTML = renderSlideMarkup(deck, slide, state.currentIndex);
     els.slideIndicator.textContent = `${state.currentIndex + 1} / ${deck.slides.length}`;
-    els.speakerNote.textContent = slide.speakerNote || 'Bu slide uchun alohida speaker note kelmagan. Sarlavha va punktlar boyicha qisqa izoh bering.';
+    els.speakerNote.textContent = slide.speakerNote || copy.speakerFallback;
     els.thumbTrack.innerHTML = deck.slides.map((item, index) => {
       const active = index === state.currentIndex ? ' active' : '';
       return `
