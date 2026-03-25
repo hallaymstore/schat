@@ -5,7 +5,9 @@ const http = require('http');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const PDFDocument = require('pdfkit');
 const multer = require('multer');
+const PptxGenJS = require('pptxgenjs');
 const cloudinary = require('cloudinary').v2;
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { Readable, Writable } = require('stream');
@@ -2822,7 +2824,440 @@ function normalizeTimelineList(list) {
     .slice(0, 5);
 }
 
-function createFallbackSlideDeck({ prompt, slideCount, themeId, watermark }) {
+function decodeHtmlEntities(text) {
+  const named = {
+    amp: '&',
+    apos: "'",
+    quot: '"',
+    nbsp: ' ',
+    lt: '<',
+    gt: '>'
+  };
+  return String(text || '')
+    .replace(/&#(\d+);/g, (_, code) => {
+      const n = Number(code || 0);
+      return Number.isFinite(n) ? String.fromCharCode(n) : '';
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => {
+      const n = parseInt(String(code || '0'), 16);
+      return Number.isFinite(n) ? String.fromCharCode(n) : '';
+    })
+    .replace(/&([a-z]+);/gi, (match, name) => named[String(name || '').toLowerCase()] || match);
+}
+
+function stripHtmlToText(html) {
+  return decodeHtmlEntities(String(html || ''))
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<(br|hr)\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|section|article|h[1-6])>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '\n- ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
+function truncateBySentence(text, maxLen = 900) {
+  const src = cleanText(text, Math.max(maxLen * 2, maxLen));
+  if (!src || src.length <= maxLen) return src;
+  const parts = src.split(/(?<=[.!?])\s+/).filter(Boolean);
+  let out = '';
+  for (const part of parts) {
+    const next = out ? `${out} ${part}` : part;
+    if (next.length > maxLen) break;
+    out = next;
+  }
+  return out || src.slice(0, maxLen);
+}
+
+function splitTextToBullets(text, { maxItems = 5, maxLen = 150 } = {}) {
+  if (!text) return [];
+  return String(text)
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((item) => cleanText(item.replace(/^[-*•\s]+/, ''), maxLen))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function splitListInHalf(list) {
+  const arr = Array.isArray(list) ? list.filter(Boolean) : [];
+  if (!arr.length) return { left: [], right: [] };
+  const middle = Math.ceil(arr.length / 2);
+  return {
+    left: arr.slice(0, middle),
+    right: arr.slice(middle)
+  };
+}
+
+function buildResearchQueries(prompt) {
+  const src = String(prompt || '').trim();
+  if (!src) return [];
+  const stripped = src
+    .replace(/[?!.:,;()[\]{}"']/g, ' ')
+    .replace(/\b(kim|nima|qanday|qachon|qaerda|qayerda|haqida|hayoti|slayd|slide|taqdimot|tayyorla|tayyorlab|ber|batafsil|presentation|about|life|history|details)\b/gi, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  const values = [stripped, src]
+    .map((item) => cleanText(item, 140))
+    .filter(Boolean);
+  return Array.from(new Set(values)).slice(0, 3);
+}
+
+async function fetchJsonWithTimeout(url, { timeoutMs = 9000, headers = {} } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      headers: Object.assign(
+        {
+          'Accept': 'application/json',
+          'User-Agent': 'HALLAYM-Slide-Studio/1.0'
+        },
+        headers || {}
+      ),
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchBinaryWithTimeout(url, { timeoutMs = 9000, headers = {} } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      headers: Object.assign(
+        {
+          'User-Agent': 'HALLAYM-Slide-Studio/1.0'
+        },
+        headers || {}
+      ),
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const arrayBuffer = await response.arrayBuffer();
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      contentType: String(response.headers.get('content-type') || '').trim()
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function wikipediaActionQuery(lang, params) {
+  const qs = new URLSearchParams();
+  qs.set('format', 'json');
+  qs.set('origin', '*');
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    qs.set(key, String(value));
+  });
+  return fetchJsonWithTimeout(`https://${lang}.wikipedia.org/w/api.php?${qs.toString()}`);
+}
+
+async function fetchWikipediaSectionText(lang, title, sectionIndex) {
+  try {
+    const data = await wikipediaActionQuery(lang, {
+      action: 'parse',
+      page: title,
+      prop: 'text',
+      section: sectionIndex
+    });
+    const html = data?.parse?.text?.['*'] || data?.parse?.text || '';
+    return truncateBySentence(stripHtmlToText(html), 700);
+  } catch (_) {
+    return '';
+  }
+}
+
+async function lookupWikipediaEntry(lang, query) {
+  try {
+    const search = await wikipediaActionQuery(lang, {
+      action: 'query',
+      list: 'search',
+      srsearch: query,
+      srlimit: 3,
+      utf8: 1
+    });
+    const hit = Array.isArray(search?.query?.search) ? search.query.search[0] : null;
+    const title = cleanText(hit?.title, 160);
+    if (!title) return null;
+
+    const detail = await wikipediaActionQuery(lang, {
+      action: 'query',
+      prop: 'extracts|pageimages|info',
+      titles: title,
+      redirects: 1,
+      inprop: 'url',
+      piprop: 'original|thumbnail',
+      pithumbsize: 1200,
+      exintro: 1,
+      explaintext: 1,
+      exsentences: 12
+    });
+    const pages = detail?.query?.pages || {};
+    const page = Array.isArray(pages) ? pages[0] : Object.values(pages)[0];
+    if (!page || page.missing) return null;
+
+    const sectionsData = await wikipediaActionQuery(lang, {
+      action: 'parse',
+      page: title,
+      prop: 'sections'
+    }).catch(() => null);
+    const sectionRows = Array.isArray(sectionsData?.parse?.sections) ? sectionsData.parse.sections : [];
+    const usefulSections = sectionRows
+      .filter((item) => {
+        const name = String(item?.line || '').trim();
+        if (!name) return false;
+        return !/references|notes|links|manbalar|external|see also|bibliography/i.test(name);
+      })
+      .slice(0, 4);
+
+    const sections = [];
+    for (const item of usefulSections) {
+      const text = await fetchWikipediaSectionText(lang, title, item?.index);
+      if (!text) continue;
+      sections.push({
+        heading: cleanText(item?.line, 120),
+        text
+      });
+    }
+
+    return {
+      lang,
+      query,
+      title,
+      summary: truncateBySentence(page?.extract || hit?.snippet || '', 950),
+      heroImageUrl: cleanText(page?.original?.source || page?.thumbnail?.source || '', 500),
+      sourceLink: cleanText(page?.fullurl || `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(title.replace(/\s+/g, '_'))}`, 500),
+      sections
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function buildResearchDigest(research) {
+  if (!research) return '';
+  const lines = [];
+  if (research.summary) lines.push(`Summary: ${research.summary}`);
+  (research.sections || []).slice(0, 4).forEach((item, idx) => {
+    const heading = cleanText(item?.heading, 120) || `Section ${idx + 1}`;
+    const text = truncateBySentence(item?.text, 520);
+    if (!text) return;
+    lines.push(`${heading}: ${text}`);
+  });
+  return lines.join('\n');
+}
+
+function ensureSlideVariety(slides, desiredCount) {
+  const safe = Array.isArray(slides) ? slides.map((item) => Object.assign({}, item)) : [];
+  const total = Math.min(safe.length, clampSlideCount(desiredCount));
+  const pattern = ['agenda', 'content', 'split', 'timeline', 'metrics', 'quote', 'content', 'split', 'timeline', 'metrics'];
+
+  for (let i = 0; i < total; i += 1) {
+    const slide = safe[i];
+    if (!slide) continue;
+
+    if (i === 0) {
+      slide.layout = 'cover';
+    } else if (i === total - 1) {
+      slide.layout = 'closing';
+    } else if (slide.timeline?.length >= 2) {
+      slide.layout = 'timeline';
+    } else if (slide.stats?.length >= 2) {
+      slide.layout = 'metrics';
+    } else if (slide.quote) {
+      slide.layout = 'quote';
+    } else if ((slide.leftBullets?.length || 0) + (slide.rightBullets?.length || 0) >= 2) {
+      slide.layout = 'split';
+    } else {
+      slide.layout = pattern[(i - 1) % pattern.length];
+    }
+
+    if (slide.layout === 'split' && (!slide.leftBullets?.length || !slide.rightBullets?.length)) {
+      const parts = splitListInHalf(slide.bullets || []);
+      slide.leftTitle = slide.leftTitle || 'Asosiy nuqtalar';
+      slide.rightTitle = slide.rightTitle || 'Davomi';
+      slide.leftBullets = slide.leftBullets?.length ? slide.leftBullets : parts.left;
+      slide.rightBullets = slide.rightBullets?.length ? slide.rightBullets : parts.right;
+    }
+
+    if (slide.layout === 'metrics' && (!slide.stats || !slide.stats.length) && Array.isArray(slide.bullets) && slide.bullets.length >= 3) {
+      slide.stats = slide.bullets.slice(0, 3).map((item, idx) => ({
+        label: cleanText(item, 60),
+        value: `${idx + 1}`
+      }));
+    }
+  }
+
+  return safe;
+}
+
+async function researchSlideTopic(prompt, language) {
+  const queries = buildResearchQueries(prompt);
+  if (!queries.length) return null;
+
+  const langOrder = Array.from(new Set([
+    normalizeSlideStudioLanguage(language),
+    'en',
+    'uz',
+    'ru'
+  ]));
+
+  const results = [];
+  for (const query of queries) {
+    for (const lang of langOrder) {
+      const hit = await lookupWikipediaEntry(lang, query);
+      if (hit && hit.summary) {
+        results.push(hit);
+      }
+      if (results.length >= 2) break;
+    }
+    if (results.length >= 2) break;
+  }
+
+  if (!results.length) return null;
+  const primary = results[0];
+  const secondary = results[1] && results[1].title !== primary.title ? results[1] : null;
+
+  return {
+    query: primary.query,
+    summary: truncateBySentence(
+      [primary.summary, secondary?.summary || ''].filter(Boolean).join(' '),
+      1400
+    ),
+    heroImageUrl: primary.heroImageUrl || secondary?.heroImageUrl || '',
+    sourceLinks: Array.from(new Set([primary.sourceLink, secondary?.sourceLink].filter(Boolean))).slice(0, 3),
+    sections: []
+      .concat(primary.sections || [])
+      .concat(secondary?.sections || [])
+      .slice(0, 5)
+      .map((item) => ({
+        heading: cleanText(item?.heading, 120),
+        text: truncateBySentence(item?.text, 700)
+      }))
+      .filter((item) => item.heading && item.text)
+  };
+}
+
+function createFallbackSlideDeck({ prompt, slideCount, themeId, watermark, research }) {
+  {
+    const generatedTitle = cleanText(prompt, 80) || cleanText(research?.query, 80) || 'Yangi taqdimot';
+    const sections = Array.isArray(research?.sections)
+      ? research.sections.slice(0, Math.max(2, clampSlideCount(slideCount) - 2))
+      : [];
+    const agendaBullets = sections.length
+      ? sections.map((item) => cleanText(item.heading, 100)).filter(Boolean).slice(0, 5)
+      : ['Kirish', 'Asosiy mavzu', 'Muhim faktlar', 'Xulosa'];
+    const generatedSlides = [
+      {
+        order: 1,
+        layout: 'cover',
+        kicker: 'HALLAYM AI',
+        title: generatedTitle,
+        subtitle: cleanText(research?.summary, 220) || 'Mavzu bo\'yicha tushunarli va tayyor taqdimot',
+        body: '',
+        bullets: splitTextToBullets(research?.summary, { maxItems: 4, maxLen: 120 }),
+        leftTitle: '',
+        leftBullets: [],
+        rightTitle: '',
+        rightBullets: [],
+        stats: [],
+        timeline: [],
+        quote: '',
+        quoteAuthor: '',
+        callout: 'Mazmun internet manbalari va HALLAYM AI tahlili asosida yig\'ildi.',
+        speakerNote: 'Kirish qismida mavzu nega muhim ekanini qisqa tushuntiring.'
+      },
+      {
+        order: 2,
+        layout: 'agenda',
+        kicker: 'Reja',
+        title: 'Nimani ko\'rib chiqamiz?',
+        subtitle: '',
+        body: '',
+        bullets: agendaBullets,
+        leftTitle: '',
+        leftBullets: [],
+        rightTitle: '',
+        rightBullets: [],
+        stats: [],
+        timeline: [],
+        quote: '',
+        quoteAuthor: '',
+        callout: '',
+        speakerNote: 'Taqdimot strukturasini oldindan ayting.'
+      }
+    ];
+
+    sections.forEach((item, idx) => {
+      const detailBullets = splitTextToBullets(item.text, { maxItems: 6, maxLen: 120 });
+      const parts = splitListInHalf(detailBullets);
+      generatedSlides.push({
+        order: generatedSlides.length + 1,
+        layout: idx % 2 === 0 ? 'content' : 'split',
+        kicker: cleanText(item.heading, 100) || 'Asosiy qism',
+        title: cleanText(item.heading, 180) || `Bo'lim ${idx + 1}`,
+        subtitle: '',
+        body: truncateBySentence(item.text, 520),
+        bullets: detailBullets,
+        leftTitle: 'Muhim faktlar',
+        leftBullets: parts.left,
+        rightTitle: 'Davomi',
+        rightBullets: parts.right,
+        stats: [],
+        timeline: [],
+        quote: '',
+        quoteAuthor: '',
+        callout: '',
+        speakerNote: 'Bo\'limni fakt va izoh bilan yoping.'
+      });
+    });
+
+    generatedSlides.push({
+      order: generatedSlides.length + 1,
+      layout: 'closing',
+      kicker: 'Xulosa',
+      title: 'Yakuniy xabar',
+      subtitle: 'Asosiy g\'oya va keyingi fikr',
+      body: '',
+      bullets: splitTextToBullets(research?.summary, { maxItems: 3, maxLen: 120 }).length
+        ? splitTextToBullets(research?.summary, { maxItems: 3, maxLen: 120 })
+        : ['Asosiy fikrni takrorlang', 'Muhim xulosani ayting', 'Savol-javobga o\'ting'],
+      leftTitle: '',
+      leftBullets: [],
+      rightTitle: '',
+      rightBullets: [],
+      stats: [],
+      timeline: [],
+      quote: '',
+      quoteAuthor: '',
+      callout: watermark,
+      speakerNote: 'Yakuniy slide auditoriyani bitta asosiy fikr bilan qoldirishi kerak.'
+    });
+
+    return {
+      title: generatedTitle,
+      subtitle: cleanText(research?.summary, 240) || 'HALLAYM AI tomonidan tayyorlangan taqdimot',
+      summary: cleanText(research?.summary, 600) || 'Asosiy mazmun tartibli slide ko\'rinishida jamlandi.',
+      themeId,
+      themeLabel: (SLIDE_THEME_MAP.get(themeId) || SLIDE_THEME_PRESETS[0]).label,
+      watermark,
+      heroImageUrl: cleanText(research?.heroImageUrl, 500),
+      researchSummary: cleanText(research?.summary, 1800),
+      sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : [],
+      generationMode: 'fallback',
+      slides: ensureSlideVariety(generatedSlides.slice(0, clampSlideCount(slideCount)), slideCount)
+    };
+  }
   const title = cleanText(prompt, 80) || 'Yangi taqdimot';
   return {
     title,
@@ -2926,7 +3361,7 @@ function createFallbackSlideDeck({ prompt, slideCount, themeId, watermark }) {
   };
 }
 
-function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, watermark }) {
+function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, watermark, research }) {
   const fallbackThemeId = SLIDE_THEME_MAP.has(styleRequested) ? styleRequested : 'teal-minimal';
   const themeId = SLIDE_THEME_MAP.has(raw?.theme_id) ? raw.theme_id : fallbackThemeId;
   const theme = SLIDE_THEME_MAP.get(themeId) || SLIDE_THEME_PRESETS[0];
@@ -2962,22 +3397,24 @@ function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, wa
     })
     .filter((slide) => slide.title || slide.quote || slide.body || slide.bullets.length || slide.timeline.length || slide.stats.length);
 
-  if (!slides.length) {
-    return createFallbackSlideDeck({ prompt, slideCount: desiredCount, themeId: fallbackThemeId, watermark });
+  if (slides.length < 4) {
+    return createFallbackSlideDeck({ prompt, slideCount: desiredCount, themeId: fallbackThemeId, watermark, research });
   }
 
-  if (slides[0]) slides[0].layout = 'cover';
-  if (slides.length > 1) slides[slides.length - 1].layout = 'closing';
+  const variedSlides = ensureSlideVariety(slides, desiredCount);
 
   return {
     title: cleanText(raw?.deck_title, 200) || cleanText(prompt, 80) || 'Yangi taqdimot',
     subtitle: cleanText(raw?.deck_subtitle, 240),
-    summary: cleanText(raw?.summary, 600),
+    summary: cleanText(raw?.summary, 600) || cleanText(research?.summary, 600),
     themeId,
     themeLabel: cleanText(raw?.theme_label, 120) || theme.label,
     watermark,
+    heroImageUrl: cleanText(research?.heroImageUrl, 500),
+    researchSummary: cleanText(research?.summary, 1800),
+    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : [],
     generationMode: 'ai',
-    slides
+    slides: variedSlides
   };
 }
 
@@ -3011,8 +3448,8 @@ async function requestGroqSlideDeckJson({ systemPrompt, userMessage }) {
         systemPrompt,
         history: [],
         userMessage,
-        temperature: strictSupported ? 0.2 : 0.3,
-        maxTokens: 2400,
+        temperature: strictSupported ? 0.25 : 0.45,
+        maxTokens: 3800,
         responseFormat
       });
       const parsed = parseJsonObjectLoose(content);
@@ -3030,6 +3467,83 @@ async function requestGroqSlideDeckJson({ systemPrompt, userMessage }) {
 }
 
 async function generateSlideDeckWithGroq({ user, prompt, audience, language, styleRequested, slideCount }) {
+  {
+    const finalLanguageValue = normalizeSlideStudioLanguage(language);
+    const finalCountValue = clampSlideCount(slideCount);
+    const finalStyleValue = SLIDE_THEME_MAP.has(styleRequested) ? styleRequested : 'auto';
+    const watermarkValue = `${cleanText(user?.fullName || user?.username || 'Foydalanuvchi', 80)} tayyorladi | by HALLAYM`;
+    const research = await researchSlideTopic(prompt, finalLanguageValue);
+    const themeHintsValue = SLIDE_THEME_PRESETS
+      .map((item) => `- ${item.id}: ${item.label} (${item.mood})`)
+      .join('\n');
+    const languageHintValue = finalLanguageValue === 'en' ? 'English' : (finalLanguageValue === 'ru' ? 'Russian' : 'Uzbek');
+    const styleHintValue = finalStyleValue === 'auto'
+      ? 'Choose the most appropriate theme for the topic.'
+      : `Prefer this theme id if it fits: ${finalStyleValue}.`;
+    const researchDigest = buildResearchDigest(research);
+    const systemPromptValue = [
+      'You are HALLAYM AI and you create rich, premium, visually varied slide decks for a university web app.',
+      `Write all slide text in ${languageHintValue}.`,
+      'Return only structured deck JSON. Do not include markdown, code fences, or explanations.',
+      'Do not mention Groq, providers, prompts, JSON, or internal tooling anywhere in the slide text.',
+      'The deck must be content-rich, not a thin outline.',
+      'Each middle slide should teach something concrete with facts, names, dates, places, reasons, or outcomes when relevant.',
+      'For biography or history topics, cover origin, early life, major turning points, achievements, impact, legacy, and memorable facts.',
+      'Use varied layouts across the deck so consecutive slides do not feel repetitive.',
+      'First slide must work like a strong cover. Last slide must work like a strong closing slide.',
+      'Use body text plus bullets or structured blocks so each slide feels complete.',
+      styleHintValue,
+      'Allowed themes:',
+      themeHintsValue
+    ].join('\n');
+    const userMessageValue = [
+      `Topic: ${prompt}`,
+      audience ? `Audience: ${audience}` : 'Audience: general',
+      `Slide count: ${finalCountValue}`,
+      `Requested style: ${finalStyleValue}`,
+      researchDigest ? `Research notes:\n${researchDigest}` : 'Research notes: no external notes found, use general knowledge carefully.',
+      research?.sourceLinks?.length ? `Sources:\n${research.sourceLinks.join('\n')}` : '',
+      'Make the structure presentation-ready, modern, visually clear, and informative.',
+      'Prefer a different useful layout on most slides.'
+    ].filter(Boolean).join('\n\n');
+
+    try {
+      const { parsed, model, generationMode } = await requestGroqSlideDeckJson({
+        systemPrompt: systemPromptValue,
+        userMessage: userMessageValue
+      });
+      const deck = normalizeSlideDeckPayload(parsed, {
+        prompt,
+        slideCount: finalCountValue,
+        styleRequested: finalStyleValue,
+        watermark: watermarkValue,
+        research
+      });
+      deck.aiProvider = 'hallaym-ai';
+      deck.aiModel = cleanText(model, 120);
+      deck.generationMode = generationMode || deck.generationMode || 'ai';
+      deck.heroImageUrl = cleanText(deck.heroImageUrl || research?.heroImageUrl, 500);
+      deck.researchSummary = cleanText(deck.researchSummary || research?.summary, 1800);
+      deck.sourceLinks = Array.isArray(deck.sourceLinks) && deck.sourceLinks.length
+        ? deck.sourceLinks.slice(0, 3)
+        : (Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : []);
+      return deck;
+    } catch (e) {
+      const fallbackThemeId = SLIDE_THEME_MAP.has(finalStyleValue) ? finalStyleValue : 'teal-minimal';
+      const deck = createFallbackSlideDeck({
+        prompt,
+        slideCount: finalCountValue,
+        themeId: fallbackThemeId,
+        watermark: watermarkValue,
+        research
+      });
+      deck.aiProvider = 'hallaym-ai';
+      deck.aiModel = 'fallback';
+      deck.generationMode = 'fallback';
+      deck.fallbackReason = cleanText(e?.message || e, 280);
+      return deck;
+    }
+  }
   const finalLanguage = normalizeSlideStudioLanguage(language);
   const finalCount = clampSlideCount(slideCount);
   const finalStyle = SLIDE_THEME_MAP.has(styleRequested) ? styleRequested : 'auto';
@@ -3108,6 +3622,9 @@ function serializeSlideDeck(deck, { includeSlides = true } = {}) {
     themeLabel: cleanText(src.themeLabel, 120),
     slideCount: clampSlideCount(src.slideCount),
     watermark: cleanText(src.watermark, 200),
+    heroImageUrl: cleanText(src.heroImageUrl, 500),
+    researchSummary: cleanText(src.researchSummary, 1800),
+    sourceLinks: Array.isArray(src.sourceLinks) ? src.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 3) : [],
     aiProvider: cleanText(src.aiProvider, 32),
     aiModel: cleanText(src.aiModel, 120),
     generationMode: cleanText(src.generationMode, 32) || 'ai',
@@ -3140,6 +3657,254 @@ function serializeSlideDeck(deck, { includeSlides = true } = {}) {
   }
 
   return out;
+}
+
+const SLIDE_THEME_TOKENS = {
+  'teal-minimal': { bg: 'FBFFFE', surface: 'EEF7F5', text: '163633', strong: '0D2623', muted: '5C7671', accent: '0F8F83', accentText: 'FFFFFF', border: 'D8ECE8' },
+  'executive-white': { bg: 'FFFFFF', surface: 'F4F8F7', text: '203D3B', strong: '102422', muted: '5A6C69', accent: '0A6F66', accentText: 'FFFFFF', border: 'DEE8E6' },
+  'midnight-teal': { bg: '081C1E', surface: '102D30', text: 'DFFAF5', strong: 'EFFDFA', muted: 'A7D8D0', accent: '77D0C4', accentText: '062422', border: '214447' },
+  'blueprint-grid': { bg: 'EFF8F7', surface: 'FFFFFF', text: '1B3D3A', strong: '0F2725', muted: '5A7774', accent: '126D82', accentText: 'FFFFFF', border: 'D9E8E7' },
+  'editorial-warm': { bg: 'FCFAF6', surface: 'FFFFFF', text: '3F3B34', strong: '25211B', muted: '6D665D', accent: '0F8F83', accentText: 'FFFFFF', border: 'E9E1D4' },
+  'campus-card': { bg: 'F5FBFA', surface: 'FFFFFF', text: '1E3F3C', strong: '122826', muted: '58706C', accent: '149F92', accentText: 'FFFFFF', border: 'DBECE9' }
+};
+
+function getSlideThemeTokens(themeId) {
+  return SLIDE_THEME_TOKENS[String(themeId || '').trim()] || SLIDE_THEME_TOKENS['teal-minimal'];
+}
+
+function sanitizeDownloadName(value, ext = '') {
+  const base = cleanText(value, 120)
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\s/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'hallaym-slide-deck';
+  return ext ? `${base}.${ext}` : base;
+}
+
+function guessImageMimeType(url, contentType) {
+  const explicit = String(contentType || '').toLowerCase();
+  if (explicit.includes('png')) return 'image/png';
+  if (explicit.includes('jpeg') || explicit.includes('jpg')) return 'image/jpeg';
+  if (explicit.includes('webp')) return 'image/webp';
+  if (/\.png(\?|$)/i.test(String(url || ''))) return 'image/png';
+  if (/\.webp(\?|$)/i.test(String(url || ''))) return 'image/webp';
+  return 'image/jpeg';
+}
+
+function bufferToDataUri(buffer, mimeType) {
+  if (!buffer || !buffer.length) return '';
+  return `data:${mimeType};base64,${buffer.toString('base64')}`;
+}
+
+async function loadDeckHeroAsset(deck) {
+  const imageUrl = cleanText(deck?.heroImageUrl, 500);
+  if (!imageUrl) return null;
+  try {
+    const out = await fetchBinaryWithTimeout(imageUrl, { timeoutMs: 12000 });
+    const mimeType = guessImageMimeType(imageUrl, out?.contentType);
+    if (mimeType === 'image/webp') return null;
+    return {
+      buffer: out?.buffer || null,
+      mimeType,
+      dataUri: bufferToDataUri(out?.buffer, mimeType)
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function buildSlideTextBlocks(slide) {
+  const bullets = normalizeStringList(slide?.bullets, { maxItems: 6, maxLen: 160 });
+  const leftBullets = normalizeStringList(slide?.leftBullets, { maxItems: 5, maxLen: 160 });
+  const rightBullets = normalizeStringList(slide?.rightBullets, { maxItems: 5, maxLen: 160 });
+  const stats = normalizeStatsList(slide?.stats);
+  const timeline = normalizeTimelineList(slide?.timeline);
+  const body = cleanText(slide?.body, 1000);
+  return {
+    body,
+    bullets,
+    leftBullets,
+    rightBullets,
+    stats,
+    timeline,
+    bulletText: bullets.map((item) => `• ${item}`).join('\n'),
+    leftText: leftBullets.map((item) => `• ${item}`).join('\n'),
+    rightText: rightBullets.map((item) => `• ${item}`).join('\n'),
+    statsText: stats.map((item) => `${item.label}: ${item.value}`).join('\n'),
+    timelineText: timeline.map((item) => `${item.title}: ${item.detail}`).join('\n')
+  };
+}
+
+function composeSourceSummary(deck) {
+  const links = Array.isArray(deck?.sourceLinks) ? deck.sourceLinks.filter(Boolean) : [];
+  return links.length ? `Manbalar: ${links.join(' | ')}` : 'Manbalar: HALLAYM AI research';
+}
+
+async function buildSlideDeckPptxBuffer(deck) {
+  const pptx = new PptxGenJS();
+  const palette = getSlideThemeTokens(deck?.themeId);
+  const heroAsset = await loadDeckHeroAsset(deck);
+  pptx.layout = 'LAYOUT_WIDE';
+  pptx.author = 'HALLAYM AI';
+  pptx.company = 'HALLAYM';
+  pptx.subject = cleanText(deck?.title, 180);
+  pptx.title = cleanText(deck?.title, 180);
+  pptx.lang = normalizeSlideStudioLanguage(deck?.language);
+
+  (Array.isArray(deck?.slides) ? deck.slides : []).forEach((slide, index) => {
+    const page = pptx.addSlide();
+    const blocks = buildSlideTextBlocks(slide);
+    page.background = { color: palette.bg };
+
+    page.addText(cleanText(slide?.kicker || deck?.themeLabel || 'HALLAYM AI', 80), {
+      x: 0.6, y: 0.35, w: 3.2, h: 0.32, fontFace: 'Aptos', fontSize: 10, bold: true, color: palette.accent
+    });
+    page.addText(cleanText(slide?.title, 220) || `Slide ${index + 1}`, {
+      x: 0.6, y: 0.75, w: heroAsset?.dataUri ? 7.6 : 12, h: 0.8, fontFace: 'Aptos Display', fontSize: index === 0 ? 26 : 24, bold: true, color: palette.strong, fit: 'shrink'
+    });
+    if (slide?.subtitle) {
+      page.addText(cleanText(slide.subtitle, 260), {
+        x: 0.6, y: 1.55, w: heroAsset?.dataUri ? 7.4 : 12, h: 0.55, fontFace: 'Aptos', fontSize: 12, color: palette.muted
+      });
+    }
+
+    if (heroAsset?.dataUri && (index === 0 || slide?.layout === 'cover')) {
+      page.addImage({ data: heroAsset.dataUri, x: 9.2, y: 0.8, w: 3.6, h: 2.6 });
+    }
+
+    const bodyY = slide?.subtitle ? 2.15 : 1.75;
+    if (blocks.body) {
+      page.addText(blocks.body, {
+        x: 0.6, y: bodyY, w: heroAsset?.dataUri && index === 0 ? 7.4 : 12, h: 1.25, fontFace: 'Aptos', fontSize: 14, color: palette.text, valign: 'top', fit: 'shrink'
+      });
+    }
+
+    if (slide?.layout === 'split' && (blocks.leftText || blocks.rightText)) {
+      page.addText(blocks.leftText || blocks.bulletText, {
+        x: 0.6, y: 3.2, w: 5.8, h: 2.4, fontFace: 'Aptos', fontSize: 13, color: palette.text, breakLine: false, margin: 0.08
+      });
+      page.addText(blocks.rightText || blocks.bulletText, {
+        x: 6.8, y: 3.2, w: 5.6, h: 2.4, fontFace: 'Aptos', fontSize: 13, color: palette.text, breakLine: false, margin: 0.08
+      });
+    } else if (slide?.layout === 'metrics' && blocks.stats.length) {
+      blocks.stats.slice(0, 4).forEach((item, idx) => {
+        const col = idx % 2;
+        const row = Math.floor(idx / 2);
+        page.addText(`${item.value}\n${item.label}`, {
+          x: 0.6 + (col * 4.1), y: 3 + (row * 1.45), w: 3.7, h: 1.1, fontFace: 'Aptos Display',
+          fontSize: 18, bold: true, color: palette.strong, fill: { color: palette.surface }, line: { color: palette.border }, margin: 0.14, align: 'center', valign: 'mid'
+        });
+      });
+    } else if (slide?.layout === 'timeline' && blocks.timeline.length) {
+      page.addText(blocks.timelineText, {
+        x: 0.75, y: 3.0, w: 11.5, h: 2.6, fontFace: 'Aptos', fontSize: 13, color: palette.text, margin: 0.12
+      });
+    } else if (slide?.layout === 'quote' && slide?.quote) {
+      page.addText(cleanText(slide.quote, 320), {
+        x: 0.9, y: 2.4, w: 11.2, h: 2.3, fontFace: 'Aptos Display', fontSize: 24, italic: true, color: palette.strong, align: 'center', valign: 'mid'
+      });
+      if (slide?.quoteAuthor) {
+        page.addText(cleanText(slide.quoteAuthor, 120), {
+          x: 0.9, y: 4.85, w: 11.2, h: 0.35, fontFace: 'Aptos', fontSize: 12, color: palette.muted, align: 'center'
+        });
+      }
+    } else if (blocks.bulletText) {
+      page.addText(blocks.bulletText, {
+        x: 0.75, y: 3.0, w: 11.2, h: 2.6, fontFace: 'Aptos', fontSize: 13, color: palette.text, margin: 0.08
+      });
+    }
+
+    const footerText = `${cleanText(deck?.watermark, 180)} | ${index + 1}/${(deck?.slides || []).length}`;
+    page.addText(footerText, {
+      x: 0.6, y: 6.85, w: 7.5, h: 0.25, fontFace: 'Aptos', fontSize: 10, color: palette.muted
+    });
+    page.addText(composeSourceSummary(deck), {
+      x: 6.6, y: 6.85, w: 6.1, h: 0.25, fontFace: 'Aptos', fontSize: 9, color: palette.muted, align: 'right'
+    });
+  });
+
+  return pptx.write({ outputType: 'nodebuffer' });
+}
+
+async function streamSlideDeckPdf(res, deck) {
+  const palette = getSlideThemeTokens(deck?.themeId);
+  const heroAsset = await loadDeckHeroAsset(deck);
+  const doc = new PDFDocument({ size: 'A4', margin: 40 });
+  doc.pipe(res);
+
+  const slides = Array.isArray(deck?.slides) ? deck.slides : [];
+  slides.forEach((slide, index) => {
+    if (index > 0) doc.addPage();
+    const blocks = buildSlideTextBlocks(slide);
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+
+    doc.rect(0, 0, pageWidth, pageHeight).fill(`#${palette.bg}`);
+    doc.fillColor(`#${palette.accent}`).fontSize(10).font('Helvetica-Bold').text(cleanText(slide?.kicker || deck?.themeLabel || 'HALLAYM AI', 80), 40, 34);
+    doc.fillColor(`#${palette.strong}`).fontSize(index === 0 ? 24 : 21).font('Helvetica-Bold').text(cleanText(slide?.title, 220) || `Slide ${index + 1}`, 40, 56, {
+      width: heroAsset?.buffer && (index === 0 || slide?.layout === 'cover') ? 320 : 515
+    });
+    doc.fillColor(`#${palette.muted}`).fontSize(11).font('Helvetica');
+    if (slide?.subtitle) {
+      doc.text(cleanText(slide.subtitle, 260), 40, 98, {
+        width: heroAsset?.buffer && (index === 0 || slide?.layout === 'cover') ? 320 : 515
+      });
+    }
+
+    if (heroAsset?.buffer && (index === 0 || slide?.layout === 'cover')) {
+      try {
+        doc.image(heroAsset.buffer, 385, 52, { fit: [165, 120], align: 'center', valign: 'center' });
+      } catch (_) {}
+    }
+
+    let cursorY = slide?.subtitle ? 140 : 116;
+    if (blocks.body) {
+      doc.fillColor(`#${palette.text}`).fontSize(12).font('Helvetica').text(blocks.body, 40, cursorY, { width: 510, align: 'left' });
+      cursorY = doc.y + 14;
+    }
+
+    if (slide?.layout === 'split' && (blocks.leftBullets.length || blocks.rightBullets.length)) {
+      doc.font('Helvetica-Bold').fillColor(`#${palette.strong}`).text(cleanText(slide?.leftTitle, 80) || 'Asosiy qism', 40, cursorY, { width: 240 });
+      doc.font('Helvetica').fillColor(`#${palette.text}`).text(blocks.leftText || blocks.bulletText, 40, cursorY + 18, { width: 240 });
+      doc.font('Helvetica-Bold').fillColor(`#${palette.strong}`).text(cleanText(slide?.rightTitle, 80) || 'Davomi', 305, cursorY, { width: 240 });
+      doc.font('Helvetica').fillColor(`#${palette.text}`).text(blocks.rightText || blocks.bulletText, 305, cursorY + 18, { width: 240 });
+    } else if (slide?.layout === 'metrics' && blocks.stats.length) {
+      blocks.stats.slice(0, 4).forEach((item, idx) => {
+        const col = idx % 2;
+        const row = Math.floor(idx / 2);
+        const x = 40 + (col * 255);
+        const y = cursorY + (row * 82);
+        doc.roundedRect(x, y, 225, 64, 14).fillAndStroke(`#${palette.surface}`, `#${palette.border}`);
+        doc.fillColor(`#${palette.strong}`).fontSize(18).font('Helvetica-Bold').text(item.value, x + 14, y + 12, { width: 197, align: 'center' });
+        doc.fillColor(`#${palette.muted}`).fontSize(11).font('Helvetica').text(item.label, x + 14, y + 36, { width: 197, align: 'center' });
+      });
+    } else if (slide?.layout === 'timeline' && blocks.timeline.length) {
+      blocks.timeline.forEach((item, idx) => {
+        const y = cursorY + (idx * 58);
+        doc.circle(52, y + 9, 7).fill(`#${palette.accent}`);
+        doc.fillColor(`#${palette.strong}`).fontSize(12).font('Helvetica-Bold').text(item.title, 70, y, { width: 470 });
+        doc.fillColor(`#${palette.text}`).fontSize(11).font('Helvetica').text(item.detail, 70, y + 16, { width: 470 });
+      });
+    } else if (slide?.layout === 'quote' && slide?.quote) {
+      doc.fillColor(`#${palette.accent}`).fontSize(50).font('Helvetica-Bold').text('"', 40, cursorY - 6);
+      doc.fillColor(`#${palette.strong}`).fontSize(20).font('Helvetica-Bold').text(cleanText(slide.quote, 320), 74, cursorY, { width: 460, align: 'center' });
+      if (slide?.quoteAuthor) {
+        doc.fillColor(`#${palette.muted}`).fontSize(12).font('Helvetica').text(cleanText(slide.quoteAuthor, 120), 40, doc.y + 12, { width: 500, align: 'center' });
+      }
+    } else if (blocks.bullets.length) {
+      doc.font('Helvetica').fillColor(`#${palette.text}`).fontSize(12).text(blocks.bulletText, 46, cursorY, { width: 500 });
+    }
+
+    const footerY = pageHeight - 42;
+    doc.fillColor(`#${palette.muted}`).fontSize(10).font('Helvetica')
+      .text(cleanText(deck?.watermark, 180), 40, footerY, { width: 260 })
+      .text(composeSourceSummary(deck), 250, footerY, { width: 300, align: 'right' })
+      .text(`${index + 1}/${slides.length}`, 500, footerY, { width: 50, align: 'right' });
+  });
+
+  doc.end();
 }
 
 app.post('/api/assistant/ai', authenticateToken, async (req, res) => {
@@ -3249,7 +4014,10 @@ app.post('/api/slides/generate', authenticateToken, async (req, res) => {
       themeLabel: cleanText(deck.themeLabel, 120),
       slideCount: Array.isArray(deck.slides) ? deck.slides.length : slideCount,
       watermark: cleanText(deck.watermark, 200),
-      aiProvider: cleanText(deck.aiProvider, 32) || 'groq',
+      heroImageUrl: cleanText(deck.heroImageUrl, 500),
+      researchSummary: cleanText(deck.researchSummary, 1800),
+      sourceLinks: Array.isArray(deck.sourceLinks) ? deck.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 3) : [],
+      aiProvider: cleanText(deck.aiProvider, 32) || 'hallaym-ai',
       aiModel: cleanText(deck.aiModel, 120),
       generationMode: cleanText(deck.generationMode, 32) || 'ai',
       slides: Array.isArray(deck.slides) ? deck.slides : []
@@ -3264,7 +4032,7 @@ app.post('/api/slides/generate', authenticateToken, async (req, res) => {
     const msg = String(e?.message || e || 'Slide service unavailable');
     console.error('POST /api/slides/generate error:', msg);
     if (/missing|configured|provider/i.test(msg)) {
-      return res.status(503).json({ error: 'Slide AI provider configured emas. GROQ_API_KEY ni tekshiring.' });
+      return res.status(503).json({ error: 'HALLAYM AI slide xizmati hozircha tayyor emas.' });
     }
     return res.status(500).json({ error: 'Slide service unavailable' });
   }
@@ -3310,6 +4078,51 @@ app.get('/api/slides/:deckId', authenticateToken, async (req, res) => {
   } catch (e) {
     console.error('GET /api/slides/:deckId error:', e);
     return res.status(500).json({ error: 'Failed to load slide deck' });
+  }
+});
+
+app.get('/api/slides/:deckId/export.pdf', authenticateToken, async (req, res) => {
+  try {
+    const deckId = String(req.params.deckId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(deckId)) {
+      return res.status(400).json({ error: 'Invalid deck id' });
+    }
+
+    const deck = await SlideDeck.findOne({ _id: deckId, userId: req.userId }).lean();
+    if (!deck) return res.status(404).json({ error: 'Slide deck not found' });
+
+    const fileName = sanitizeDownloadName(deck.title || 'hallaym-slide-deck', 'pdf');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    await streamSlideDeckPdf(res, serializeSlideDeck(deck));
+  } catch (e) {
+    console.error('GET /api/slides/:deckId/export.pdf error:', e);
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Failed to export PDF' });
+    }
+    res.end();
+  }
+});
+
+app.get('/api/slides/:deckId/export.pptx', authenticateToken, async (req, res) => {
+  try {
+    const deckId = String(req.params.deckId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(deckId)) {
+      return res.status(400).json({ error: 'Invalid deck id' });
+    }
+
+    const deck = await SlideDeck.findOne({ _id: deckId, userId: req.userId }).lean();
+    if (!deck) return res.status(404).json({ error: 'Slide deck not found' });
+
+    const serializedDeck = serializeSlideDeck(deck);
+    const buffer = await buildSlideDeckPptxBuffer(serializedDeck);
+    const fileName = sanitizeDownloadName(deck.title || 'hallaym-slide-deck', 'pptx');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.end(buffer);
+  } catch (e) {
+    console.error('GET /api/slides/:deckId/export.pptx error:', e);
+    return res.status(500).json({ error: 'Failed to export PPTX' });
   }
 });
 
@@ -7994,7 +8807,10 @@ const SlideDeckSchema = new mongoose.Schema({
   themeLabel: { type: String, default: 'Teal Minimal', trim: true, maxlength: 120 },
   slideCount: { type: Number, default: 6, min: 1, max: 12 },
   watermark: { type: String, default: '', trim: true, maxlength: 200 },
-  aiProvider: { type: String, default: 'groq', trim: true, maxlength: 32 },
+  heroImageUrl: { type: String, default: '', trim: true, maxlength: 500 },
+  researchSummary: { type: String, default: '', trim: true, maxlength: 2000 },
+  sourceLinks: [{ type: String, trim: true, maxlength: 500 }],
+  aiProvider: { type: String, default: 'hallaym-ai', trim: true, maxlength: 32 },
   aiModel: { type: String, default: '', trim: true, maxlength: 120 },
   generationMode: { type: String, default: 'ai', trim: true, maxlength: 32 },
   slides: [{

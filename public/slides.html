@@ -45,7 +45,7 @@
     <main class="studio-layout">
       <aside class="control-stack">
         <section class="panel-card welcome-panel">
-          <p class="section-kicker">AI Slide Studio</p>
+          <p class="section-kicker">HALLAYM AI Studio</p>
           <h2 class="section-title">Bir necha soniyada tayyor deck</h2>
           <p class="section-subtitle">Mavzuni kiriting, uslubni tanlang va HALLAYM uchun chiroyli slidelar tayyor bo'ladi. Har bir slide pastida sizning watermark'ingiz chiqadi.</p>
           <div class="welcome-note hidden" id="welcomeNote"></div>
@@ -125,6 +125,8 @@
             </div>
             <div class="workspace-actions">
               <button class="action-btn primary alt" type="button" id="copyOutlineBtn"><i class="fa-solid fa-copy"></i> Outline</button>
+              <button class="action-btn" type="button" id="downloadPdfBtn"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+              <button class="action-btn" type="button" id="downloadPptxBtn"><i class="fa-solid fa-file-powerpoint"></i> PPTX</button>
               <button class="action-btn" type="button" id="autoplayBtn"><i class="fa-solid fa-play"></i> Auto play</button>
               <button class="action-btn primary" type="button" id="presentBtn"><i class="fa-solid fa-display"></i> Taqdimot</button>
             </div>
@@ -132,7 +134,7 @@
         </section>
 
         <section class="panel-card preview-panel">
-          <div id="previewSlot" class="empty-state">AI deck shu yerda ko'rinadi. Chap tomondan mavzuni kiriting yoki tarixdan deck tanlang.</div>
+          <div id="previewSlot" class="empty-state">HALLAYM AI deck shu yerda ko'rinadi. Chap tomondan mavzuni kiriting yoki tarixdan deck tanlang.</div>
           <div class="nav-row">
             <div class="nav-actions">
               <button class="nav-pill" id="prevSlideBtn" type="button"><i class="fa-solid fa-arrow-left"></i> Oldingi</button>
@@ -150,6 +152,7 @@
           <p class="section-kicker">Speaker note</p>
           <h3 class="section-title small-title">Taqdimot izohi</h3>
           <p id="speakerNote">Hozircha speaker note yo'q. Deck tanlanganda AI shu slide uchun qisqa gapirish tavsiyasini ham ko'rsatadi.</p>
+          <div class="sources-wrap" id="sourcesWrap"></div>
         </section>
       </section>
     </main>

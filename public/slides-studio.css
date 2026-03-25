@@ -199,6 +199,10 @@ html.dark .slide-stage{background:rgba(8,24,26,.68);box-shadow:none}
   position:relative;min-height:260px;background:var(--slide-surface,rgba(255,255,255,.74));border:1px solid var(--slide-outline,rgba(15,143,131,.12));
   border-radius:26px;overflow:hidden;display:grid;align-items:end;padding:20px
 }
+.cover-photo{
+  position:absolute;inset:18px 18px 62px;border-radius:20px;background:center/cover no-repeat;
+  border:1px solid rgba(255,255,255,.28);opacity:.92
+}
 .cover-art::before{
   content:"";position:absolute;inset:18px 18px 62px;border-radius:20px;
   background:rgba(255,255,255,.22) url("/assets/landing-hero-illustration.svg") center/contain no-repeat;
@@ -251,6 +255,12 @@ html.dark .slide-stage{background:rgba(8,24,26,.68);box-shadow:none}
 .thumb-track{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 .thumb-card{padding:14px;cursor:pointer}
 .note-card p{margin:0;font-size:15px;line-height:1.65;color:var(--studio-muted)}
+.sources-wrap{display:grid;gap:8px;margin-top:18px}
+.source-link{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;text-decoration:none;
+  color:var(--studio-text-strong);background:rgba(15,143,131,.06);border:1px solid rgba(15,143,131,.12);font-size:13px;font-weight:700
+}
+.source-link span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .present-overlay{
   position:fixed;inset:0;z-index:80;padding:18px;background:rgba(4,11,12,.78);backdrop-filter:blur(10px);

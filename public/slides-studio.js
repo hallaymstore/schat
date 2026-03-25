@@ -53,7 +53,10 @@
     nextSlideBtn: document.getElementById('nextSlideBtn'),
     thumbTrack: document.getElementById('thumbTrack'),
     speakerNote: document.getElementById('speakerNote'),
+    sourcesWrap: document.getElementById('sourcesWrap'),
     copyOutlineBtn: document.getElementById('copyOutlineBtn'),
+    downloadPdfBtn: document.getElementById('downloadPdfBtn'),
+    downloadPptxBtn: document.getElementById('downloadPptxBtn'),
     autoplayBtn: document.getElementById('autoplayBtn'),
     presentBtn: document.getElementById('presentBtn'),
     deleteDeckBtn: document.getElementById('deleteDeckBtn'),
@@ -186,7 +189,7 @@
       slideCount: Number(deck && deck.slideCount || (deck && deck.slides && deck.slides.length) || 0),
       generationMode: deck && deck.generationMode || 'ai',
       createdAt: deck && deck.createdAt || new Date().toISOString(),
-      aiProvider: deck && deck.aiProvider || 'groq'
+      aiProvider: deck && deck.aiProvider || 'hallaym-ai'
     };
   }
 
@@ -221,7 +224,7 @@
           <div class="history-top">
             <div style="min-width:0;">
               <strong>${escapeHtml(deck.title || 'Yangi deck')}</strong>
-              <span>${escapeHtml(deck.subtitle || deck.summary || 'AI slide deck')}</span>
+              <span>${escapeHtml(deck.subtitle || deck.summary || 'HALLAYM AI deck')}</span>
             </div>
             <button class="history-delete" type="button" data-delete-deck="${escapeHtml(deck._id)}" aria-label="Delete deck">
               <i class="fa-solid fa-trash"></i>
@@ -260,12 +263,13 @@
     const slideCount = Number(deck && deck.slideCount || (deck && deck.slides && deck.slides.length) || 0);
     const created = deck && deck.createdAt ? formatDate(deck.createdAt) : '';
     const mode = String(deck && deck.generationMode || 'ai');
-    const provider = String(deck && deck.aiProvider || 'groq').toUpperCase();
+    const sourceCount = Array.isArray(deck && deck.sourceLinks) ? deck.sourceLinks.length : 0;
     els.deckMetaRow.innerHTML = `
       <span class="deck-chip"><i class="fa-solid fa-palette"></i> ${escapeHtml(deck && deck.themeLabel || deck && deck.themeId || 'Theme')}</span>
       <span class="deck-chip"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(String(slideCount))} slide</span>
-      <span class="deck-chip"><i class="fa-solid fa-robot"></i> ${escapeHtml(provider)}</span>
+      <span class="deck-chip"><i class="fa-solid fa-robot"></i> HALLAYM AI</span>
       <span class="deck-chip"><i class="fa-solid fa-sparkles"></i> ${escapeHtml(mode)}</span>
+      ${sourceCount ? `<span class="deck-chip"><i class="fa-solid fa-globe"></i> ${escapeHtml(String(sourceCount))} manba</span>` : ''}
       ${created ? `<span class="deck-chip"><i class="fa-solid fa-clock"></i> ${escapeHtml(created)}</span>` : ''}
     `;
   }
@@ -324,6 +328,7 @@
     const body = escapeHtml(slide && slide.body || '');
     const callout = slide && slide.callout ? `<div class="callout-box">${escapeHtml(slide.callout)}</div>` : '';
     const watermark = escapeHtml(normalizeCopy(deck && deck.watermark || ''));
+    const heroImageUrl = String(deck && deck.heroImageUrl || '').trim();
     const layout = String(slide && slide.layout || 'content');
     const countText = `${index + 1} / ${(deck && deck.slides && deck.slides.length) || 0}`;
     const topLine = `
@@ -347,8 +352,9 @@
               ${callout}
             </div>
             <div class="cover-art">
+              ${heroImageUrl ? `<div class="cover-photo" style="background-image:url('${escapeHtml(heroImageUrl)}')"></div>` : ''}
               <div class="surface-card">
-                <strong>${escapeHtml(deck && deck.themeLabel || 'AI deck')}</strong>
+                <strong>${escapeHtml(deck && deck.themeLabel || 'HALLAYM AI deck')}</strong>
                 <span>${escapeHtml(deck && deck.summary || 'HALLAYM Slide Studio bu deckni presentation-ready korinishda tayyorladi.')}</span>
               </div>
             </div>
@@ -473,12 +479,30 @@
     `;
   }
 
+  function renderSources(deck) {
+    const links = Array.isArray(deck && deck.sourceLinks) ? deck.sourceLinks.filter(Boolean) : [];
+    if (!links.length) {
+      els.sourcesWrap.innerHTML = '';
+      return;
+    }
+    els.sourcesWrap.innerHTML = `
+      <p class="section-kicker" style="margin-top:4px;">Manbalar</p>
+      ${links.map((link, index) => `
+        <a class="source-link" href="${escapeHtml(link)}" target="_blank" rel="noreferrer noopener">
+          <i class="fa-solid fa-link"></i>
+          <span>${escapeHtml(`Manba ${index + 1}: ${link}`)}</span>
+        </a>
+      `).join('')}
+    `;
+  }
+
   function renderEmpty(message) {
     els.previewSlot.className = 'empty-state';
     els.previewSlot.innerHTML = escapeHtml(message);
     els.thumbTrack.innerHTML = '';
     els.slideIndicator.textContent = '0 / 0';
     els.speakerNote.textContent = 'Hozircha speaker note yo\'q.';
+    els.sourcesWrap.innerHTML = '';
     els.deckMetaRow.innerHTML = '';
   }
 
@@ -487,7 +511,7 @@
     if (!deck || !Array.isArray(deck.slides) || !deck.slides.length) {
       els.deckTitle.textContent = 'Slide Studio tayyor';
       els.deckSubtitle.textContent = 'Deck tanlang yoki yangi taqdimot tayyorlang. Slidelar sodda, rasmiy va tushunarli qilib chiqariladi.';
-      renderEmpty('AI deck shu yerda ko\'rinadi. Chap tomondan mavzuni kiriting yoki tarixdan deck tanlang.');
+      renderEmpty('HALLAYM AI deck shu yerda ko\'rinadi. Chap tomondan mavzuni kiriting yoki tarixdan deck tanlang.');
       return;
     }
     if (state.currentIndex >= deck.slides.length) state.currentIndex = deck.slides.length - 1;
@@ -496,6 +520,7 @@
     els.deckTitle.textContent = deck.title || 'Yangi deck';
     els.deckSubtitle.textContent = deck.subtitle || deck.summary || 'AI taqdimot decki';
     renderDeckMeta(deck);
+    renderSources(deck);
     els.previewSlot.className = 'slide-stage';
     els.previewSlot.innerHTML = renderSlideMarkup(deck, slide, state.currentIndex);
     els.slideIndicator.textContent = `${state.currentIndex + 1} / ${deck.slides.length}`;
@@ -521,7 +546,7 @@
     });
     if (state.isPresenting) {
       els.presentDeckTitle.textContent = deck.title || 'Taqdimot';
-      els.presentDeckMeta.textContent = `${deck.themeLabel || deck.themeId || 'Slide Studio'} • ${state.currentIndex + 1} / ${deck.slides.length}`;
+      els.presentDeckMeta.textContent = `${deck.themeLabel || deck.themeId || 'Slide Studio'} | ${state.currentIndex + 1} / ${deck.slides.length}`;
       els.presentSlideSlot.innerHTML = renderSlideMarkup(deck, slide, state.currentIndex);
     }
   }
@@ -591,7 +616,7 @@
     const original = els.generateBtn.innerHTML;
     setButtonLoading(els.generateBtn, true, '<i class="fa-solid fa-spinner fa-spin"></i> Tayyorlanmoqda...');
     els.previewSlot.className = 'loading-state';
-    els.previewSlot.textContent = autoPrompt ? 'Yangi foydalanuvchi uchun demo deck tayyorlanmoqda...' : 'Groq AI slidelarni tayyorlayapti...';
+      els.previewSlot.textContent = autoPrompt ? 'Yangi foydalanuvchi uchun demo deck tayyorlanmoqda...' : 'HALLAYM AI slidelarni tayyorlayapti...';
     try {
       const result = await api('/api/slides/generate', {
         method: 'POST',
@@ -612,7 +637,7 @@
       state.decks = [deckSummary(deck)].concat(state.decks.filter((item) => String(item._id) !== String(deck._id)));
       renderHistory();
       renderDeck();
-      showToast(autoPrompt ? 'Demo deck tayyorlandi.' : 'AI deck tayyor.', 'success');
+      showToast(autoPrompt ? 'Demo deck tayyorlandi.' : 'HALLAYM AI deck tayyor.', 'success');
     } catch (error) {
       renderDeck();
       showToast(error.message || 'Deck tayyorlab bolmadi.', 'error');
@@ -653,6 +678,42 @@
       showToast('Outline nusxalandi.', 'success');
     } catch (_) {
       showToast('Clipboard ga yozib bolmadi.', 'error');
+    }
+  }
+
+  async function downloadDeck(format) {
+    if (!state.currentDeck || !state.currentDeck._id) {
+      showToast('Avval deck tayyorlang.', 'error');
+      return;
+    }
+    const btn = format === 'pdf' ? els.downloadPdfBtn : els.downloadPptxBtn;
+    const original = btn.innerHTML;
+    setButtonLoading(btn, true, format === 'pdf'
+      ? '<i class="fa-solid fa-spinner fa-spin"></i> PDF...'
+      : '<i class="fa-solid fa-spinner fa-spin"></i> PPTX...');
+    try {
+      const response = await fetch(`/api/slides/${encodeURIComponent(state.currentDeck._id)}/export.${format}`, {
+        headers: { Authorization: `Bearer ${state.token}` }
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Export failed (${response.status})`);
+      }
+      const blob = await response.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const safeTitle = String(state.currentDeck.title || 'hallaym-slide-deck').replace(/[<>:"/\\|?*\x00-\x1F]+/g, ' ').trim().replace(/\s+/g, '-');
+      a.href = href;
+      a.download = `${safeTitle || 'hallaym-slide-deck'}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+      showToast(format === 'pdf' ? 'PDF yuklab olindi.' : 'PPTX yuklab olindi.', 'success');
+    } catch (error) {
+      showToast(error.message || 'Yuklab olib bo\'lmadi.', 'error');
+    } finally {
+      setButtonLoading(btn, false, original);
     }
   }
 
@@ -776,6 +837,8 @@
     els.presentNextBtn.addEventListener('click', () => moveSlide(1));
     els.presentCloseBtn.addEventListener('click', exitPresentMode);
     els.copyOutlineBtn.addEventListener('click', copyOutline);
+    els.downloadPdfBtn.addEventListener('click', async () => { await downloadDeck('pdf'); });
+    els.downloadPptxBtn.addEventListener('click', async () => { await downloadDeck('pptx'); });
     els.autoplayBtn.addEventListener('click', toggleAutoplay);
     els.presentBtn.addEventListener('click', enterPresentMode);
     els.deleteDeckBtn.addEventListener('click', async () => {
