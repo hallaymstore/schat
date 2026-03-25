@@ -263,6 +263,372 @@
     
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <style>
+    #progress{
+      background: var(--h-accent) !important;
+    }
+
+    .site-header-shell{
+      padding: 14px 16px !important;
+      border-radius: 28px !important;
+      box-shadow: 0 20px 46px rgba(15,87,79,.12) !important;
+    }
+
+    .site-drawer-shell{
+      padding: 16px !important;
+      background: rgba(255,255,255,.96) !important;
+    }
+
+    html.dark .site-drawer-shell{
+      background: rgba(8,26,28,.96) !important;
+    }
+
+    .landing-hero{
+      position: relative;
+      overflow: hidden;
+      border-radius: 32px;
+      padding: 28px;
+      background: rgba(255,255,255,.78);
+      border: 1px solid rgba(15,143,131,.14);
+      box-shadow: 0 28px 68px rgba(15,87,79,.12);
+    }
+
+    html.dark .landing-hero{
+      background: rgba(7,22,24,.92);
+      box-shadow: 0 30px 80px rgba(0,0,0,.40);
+    }
+
+    .landing-hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: url('/assets/landing-hero-illustration.svg') right -120px bottom -14px / 640px auto no-repeat;
+      opacity:.08;
+      pointer-events:none;
+    }
+
+    html.dark .landing-hero::before{
+      opacity:.12;
+      filter: saturate(.7);
+    }
+
+    .landing-hero__grid{
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.04fr) minmax(320px, .96fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .landing-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding: 11px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(15,143,131,.12);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--h-muted);
+    }
+
+    html.dark .landing-kicker{
+      background: rgba(255,255,255,.06);
+      border-color: rgba(119,208,196,.16);
+    }
+
+    .landing-kicker__dot{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background: var(--h-accent);
+      box-shadow: 0 0 0 6px rgba(15,143,131,.10);
+      flex: none;
+    }
+
+    .landing-subtitle{
+      max-width: 42rem;
+    }
+
+    .landing-actions{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, max-content));
+      gap: 12px;
+      align-items:center;
+      margin-top: 28px;
+    }
+
+    .landing-stats{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .landing-stat{
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.84);
+      border: 1px solid rgba(15,143,131,.12);
+      box-shadow: 0 14px 28px rgba(15,87,79,.08);
+    }
+
+    html.dark .landing-stat{
+      background: rgba(255,255,255,.05);
+      border-color: rgba(119,208,196,.15);
+      box-shadow: none;
+    }
+
+    .landing-trust{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top: 18px;
+    }
+
+    .landing-trust__item{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(15,143,131,.10);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--h-text-strong);
+    }
+
+    html.dark .landing-trust__item{
+      background: rgba(255,255,255,.06);
+      border-color: rgba(119,208,196,.16);
+    }
+
+    .landing-stage{
+      position:relative;
+      min-height: 560px;
+      overflow:hidden;
+      border-radius: 28px;
+      background: #0b1f21;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .landing-stage__poster,
+    .landing-stage__video{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+
+    .landing-stage__poster{
+      opacity:.24;
+      object-position:center;
+    }
+
+    .landing-stage__video{
+      opacity:.54;
+      object-position:center;
+    }
+
+    html.dark .landing-stage__video{
+      opacity:.46;
+    }
+
+    .landing-stage__overlay{
+      position:absolute;
+      inset:0;
+      background: rgba(6,24,24,.34);
+    }
+
+    .landing-stage__frame{
+      position:absolute;
+      inset:18px;
+      border-radius:24px;
+      border:1px solid rgba(255,255,255,.14);
+    }
+
+    .landing-stage__cards{
+      position:relative;
+      z-index:1;
+      min-height:560px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      padding: 22px;
+    }
+
+    .landing-chip-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .landing-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 10px 14px;
+      border-radius:999px;
+      color:#f5fffd;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .landing-stage__bottom{
+      display:grid;
+      gap:14px;
+      justify-items:end;
+    }
+
+    .landing-mini-grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:12px;
+      width:min(100%, 360px);
+    }
+
+    .landing-mini-card{
+      padding: 14px 15px;
+      border-radius:22px;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.18);
+      color:#f4fffd;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .landing-mini-card .label{
+      font-size: 12px;
+      letter-spacing:.08em;
+      text-transform: uppercase;
+      opacity:.72;
+    }
+
+    .landing-mini-card .value{
+      margin-top: 6px;
+      font-weight: 800;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .landing-flow{
+      width:min(100%, 360px);
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(15,143,131,.12);
+      color: var(--h-text-strong);
+      box-shadow: 0 18px 44px rgba(0,0,0,.14);
+    }
+
+    html.dark .landing-flow{
+      background: rgba(9,30,33,.92);
+      border-color: rgba(119,208,196,.18);
+      box-shadow: none;
+    }
+
+    .landing-flow__title{
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--h-muted);
+    }
+
+    .landing-flow__steps{
+      display:flex;
+      align-items:center;
+      flex-wrap:wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .landing-flow__step{
+      padding: 9px 12px;
+      border-radius: 14px;
+      background: var(--h-accent-soft-2);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    html.dark .landing-flow__step{
+      background: rgba(255,255,255,.08);
+    }
+
+    .landing-flow p{
+      margin-top: 12px;
+      font-size: 14px;
+      color: var(--h-muted);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1100px){
+      .landing-hero__grid{
+        grid-template-columns: 1fr;
+      }
+
+      .landing-stage,
+      .landing-stage__cards{
+        min-height: 460px;
+      }
+
+      .landing-stage__bottom{
+        justify-items: stretch;
+      }
+
+      .landing-flow{
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 640px){
+      .site-header-shell{
+        padding: 12px !important;
+      }
+
+      .site-drawer-shell{
+        padding: 14px !important;
+      }
+
+      .landing-hero{
+        padding: 16px;
+      }
+
+      .landing-hero::before{
+        background-size: 420px auto;
+        background-position: right -110px bottom -20px;
+      }
+
+      .landing-actions{
+        grid-template-columns: 1fr;
+      }
+
+      .landing-stats{
+        grid-template-columns: 1fr;
+      }
+
+      .landing-stage,
+      .landing-stage__cards{
+        min-height: 420px;
+      }
+
+      .landing-chip{
+        font-size: 12px;
+      }
+
+      .landing-flow__steps{
+        gap: 8px;
+      }
+    }
+  </style>
 </head>
 
 <body id="top" class="h-full text-slate-900 dark:text-slate-100">
@@ -273,10 +639,10 @@
   <!-- Header -->
   <header class="sticky top-0 z-50">
     <div class="mx-auto max-w-7xl px-4 py-4">
-      <div class="glass rounded-3xl px-4 py-3 flex items-center justify-between">
+      <div class="glass site-header-shell rounded-3xl px-4 py-3 flex items-center justify-between">
         <a href="/index.html" class="flex items-center gap-3">
           <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shadow-glass overflow-hidden"
-     style="background: radial-gradient(120% 120% at 20% 20%, rgba(20,184,166,.35), rgba(2,6,23,.0) 60%), radial-gradient(140% 140% at 80% 80%, rgba(245,158,11,.22), rgba(2,6,23,.0) 60%), rgba(2,6,23,.12);">
+     style="background: rgba(15,143,131,.12); border: 1px solid rgba(15,143,131,.16);">
   <svg viewBox="0 0 120 120" class="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px]" aria-hidden="true">
     <defs>
       <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
@@ -354,11 +720,11 @@
   </div>
 
   <aside id="mobileMenu" class="fixed top-0 right-0 z-[70] h-[100dvh] w-[min(340px,92vw)] translate-x-full transition-transform duration-300 ease-out">
-    <div class="h-full glass border-l border-white/20 dark:border-slate-700/30 p-4">
+    <div class="h-full glass site-drawer-shell border-l border-white/20 dark:border-slate-700/30 p-4">
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shadow-glass overflow-hidden"
-     style="background: radial-gradient(120% 120% at 20% 20%, rgba(20,184,166,.35), rgba(2,6,23,.0) 60%), radial-gradient(140% 140% at 80% 80%, rgba(245,158,11,.22), rgba(2,6,23,.0) 60%), rgba(2,6,23,.12);">
+     style="background: rgba(15,143,131,.12); border: 1px solid rgba(15,143,131,.16);">
   <svg viewBox="0 0 120 120" class="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px]" aria-hidden="true">
     <defs>
       <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
@@ -441,8 +807,120 @@
   </aside>
 
 
+  <section class="mx-auto max-w-7xl px-4 pt-6 pb-10">
+    <div class="landing-hero reveal">
+      <div class="landing-hero__grid">
+        <div class="landing-hero__content">
+          <div class="landing-kicker">
+            <span class="landing-kicker__dot"></span>
+            Talabalar uchun sodda, rasmiy va tushunarli raqamli kampus
+          </div>
+
+          <h1 class="mt-6 text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.05]">
+            Talaba uchun kerakli hamma narsa <span class="u-anim">bitta</span> joyda.
+          </h1>
+
+          <p class="landing-subtitle mt-5 text-lg sm:text-xl muted leading-relaxed">
+            HALLAYM edu kanallar, guruhlar, real-time chat, xizmatlar bozori va Campus Signal'ni bitta sodda interfeysda birlashtiradi.
+            Yangi kirgan foydalanuvchi ham bir qarashda sayt nima haqida ekanini tushunadi.
+          </p>
+
+          <div class="landing-actions">
+            <a href="/register.html" class="btn-primary text-white px-6 py-3 rounded-2xl font-extrabold text-center glow-ring magnet">
+              Boshlash <i class="fa-solid fa-arrow-right ml-2"></i>
+            </a>
+            <a href="/channels.html" class="glass px-6 py-3 rounded-2xl font-extrabold text-center btn-ghost glow-ring">
+              Platformani ko'rish <i class="fa-solid fa-compass ml-2"></i>
+            </a>
+          </div>
+
+          <div class="landing-stats">
+            <div class="landing-stat">
+              <div class="text-xs muted font-semibold">Asosiy bo'limlar</div>
+              <div class="mt-1 text-2xl font-black"><span class="count" data-to="4">0</span> ta</div>
+              <div class="mt-1 text-xs muted2">kanallar, guruhlar, xizmatlar va signal</div>
+            </div>
+            <div class="landing-stat">
+              <div class="text-xs muted font-semibold">Bitta hisob</div>
+              <div class="mt-1 text-2xl font-black"><span class="count" data-to="1">0</span> profil</div>
+              <div class="mt-1 text-xs muted2">hamma sahifaga yagona kirish nuqtasi</div>
+            </div>
+            <div class="landing-stat">
+              <div class="text-xs muted font-semibold">Ishlash tartibi</div>
+              <div class="mt-1 text-2xl font-black"><span class="count" data-to="24">0</span>/7</div>
+              <div class="mt-1 text-xs muted2">moderatsiya, nazorat va xavfsizlik</div>
+            </div>
+          </div>
+
+          <div class="mt-6 text-sm muted2">
+            Platforma mantig'i sodda: avval ma'lumotni olasiz, keyin guruhga kirasiz, keyin yordam topasiz yoki muammo yuborasiz.
+          </div>
+
+          <div class="landing-trust">
+            <div class="landing-trust__item"><i class="fa-solid fa-bullhorn"></i> Rasmiy yangiliklar</div>
+            <div class="landing-trust__item"><i class="fa-solid fa-people-group"></i> O'quv guruhlari</div>
+            <div class="landing-trust__item"><i class="fa-solid fa-store"></i> Talaba xizmatlari</div>
+            <div class="landing-trust__item"><i class="fa-solid fa-bell"></i> Campus Signal</div>
+          </div>
+        </div>
+
+        <div class="landing-stage reveal" aria-label="Platforma taqdimot videosi">
+          <img src="/assets/landing-hero-illustration.svg" alt="" class="landing-stage__poster" />
+          <video class="landing-stage__video" autoplay muted loop playsinline preload="metadata" poster="/assets/landing-hero-illustration.svg">
+            <source src="/assets/hero-campus.mp4" type="video/mp4" />
+          </video>
+          <div class="landing-stage__overlay"></div>
+          <div class="landing-stage__frame"></div>
+
+          <div class="landing-stage__cards">
+            <div class="landing-chip-row">
+              <div class="landing-chip"><i class="fa-solid fa-bullhorn"></i> Kanallar</div>
+              <div class="landing-chip"><i class="fa-solid fa-people-group"></i> Guruhlar</div>
+              <div class="landing-chip"><i class="fa-solid fa-comments"></i> Chat</div>
+            </div>
+
+            <div class="landing-stage__bottom">
+              <div class="landing-mini-grid">
+                <div class="landing-mini-card">
+                  <div class="label">1-qadam</div>
+                  <div class="value">Yangilik va e'lonlarni ko'ring</div>
+                </div>
+                <div class="landing-mini-card">
+                  <div class="label">2-qadam</div>
+                  <div class="value">Fan yoki kurs guruhiga qo'shiling</div>
+                </div>
+                <div class="landing-mini-card">
+                  <div class="label">3-qadam</div>
+                  <div class="value">Talaba xizmatidan foydalaning</div>
+                </div>
+                <div class="landing-mini-card">
+                  <div class="label">4-qadam</div>
+                  <div class="value">Muammoni Campus Signal orqali yuboring</div>
+                </div>
+              </div>
+
+              <div class="landing-flow">
+                <div class="landing-flow__title">Sayt mantig'i</div>
+                <div class="landing-flow__steps">
+                  <span class="landing-flow__step">Kanal</span>
+                  <i class="fa-solid fa-arrow-right-long"></i>
+                  <span class="landing-flow__step">Guruh</span>
+                  <i class="fa-solid fa-arrow-right-long"></i>
+                  <span class="landing-flow__step">Xizmat</span>
+                  <i class="fa-solid fa-arrow-right-long"></i>
+                  <span class="landing-flow__step">Signal</span>
+                </div>
+                <p>Bu landing page foydalanuvchiga birinchi soniyadanoq platformaning vazifasini ko'rsatadi: o'qish, hamkorlik, yordam va yechim.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Hero -->
-  <section class="mx-auto max-w-7xl px-4 pt-10 pb-10">
+  <section class="mx-auto max-w-7xl px-4 pt-10 pb-10" style="display:none">
     <div class="grid lg:grid-cols-2 gap-8 items-center">
       <div class="reveal">
         <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
@@ -1071,6 +1549,11 @@
     // Year
     document.getElementById('year').textContent = new Date().getFullYear();
 
+    // Normalize a few legacy labels that were previously saved with broken apostrophe encoding.
+    document.querySelectorAll('header a[href="/register.html"], #mobileMenu a[href="/register.html"]').forEach((el)=>{
+      el.textContent = "Ro'yxatdan o'tish";
+    });
+
     // Scroll progress
     (function(){
       const bar = document.getElementById('progress');
@@ -1189,5 +1672,3 @@
   <script src="/global-assistant.js" defer></script>
 </body>
 </html>
-
-
