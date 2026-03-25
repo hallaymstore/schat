@@ -2460,14 +2460,17 @@ function buildAssistantSystemPrompt({ mode, user, context }) {
   return base.concat(profile, botRules).join('\n');
 }
 
-async function requestOpenAiCompatibleAnswer({
+async function requestOpenAiCompatibleChat({
   baseUrl,
   apiKey,
   model,
   systemPrompt,
   history,
   userMessage,
-  extraHeaders = {}
+  extraHeaders = {},
+  temperature = 0.4,
+  maxTokens = 600,
+  responseFormat = null
 }) {
   const root = String(baseUrl || '').replace(/\/+$/g, '');
   if (!root || !apiKey || !model) throw new Error('openai-compatible config missing');
@@ -2487,24 +2490,51 @@ async function requestOpenAiCompatibleAnswer({
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       }, extraHeaders || {}),
-      body: JSON.stringify({
+      body: JSON.stringify(Object.assign({
         model,
         messages,
-        temperature: 0.4,
-        max_tokens: 600
-      })
+        temperature,
+        max_tokens: maxTokens
+      }, responseFormat ? { response_format: responseFormat } : {}))
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
       const detail = cleanText(data?.error?.message || data?.message || `HTTP ${r.status}`, 280);
       throw new Error(detail || `HTTP ${r.status}`);
     }
-    const answer = cleanText(data?.choices?.[0]?.message?.content, 4000);
-    if (!answer) throw new Error('Empty AI response');
-    return answer;
+    const content = String(data?.choices?.[0]?.message?.content || '').trim();
+    if (!content) throw new Error('Empty AI response');
+    return { data, content };
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function requestOpenAiCompatibleAnswer({
+  baseUrl,
+  apiKey,
+  model,
+  systemPrompt,
+  history,
+  userMessage,
+  extraHeaders = {},
+  temperature = 0.4,
+  maxTokens = 600
+}) {
+  const { content } = await requestOpenAiCompatibleChat({
+    baseUrl,
+    apiKey,
+    model,
+    systemPrompt,
+    history,
+    userMessage,
+    extraHeaders,
+    temperature,
+    maxTokens
+  });
+  const answer = cleanText(content, 4000);
+  if (!answer) throw new Error('Empty AI response');
+  return answer;
 }
 
 async function requestGeminiAnswer({ apiKey, model, systemPrompt, history, userMessage }) {
@@ -2624,6 +2654,494 @@ async function generateAssistantAiAnswer({ systemPrompt, history, userMessage, r
   throw new Error(lastErr || 'No AI provider configured');
 }
 
+const slideAiRateBuckets = new Map();
+const SLIDE_AI_RATE_WINDOW_MS = Math.max(10_000, Number(process.env.SLIDE_AI_RATE_WINDOW_MS || 10 * 60 * 1000));
+const SLIDE_AI_RATE_MAX = Math.max(2, Number(process.env.SLIDE_AI_RATE_MAX || 12));
+const SLIDE_LAYOUTS = ['cover', 'agenda', 'content', 'split', 'quote', 'timeline', 'metrics', 'closing'];
+const SLIDE_THEME_PRESETS = [
+  { id: 'teal-minimal', label: 'Teal Minimal', mood: 'bright, premium, clean, official' },
+  { id: 'executive-white', label: 'Executive White', mood: 'formal, boardroom, minimalist' },
+  { id: 'midnight-teal', label: 'Midnight Teal', mood: 'dark, premium, high contrast' },
+  { id: 'blueprint-grid', label: 'Blueprint Grid', mood: 'academic, technical, structured' },
+  { id: 'editorial-warm', label: 'Editorial Warm', mood: 'storytelling, elegant, human-centered' },
+  { id: 'campus-card', label: 'Campus Card', mood: 'friendly, student-focused, modern cards' }
+];
+const SLIDE_THEME_MAP = new Map(SLIDE_THEME_PRESETS.map((item) => [item.id, item]));
+const SLIDE_GENERATION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    deck_title: { type: 'string' },
+    deck_subtitle: { type: 'string' },
+    summary: { type: 'string' },
+    theme_id: { type: 'string', enum: SLIDE_THEME_PRESETS.map((item) => item.id) },
+    theme_label: { type: 'string' },
+    slides: {
+      type: 'array',
+      minItems: 4,
+      maxItems: 12,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          layout: { type: 'string', enum: SLIDE_LAYOUTS },
+          kicker: { type: 'string' },
+          title: { type: 'string' },
+          subtitle: { type: 'string' },
+          body: { type: 'string' },
+          bullets: { type: 'array', items: { type: 'string' } },
+          left_title: { type: 'string' },
+          left_bullets: { type: 'array', items: { type: 'string' } },
+          right_title: { type: 'string' },
+          right_bullets: { type: 'array', items: { type: 'string' } },
+          stats: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                label: { type: 'string' },
+                value: { type: 'string' }
+              },
+              required: ['label', 'value']
+            }
+          },
+          timeline: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                title: { type: 'string' },
+                detail: { type: 'string' }
+              },
+              required: ['title', 'detail']
+            }
+          },
+          quote: { type: 'string' },
+          quote_author: { type: 'string' },
+          callout: { type: 'string' },
+          speaker_note: { type: 'string' }
+        },
+        required: [
+          'layout',
+          'kicker',
+          'title',
+          'subtitle',
+          'body',
+          'bullets',
+          'left_title',
+          'left_bullets',
+          'right_title',
+          'right_bullets',
+          'stats',
+          'timeline',
+          'quote',
+          'quote_author',
+          'callout',
+          'speaker_note'
+        ]
+      }
+    }
+  },
+  required: ['deck_title', 'deck_subtitle', 'summary', 'theme_id', 'theme_label', 'slides']
+};
+
+function takeSlideAiRateSlot(key) {
+  const k = String(key || '').trim() || 'anon';
+  const now = Date.now();
+  const from = now - SLIDE_AI_RATE_WINDOW_MS;
+  const arr = (slideAiRateBuckets.get(k) || []).filter((t) => Number(t || 0) >= from);
+  if (arr.length >= SLIDE_AI_RATE_MAX) {
+    const oldest = Number(arr[0] || now);
+    const retryAfterSec = Math.max(1, Math.ceil((oldest + SLIDE_AI_RATE_WINDOW_MS - now) / 1000));
+    slideAiRateBuckets.set(k, arr);
+    return { ok: false, retryAfterSec };
+  }
+  arr.push(now);
+  slideAiRateBuckets.set(k, arr);
+  return { ok: true, retryAfterSec: 0 };
+}
+
+function clampSlideCount(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return 6;
+  return Math.max(4, Math.min(12, Math.round(n)));
+}
+
+function normalizeSlideStudioLanguage(value) {
+  const v = String(value || '').trim().toLowerCase();
+  if (v === 'en' || v === 'english') return 'en';
+  if (v === 'ru' || v === 'russian') return 'ru';
+  return 'uz';
+}
+
+function parseJsonObjectLoose(text) {
+  const src = String(text || '').trim();
+  if (!src) return null;
+  try {
+    return JSON.parse(src);
+  } catch (_) {}
+  const first = src.indexOf('{');
+  const last = src.lastIndexOf('}');
+  if (first >= 0 && last > first) {
+    try {
+      return JSON.parse(src.slice(first, last + 1));
+    } catch (_) {}
+  }
+  return null;
+}
+
+function normalizeStringList(list, { maxItems = 6, maxLen = 160 } = {}) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => cleanText(item, maxLen))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function normalizeStatsList(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => ({
+      label: cleanText(item?.label, 80),
+      value: cleanText(item?.value, 80)
+    }))
+    .filter((item) => item.label && item.value)
+    .slice(0, 4);
+}
+
+function normalizeTimelineList(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => ({
+      title: cleanText(item?.title, 120),
+      detail: cleanText(item?.detail, 220)
+    }))
+    .filter((item) => item.title && item.detail)
+    .slice(0, 5);
+}
+
+function createFallbackSlideDeck({ prompt, slideCount, themeId, watermark }) {
+  const title = cleanText(prompt, 80) || 'Yangi taqdimot';
+  return {
+    title,
+    subtitle: 'AI servis band bo‘lsa ham ishga tayyor draft',
+    summary: 'Asosiy mazmunni sodda va ko‘rgazmali qilib bosqichma-bosqich taqdim eting.',
+    themeId,
+    themeLabel: (SLIDE_THEME_MAP.get(themeId) || SLIDE_THEME_PRESETS[0]).label,
+    watermark,
+    generationMode: 'fallback',
+    slides: [
+      {
+        order: 1,
+        layout: 'cover',
+        kicker: 'Taqdimot',
+        title,
+        subtitle: 'Mavzu bo‘yicha tezkor konspekt va asosiy yo‘nalishlar',
+        body: '',
+        bullets: [],
+        leftTitle: '',
+        leftBullets: [],
+        rightTitle: '',
+        rightBullets: [],
+        stats: [],
+        timeline: [],
+        quote: '',
+        quoteAuthor: '',
+        callout: 'Ma’lumotlar kerak bo‘lsa deckni qayta generatsiya qiling.',
+        speakerNote: 'Kirish, maqsad va nimani ko‘rib chiqishingizni ayting.'
+      },
+      {
+        order: 2,
+        layout: 'agenda',
+        kicker: 'Reja',
+        title: 'Nimani ko‘rib chiqamiz?',
+        subtitle: '',
+        body: '',
+        bullets: [
+          'Muammo yoki vazifa nimadan iborat',
+          'Asosiy g‘oyalar va yechimlar',
+          'Amaliy qadamlar',
+          'Kutiladigan natija'
+        ],
+        leftTitle: '',
+        leftBullets: [],
+        rightTitle: '',
+        rightBullets: [],
+        stats: [],
+        timeline: [],
+        quote: '',
+        quoteAuthor: '',
+        callout: '',
+        speakerNote: 'Tomoshabinga deck strukturasini qisqa ayting.'
+      },
+      {
+        order: 3,
+        layout: 'content',
+        kicker: 'Asosiy mazmun',
+        title: 'Muhim nuqtalar',
+        subtitle: '',
+        body: 'Bu yerga mavzu bo‘yicha AI generatsiya qilgan asosiy mazmun joylashadi.',
+        bullets: [
+          'Fikrlarni sodda ketma-ketlikda ayting',
+          'Har slide bitta asosiy g‘oyani tutsin',
+          'Ortiqcha matndan qoching'
+        ],
+        leftTitle: '',
+        leftBullets: [],
+        rightTitle: '',
+        rightBullets: [],
+        stats: [],
+        timeline: [],
+        quote: '',
+        quoteAuthor: '',
+        callout: '',
+        speakerNote: 'Misol yoki dalil bilan tushuntiring.'
+      },
+      {
+        order: Math.max(4, slideCount),
+        layout: 'closing',
+        kicker: 'Xulosa',
+        title: 'Yakuniy xabar',
+        subtitle: 'Keyingi qadamni aniq ayting',
+        body: '',
+        bullets: [
+          'Asosiy fikrni takrorlang',
+          'Qaror yoki harakatni belgilang',
+          'Savol-javobga o‘ting'
+        ],
+        leftTitle: '',
+        leftBullets: [],
+        rightTitle: '',
+        rightBullets: [],
+        stats: [],
+        timeline: [],
+        quote: '',
+        quoteAuthor: '',
+        callout: watermark,
+        speakerNote: 'Yakuniy slide auditoriyani keyingi qadamga olib borishi kerak.'
+      }
+    ]
+  };
+}
+
+function normalizeSlideDeckPayload(raw, { prompt, slideCount, styleRequested, watermark }) {
+  const fallbackThemeId = SLIDE_THEME_MAP.has(styleRequested) ? styleRequested : 'teal-minimal';
+  const themeId = SLIDE_THEME_MAP.has(raw?.theme_id) ? raw.theme_id : fallbackThemeId;
+  const theme = SLIDE_THEME_MAP.get(themeId) || SLIDE_THEME_PRESETS[0];
+  const desiredCount = clampSlideCount(slideCount);
+  const safeSlides = Array.isArray(raw?.slides) ? raw.slides : [];
+
+  const slides = safeSlides
+    .slice(0, desiredCount)
+    .map((slide, idx) => {
+      const layout = SLIDE_LAYOUTS.includes(String(slide?.layout || '').trim()) ? String(slide.layout).trim() : (idx === 0 ? 'cover' : 'content');
+      const bullets = normalizeStringList(slide?.bullets, { maxItems: 6, maxLen: 160 });
+      const leftBullets = normalizeStringList(slide?.left_bullets, { maxItems: 5, maxLen: 160 });
+      const rightBullets = normalizeStringList(slide?.right_bullets, { maxItems: 5, maxLen: 160 });
+      return {
+        order: idx + 1,
+        layout,
+        kicker: cleanText(slide?.kicker, 120),
+        title: cleanText(slide?.title, 220) || `Slide ${idx + 1}`,
+        subtitle: cleanText(slide?.subtitle, 260),
+        body: cleanText(slide?.body, 1000),
+        bullets,
+        leftTitle: cleanText(slide?.left_title, 120),
+        leftBullets,
+        rightTitle: cleanText(slide?.right_title, 120),
+        rightBullets,
+        stats: normalizeStatsList(slide?.stats),
+        timeline: normalizeTimelineList(slide?.timeline),
+        quote: cleanText(slide?.quote, 320),
+        quoteAuthor: cleanText(slide?.quote_author, 120),
+        callout: cleanText(slide?.callout, 220),
+        speakerNote: cleanText(slide?.speaker_note, 400)
+      };
+    })
+    .filter((slide) => slide.title || slide.quote || slide.body || slide.bullets.length || slide.timeline.length || slide.stats.length);
+
+  if (!slides.length) {
+    return createFallbackSlideDeck({ prompt, slideCount: desiredCount, themeId: fallbackThemeId, watermark });
+  }
+
+  if (slides[0]) slides[0].layout = 'cover';
+  if (slides.length > 1) slides[slides.length - 1].layout = 'closing';
+
+  return {
+    title: cleanText(raw?.deck_title, 200) || cleanText(prompt, 80) || 'Yangi taqdimot',
+    subtitle: cleanText(raw?.deck_subtitle, 240),
+    summary: cleanText(raw?.summary, 600),
+    themeId,
+    themeLabel: cleanText(raw?.theme_label, 120) || theme.label,
+    watermark,
+    generationMode: 'ai',
+    slides
+  };
+}
+
+async function requestGroqSlideDeckJson({ systemPrompt, userMessage }) {
+  const apiKey = String(process.env.GROQ_API_KEY || '').trim();
+  if (!apiKey) throw new Error('GROQ_API_KEY missing');
+
+  const preferredModel = String(process.env.GROQ_SLIDES_MODEL || 'openai/gpt-oss-20b').trim();
+  const fallbackModel = String(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+  const models = Array.from(new Set([preferredModel, fallbackModel].filter(Boolean)));
+  let lastErr = '';
+
+  for (const model of models) {
+    const strictSupported = /^openai\/gpt-oss-/i.test(model);
+    try {
+      const responseFormat = strictSupported
+        ? {
+            type: 'json_schema',
+            json_schema: {
+              name: 'slide_deck',
+              strict: true,
+              schema: SLIDE_GENERATION_SCHEMA
+            }
+          }
+        : { type: 'json_object' };
+
+      const { content } = await requestOpenAiCompatibleChat({
+        baseUrl: 'https://api.groq.com/openai/v1',
+        apiKey,
+        model,
+        systemPrompt,
+        history: [],
+        userMessage,
+        temperature: strictSupported ? 0.2 : 0.3,
+        maxTokens: 2400,
+        responseFormat
+      });
+      const parsed = parseJsonObjectLoose(content);
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('AI JSON parse failed');
+      }
+      return { parsed, model, generationMode: strictSupported ? 'ai' : 'ai-best-effort' };
+    } catch (e) {
+      lastErr = String(e?.message || e || 'slide generation failed');
+      console.warn(`slide ai provider failed (${model}):`, lastErr);
+    }
+  }
+
+  throw new Error(lastErr || 'Groq slide generation failed');
+}
+
+async function generateSlideDeckWithGroq({ user, prompt, audience, language, styleRequested, slideCount }) {
+  const finalLanguage = normalizeSlideStudioLanguage(language);
+  const finalCount = clampSlideCount(slideCount);
+  const finalStyle = SLIDE_THEME_MAP.has(styleRequested) ? styleRequested : 'auto';
+  const watermark = `${cleanText(user?.fullName || user?.username || 'Foydalanuvchi', 80)} tayyorladi • by HALLAYM`;
+  const themeHints = SLIDE_THEME_PRESETS
+    .map((item) => `- ${item.id}: ${item.label} (${item.mood})`)
+    .join('\n');
+  const languageHint = finalLanguage === 'en' ? 'English' : (finalLanguage === 'ru' ? 'Russian' : 'Uzbek');
+  const styleHint = finalStyle === 'auto'
+    ? 'Choose the most appropriate theme for the topic.'
+    : `Prefer this theme id if it fits: ${finalStyle}.`;
+
+  const systemPrompt = [
+    'You create premium but simple slide decks for a university web slide studio.',
+    `Write all slide text in ${languageHint}.`,
+    'Return only structured deck JSON. Do not include markdown, code fences, or explanations.',
+    'Every slide must be easy to understand for beginners.',
+    'Use concise wording. Each bullet should stay short and scannable.',
+    'Vary layouts across the deck so it feels designed, not repetitive.',
+    'First slide must work like a cover. Last slide must work like a closing slide.',
+    styleHint,
+    'Allowed themes:',
+    themeHints
+  ].join('\n');
+
+  const userMessage = [
+    `Topic: ${prompt}`,
+    audience ? `Audience: ${audience}` : 'Audience: general',
+    `Slide count: ${finalCount}`,
+    `Requested style: ${finalStyle}`,
+    'Make the structure presentation-ready, modern, and visually clear.',
+    'Use honest, informative content only.'
+  ].join('\n');
+
+  try {
+    const { parsed, model, generationMode } = await requestGroqSlideDeckJson({ systemPrompt, userMessage });
+    const deck = normalizeSlideDeckPayload(parsed, {
+      prompt,
+      slideCount: finalCount,
+      styleRequested: finalStyle,
+      watermark
+    });
+    deck.aiProvider = 'groq';
+    deck.aiModel = model;
+    deck.generationMode = generationMode || deck.generationMode || 'ai';
+    return deck;
+  } catch (e) {
+    const fallbackThemeId = SLIDE_THEME_MAP.has(finalStyle) ? finalStyle : 'teal-minimal';
+    const deck = createFallbackSlideDeck({
+      prompt,
+      slideCount: finalCount,
+      themeId: fallbackThemeId,
+      watermark
+    });
+    deck.aiProvider = 'groq';
+    deck.aiModel = 'fallback';
+    deck.generationMode = 'fallback';
+    deck.fallbackReason = cleanText(e?.message || e, 280);
+    return deck;
+  }
+}
+
+function serializeSlideDeck(deck, { includeSlides = true } = {}) {
+  if (!deck) return null;
+  const src = (typeof deck.toObject === 'function') ? deck.toObject() : deck;
+  const out = {
+    _id: String(src._id || ''),
+    title: cleanText(src.title, 200),
+    subtitle: cleanText(src.subtitle, 240),
+    summary: cleanText(src.summary, 600),
+    prompt: cleanText(src.prompt, 3000),
+    audience: cleanText(src.audience, 160),
+    language: normalizeSlideStudioLanguage(src.language),
+    styleRequested: cleanText(src.styleRequested, 64) || 'auto',
+    themeId: cleanText(src.themeId, 64) || 'teal-minimal',
+    themeLabel: cleanText(src.themeLabel, 120),
+    slideCount: clampSlideCount(src.slideCount),
+    watermark: cleanText(src.watermark, 200),
+    aiProvider: cleanText(src.aiProvider, 32),
+    aiModel: cleanText(src.aiModel, 120),
+    generationMode: cleanText(src.generationMode, 32) || 'ai',
+    createdAt: src.createdAt || null,
+    updatedAt: src.updatedAt || null
+  };
+
+  if (includeSlides) {
+    out.slides = Array.isArray(src.slides)
+      ? src.slides.map((slide, idx) => ({
+          order: Math.max(1, Number(slide?.order || idx + 1)),
+          layout: SLIDE_LAYOUTS.includes(String(slide?.layout || '').trim()) ? String(slide.layout).trim() : 'content',
+          kicker: cleanText(slide?.kicker, 120),
+          title: cleanText(slide?.title, 220),
+          subtitle: cleanText(slide?.subtitle, 260),
+          body: cleanText(slide?.body, 1000),
+          bullets: normalizeStringList(slide?.bullets, { maxItems: 6, maxLen: 160 }),
+          leftTitle: cleanText(slide?.leftTitle, 120),
+          leftBullets: normalizeStringList(slide?.leftBullets, { maxItems: 5, maxLen: 160 }),
+          rightTitle: cleanText(slide?.rightTitle, 120),
+          rightBullets: normalizeStringList(slide?.rightBullets, { maxItems: 5, maxLen: 160 }),
+          stats: normalizeStatsList(slide?.stats),
+          timeline: normalizeTimelineList(slide?.timeline),
+          quote: cleanText(slide?.quote, 320),
+          quoteAuthor: cleanText(slide?.quoteAuthor, 120),
+          callout: cleanText(slide?.callout, 220),
+          speakerNote: cleanText(slide?.speakerNote, 400)
+        }))
+      : [];
+  }
+
+  return out;
+}
+
 app.post('/api/assistant/ai', authenticateToken, async (req, res) => {
   try {
     if (denyIfMuted(req, res)) return;
@@ -2675,6 +3193,143 @@ app.post('/api/assistant/ai', authenticateToken, async (req, res) => {
       return res.status(503).json({ error: 'AI provider configured emas. API key ni server .env ga qo\'ying.' });
     }
     return res.status(500).json({ error: 'AI service unavailable' });
+  }
+});
+
+app.post('/api/slides/generate', authenticateToken, async (req, res) => {
+  try {
+    if (denyIfMuted(req, res)) return;
+    const userId = String(req.userId || '').trim();
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const rate = takeSlideAiRateSlot(`u:${userId}`);
+    if (!rate.ok) {
+      return res.status(429).json({
+        error: 'Too many slide requests. Please wait a bit.',
+        retryAfterSec: rate.retryAfterSec
+      });
+    }
+
+    const prompt = cleanText(req.body?.prompt, 3000);
+    if (!prompt || prompt.length < 6) {
+      return res.status(400).json({ error: 'prompt required' });
+    }
+
+    const audience = cleanText(req.body?.audience, 160);
+    const language = normalizeSlideStudioLanguage(req.body?.language);
+    const styleRequestedRaw = cleanText(req.body?.styleRequested || req.body?.style || req.body?.themeId, 64);
+    const styleRequested = SLIDE_THEME_MAP.has(styleRequestedRaw) ? styleRequestedRaw : 'auto';
+    const slideCount = clampSlideCount(req.body?.slideCount);
+
+    const me = await User.findById(userId)
+      .select('fullName username role university faculty studyType studyGroup')
+      .lean()
+      .catch(() => null);
+    if (!me) return res.status(404).json({ error: 'User not found' });
+
+    const deck = await generateSlideDeckWithGroq({
+      user: me,
+      prompt,
+      audience,
+      language,
+      styleRequested,
+      slideCount
+    });
+
+    const created = await SlideDeck.create({
+      userId,
+      title: cleanText(deck.title, 200) || cleanText(prompt, 80) || 'Yangi taqdimot',
+      subtitle: cleanText(deck.subtitle, 240),
+      summary: cleanText(deck.summary, 600),
+      prompt,
+      audience,
+      language,
+      styleRequested,
+      themeId: cleanText(deck.themeId, 64) || 'teal-minimal',
+      themeLabel: cleanText(deck.themeLabel, 120),
+      slideCount: Array.isArray(deck.slides) ? deck.slides.length : slideCount,
+      watermark: cleanText(deck.watermark, 200),
+      aiProvider: cleanText(deck.aiProvider, 32) || 'groq',
+      aiModel: cleanText(deck.aiModel, 120),
+      generationMode: cleanText(deck.generationMode, 32) || 'ai',
+      slides: Array.isArray(deck.slides) ? deck.slides : []
+    });
+
+    return res.json({
+      success: true,
+      deck: serializeSlideDeck(created),
+      themePresets: SLIDE_THEME_PRESETS
+    });
+  } catch (e) {
+    const msg = String(e?.message || e || 'Slide service unavailable');
+    console.error('POST /api/slides/generate error:', msg);
+    if (/missing|configured|provider/i.test(msg)) {
+      return res.status(503).json({ error: 'Slide AI provider configured emas. GROQ_API_KEY ni tekshiring.' });
+    }
+    return res.status(500).json({ error: 'Slide service unavailable' });
+  }
+});
+
+app.get('/api/slides', authenticateToken, async (req, res) => {
+  try {
+    const userId = String(req.userId || '').trim();
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    const limitRaw = Number(req.query.limit || 18);
+    const limit = Math.max(1, Math.min(40, Number.isFinite(limitRaw) ? Math.round(limitRaw) : 18));
+
+    const decks = await SlideDeck.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    return res.json({
+      success: true,
+      decks: Array.isArray(decks) ? decks.map((item) => serializeSlideDeck(item, { includeSlides: false })) : [],
+      themePresets: SLIDE_THEME_PRESETS
+    });
+  } catch (e) {
+    console.error('GET /api/slides error:', e);
+    return res.status(500).json({ error: 'Failed to load slide history' });
+  }
+});
+
+app.get('/api/slides/:deckId', authenticateToken, async (req, res) => {
+  try {
+    const deckId = String(req.params.deckId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(deckId)) {
+      return res.status(400).json({ error: 'Invalid deck id' });
+    }
+
+    const deck = await SlideDeck.findOne({ _id: deckId, userId: req.userId }).lean();
+    if (!deck) return res.status(404).json({ error: 'Slide deck not found' });
+
+    return res.json({
+      success: true,
+      deck: serializeSlideDeck(deck)
+    });
+  } catch (e) {
+    console.error('GET /api/slides/:deckId error:', e);
+    return res.status(500).json({ error: 'Failed to load slide deck' });
+  }
+});
+
+app.delete('/api/slides/:deckId', authenticateToken, async (req, res) => {
+  try {
+    const deckId = String(req.params.deckId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(deckId)) {
+      return res.status(400).json({ error: 'Invalid deck id' });
+    }
+
+    const removed = await SlideDeck.findOneAndDelete({ _id: deckId, userId: req.userId }).lean();
+    if (!removed) return res.status(404).json({ error: 'Slide deck not found' });
+
+    return res.json({
+      success: true,
+      deckId
+    });
+  } catch (e) {
+    console.error('DELETE /api/slides/:deckId error:', e);
+    return res.status(500).json({ error: 'Failed to delete slide deck' });
   }
 });
 
@@ -7325,6 +7980,51 @@ const SignalModerationSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const SignalModeration = mongoose.model('SignalModeration', SignalModerationSchema);
+
+const SlideDeckSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  title: { type: String, required: true, trim: true, maxlength: 200 },
+  subtitle: { type: String, default: '', trim: true, maxlength: 240 },
+  summary: { type: String, default: '', trim: true, maxlength: 600 },
+  prompt: { type: String, required: true, trim: true, maxlength: 3000 },
+  audience: { type: String, default: '', trim: true, maxlength: 160 },
+  language: { type: String, default: 'uz', trim: true, maxlength: 16 },
+  styleRequested: { type: String, default: 'auto', trim: true, maxlength: 64 },
+  themeId: { type: String, default: 'teal-minimal', trim: true, maxlength: 64 },
+  themeLabel: { type: String, default: 'Teal Minimal', trim: true, maxlength: 120 },
+  slideCount: { type: Number, default: 6, min: 1, max: 12 },
+  watermark: { type: String, default: '', trim: true, maxlength: 200 },
+  aiProvider: { type: String, default: 'groq', trim: true, maxlength: 32 },
+  aiModel: { type: String, default: '', trim: true, maxlength: 120 },
+  generationMode: { type: String, default: 'ai', trim: true, maxlength: 32 },
+  slides: [{
+    order: { type: Number, default: 1, min: 1, max: 30 },
+    layout: { type: String, default: 'content', trim: true, maxlength: 32 },
+    kicker: { type: String, default: '', trim: true, maxlength: 120 },
+    title: { type: String, required: true, trim: true, maxlength: 220 },
+    subtitle: { type: String, default: '', trim: true, maxlength: 260 },
+    body: { type: String, default: '', trim: true, maxlength: 1000 },
+    bullets: [{ type: String, trim: true, maxlength: 160 }],
+    leftTitle: { type: String, default: '', trim: true, maxlength: 120 },
+    leftBullets: [{ type: String, trim: true, maxlength: 160 }],
+    rightTitle: { type: String, default: '', trim: true, maxlength: 120 },
+    rightBullets: [{ type: String, trim: true, maxlength: 160 }],
+    stats: [{
+      label: { type: String, default: '', trim: true, maxlength: 80 },
+      value: { type: String, default: '', trim: true, maxlength: 80 }
+    }],
+    timeline: [{
+      title: { type: String, default: '', trim: true, maxlength: 120 },
+      detail: { type: String, default: '', trim: true, maxlength: 220 }
+    }],
+    quote: { type: String, default: '', trim: true, maxlength: 320 },
+    quoteAuthor: { type: String, default: '', trim: true, maxlength: 120 },
+    callout: { type: String, default: '', trim: true, maxlength: 220 },
+    speakerNote: { type: String, default: '', trim: true, maxlength: 400 }
+  }]
+}, { timestamps: true });
+SlideDeckSchema.index({ userId: 1, createdAt: -1 });
+const SlideDeck = mongoose.models.SlideDeck || mongoose.model('SlideDeck', SlideDeckSchema);
 
 
 // ==================== ROUTES ====================

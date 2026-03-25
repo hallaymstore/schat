@@ -1,0 +1,814 @@
+(function () {
+  const TOKEN_KEY = 'token';
+  const THEME_KEY = 'theme';
+  const DEFAULT_THEMES = [
+    { id: 'auto', label: 'AI tanlaydi', mood: 'Mavzuga qarab eng mos uslubni tanlaydi.' },
+    { id: 'teal-minimal', label: 'Teal Minimal', mood: 'Oq fon, rasmiy va juda toza korinish.' },
+    { id: 'executive-white', label: 'Executive White', mood: 'Formal, boardroom uslubi, minimal chiziqlar.' },
+    { id: 'midnight-teal', label: 'Midnight Teal', mood: 'Qora fon va och teal aksentlar.' },
+    { id: 'blueprint-grid', label: 'Blueprint Grid', mood: 'Akademik, texnik va gridga tayangan dizayn.' },
+    { id: 'editorial-warm', label: 'Editorial Warm', mood: 'Storytelling va jurnalsimon yumshoq dizayn.' },
+    { id: 'campus-card', label: 'Campus Card', mood: 'Talabalar uchun qulay, kartali va zamonaviy.' }
+  ];
+
+  const state = {
+    token: localStorage.getItem(TOKEN_KEY) || '',
+    me: null,
+    themes: DEFAULT_THEMES.slice(),
+    selectedStyle: 'auto',
+    decks: [],
+    currentDeck: null,
+    currentIndex: 0,
+    autoplayTimer: null,
+    toastTimer: null,
+    isPresenting: false,
+    freshAutoDone: false,
+    qs: new URLSearchParams(window.location.search)
+  };
+
+  const els = {
+    welcomeUserLine: document.getElementById('welcomeUserLine'),
+    dashboardLink: document.getElementById('dashboardLink'),
+    themeToggleBtn: document.getElementById('themeToggleBtn'),
+    logoutBtn: document.getElementById('logoutBtn'),
+    welcomeNote: document.getElementById('welcomeNote'),
+    generatorForm: document.getElementById('generatorForm'),
+    promptInput: document.getElementById('promptInput'),
+    audienceInput: document.getElementById('audienceInput'),
+    languageInput: document.getElementById('languageInput'),
+    slideCountInput: document.getElementById('slideCountInput'),
+    slideCountValue: document.getElementById('slideCountValue'),
+    styleGrid: document.getElementById('styleGrid'),
+    demoDeckBtn: document.getElementById('demoDeckBtn'),
+    resetPromptBtn: document.getElementById('resetPromptBtn'),
+    refreshHistoryBtn: document.getElementById('refreshHistoryBtn'),
+    generateBtn: document.getElementById('generateBtn'),
+    historyList: document.getElementById('historyList'),
+    deckTitle: document.getElementById('deckTitle'),
+    deckSubtitle: document.getElementById('deckSubtitle'),
+    deckMetaRow: document.getElementById('deckMetaRow'),
+    previewSlot: document.getElementById('previewSlot'),
+    slideIndicator: document.getElementById('slideIndicator'),
+    prevSlideBtn: document.getElementById('prevSlideBtn'),
+    nextSlideBtn: document.getElementById('nextSlideBtn'),
+    thumbTrack: document.getElementById('thumbTrack'),
+    speakerNote: document.getElementById('speakerNote'),
+    copyOutlineBtn: document.getElementById('copyOutlineBtn'),
+    autoplayBtn: document.getElementById('autoplayBtn'),
+    presentBtn: document.getElementById('presentBtn'),
+    deleteDeckBtn: document.getElementById('deleteDeckBtn'),
+    presentOverlay: document.getElementById('presentOverlay'),
+    presentDeckTitle: document.getElementById('presentDeckTitle'),
+    presentDeckMeta: document.getElementById('presentDeckMeta'),
+    presentSlideSlot: document.getElementById('presentSlideSlot'),
+    presentPrevBtn: document.getElementById('presentPrevBtn'),
+    presentNextBtn: document.getElementById('presentNextBtn'),
+    presentCloseBtn: document.getElementById('presentCloseBtn'),
+    toast: document.getElementById('toast')
+  };
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function normalizeCopy(value) {
+    return String(value || '')
+      .replace(/вЂў/g, '|')
+      .replace(/вЂ™/g, "'")
+      .replace(/вЂ/g, "'");
+  }
+
+  function showToast(message, type) {
+    if (!message) return;
+    clearTimeout(state.toastTimer);
+    els.toast.textContent = message;
+    els.toast.className = `toast ${type || ''}`.trim();
+    els.toast.classList.remove('hidden');
+    state.toastTimer = window.setTimeout(() => {
+      els.toast.classList.add('hidden');
+    }, 3400);
+  }
+
+  function setButtonLoading(btn, loading, html) {
+    if (!btn) return;
+    btn.classList.toggle('is-loading', !!loading);
+    btn.disabled = !!loading;
+    if (html) btn.innerHTML = html;
+  }
+
+  function normalizeNextPath(raw) {
+    const value = String(raw || '').trim();
+    if (!value.startsWith('/')) return '';
+    if (value.startsWith('//')) return '';
+    return value;
+  }
+
+  function dashboardPathForRole(role) {
+    const normalized = String(role || '').toLowerCase();
+    if (normalized === 'teacher') return '/teacher-dashboard.html';
+    if (normalized === 'admin') return '/admin-dashboard.html';
+    if (normalized === 'organizer') return '/organizer.html';
+    return '/student-dashboard.html';
+  }
+
+  function formatDate(value) {
+    try {
+      return new Intl.DateTimeFormat('uz-UZ', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(new Date(value));
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark');
+    const next = isDark ? 'light' : 'dark';
+    html.classList.toggle('dark', next === 'dark');
+    localStorage.setItem(THEME_KEY, next);
+    syncThemeButton();
+  }
+
+  function syncThemeButton() {
+    const isDark = document.documentElement.classList.contains('dark');
+    els.themeToggleBtn.innerHTML = isDark
+      ? '<i class="fa-solid fa-sun"></i> Kunduzgi'
+      : '<i class="fa-solid fa-moon"></i> Tungi';
+  }
+
+  async function api(path, options) {
+    const headers = Object.assign({}, options && options.headers || {});
+    if (state.token) headers.Authorization = `Bearer ${state.token}`;
+    if (!headers['Content-Type'] && options && options.body && !(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
+    const response = await fetch(path, Object.assign({}, options || {}, { headers }));
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem(TOKEN_KEY);
+        window.location.href = '/login.html?next=' + encodeURIComponent('/slides.html');
+      }
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+    return data;
+  }
+
+  function mergeThemePresets(list) {
+    if (!Array.isArray(list) || !list.length) return;
+    const map = new Map(DEFAULT_THEMES.map((item) => [item.id, Object.assign({}, item)]));
+    list.forEach((item) => {
+      const id = String(item && item.id || '').trim();
+      if (!id) return;
+      map.set(id, { id, label: String(item.label || id), mood: String(item.mood || '') });
+    });
+    state.themes = [{ id: 'auto', label: 'AI tanlaydi', mood: 'Mavzuga qarab eng mos uslubni tanlaydi.' }]
+      .concat(Array.from(map.values()).filter((item) => item.id !== 'auto'));
+  }
+
+  function deckSummary(deck) {
+    return {
+      _id: deck && deck._id || '',
+      title: deck && deck.title || 'Yangi deck',
+      subtitle: deck && deck.subtitle || '',
+      summary: deck && deck.summary || '',
+      themeId: deck && deck.themeId || 'teal-minimal',
+      themeLabel: deck && deck.themeLabel || 'Teal Minimal',
+      slideCount: Number(deck && deck.slideCount || (deck && deck.slides && deck.slides.length) || 0),
+      generationMode: deck && deck.generationMode || 'ai',
+      createdAt: deck && deck.createdAt || new Date().toISOString(),
+      aiProvider: deck && deck.aiProvider || 'groq'
+    };
+  }
+
+  function renderStyleGrid() {
+    els.styleGrid.innerHTML = state.themes.map((theme) => {
+      const active = state.selectedStyle === theme.id ? ' active' : '';
+      return `
+        <button class="style-card${active}" type="button" data-style-id="${escapeHtml(theme.id)}">
+          <strong>${escapeHtml(theme.label)}</strong>
+          <span>${escapeHtml(theme.mood || 'Premium va sodda korinish.')}</span>
+        </button>
+      `;
+    }).join('');
+    els.styleGrid.querySelectorAll('[data-style-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.selectedStyle = btn.getAttribute('data-style-id') || 'auto';
+        renderStyleGrid();
+      });
+    });
+  }
+
+  function renderHistory() {
+    if (!state.decks.length) {
+      els.historyList.innerHTML = '<div class="empty-state" style="min-height:180px;">Hozircha deck yo\'q. Birinchi taqdimotingizni tayyorlab ko\'ring.</div>';
+      return;
+    }
+    const currentId = String(state.currentDeck && state.currentDeck._id || '');
+    els.historyList.innerHTML = state.decks.map((deck) => {
+      const active = currentId && currentId === String(deck._id || '') ? ' active' : '';
+      return `
+        <div class="history-card${active}" data-open-deck="${escapeHtml(deck._id)}">
+          <div class="history-top">
+            <div style="min-width:0;">
+              <strong>${escapeHtml(deck.title || 'Yangi deck')}</strong>
+              <span>${escapeHtml(deck.subtitle || deck.summary || 'AI slide deck')}</span>
+            </div>
+            <button class="history-delete" type="button" data-delete-deck="${escapeHtml(deck._id)}" aria-label="Delete deck">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          <div class="history-meta">
+            <span>${escapeHtml(deck.themeLabel || deck.themeId || 'Theme')}</span>
+            <span>${escapeHtml(String(deck.slideCount || 0))} slide</span>
+          </div>
+          <div class="history-meta">
+            <span>${escapeHtml(deck.generationMode || 'ai')}</span>
+            <span>${escapeHtml(formatDate(deck.createdAt))}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+    els.historyList.querySelectorAll('[data-open-deck]').forEach((card) => {
+      card.addEventListener('click', async (event) => {
+        if (event.target.closest('[data-delete-deck]')) return;
+        const deckId = card.getAttribute('data-open-deck');
+        if (!deckId) return;
+        await openDeck(deckId, true);
+      });
+    });
+    els.historyList.querySelectorAll('[data-delete-deck]').forEach((btn) => {
+      btn.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        const deckId = btn.getAttribute('data-delete-deck');
+        if (!deckId) return;
+        await deleteDeck(deckId);
+      });
+    });
+  }
+
+  function renderDeckMeta(deck) {
+    const slideCount = Number(deck && deck.slideCount || (deck && deck.slides && deck.slides.length) || 0);
+    const created = deck && deck.createdAt ? formatDate(deck.createdAt) : '';
+    const mode = String(deck && deck.generationMode || 'ai');
+    const provider = String(deck && deck.aiProvider || 'groq').toUpperCase();
+    els.deckMetaRow.innerHTML = `
+      <span class="deck-chip"><i class="fa-solid fa-palette"></i> ${escapeHtml(deck && deck.themeLabel || deck && deck.themeId || 'Theme')}</span>
+      <span class="deck-chip"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(String(slideCount))} slide</span>
+      <span class="deck-chip"><i class="fa-solid fa-robot"></i> ${escapeHtml(provider)}</span>
+      <span class="deck-chip"><i class="fa-solid fa-sparkles"></i> ${escapeHtml(mode)}</span>
+      ${created ? `<span class="deck-chip"><i class="fa-solid fa-clock"></i> ${escapeHtml(created)}</span>` : ''}
+    `;
+  }
+
+  function buildPointList(list) {
+    if (!Array.isArray(list) || !list.length) return '';
+    return `<ul class="point-list">${list.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+  }
+
+  function buildChipList(list) {
+    if (!Array.isArray(list) || !list.length) return '';
+    return `<div class="chip-list">${list.slice(0, 4).map((item) => `<div class="chip-item">${escapeHtml(item)}</div>`).join('')}</div>`;
+  }
+
+  function buildAgendaList(list) {
+    if (!Array.isArray(list) || !list.length) return '';
+    return `<div class="agenda-grid">${list.map((item, index) => `
+      <div class="agenda-item">
+        <span class="agenda-index">${index + 1}</span>
+        <div class="agenda-copy">
+          <strong>${escapeHtml(item)}</strong>
+          <span>Ushbu qismni qisqa va aniq tushuntiring.</span>
+        </div>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function buildTimeline(list) {
+    if (!Array.isArray(list) || !list.length) return '';
+    return `<div class="timeline-list">${list.map((item, index) => `
+      <div class="timeline-item">
+        <span class="timeline-index">${index + 1}</span>
+        <div class="timeline-copy">
+          <strong>${escapeHtml(item.title || 'Bosqich')}</strong>
+          <span>${escapeHtml(item.detail || '')}</span>
+        </div>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function buildStats(list) {
+    if (!Array.isArray(list) || !list.length) return '';
+    return `<div class="metric-grid">${list.map((item) => `
+      <div class="stat-card">
+        <strong>${escapeHtml(item.value || '')}</strong>
+        <span>${escapeHtml(item.label || '')}</span>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function renderSlideMarkup(deck, slide, index) {
+    const themeId = String(deck && deck.themeId || 'teal-minimal');
+    const title = escapeHtml(slide && slide.title || `Slide ${index + 1}`);
+    const subtitle = escapeHtml(slide && slide.subtitle || deck && deck.subtitle || '');
+    const kicker = escapeHtml(slide && slide.kicker || deck && deck.themeLabel || 'Slide');
+    const body = escapeHtml(slide && slide.body || '');
+    const callout = slide && slide.callout ? `<div class="callout-box">${escapeHtml(slide.callout)}</div>` : '';
+    const watermark = escapeHtml(normalizeCopy(deck && deck.watermark || ''));
+    const layout = String(slide && slide.layout || 'content');
+    const countText = `${index + 1} / ${(deck && deck.slides && deck.slides.length) || 0}`;
+    const topLine = `
+      <div class="slide-topline">
+        <span>${escapeHtml(deck && deck.themeLabel || deck && deck.themeId || 'Slide Studio')}</span>
+        <span>${countText}</span>
+      </div>
+    `;
+    let content = '';
+
+    if (layout === 'cover') {
+      content = `
+        <div class="slide-body">
+          <span class="slide-kicker">${kicker}</span>
+          <div class="cover-grid">
+            <div style="display:grid;gap:16px;align-content:start;">
+              <h3 class="slide-title">${title}</h3>
+              ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
+              ${body ? `<p class="slide-paragraph">${body}</p>` : ''}
+              ${buildChipList(slide && slide.bullets || [])}
+              ${callout}
+            </div>
+            <div class="cover-art">
+              <div class="surface-card">
+                <strong>${escapeHtml(deck && deck.themeLabel || 'AI deck')}</strong>
+                <span>${escapeHtml(deck && deck.summary || 'HALLAYM Slide Studio bu deckni presentation-ready korinishda tayyorladi.')}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (layout === 'agenda') {
+      content = `
+        <div class="slide-body">
+          <span class="slide-kicker">${kicker}</span>
+          <h3 class="slide-title medium">${title}</h3>
+          ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
+          ${buildAgendaList(slide && slide.bullets || [])}
+          ${callout}
+        </div>
+      `;
+    } else if (layout === 'split') {
+      const leftTitle = escapeHtml(slide && slide.leftTitle || 'Asosiy qism');
+      const rightTitle = escapeHtml(slide && slide.rightTitle || 'Muhim nuqtalar');
+      const leftBullets = Array.isArray(slide && slide.leftBullets) ? slide.leftBullets : [];
+      const rightBullets = Array.isArray(slide && slide.rightBullets) ? slide.rightBullets : [];
+      content = `
+        <div class="slide-body">
+          <span class="slide-kicker">${kicker}</span>
+          <h3 class="slide-title medium">${title}</h3>
+          ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
+          <div class="split-grid${(!leftBullets.length && !rightBullets.length) ? ' single' : ''}">
+            <div class="surface-card">
+              <strong>${leftTitle}</strong>
+              <span>${body || 'Mazmunni chap tarafda qisqa blok bilan tushuntiring.'}</span>
+              ${buildPointList(leftBullets.length ? leftBullets : (slide && slide.bullets || []))}
+            </div>
+            ${leftBullets.length || rightBullets.length ? `
+              <div class="surface-card">
+                <strong>${rightTitle}</strong>
+                <span>${escapeHtml(slide && slide.callout || 'Qisqa dalillar, misollar yoki actions.')}</span>
+                ${buildPointList(rightBullets.length ? rightBullets : (slide && slide.bullets || []))}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    } else if (layout === 'quote') {
+      content = `
+        <div class="slide-body">
+          <div class="quote-block">
+            <span class="quote-mark">"</span>
+            <p class="quote-text">${escapeHtml(slide && slide.quote || slide && slide.title || '')}</p>
+            ${slide && slide.quoteAuthor ? `<p class="quote-author">${escapeHtml(slide.quoteAuthor)}</p>` : ''}
+            ${callout}
+          </div>
+        </div>
+      `;
+    } else if (layout === 'timeline') {
+      content = `
+        <div class="slide-body">
+          <span class="slide-kicker">${kicker}</span>
+          <h3 class="slide-title medium">${title}</h3>
+          ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
+          ${buildTimeline(slide && slide.timeline || []) || buildPointList(slide && slide.bullets || [])}
+        </div>
+      `;
+    } else if (layout === 'metrics') {
+      content = `
+        <div class="slide-body">
+          <span class="slide-kicker">${kicker}</span>
+          <h3 class="slide-title medium">${title}</h3>
+          ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
+          ${buildStats(slide && slide.stats || []) || buildChipList(slide && slide.bullets || [])}
+          ${body ? `<p class="slide-paragraph">${body}</p>` : ''}
+          ${callout}
+        </div>
+      `;
+    } else if (layout === 'closing') {
+      content = `
+        <div class="slide-body">
+          <span class="slide-kicker">${kicker}</span>
+          <div class="closing-grid">
+            <div style="display:grid;gap:16px;align-content:start;">
+              <h3 class="slide-title">${title}</h3>
+              ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
+              ${body ? `<p class="slide-paragraph">${body}</p>` : ''}
+              ${buildPointList(slide && slide.bullets || [])}
+            </div>
+            <div class="surface-card" style="display:grid;gap:14px;align-content:start;">
+              <strong>Keyingi qadam</strong>
+              <span>${escapeHtml(slide && slide.callout || 'Yakuniy xulosa, action yoki savol-javob chaqiruvi shu yerda turadi.')}</span>
+              <div class="callout-box">${escapeHtml(deck && deck.watermark || '')}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      const bullets = Array.isArray(slide && slide.bullets) ? slide.bullets : [];
+      content = `
+        <div class="slide-body">
+          <span class="slide-kicker">${kicker}</span>
+          <div class="content-grid${bullets.length ? '' : ' single'}">
+            <div style="display:grid;gap:16px;align-content:start;">
+              <h3 class="slide-title medium">${title}</h3>
+              ${subtitle ? `<p class="slide-subtitle">${subtitle}</p>` : ''}
+              ${body ? `<p class="slide-paragraph">${body}</p>` : ''}
+              ${callout}
+            </div>
+            ${bullets.length ? `<div class="surface-card">${buildPointList(bullets)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="slide-canvas" data-theme="${escapeHtml(themeId)}">
+        <div class="slide-shell">
+          ${topLine}
+          ${content}
+          <div class="slide-footer">
+            <span>${watermark || '<strong>by HALLAYM</strong>'}</span>
+            <strong>${countText}</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderEmpty(message) {
+    els.previewSlot.className = 'empty-state';
+    els.previewSlot.innerHTML = escapeHtml(message);
+    els.thumbTrack.innerHTML = '';
+    els.slideIndicator.textContent = '0 / 0';
+    els.speakerNote.textContent = 'Hozircha speaker note yo\'q.';
+    els.deckMetaRow.innerHTML = '';
+  }
+
+  function renderDeck() {
+    const deck = state.currentDeck;
+    if (!deck || !Array.isArray(deck.slides) || !deck.slides.length) {
+      els.deckTitle.textContent = 'Slide Studio tayyor';
+      els.deckSubtitle.textContent = 'Deck tanlang yoki yangi taqdimot tayyorlang. Slidelar sodda, rasmiy va tushunarli qilib chiqariladi.';
+      renderEmpty('AI deck shu yerda ko\'rinadi. Chap tomondan mavzuni kiriting yoki tarixdan deck tanlang.');
+      return;
+    }
+    if (state.currentIndex >= deck.slides.length) state.currentIndex = deck.slides.length - 1;
+    if (state.currentIndex < 0) state.currentIndex = 0;
+    const slide = deck.slides[state.currentIndex];
+    els.deckTitle.textContent = deck.title || 'Yangi deck';
+    els.deckSubtitle.textContent = deck.subtitle || deck.summary || 'AI taqdimot decki';
+    renderDeckMeta(deck);
+    els.previewSlot.className = 'slide-stage';
+    els.previewSlot.innerHTML = renderSlideMarkup(deck, slide, state.currentIndex);
+    els.slideIndicator.textContent = `${state.currentIndex + 1} / ${deck.slides.length}`;
+    els.speakerNote.textContent = slide.speakerNote || 'Bu slide uchun alohida speaker note kelmagan. Sarlavha va punktlar boyicha qisqa izoh bering.';
+    els.thumbTrack.innerHTML = deck.slides.map((item, index) => {
+      const active = index === state.currentIndex ? ' active' : '';
+      return `
+        <button class="thumb-card${active}" type="button" data-slide-index="${index}">
+          <strong>${escapeHtml(item.title || `Slide ${index + 1}`)}</strong>
+          <span>${escapeHtml(item.kicker || item.layout || 'Slide')}</span>
+          <div class="thumb-meta">
+            <span>${escapeHtml(item.layout || 'content')}</span>
+            <span>${index + 1}</span>
+          </div>
+        </button>
+      `;
+    }).join('');
+    els.thumbTrack.querySelectorAll('[data-slide-index]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.currentIndex = Number(btn.getAttribute('data-slide-index') || 0);
+        renderDeck();
+      });
+    });
+    if (state.isPresenting) {
+      els.presentDeckTitle.textContent = deck.title || 'Taqdimot';
+      els.presentDeckMeta.textContent = `${deck.themeLabel || deck.themeId || 'Slide Studio'} • ${state.currentIndex + 1} / ${deck.slides.length}`;
+      els.presentSlideSlot.innerHTML = renderSlideMarkup(deck, slide, state.currentIndex);
+    }
+  }
+
+  async function loadHistory() {
+    const result = await api('/api/slides?limit=24');
+    mergeThemePresets(result.themePresets);
+    renderStyleGrid();
+    state.decks = Array.isArray(result.decks) ? result.decks : [];
+    renderHistory();
+    if (!state.currentDeck && state.decks.length) {
+      await openDeck(state.decks[0]._id, false);
+    }
+  }
+
+  async function openDeck(deckId, withToast) {
+    if (!deckId) return;
+    const result = await api(`/api/slides/${encodeURIComponent(deckId)}`);
+    state.currentDeck = result.deck || null;
+    state.currentIndex = 0;
+    renderHistory();
+    renderDeck();
+    if (withToast) showToast('Deck ochildi.', 'success');
+  }
+
+  async function deleteDeck(deckId) {
+    if (!deckId) return;
+    if (!window.confirm('Ushbu deckni ochirib tashlaysizmi?')) return;
+    await api(`/api/slides/${encodeURIComponent(deckId)}`, { method: 'DELETE' });
+    state.decks = state.decks.filter((item) => String(item._id) !== String(deckId));
+    if (state.currentDeck && String(state.currentDeck._id) === String(deckId)) {
+      state.currentDeck = null;
+      state.currentIndex = 0;
+    }
+    renderHistory();
+    if (!state.currentDeck && state.decks.length) await openDeck(state.decks[0]._id, false);
+    else renderDeck();
+    showToast('Deck ochirildi.', 'success');
+  }
+
+  function buildWelcomePrompt() {
+    const user = state.me || {};
+    const role = String(user.role || 'student').toLowerCase();
+    const roleLabel = role === 'teacher' ? 'oqituvchi' : (role === 'admin' ? 'platforma boshqaruvi' : (role === 'organizer' ? 'tashkilotchi' : 'talaba'));
+    const uni = user.university ? ` ${user.university} uchun` : '';
+    return `${roleLabel}${uni} HALLAYM Slide Studio tanishtiruv taqdimoti`;
+  }
+
+  function defaultAudience() {
+    const role = String(state.me && state.me.role || 'student').toLowerCase();
+    if (role === 'teacher') return 'Teacherlar va talabalar';
+    if (role === 'admin') return 'Platforma jamoasi va foydalanuvchilar';
+    if (role === 'organizer') return 'Tadbir qatnashchilari';
+    return 'Talabalar va boshlovchilar';
+  }
+
+  async function generateDeck(autoPrompt) {
+    const prompt = els.promptInput.value.trim();
+    const audience = els.audienceInput.value.trim();
+    const language = els.languageInput.value;
+    const slideCount = Number(els.slideCountInput.value || 6);
+    if (!prompt) {
+      showToast('Avval mavzuni yozing.', 'error');
+      els.promptInput.focus();
+      return;
+    }
+    const original = els.generateBtn.innerHTML;
+    setButtonLoading(els.generateBtn, true, '<i class="fa-solid fa-spinner fa-spin"></i> Tayyorlanmoqda...');
+    els.previewSlot.className = 'loading-state';
+    els.previewSlot.textContent = autoPrompt ? 'Yangi foydalanuvchi uchun demo deck tayyorlanmoqda...' : 'Groq AI slidelarni tayyorlayapti...';
+    try {
+      const result = await api('/api/slides/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          prompt,
+          audience,
+          language,
+          slideCount,
+          styleRequested: state.selectedStyle
+        })
+      });
+      mergeThemePresets(result.themePresets);
+      renderStyleGrid();
+      const deck = result.deck || null;
+      if (!deck) throw new Error('Deck empty');
+      state.currentDeck = deck;
+      state.currentIndex = 0;
+      state.decks = [deckSummary(deck)].concat(state.decks.filter((item) => String(item._id) !== String(deck._id)));
+      renderHistory();
+      renderDeck();
+      showToast(autoPrompt ? 'Demo deck tayyorlandi.' : 'AI deck tayyor.', 'success');
+    } catch (error) {
+      renderDeck();
+      showToast(error.message || 'Deck tayyorlab bolmadi.', 'error');
+    } finally {
+      setButtonLoading(els.generateBtn, false, original);
+    }
+  }
+
+  function outlineText(deck) {
+    if (!deck || !Array.isArray(deck.slides)) return '';
+    return [
+      deck.title || 'Presentation',
+      deck.subtitle || '',
+      ''
+    ].concat(deck.slides.map((slide, index) => {
+      const lines = [`${index + 1}. ${slide.title || `Slide ${index + 1}`}`];
+      if (slide.subtitle) lines.push(`   ${slide.subtitle}`);
+      if (slide.body) lines.push(`   ${slide.body}`);
+      const group = []
+        .concat(Array.isArray(slide.bullets) ? slide.bullets : [])
+        .concat(Array.isArray(slide.leftBullets) ? slide.leftBullets : [])
+        .concat(Array.isArray(slide.rightBullets) ? slide.rightBullets : []);
+      group.slice(0, 6).forEach((item) => lines.push(`   - ${item}`));
+      if (Array.isArray(slide.stats)) slide.stats.forEach((item) => lines.push(`   - ${item.label}: ${item.value}`));
+      if (Array.isArray(slide.timeline)) slide.timeline.forEach((item) => lines.push(`   - ${item.title}: ${item.detail}`));
+      if (slide.quote) lines.push(`   - Quote: ${slide.quote}`);
+      return lines.join('\n');
+    })).join('\n');
+  }
+
+  async function copyOutline() {
+    if (!state.currentDeck) {
+      showToast('Avval deck oching.', 'error');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(outlineText(state.currentDeck));
+      showToast('Outline nusxalandi.', 'success');
+    } catch (_) {
+      showToast('Clipboard ga yozib bolmadi.', 'error');
+    }
+  }
+
+  function toggleAutoplay() {
+    if (!state.currentDeck || !state.currentDeck.slides || !state.currentDeck.slides.length) {
+      showToast('Auto play uchun deck kerak.', 'error');
+      return;
+    }
+    if (state.autoplayTimer) {
+      clearInterval(state.autoplayTimer);
+      state.autoplayTimer = null;
+      els.autoplayBtn.innerHTML = '<i class="fa-solid fa-play"></i> Auto play';
+      showToast('Auto play toxtatildi.');
+      return;
+    }
+    state.autoplayTimer = window.setInterval(() => {
+      const total = state.currentDeck && state.currentDeck.slides ? state.currentDeck.slides.length : 0;
+      if (!total) return;
+      state.currentIndex = (state.currentIndex + 1) % total;
+      renderDeck();
+    }, 5000);
+    els.autoplayBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Stop';
+    showToast('Auto play ishga tushdi.', 'success');
+  }
+
+  function enterPresentMode() {
+    if (!state.currentDeck || !state.currentDeck.slides || !state.currentDeck.slides.length) {
+      showToast('Avval deck tayyorlang.', 'error');
+      return;
+    }
+    state.isPresenting = true;
+    els.presentOverlay.hidden = false;
+    renderDeck();
+    if (els.presentOverlay.requestFullscreen) els.presentOverlay.requestFullscreen().catch(() => {});
+  }
+
+  function exitPresentMode() {
+    state.isPresenting = false;
+    els.presentOverlay.hidden = true;
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  }
+
+  function moveSlide(step) {
+    if (!state.currentDeck || !Array.isArray(state.currentDeck.slides) || !state.currentDeck.slides.length) return;
+    const total = state.currentDeck.slides.length;
+    state.currentIndex = (state.currentIndex + step + total) % total;
+    renderDeck();
+  }
+
+  async function logout() {
+    try {
+      if (state.token) {
+        await fetch('/api/logout', { method: 'POST', headers: { Authorization: `Bearer ${state.token}` } }).catch(() => null);
+      }
+    } finally {
+      localStorage.removeItem(TOKEN_KEY);
+      window.location.href = '/login.html';
+    }
+  }
+
+  async function maybeAutoGenerateFreshDeck() {
+    const wantsWelcome = state.qs.get('welcome') === '1';
+    const wantsFresh = state.qs.get('fresh') === '1';
+    if (!wantsWelcome) return;
+    const userName = String(state.me && (state.me.fullName || state.me.username) || 'foydalanuvchi');
+    els.welcomeNote.classList.remove('hidden');
+    els.welcomeNote.innerHTML = `
+      <strong>${escapeHtml(userName)}, Slide Studio tayyor.</strong>
+      <span>Royxatdan keyin foydalanuvchini faollashtirish uchun shu yerning ozida AI demo deck ham tayyorlab bera olamiz. Kerak bolsa keyin shu sahifadan cheksiz yangi decklar yasaysiz.</span>
+    `;
+    if (!wantsFresh || state.freshAutoDone || state.decks.length) return;
+    state.freshAutoDone = true;
+    if (!els.promptInput.value.trim()) els.promptInput.value = buildWelcomePrompt();
+    if (!els.audienceInput.value.trim()) els.audienceInput.value = defaultAudience();
+    state.selectedStyle = 'campus-card';
+    renderStyleGrid();
+    await generateDeck(true);
+  }
+
+  async function loadProfile() {
+    if (!state.token) {
+      window.location.href = '/login.html?next=' + encodeURIComponent('/slides.html');
+      return;
+    }
+    const me = await api('/api/me');
+    state.me = me && (me.user || me) || {};
+    const fullName = state.me.fullName || state.me.fullname || state.me.username || 'foydalanuvchi';
+    const nextPath = normalizeNextPath(state.qs.get('next')) || dashboardPathForRole(state.me.role);
+    els.welcomeUserLine.textContent = `${fullName} uchun AI taqdimot maydoni tayyor. Watermark avtomatik qoshiladi.`;
+    els.dashboardLink.href = nextPath;
+    if (!els.audienceInput.value.trim()) els.audienceInput.value = defaultAudience();
+  }
+
+  function bindEvents() {
+    els.themeToggleBtn.addEventListener('click', toggleTheme);
+    els.logoutBtn.addEventListener('click', logout);
+    els.slideCountInput.addEventListener('input', () => { els.slideCountValue.textContent = els.slideCountInput.value; });
+    els.generatorForm.addEventListener('submit', async (event) => { event.preventDefault(); await generateDeck(false); });
+    els.demoDeckBtn.addEventListener('click', async () => {
+      els.promptInput.value = buildWelcomePrompt();
+      els.audienceInput.value = defaultAudience();
+      if (!state.selectedStyle || state.selectedStyle === 'auto') {
+        state.selectedStyle = 'campus-card';
+        renderStyleGrid();
+      }
+      await generateDeck(true);
+    });
+    els.resetPromptBtn.addEventListener('click', () => {
+      els.promptInput.value = '';
+      els.audienceInput.value = defaultAudience();
+      els.languageInput.value = 'uz';
+      els.slideCountInput.value = '6';
+      els.slideCountValue.textContent = '6';
+      state.selectedStyle = 'auto';
+      renderStyleGrid();
+    });
+    els.refreshHistoryBtn.addEventListener('click', async () => { await loadHistory(); showToast('Tarix yangilandi.'); });
+    els.prevSlideBtn.addEventListener('click', () => moveSlide(-1));
+    els.nextSlideBtn.addEventListener('click', () => moveSlide(1));
+    els.presentPrevBtn.addEventListener('click', () => moveSlide(-1));
+    els.presentNextBtn.addEventListener('click', () => moveSlide(1));
+    els.presentCloseBtn.addEventListener('click', exitPresentMode);
+    els.copyOutlineBtn.addEventListener('click', copyOutline);
+    els.autoplayBtn.addEventListener('click', toggleAutoplay);
+    els.presentBtn.addEventListener('click', enterPresentMode);
+    els.deleteDeckBtn.addEventListener('click', async () => {
+      if (!state.currentDeck || !state.currentDeck._id) return showToast('Ochiriladigan deck tanlanmagan.', 'error');
+      await deleteDeck(state.currentDeck._id);
+    });
+    document.addEventListener('keydown', (event) => {
+      const activeTag = String(document.activeElement && document.activeElement.tagName || '').toUpperCase();
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+      if (event.key === 'ArrowRight') moveSlide(1);
+      if (event.key === 'ArrowLeft') moveSlide(-1);
+      if (event.key === 'Escape' && state.isPresenting) exitPresentMode();
+    });
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && state.isPresenting) {
+        state.isPresenting = false;
+        els.presentOverlay.hidden = true;
+      }
+    });
+  }
+
+  async function init() {
+    syncThemeButton();
+    renderStyleGrid();
+    bindEvents();
+    renderDeck();
+    await loadProfile();
+    await loadHistory();
+    await maybeAutoGenerateFreshDeck();
+  }
+
+  init().catch((error) => {
+    console.error('slides init error:', error);
+    showToast(error.message || 'Slide Studio yuklanmadi.', 'error');
+  });
+})();
