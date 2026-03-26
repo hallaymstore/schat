@@ -535,6 +535,35 @@
   #teacherStage .stage-slot-secondary{
     z-index: 1;
   }
+  #teacherStage.whiteboard-live .stage-slot-primary.whiteboard-live{
+    background:#ffffff;
+    border-color:rgba(14,165,233,.24);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 12px 28px rgba(2,6,23,.22);
+  }
+  #teacherStage .stage-slot-primary.whiteboard-live > .video-tile,
+  #teacherStage .stage-slot-primary.whiteboard-live > .stage-placeholder{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+  }
+  #teacherStage .stage-slot-primary.whiteboard-live .video-name,
+  #teacherStage .stage-slot-primary.whiteboard-live .pin-btn,
+  #teacherStage .stage-slot-primary.whiteboard-live .speaker-badge{
+    display:none !important;
+  }
+  #teacherStage .stage-slot-primary.whiteboard-live #stageWhiteboardLayer{
+    inset:0;
+    border:0;
+    border-radius:16px;
+    box-shadow:none;
+    background:linear-gradient(180deg,rgba(245,252,255,.96),rgba(232,244,255,.94));
+  }
+  #teacherStageWrap.whiteboard-live #teacherStageZoomHud,
+  #teacherStageWrap.whiteboard-live #teacherStageZoomHint{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+  }
   #teacherStage.stage-dual{
     grid-template-columns: minmax(0,1fr) minmax(0,1fr);
     gap: 10px;
@@ -947,6 +976,7 @@
     touch-action:none;
     background:#fff;
     cursor:crosshair;
+    z-index:1;
   }
   #stageWhiteboardCamPip{
     position:absolute;
@@ -960,6 +990,7 @@
     background:#0b1020;
     object-fit:cover;
     z-index:4;
+    pointer-events:none;
   }
   #stageWhiteboardQuickTools{
     position:absolute;
@@ -3373,11 +3404,29 @@ function setupSocket() {
             }
         }
 
+        function syncStageWhiteboardModeUi() {
+            const wrap = document.getElementById('teacherStageWrap');
+            const stage = document.getElementById('teacherStage');
+            const host = document.querySelector('#teacherStage .stage-slot-primary') || null;
+            try {
+                document.querySelectorAll('#teacherStage .stage-slot.whiteboard-live').forEach((node) => {
+                    if (node !== host) node.classList.remove('whiteboard-live');
+                });
+            } catch(_) {}
+            if (host) host.classList.toggle('whiteboard-live', !!stageWhiteboard.active);
+            if (wrap) wrap.classList.toggle('whiteboard-live', !!stageWhiteboard.active);
+            if (stage) stage.classList.toggle('whiteboard-live', !!stageWhiteboard.active);
+        }
+
         function syncStageWhiteboardHost() {
             const layer = document.getElementById('stageWhiteboardLayer');
             const host = document.querySelector('#teacherStage .stage-slot-primary') || document.getElementById('teacherStage');
-            if (!layer || !host) return;
+            if (!layer || !host) {
+                syncStageWhiteboardModeUi();
+                return;
+            }
             if (layer.parentElement !== host) host.appendChild(layer);
+            syncStageWhiteboardModeUi();
         }
 
         function bindStageWhiteboardTextInput() {
@@ -3822,6 +3871,7 @@ function setupSocket() {
             if (layer && (!stageWhiteboard.active || !canUse)) {
                 layer.classList.remove('active');
             }
+            syncStageWhiteboardModeUi();
             syncStageWhiteboardTextUi();
         }
 
@@ -3970,6 +4020,8 @@ function setupSocket() {
                 stageWhiteboard.track = wbTrack;
                 stageWhiteboard.textMode = false;
                 stageWhiteboard.calcOpen = false;
+                syncStageWhiteboardHost();
+                syncStageWhiteboardModeUi();
                 const calcBox = document.getElementById('stageWhiteboardCalc');
                 if (calcBox) calcBox.classList.remove('open');
                 syncStageWhiteboardTextUi();
@@ -4018,6 +4070,7 @@ function setupSocket() {
                 stageWhiteboard.stream = null;
                 stageWhiteboard.track = null;
                 stageWhiteboard.active = false;
+                syncStageWhiteboardModeUi();
 
                 try {
                     stageWhiteboard.camStream?.getTracks?.().forEach((t) => t.stop());
