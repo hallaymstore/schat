@@ -950,46 +950,85 @@
   }
   #stageWhiteboardCamPip{
     position:absolute;
-    top:14px;
-    right:14px;
-    width:min(22vw,220px);
+    top:18px;
+    right:18px;
+    width:min(19vw,210px);
     aspect-ratio:16/9;
-    border-radius:12px;
-    border:2px solid rgba(255,255,255,.75);
-    box-shadow:0 10px 24px rgba(0,0,0,.42);
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.85);
+    box-shadow:0 16px 36px rgba(2,6,23,.38);
     background:#0b1020;
     object-fit:cover;
-    z-index:2;
+    z-index:4;
+  }
+  #stageWhiteboardQuickTools{
+    position:absolute;
+    top:18px;
+    left:18px;
+    z-index:7;
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  #stageWhiteboardQuickTools .wb-quick-btn{
+    border:1px solid rgba(255,255,255,.24);
+    background:rgba(2,6,23,.72);
+    color:#fff;
+    border-radius:999px;
+    min-height:40px;
+    padding:0 14px;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    font-weight:800;
+    box-shadow:0 12px 24px rgba(2,6,23,.22);
+    backdrop-filter:blur(14px);
+  }
+  #stageWhiteboardQuickTools .wb-quick-btn.active{
+    background:linear-gradient(135deg,#0ea5a7,#14b8a6);
+    border-color:rgba(255,255,255,.64);
   }
   #stageWhiteboardToolbar{
     position:absolute;
-    left:12px;
-    right:12px;
-    bottom:12px;
-    z-index:3;
+    left:14px;
+    right:14px;
+    bottom:14px;
+    z-index:5;
     display:flex;
     flex-wrap:wrap;
     gap:8px;
     align-items:center;
     border:1px solid rgba(255,255,255,.24);
-    border-radius:12px;
-    padding:8px;
-    background:rgba(2,6,23,.62);
+    border-radius:16px;
+    padding:10px;
+    background:rgba(2,6,23,.68);
     backdrop-filter: blur(12px);
   }
-  #stageWhiteboardToolbar .wb-btn{
+  #stageWhiteboardToolbar .wb-btn,
+  #stageWhiteboardTextPanel .wb-btn{
     border:1px solid rgba(255,255,255,.2);
     background:rgba(255,255,255,.11);
     color:#fff;
-    border-radius:10px;
-    padding:6px 10px;
+    border-radius:12px;
+    padding:7px 11px;
     font-size:12px;
     font-weight:800;
     line-height:1.1;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    min-height:36px;
   }
   #stageWhiteboardToolbar .wb-btn.active{
     background:linear-gradient(135deg,#0ea5a7,#14b8a6);
     border-color:rgba(255,255,255,.55);
+  }
+  #stageWhiteboardToolbar .wb-btn.wb-icon,
+  #stageWhiteboardTextPanel .wb-btn.wb-icon{
+    min-width:36px;
+    padding:7px 10px;
   }
   #stageWhiteboardToolbar .wb-color{
     display:block;
@@ -998,9 +1037,32 @@
     border-radius:999px;
     border:2px solid rgba(255,255,255,.66);
     padding:0;
+    pointer-events:none;
   }
   #stageWhiteboardToolbar .wb-range{
     width:108px;
+  }
+  #stageWhiteboardToolbar .wb-label{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    color:rgba(255,255,255,.88);
+    font-size:11px;
+    font-weight:800;
+  }
+  #stageWhiteboardToolbar .wb-select{
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:12px;
+    background:rgba(255,255,255,.12);
+    color:#fff;
+    min-height:36px;
+    padding:0 12px;
+    outline:none;
+    font-size:12px;
+    font-weight:700;
+  }
+  #stageWhiteboardToolbar .wb-select option{
+    color:#0f172a;
   }
   #stageWhiteboardCalc{
     position:absolute;
@@ -1041,27 +1103,46 @@
   }
   #stageWhiteboardTextPanel{
     position:absolute;
-    left:12px;
-    right:12px;
-    top:12px;
-    z-index:4;
+    left:18px;
+    top:68px;
+    width:min(380px,34vw);
+    max-width:max(220px, calc(100% - 256px));
+    max-height:min(42vh,320px);
+    z-index:6;
     display:none;
-    gap:8px;
-    padding:10px;
+    gap:10px;
+    padding:12px;
     border:1px solid rgba(255,255,255,.24);
-    border-radius:12px;
-    background:rgba(2,6,23,.82);
-    backdrop-filter: blur(12px);
+    border-radius:16px;
+    background:rgba(2,6,23,.76);
+    backdrop-filter: blur(16px);
+    box-shadow:0 16px 42px rgba(2,6,23,.3);
   }
   #stageWhiteboardTextPanel.open{
     display:grid;
+    animation:wbPanelIn .18s ease;
+  }
+  #stageWhiteboardTextPanel .panel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  #stageWhiteboardTextPanel .panel-title{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    color:#f8fafc;
+    font-size:13px;
+    font-weight:800;
   }
   #stageWhiteboardTextPanel .mini{
     color:rgba(255,255,255,.82);
   }
   #wbTextInput{
     width:100%;
-    min-height:120px;
+    min-height:124px;
+    max-height:210px;
     resize:vertical;
     border-radius:12px;
     border:1px solid rgba(255,255,255,.18);
@@ -1081,6 +1162,10 @@
     gap:8px;
     font-size:11px;
     color:rgba(255,255,255,.78);
+  }
+  @keyframes wbPanelIn{
+    from{ opacity:0; transform:translateY(-8px) scale(.98); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
   }
   #wbCalcHistory button{
     border:1px solid rgba(255,255,255,.2);
@@ -1290,12 +1375,15 @@
     #callGameFab{ right:8px; bottom:calc(8px + env(safe-area-inset-bottom, 0px)); }
     #callGamePanel{ right:6px; bottom:calc(64px + env(safe-area-inset-bottom, 0px)); width:min(96vw,360px); }
     #stageWhiteboardLayer{ inset:6px; border-radius:12px; }
-    #stageWhiteboardCamPip{ width:min(38vw,150px); top:8px; right:8px; border-radius:10px; }
+    #stageWhiteboardCamPip{ width:min(34vw,136px); top:8px; right:8px; border-radius:12px; }
+    #stageWhiteboardQuickTools{ top:8px; left:8px; }
+    #stageWhiteboardQuickTools .wb-quick-btn{ min-height:34px; padding:0 10px; gap:6px; font-size:11px; }
     #stageWhiteboardToolbar{ left:6px; right:6px; bottom:6px; padding:7px; gap:6px; }
     #stageWhiteboardToolbar .wb-btn{ padding:5px 8px; font-size:11px; }
     #stageWhiteboardToolbar .wb-range{ width:84px; }
+    #stageWhiteboardToolbar .wb-select{ min-height:34px; padding:0 10px; font-size:11px; }
     #stageWhiteboardCalc{ left:6px; top:6px; width:min(95vw,300px); max-height:58vh; padding:7px; }
-    #stageWhiteboardTextPanel{ left:6px; right:6px; top:6px; padding:8px; gap:6px; }
+    #stageWhiteboardTextPanel{ left:8px; top:50px; width:min(66vw,290px); max-width:max(190px, calc(100% - 154px)); padding:8px; gap:6px; }
     #wbTextInput{ min-height:94px; font-size:11px; padding:8px 10px; }
     #teacherMiniWidget{
       width:min(95vw, 290px);
@@ -3142,6 +3230,7 @@ function setupSocket() {
             textCols: 28,
             textRows: 10,
             calcOpen: false,
+            backgroundMode: 'plain',
             lastAccessWarnAt: 0,
             calcHistory: []
         };
@@ -3261,13 +3350,27 @@ function setupSocket() {
             return !!me && !!teacherStageUser && me === teacherStageUser && isTeacherLikeUser(me);
         }
 
+        function normalizeStageWhiteboardBackground(mode) {
+            const next = String(mode || '').trim().toLowerCase();
+            if (['plain', 'math', 'ruled', 'dots', 'dark'].includes(next)) return next;
+            return 'plain';
+        }
+
         function updateStageWhiteboardToolbarUi() {
             const er = document.getElementById('wbEraserBtn');
             const tx = document.getElementById('wbTextBtn');
+            const txFab = document.getElementById('wbTextFab');
+            const calc = document.getElementById('wbCalcBtn');
             const lbl = document.getElementById('wbBrushSizeLabel');
+            const bg = document.getElementById('wbBgMode');
             if (er) er.classList.toggle('active', !!stageWhiteboard.eraser);
             if (tx) tx.classList.toggle('active', !!stageWhiteboard.textMode);
+            if (txFab) txFab.classList.toggle('active', !!stageWhiteboard.textMode);
+            if (calc) calc.classList.toggle('active', !!stageWhiteboard.calcOpen);
             if (lbl) lbl.textContent = `${Number(stageWhiteboard.size || 4)}px`;
+            if (bg && bg.value !== String(stageWhiteboard.backgroundMode || 'plain')) {
+                bg.value = String(stageWhiteboard.backgroundMode || 'plain');
+            }
         }
 
         function syncStageWhiteboardHost() {
@@ -3323,6 +3426,12 @@ function setupSocket() {
             }
         }
 
+        function setStageWhiteboardBackground(mode) {
+            stageWhiteboard.backgroundMode = normalizeStageWhiteboardBackground(mode || stageWhiteboard.backgroundMode);
+            updateStageWhiteboardToolbarUi();
+            renderStageWhiteboardFrame();
+        }
+
         function getStageWhiteboardTextLayout(W, H) {
             const pipReserved = Math.round(W * 0.24);
             const marginX = Math.max(28, Math.round(W * 0.045));
@@ -3360,31 +3469,67 @@ function setupSocket() {
             return out;
         }
 
-        function renderStageWhiteboardNotebook(ctx, W, H, layout) {
+        function renderStageWhiteboardBackground(ctx, W, H, layout) {
+            const mode = normalizeStageWhiteboardBackground(stageWhiteboard.backgroundMode);
+            const isDark = mode === 'dark';
+            const left = layout.marginX;
+            const right = W - layout.right;
+            const top = layout.top - layout.lineHeight * 0.55;
+            const bottom = H - layout.bottom;
             ctx.save();
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = isDark ? '#0f172a' : '#ffffff';
             ctx.fillRect(0, 0, W, H);
+            if (mode === 'plain') {
+                ctx.restore();
+                return;
+            }
+
             ctx.lineWidth = 1;
-            ctx.strokeStyle = 'rgba(37,99,235,.14)';
-            for (let x = layout.marginX; x < (W - layout.right); x += layout.cellWidth) {
+            if (mode === 'math' || mode === 'dark') {
+                ctx.strokeStyle = isDark ? 'rgba(94,234,212,.14)' : 'rgba(37,99,235,.14)';
+                for (let x = left; x < right; x += layout.cellWidth) {
+                    ctx.beginPath();
+                    ctx.moveTo(x + 0.5, top);
+                    ctx.lineTo(x + 0.5, bottom);
+                    ctx.stroke();
+                }
+                for (let y = layout.top; y < bottom; y += layout.lineHeight) {
+                    ctx.beginPath();
+                    ctx.moveTo(left, y + 0.5);
+                    ctx.lineTo(right, y + 0.5);
+                    ctx.stroke();
+                }
+                ctx.strokeStyle = isDark ? 'rgba(250,204,21,.24)' : 'rgba(239,68,68,.24)';
+                ctx.lineWidth = Math.max(1, Math.round(W * 0.0012));
+                const marginGuide = left + Math.round(layout.cellWidth * 2.2);
                 ctx.beginPath();
-                ctx.moveTo(x + 0.5, layout.top - layout.lineHeight * 0.55);
-                ctx.lineTo(x + 0.5, H - layout.bottom);
+                ctx.moveTo(marginGuide, top);
+                ctx.lineTo(marginGuide, bottom);
                 ctx.stroke();
-            }
-            for (let y = layout.top; y < (H - layout.bottom); y += layout.lineHeight) {
+            } else if (mode === 'ruled') {
+                ctx.strokeStyle = 'rgba(14,165,233,.18)';
+                for (let y = layout.top; y < bottom; y += layout.lineHeight) {
+                    ctx.beginPath();
+                    ctx.moveTo(left, y + 0.5);
+                    ctx.lineTo(right, y + 0.5);
+                    ctx.stroke();
+                }
+                ctx.strokeStyle = 'rgba(14,165,233,.24)';
+                const marginGuide = left + Math.round(layout.cellWidth * 1.8);
                 ctx.beginPath();
-                ctx.moveTo(layout.marginX, y + 0.5);
-                ctx.lineTo(W - layout.right, y + 0.5);
+                ctx.moveTo(marginGuide, top);
+                ctx.lineTo(marginGuide, bottom);
                 ctx.stroke();
+            } else if (mode === 'dots') {
+                ctx.fillStyle = 'rgba(15,23,42,.16)';
+                for (let x = left; x < right; x += layout.cellWidth) {
+                    for (let y = layout.top; y < bottom; y += layout.lineHeight) {
+                        ctx.beginPath();
+                        ctx.arc(x, y, Math.max(1.2, Math.round(layout.cellWidth * 0.08)), 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
             }
-            ctx.strokeStyle = 'rgba(239,68,68,.24)';
-            ctx.lineWidth = Math.max(1, Math.round(W * 0.0012));
-            const marginGuide = layout.marginX + Math.round(layout.cellWidth * 2.2);
-            ctx.beginPath();
-            ctx.moveTo(marginGuide, layout.top - layout.lineHeight * 0.55);
-            ctx.lineTo(marginGuide, H - layout.bottom);
-            ctx.stroke();
             ctx.restore();
         }
 
@@ -3395,7 +3540,9 @@ function setupSocket() {
             const lines = wrapStageWhiteboardText(stageWhiteboard.textValue || '', layout.cols).slice(0, layout.rows);
             ctx.save();
             ctx.font = `600 ${layout.fontSize}px Consolas, "Courier New", monospace`;
-            ctx.fillStyle = '#0f172a';
+            ctx.fillStyle = normalizeStageWhiteboardBackground(stageWhiteboard.backgroundMode) === 'dark'
+                ? 'rgba(240,249,255,.98)'
+                : '#0f172a';
             ctx.textBaseline = 'middle';
             lines.forEach((line, idx) => {
                 const y = layout.top + idx * layout.lineHeight + Math.round(layout.lineHeight * 0.54);
@@ -3468,7 +3615,7 @@ function setupSocket() {
             const H = canvas.height;
             ctx.save();
             const textLayout = getStageWhiteboardTextLayout(W, H);
-            renderStageWhiteboardNotebook(ctx, W, H, textLayout);
+            renderStageWhiteboardBackground(ctx, W, H, textLayout);
             renderStageWhiteboardText(ctx, W, H);
             if (stageWhiteboard.inkCanvas) {
                 ctx.drawImage(stageWhiteboard.inkCanvas, 0, 0, W, H);
@@ -3477,13 +3624,16 @@ function setupSocket() {
             const pip = stageWhiteboard.camVideo;
             const canPip = !!(pip && pip.readyState >= 2 && (pip.videoWidth || 0) > 0 && (pip.videoHeight || 0) > 0);
             if (canPip) {
-                const pipW = Math.max(180, Math.round(W * 0.19));
+                const pipW = Math.max(170, Math.round(W * 0.18));
                 const pipH = Math.round((pipW * 9) / 16);
-                const m = Math.max(10, Math.round(W * 0.012));
+                const m = Math.max(12, Math.round(W * 0.014));
                 const x = W - pipW - m;
                 const y = m;
-                const r = 14;
+                const r = 18;
                 ctx.save();
+                ctx.shadowColor = 'rgba(2,6,23,.34)';
+                ctx.shadowBlur = Math.max(12, Math.round(W * 0.012));
+                ctx.shadowOffsetY = Math.max(6, Math.round(H * 0.01));
                 ctx.beginPath();
                 ctx.moveTo(x + r, y);
                 ctx.lineTo(x + pipW - r, y);
@@ -3499,9 +3649,39 @@ function setupSocket() {
                 ctx.drawImage(pip, x, y, pipW, pipH);
                 ctx.restore();
 
-                ctx.lineWidth = Math.max(2, Math.round(W * 0.0022));
-                ctx.strokeStyle = 'rgba(15,23,42,.86)';
-                ctx.strokeRect(x, y, pipW, pipH);
+                ctx.save();
+                ctx.lineWidth = Math.max(2, Math.round(W * 0.0018));
+                ctx.strokeStyle = 'rgba(255,255,255,.86)';
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + pipW - r, y);
+                ctx.quadraticCurveTo(x + pipW, y, x + pipW, y + r);
+                ctx.lineTo(x + pipW, y + pipH - r);
+                ctx.quadraticCurveTo(x + pipW, y + pipH, x + pipW - r, y + pipH);
+                ctx.lineTo(x + r, y + pipH);
+                ctx.quadraticCurveTo(x, y + pipH, x, y + pipH - r);
+                ctx.lineTo(x, y + r);
+                ctx.quadraticCurveTo(x, y, x + r, y);
+                ctx.closePath();
+                ctx.stroke();
+
+                const chipW = Math.round(Math.min(pipW * 0.52, 128));
+                const chipH = Math.round(Math.max(26, pipH * 0.18));
+                const chipX = x + 10;
+                const chipY = y + pipH - chipH - 10;
+                ctx.fillStyle = 'rgba(15,23,42,.72)';
+                if (typeof ctx.roundRect === 'function') {
+                    ctx.beginPath();
+                    ctx.roundRect(chipX, chipY, chipW, chipH, 999);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(chipX, chipY, chipW, chipH);
+                }
+                ctx.fillStyle = '#f8fafc';
+                ctx.font = `700 ${Math.max(11, Math.round(W * 0.008))}px Inter, Arial, sans-serif`;
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Ustoz live', chipX + 12, chipY + chipH / 2);
+                ctx.restore();
             }
             ctx.restore();
         }
@@ -3788,7 +3968,7 @@ function setupSocket() {
                 stageWhiteboard.active = true;
                 stageWhiteboard.stream = wbStream;
                 stageWhiteboard.track = wbTrack;
-                stageWhiteboard.textMode = true;
+                stageWhiteboard.textMode = false;
                 stageWhiteboard.calcOpen = false;
                 const calcBox = document.getElementById('stageWhiteboardCalc');
                 if (calcBox) calcBox.classList.remove('open');
@@ -3806,7 +3986,6 @@ function setupSocket() {
                 if (sz) sz.value = String(Math.max(1, Math.min(24, Number(stageWhiteboard.size || 4))));
                 updateStageWhiteboardToolbarUi();
                 renderWbCalcHistory();
-                try { document.getElementById('wbTextInput')?.focus(); } catch(_) {}
                 notify('Oq doska yoqildi', 'ok');
             } catch (e) {
                 console.error('startStageWhiteboardMode failed:', e);
@@ -10082,13 +10261,26 @@ async function toggleMute() {
       <div id="stageWhiteboardLayer" aria-label="Stage whiteboard">
         <canvas id="stageWhiteboardCanvas"></canvas>
         <video id="stageWhiteboardCamPip" autoplay playsinline muted></video>
+        <div id="stageWhiteboardQuickTools">
+          <button id="wbTextFab" class="wb-quick-btn" type="button" onclick="toggleStageWhiteboardTextMode()" title="Klaviatura matni">
+            <i class="fas fa-keyboard"></i><span>Klaviatura</span>
+          </button>
+        </div>
 
         <div id="stageWhiteboardTextPanel">
-          <div class="mini font-semibold">Matn rejimi</div>
-          <textarea id="wbTextInput" placeholder="Klaviatura bilan yozing. Matn katakli ko'rinishda kichik va tartibli chiqadi."></textarea>
+          <div class="panel-head">
+            <div class="panel-title">
+              <i class="fas fa-keyboard"></i>
+              <span>Klaviatura matni</span>
+            </div>
+            <button class="wb-btn wb-icon" type="button" onclick="toggleStageWhiteboardTextMode(false)" aria-label="Matn panelini yopish">
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
+          <textarea id="wbTextInput" placeholder="Matn, formula yoki izoh yozing. Ikonani yana bossangiz panel yopiladi."></textarea>
           <div id="wbTextMeta">
             <span id="wbTextGridMeta">0 satr • 0 ustun</span>
-            <span>Enter = yangi satr</span>
+            <span>Ikona bilan ochiladi va yopiladi</span>
           </div>
         </div>
 
@@ -10142,13 +10334,31 @@ async function toggleMute() {
           <button class="wb-btn" onclick="setStageWhiteboardColor('#3b82f6')" title="Ko'k"><span class="wb-color" style="background:#3b82f6"></span></button>
           <button class="wb-btn" onclick="setStageWhiteboardColor('#f59e0b')" title="Sariq"><span class="wb-color" style="background:#f59e0b"></span></button>
           <button class="wb-btn" onclick="setStageWhiteboardColor('#111827')" title="Qora"><span class="wb-color" style="background:#111827"></span></button>
-          <button id="wbEraserBtn" class="wb-btn" onclick="toggleStageWhiteboardEraser()">Eraser</button>
-          <button id="wbTextBtn" class="wb-btn" onclick="toggleStageWhiteboardTextMode()">Matn</button>
-          <label class="mini">Qalam <span id="wbBrushSizeLabel">4px</span></label>
+          <button id="wbEraserBtn" class="wb-btn" type="button" onclick="toggleStageWhiteboardEraser()" title="Ochirgich">
+            <i class="fas fa-eraser"></i><span>Eraser</span>
+          </button>
+          <button id="wbTextBtn" class="wb-btn" type="button" onclick="toggleStageWhiteboardTextMode()" title="Klaviatura matni">
+            <i class="fas fa-keyboard"></i><span>Matn</span>
+          </button>
+          <label class="mini wb-label"><i class="fas fa-pen-ruler"></i>Qalam <span id="wbBrushSizeLabel">4px</span></label>
           <input id="wbBrushSize" class="wb-range" type="range" min="1" max="24" value="4" oninput="setStageWhiteboardBrushSize(this.value)">
-          <button class="wb-btn" onclick="clearStageWhiteboard()">Tozalash</button>
-          <button class="wb-btn" onclick="toggleStageWhiteboardCalc()">Calc</button>
-          <button class="wb-btn" onclick="toggleStageWhiteboard(false)">Yopish</button>
+          <label class="mini wb-label"><i class="fas fa-border-all"></i>Fon</label>
+          <select id="wbBgMode" class="wb-select" onchange="setStageWhiteboardBackground(this.value)" aria-label="Whiteboard foni">
+            <option value="plain">Oq fon</option>
+            <option value="math">Katak fon</option>
+            <option value="ruled">Chiziqli fon</option>
+            <option value="dots">Nuqtali fon</option>
+            <option value="dark">Qora fon</option>
+          </select>
+          <button class="wb-btn" type="button" onclick="clearStageWhiteboard()">
+            <i class="fas fa-broom"></i><span>Tozalash</span>
+          </button>
+          <button id="wbCalcBtn" class="wb-btn" type="button" onclick="toggleStageWhiteboardCalc()">
+            <i class="fas fa-calculator"></i><span>Calc</span>
+          </button>
+          <button class="wb-btn" type="button" onclick="toggleStageWhiteboard(false)">
+            <i class="fas fa-xmark"></i><span>Yopish</span>
+          </button>
         </div>
       </div>
     </div>
