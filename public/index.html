@@ -415,7 +415,10 @@
       min-height: 560px;
       overflow:hidden;
       border-radius: 28px;
-      background: #0b1f21;
+      background:
+        radial-gradient(320px 220px at 84% 16%, rgba(255,214,92,.20), transparent 72%),
+        radial-gradient(260px 220px at 12% 88%, rgba(25,193,174,.22), transparent 72%),
+        linear-gradient(155deg, #0b2a2d 0%, #0d4c53 44%, #091a20 100%);
       border: 1px solid rgba(255,255,255,.08);
     }
 
@@ -448,6 +451,96 @@
       background: rgba(6,24,24,.34);
     }
 
+    @keyframes drift{
+      0%, 100%{ transform: translate3d(0, 0, 0) rotate(0deg); }
+      50%{ transform: translate3d(0, -14px, 0) rotate(1.4deg); }
+    }
+
+    @keyframes lightningPulse{
+      0%, 100%{ opacity:.34; transform:scaleX(.84); }
+      12%{ opacity:.94; transform:scaleX(1); }
+      18%{ opacity:.46; transform:scaleX(.92); }
+      22%{ opacity:.88; transform:scaleX(1.04); }
+      60%{ opacity:.38; transform:scaleX(.88); }
+    }
+
+    [data-parallax]{
+      will-change: transform;
+      transform-origin: center center;
+    }
+
+    .landing-floating-art{
+      position:absolute;
+      z-index:1;
+      pointer-events:none;
+      transition:transform .22s ease-out;
+    }
+
+    .landing-floating-art img{
+      display:block;
+      width:100%;
+      height:auto;
+      animation: drift 8s ease-in-out infinite;
+      filter: drop-shadow(0 26px 54px rgba(0,0,0,.28));
+    }
+
+    .landing-floating-art--orb{
+      top:-34px;
+      right:-44px;
+      width:min(30vw, 244px);
+    }
+
+    .landing-floating-art--stack{
+      left:-36px;
+      bottom:-52px;
+      width:min(23vw, 186px);
+    }
+
+    .landing-floating-art--stack img{
+      animation-delay:-2.6s;
+    }
+
+    .stage-energy{
+      position:absolute;
+      z-index:1;
+      height:4px;
+      border-radius:999px;
+      pointer-events:none;
+      background:linear-gradient(90deg, rgba(255,255,255,0), rgba(183,255,244,.92), rgba(255,214,92,.96), rgba(255,255,255,0));
+      box-shadow:0 0 18px rgba(149,244,230,.54), 0 0 40px rgba(255,205,88,.26);
+      animation: lightningPulse 4.8s ease-in-out infinite;
+      mix-blend-mode:screen;
+    }
+
+    .stage-energy::after{
+      content:"";
+      position:absolute;
+      top:50%;
+      right:8px;
+      width:12px;
+      height:12px;
+      transform:translateY(-50%);
+      border-radius:999px;
+      background:rgba(255,243,201,.94);
+      box-shadow:0 0 22px rgba(255,243,201,.68);
+    }
+
+    .stage-energy--a{
+      top:16%;
+      right:15%;
+      width:184px;
+      transform:rotate(-18deg);
+      animation-delay:-.6s;
+    }
+
+    .stage-energy--b{
+      left:11%;
+      bottom:18%;
+      width:146px;
+      transform:rotate(20deg);
+      animation-delay:-2.3s;
+    }
+
     .landing-stage__frame{
       position:absolute;
       inset:18px;
@@ -457,7 +550,7 @@
 
     .landing-stage__cards{
       position:relative;
-      z-index:1;
+      z-index:2;
       min-height:560px;
       display:flex;
       flex-direction:column;
@@ -2202,6 +2295,382 @@
       gap:18px;
     }
 
+    .site-brand-block{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      min-width:0;
+    }
+
+    .site-brand-meta{
+      display:grid;
+      gap:2px;
+      min-width:0;
+    }
+
+    .site-brand-eyebrow{
+      font-size:10px;
+      line-height:1.2;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      font-weight:900;
+      color:var(--h-accent-strong);
+    }
+
+    .site-brand-name{
+      font-size:1.08rem;
+      font-weight:900;
+      letter-spacing:-.03em;
+      color:var(--h-text-strong);
+    }
+
+    .site-brand-sub{
+      font-size:12px;
+      line-height:1.4;
+      color:var(--h-muted);
+    }
+
+    .site-nav{
+      display:flex;
+      align-items:center;
+      gap:4px;
+      padding:6px;
+      border-radius:18px;
+      background:rgba(244,251,249,.82);
+      border:1px solid rgba(196,232,225,.88);
+      box-shadow:0 10px 24px rgba(9,88,79,.06);
+    }
+
+    html.dark .site-nav{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+    }
+
+    .site-nav__link{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px 14px;
+      border-radius:12px;
+      color:var(--h-muted);
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.01em;
+      transition:background .18s ease,color .18s ease, transform .18s ease;
+    }
+
+    .site-nav__link:hover{
+      background:rgba(15,143,131,.08);
+      color:var(--h-text-strong);
+      transform:translateY(-1px);
+    }
+
+    .site-header-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .site-utility-btn{
+      border-radius:14px !important;
+      border:1px solid rgba(196,232,225,.92) !important;
+      background:rgba(255,255,255,.95) !important;
+      box-shadow:0 12px 28px rgba(9,88,79,.06) !important;
+    }
+
+    html.dark .site-utility-btn{
+      background:rgba(255,255,255,.06) !important;
+      border-color:rgba(119,208,196,.14) !important;
+      box-shadow:none !important;
+    }
+
+    .site-primary-btn{
+      border-radius:14px !important;
+      padding-left:18px !important;
+      padding-right:18px !important;
+    }
+
+    .site-footer-shell{
+      position:relative;
+      border-radius:34px;
+      overflow:hidden;
+      background:
+        radial-gradient(460px 280px at 16% 16%, rgba(23,193,174,.22), transparent 70%),
+        radial-gradient(360px 240px at 84% 18%, rgba(255,209,90,.18), transparent 72%),
+        linear-gradient(145deg, rgba(5,25,30,.98) 0%, rgba(8,50,54,.97) 46%, rgba(5,15,24,.99) 100%),
+        url('/assets/theme-ambient-dark.svg') center/cover no-repeat;
+      border:1px solid rgba(119,208,196,.16) !important;
+      box-shadow:0 34px 92px rgba(3,22,25,.34) !important;
+    }
+
+    .site-footer-shell::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(130deg, rgba(255,255,255,.08) 0 8%, transparent 8% 62%, rgba(255,255,255,.05) 62% 66%, transparent 66%),
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 38%, rgba(255,255,255,.04));
+      pointer-events:none;
+    }
+
+    .site-footer-backword{
+      position:absolute;
+      left:50%;
+      bottom:12px;
+      z-index:0;
+      transform:translateX(-50%);
+      font-size:clamp(5rem, 17vw, 12rem);
+      line-height:.8;
+      letter-spacing:-.08em;
+      font-weight:900;
+      color:rgba(231,255,250,.08);
+      pointer-events:none;
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    .site-footer-illustration{
+      position:absolute;
+      right:-28px;
+      bottom:18px;
+      z-index:1;
+      width:min(38vw, 398px);
+      pointer-events:none;
+      filter:drop-shadow(0 28px 48px rgba(0,0,0,.28));
+    }
+
+    .site-footer-top{
+      display:grid;
+      grid-template-columns:1.06fr .94fr;
+      gap:24px;
+      align-items:start;
+      position:relative;
+      z-index:2;
+    }
+
+    .site-footer-brand{
+      padding-right:8px;
+    }
+
+    .site-footer-social{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom:18px;
+      flex-wrap:wrap;
+    }
+
+    .site-footer-social a{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:44px;
+      height:44px;
+      border-radius:16px;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(160,241,231,.16);
+      color:#f0fffb;
+      box-shadow:0 14px 28px rgba(0,0,0,.16);
+      transition:transform .18s ease, background .18s ease, color .18s ease;
+    }
+
+    .site-footer-social a:hover{
+      background:rgba(255,255,255,.16);
+      color:#fffdf4;
+      transform:translateY(-1px);
+    }
+
+    .site-footer-shell .site-brand-eyebrow{
+      color:#89efe1;
+    }
+
+    .site-footer-title{
+      margin-top:8px;
+      font-size:2rem;
+      line-height:1.02;
+      letter-spacing:-.04em;
+      font-weight:900;
+      color:#f5fffc;
+    }
+
+    .site-footer-copy{
+      margin-top:14px;
+      max-width:42rem;
+      font-size:14px;
+      line-height:1.8;
+      color:rgba(233,255,251,.74);
+    }
+
+    .site-footer-capsules{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:18px;
+    }
+
+    .site-footer-capsule{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(160,241,231,.14);
+      color:#f1fffc;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    html.dark .site-footer-capsule{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.12);
+      color:#effdfa;
+    }
+
+    .site-footer-columns{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+      position:relative;
+      z-index:2;
+    }
+
+    .site-footer-card{
+      padding:18px;
+      border-radius:24px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(160,241,231,.12);
+      box-shadow:0 14px 34px rgba(0,0,0,.12);
+      backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);
+    }
+
+    html.dark .site-footer-card{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+    }
+
+    .site-footer-card h4{
+      font-size:13px;
+      line-height:1.3;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#8feee0;
+      font-weight:900;
+    }
+
+    .site-footer-link{
+      display:block;
+      margin-top:12px;
+      color:#f6fffd;
+      font-size:14px;
+      font-weight:800;
+      line-height:1.55;
+    }
+
+    .site-footer-link:hover{
+      color:#ffd566;
+    }
+
+    .site-footer-meta{
+      margin-top:12px;
+      color:rgba(233,255,251,.66);
+      font-size:12px;
+      line-height:1.6;
+      font-weight:700;
+    }
+
+    .site-footer-bottom{
+      margin-top:22px;
+      padding-top:18px;
+      border-top:1px solid rgba(160,241,231,.12);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+      position:relative;
+      z-index:2;
+    }
+
+    html.dark .site-footer-bottom{
+      border-top-color:rgba(119,208,196,.12);
+    }
+
+    .site-footer-legal{
+      color:rgba(233,255,251,.66);
+      font-size:12px;
+      line-height:1.7;
+      font-weight:700;
+    }
+
+    .site-footer-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .site-footer-actions a{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:14px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(160,241,231,.12);
+      color:#f5fffc;
+      font-size:13px;
+      font-weight:800;
+      box-shadow:none;
+    }
+
+    html.dark .site-footer-actions a{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+      color:#effdfa;
+    }
+
+    .site-footer-actions a:hover{
+      background:rgba(255,255,255,.14);
+    }
+
+    .site-footer-cta{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:22px;
+    }
+
+    .site-footer-cta a{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 18px;
+      border-radius:16px;
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.02em;
+      box-shadow:0 16px 30px rgba(0,0,0,.16);
+    }
+
+    .site-footer-cta a:first-child{
+      background:linear-gradient(135deg, rgba(20,184,166,1), rgba(255,209,90,1));
+      color:#062930;
+    }
+
+    .site-footer-cta a:last-child{
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(160,241,231,.14);
+      color:#f5fffc;
+    }
+
     .gallery-shell{
       position:relative;
       overflow:hidden;
@@ -2295,6 +2764,65 @@
       background:linear-gradient(180deg, rgba(4,24,26,.04), rgba(4,24,26,.1) 34%, rgba(4,24,26,.78) 100%);
     }
 
+    .gallery-card--illustrated{
+      min-height:320px;
+      background:linear-gradient(145deg, rgba(7,40,46,.98), rgba(10,76,84,.96) 52%, rgba(7,25,34,.98));
+    }
+
+    .gallery-card--illustrated::after{
+      background:linear-gradient(180deg, rgba(4,24,26,.08), rgba(4,24,26,.12) 34%, rgba(4,24,26,.74) 100%);
+    }
+
+    .gallery-card__art{
+      object-fit:contain !important;
+      object-position:center bottom !important;
+      padding:26px 24px 6px;
+      filter:drop-shadow(0 28px 42px rgba(0,0,0,.26));
+    }
+
+    .gallery-card__panel{
+      position:absolute;
+      top:22px;
+      right:22px;
+      z-index:1;
+      width:min(42%, 244px);
+      padding:16px 18px;
+      border-radius:24px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);
+      color:#f7fffd;
+      box-shadow:0 20px 34px rgba(3,16,20,.18);
+    }
+
+    .gallery-card__panel-label{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:11px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      font-weight:900;
+      color:rgba(247,255,253,.8);
+    }
+
+    .gallery-card__panel strong{
+      display:block;
+      margin-top:10px;
+      font-size:1rem;
+      line-height:1.35;
+      letter-spacing:-.03em;
+    }
+
+    .gallery-card__panel span{
+      display:block;
+      margin-top:8px;
+      font-size:13px;
+      line-height:1.65;
+      color:rgba(247,255,253,.76);
+    }
+
     .gallery-card__copy{
       position:absolute;
       left:22px;
@@ -2358,6 +2886,11 @@
     }
 
     @media (max-width:1100px){
+      .site-footer-top,
+      .site-footer-columns{
+        grid-template-columns:1fr;
+      }
+
       .gallery-grid{
         grid-template-columns:1fr;
       }
@@ -2365,9 +2898,27 @@
       .gallery-card--video{
         min-height:420px;
       }
+
+      .site-footer-illustration{
+        width:min(48vw, 360px);
+        right:-18px;
+      }
     }
 
     @media (max-width:760px){
+      .site-nav{
+        padding:4px;
+      }
+
+      .site-brand-eyebrow,
+      .site-brand-sub{
+        display:none;
+      }
+
+      .site-brand-name{
+        font-size:.98rem;
+      }
+
       .landing-section + .landing-section{
         margin-top:24px;
       }
@@ -2394,9 +2945,64 @@
         bottom:16px;
       }
 
+      .gallery-card__panel{
+        left:16px;
+        right:16px;
+        top:16px;
+        width:auto;
+      }
+
+      .landing-floating-art--orb{
+        width:172px;
+        top:-16px;
+        right:-36px;
+      }
+
+      .landing-floating-art--stack{
+        width:136px;
+        left:-30px;
+        bottom:-28px;
+      }
+
+      .stage-energy--a{
+        width:132px;
+        right:10%;
+      }
+
+      .stage-energy--b{
+        width:110px;
+      }
+
       .testimonial-media{
         margin:-22px -22px 16px;
         height:120px;
+      }
+
+      .site-footer-shell{
+        border-radius:28px;
+      }
+
+      .site-footer-backword{
+        font-size:4.2rem;
+        bottom:88px;
+      }
+
+      .site-footer-illustration{
+        position:relative;
+        display:block;
+        right:auto;
+        bottom:auto;
+        width:min(84vw, 320px);
+        margin:18px auto 4px;
+      }
+
+      .site-footer-cta{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .site-footer-cta a{
+        justify-content:center;
       }
     }
   </style>
@@ -2415,8 +3021,8 @@
   <!-- Header -->
   <header class="sticky top-0 z-50">
     <div class="mx-auto max-w-7xl px-4 py-4">
-      <div class="glass site-header-shell rounded-3xl px-4 py-3 flex items-center justify-between">
-        <a href="/index.html" class="flex items-center gap-3">
+      <div class="glass site-header-shell rounded-3xl px-4 py-3 flex items-center justify-between gap-4">
+        <a href="/index.html" class="site-brand-block">
           <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shadow-glass overflow-hidden"
      style="background: rgba(15,143,131,.12); border: 1px solid rgba(15,143,131,.16);">
   <svg viewBox="0 0 120 120" class="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px]" aria-hidden="true">
@@ -2453,37 +3059,38 @@
           fill="url(#gIce)" style="letter-spacing:.5px">hallaym</text>
   </svg>
 </div>
-          <div class="leading-tight">
-            <div class="font-extrabold tracking-tight"><span class="u-anim">HALLAYM</span> edu</div>
-            <div class="text-xs muted">Talabalar uchun platforma</div>
+          <div class="site-brand-meta">
+            <div class="site-brand-eyebrow">Rasmiy Ta'lim Platformasi</div>
+            <div class="site-brand-name">HALLAYM edu</div>
+            <div class="site-brand-sub">Online videodars, LMS va campus oqimi</div>
           </div>
         </a>
 
-        <nav class="hidden md:flex items-center gap-1">
-          <a href="#imkoniyatlar" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Imkoniyatlar</a>
-          <a href="#qanday-ishlaydi" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Qanday ishlaydi</a>
-          <a href="#galereya" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Galereya</a>
-          <a href="#xizmatlar" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Xizmatlar</a>
-          <a href="#signal" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Campus Signal</a>
-          <a href="#faq" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">FAQ</a>
+        <nav class="site-nav hidden lg:flex">
+          <a href="#imkoniyatlar" class="site-nav__link">Imkoniyatlar</a>
+          <a href="#qanday-ishlaydi" class="site-nav__link">Qanday ishlaydi</a>
+          <a href="#galereya" class="site-nav__link">Galereya</a>
+          <a href="#xizmatlar" class="site-nav__link">Xizmatlar</a>
+          <a href="#signal" class="site-nav__link">Campus Signal</a>
+          <a href="#faq" class="site-nav__link">FAQ</a>
         </nav>
 
-        <div class="flex items-center gap-2">
-          <button id="mobileMenuBtn" class="md:hidden glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring" aria-label="Menyu" aria-expanded="false" aria-controls="mobileMenu">
+        <div class="site-header-actions">
+          <button id="mobileMenuBtn" class="md:hidden glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring site-utility-btn" aria-label="Menyu" aria-expanded="false" aria-controls="mobileMenu">
             <i class="fa-solid fa-bars"></i>
           </button>
 
-          <button id="themeToggle" class="btn-ghost glass rounded-xl px-3 py-2 text-sm font-semibold muted glow-ring">
+          <button id="themeToggle" class="btn-ghost glass rounded-xl px-3 py-2 text-sm font-semibold muted glow-ring site-utility-btn">
             <i id="themeIcon" class="fa-solid fa-moon"></i>
             <span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
           </button>
 
-          <a href="/login.html" class="glass rounded-xl px-4 py-2 text-sm font-bold btn-ghost glow-ring">
+          <a href="/login.html" class="glass rounded-xl px-4 py-2 text-sm font-bold btn-ghost glow-ring site-utility-btn">
             <i class="fa-solid fa-right-to-bracket"></i>
             <span class="ml-2 hidden sm:inline">Kirish</span>
           </a>
 
-          <a href="/register.html" class="btn-primary rounded-xl px-4 py-2 text-sm font-bold text-white glow-ring magnet">
+          <a href="/register.html" class="btn-primary rounded-xl px-4 py-2 text-sm font-bold text-white glow-ring magnet site-primary-btn">
             Ro‘yxatdan o‘tish
           </a>
         </div>
@@ -2538,7 +3145,7 @@
 </div>
           <div class="leading-tight">
             <div class="font-extrabold tracking-tight">HALLAYM edu</div>
-            <div class="text-xs muted">Menyu</div>
+            <div class="text-xs muted">Rasmiy menyu</div>
           </div>
         </div>
 
@@ -2645,6 +3252,15 @@
             <source src="/assets/hero-campus.mp4" type="video/mp4" />
           </video>
           <div class="landing-stage__overlay"></div>
+          <div class="landing-stage__frame"></div>
+          <span class="stage-energy stage-energy--a" aria-hidden="true"></span>
+          <span class="stage-energy stage-energy--b" aria-hidden="true"></span>
+          <div class="landing-floating-art landing-floating-art--orb" data-parallax="0.12" data-parallax-x="-0.04" aria-hidden="true">
+            <img src="/assets/edu-hero-orbit-3d.svg" alt="" />
+          </div>
+          <div class="landing-floating-art landing-floating-art--stack" data-parallax="0.18" data-parallax-x="0.05" aria-hidden="true">
+            <img src="/assets/edu-gallery-stack-3d.svg" alt="" />
+          </div>
 
           <div class="landing-stage__cards">
             <div>
@@ -2936,12 +3552,17 @@
       </div>
 
       <div class="gallery-grid mt-4">
-        <article class="gallery-card gallery-card--wide">
-          <img src="/assets/lesson-gallery-wall.svg" alt="Darslar va bo'limlar kollaji previewi" />
+        <article class="gallery-card gallery-card--wide gallery-card--illustrated">
+          <img src="/assets/edu-gallery-stack-3d.svg" alt="3D ta'lim oqimi illustratsiyasi" class="gallery-card__art" data-parallax="0.08" data-parallax-x="-0.03" />
+          <div class="gallery-card__panel">
+            <div class="gallery-card__panel-label"><i class="fa-solid fa-cubes"></i> 3D Layer</div>
+            <strong>Video, CTA va yo'nalish bir kompozitsiyada.</strong>
+            <span>Sahifa faqat matn bilan emas, shakl va obyektlar orqali ham platforma vazifasini tushuntiradi.</span>
+          </div>
           <div class="gallery-card__copy">
             <div class="gallery-card__eyebrow"><i class="fa-solid fa-layer-group"></i> Vizual oqim</div>
-            <h3>Section'lar orasidagi katta bo'shliqlar va kartalar orqa fondagi videoni ko'rsatib turadi.</h3>
-            <p>Natijada sahifa tekis oq bloklar to'plami emas, balki jonli va harakatdagi mahsulotga o'xshab ko'rinadi.</p>
+            <h3>3D illustratsiya section'larni oddiy kartadan ko'ra boyroq va esda qoladigan qiladi.</h3>
+            <p>Scroll qilganda katta bo'shliqlar, ambient video va suzuvchi assetlar birga ishlaydi, natijada landing page jonli mahsulot taassurotini beradi.</p>
           </div>
         </article>
 
@@ -3439,41 +4060,69 @@
   </section>
 
   <footer class="landing-section mx-auto max-w-7xl px-4 pb-10">
-    <div class="glass rounded-[34px] p-8 reveal g-border">
-      <div class="grid lg:grid-cols-[1.08fr_.92fr] gap-8">
-        <div>
-          <div class="font-black text-2xl">HALLAYM edu</div>
-          <div class="mt-3 text-sm muted2 max-w-2xl leading-7">
-            Online real vaqt videodars, kurs oqimi, talabalar hamkorligi, xizmatlar va campus signal tizimini bitta premium tajribaga yig'adigan platforma.
-            Dizayn ham shu fikrni kuchaytirish uchun och teal, yumshoq oq va qoramtir aksentlar bilan qayta ishlangan.
+    <div class="glass site-footer-shell p-8 reveal g-border">
+      <div class="site-footer-backword" aria-hidden="true">HALLAYM</div>
+      <img src="/assets/edu-footer-atmosphere.svg" alt="" class="site-footer-illustration" aria-hidden="true" data-parallax="0.1" data-parallax-x="-0.03" />
+      <div class="site-footer-top">
+        <div class="site-footer-brand">
+          <div class="site-footer-social">
+            <a href="https://t.me/hallaym" aria-label="Telegram"><i class="fa-brands fa-telegram"></i></a>
+            <a href="/channels.html" aria-label="Kanallar"><i class="fa-solid fa-bullhorn"></i></a>
+            <a href="/lives.html" aria-label="Jonli darslar"><i class="fa-solid fa-video"></i></a>
           </div>
-          <div class="mt-5 flex flex-wrap gap-3 text-xs font-extrabold">
-            <span class="landing-trust__item">LIVE CLASSROOMS</span>
-            <span class="landing-trust__item">CAMPUS FLOW</span>
-            <span class="landing-trust__item">MARKETPLACE</span>
+          <div class="site-brand-eyebrow">Rasmiy Platforma</div>
+          <div class="site-footer-title">HALLAYM edu</div>
+          <div class="site-footer-copy">
+            Online real vaqt videodars, kurs oqimi, talabalar hamkorligi, xizmatlar va campus signalni bitta tartibli platformaga yig'adigan rasmiy ta'lim muhiti.
+            Tashqi ko'rinish endi rasmiyroq, lekin premium kayfiyatni yo'qotmaydi: chuqur footer, 3D ilustratsiyalar va aniq yo'nalishlar foydalanuvchini keyingi qadamga olib boradi.
           </div>
-          <div class="mt-4 text-xs muted2">
-            &copy; <span id="year"></span> <a href="https://t.me/hallaym" class="font-semibold"><span class="u-anim">HALLAYM</span></a>. Barcha huquqlar himoyalangan.
+          <div class="site-footer-capsules">
+            <span class="site-footer-capsule"><i class="fa-solid fa-video"></i> Live Classrooms</span>
+            <span class="site-footer-capsule"><i class="fa-solid fa-graduation-cap"></i> Learning Flow</span>
+            <span class="site-footer-capsule"><i class="fa-solid fa-shield-halved"></i> Official Platform</span>
+          </div>
+          <div class="site-footer-cta">
+            <a href="/register.html"><i class="fa-solid fa-user-plus"></i> Bepul boshlash</a>
+            <a href="/lives.html"><i class="fa-solid fa-circle-play"></i> Live darslarni ko'rish</a>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-          <a class="glass rounded-2xl px-4 py-3 btn-ghost font-bold" href="/lives.html">Live darslar</a>
-          <a class="glass rounded-2xl px-4 py-3 btn-ghost font-bold" href="/channels.html">Kanallar</a>
-          <a class="glass rounded-2xl px-4 py-3 btn-ghost font-bold" href="/groups.html">Guruhlar</a>
-          <a class="glass rounded-2xl px-4 py-3 btn-ghost font-bold" href="/messages.html">Xabarlar</a>
-          <a class="glass rounded-2xl px-4 py-3 btn-ghost font-bold" href="/services.html">Xizmatlar</a>
-          <a class="glass rounded-2xl px-4 py-3 btn-ghost font-bold" href="/signals.html">Signal</a>
+        <div class="site-footer-columns">
+          <div class="site-footer-card">
+            <h4>Platforma</h4>
+            <a class="site-footer-link" href="/lives.html">Live darslar</a>
+            <a class="site-footer-link" href="/channels.html">Kanallar</a>
+            <a class="site-footer-link" href="/groups.html">Guruhlar</a>
+            <div class="site-footer-meta">Asosiy ta'lim oqimi va foydalanuvchi harakati shu bo'limlarda jamlangan.</div>
+          </div>
+
+          <div class="site-footer-card">
+            <h4>Tizim</h4>
+            <a class="site-footer-link" href="/services.html">Xizmatlar</a>
+            <a class="site-footer-link" href="/signals.html">Campus Signal</a>
+            <a class="site-footer-link" href="#faq">FAQ</a>
+            <div class="site-footer-meta">Qo'shimcha imkoniyatlar, yordam va campus boshqaruvi uchun alohida bo'limlar.</div>
+          </div>
+
+          <div class="site-footer-card">
+            <h4>Aloqa</h4>
+            <a class="site-footer-link" href="https://t.me/hallaym">Telegram</a>
+            <a class="site-footer-link" href="/register.html">Ro'yxatdan o'tish</a>
+            <a class="site-footer-link" href="/login.html">Kirish</a>
+            <div class="site-footer-meta">Rasmiy savollar va tezkor bog'lanish uchun asosiy aloqa kanallari.</div>
+          </div>
         </div>
       </div>
 
-      <div class="mt-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <div class="text-xs muted2">
-          Maslahat: bosh sahifadan keyin eng kuchli onboarding yo'li - live dars preview yoki ro'yxatdan o'tish tugmasi.
+      <div class="site-footer-bottom">
+        <div class="site-footer-legal">
+          &copy; <span id="year"></span> <a href="https://t.me/hallaym" class="font-semibold"><span class="u-anim">HALLAYM</span></a>. Barcha huquqlar himoyalangan.
         </div>
-        <a href="#top" class="glass rounded-2xl px-4 py-2 text-sm font-bold btn-ghost">
-          Tepaga <i class="fa-solid fa-arrow-up ml-2"></i>
-        </a>
+
+        <div class="site-footer-actions">
+          <a href="#faq"><i class="fa-solid fa-circle-question"></i> FAQ</a>
+          <a href="#top"><i class="fa-solid fa-arrow-up"></i> Tepaga</a>
+        </div>
       </div>
     </div>
   </footer>
@@ -3989,6 +4638,42 @@
 
       window.addEventListener('scroll', onScroll, {passive:true});
       onScroll();
+    })();
+
+    // Decorative parallax for floating art
+    (function(){
+      const items = Array.from(document.querySelectorAll('[data-parallax]'));
+      if(!items.length) return;
+      if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      let ticking = false;
+
+      function update(){
+        ticking = false;
+        const viewport = window.innerHeight || 1;
+
+        items.forEach((item)=>{
+          const rect = item.getBoundingClientRect();
+          const depth = parseFloat(item.getAttribute('data-parallax') || '0.1');
+          const depthX = parseFloat(item.getAttribute('data-parallax-x') || '0');
+          const center = rect.top + (rect.height / 2);
+          const distance = (center - viewport / 2) / viewport;
+          const shiftY = distance * depth * -120;
+          const shiftX = distance * depthX * -120;
+          const rotate = distance * depth * -12;
+          item.style.transform = `translate3d(${shiftX}px, ${shiftY}px, 0) rotate(${rotate}deg)`;
+        });
+      }
+
+      function requestTick(){
+        if(ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(update);
+      }
+
+      window.addEventListener('scroll', requestTick, {passive:true});
+      window.addEventListener('resize', requestTick);
+      update();
     })();
 
     // Reveal on scroll
