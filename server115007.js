@@ -469,6 +469,12 @@ const COURSE_MATERIAL_MAX_FILES = 3;
 const COURSE_MATERIAL_MAX_BYTES = 5 * 1024 * 1024;
 const COURSE_MATERIAL_MAX_TEXT_CHARS = 16000;
 const COURSE_AI_SOURCE_MAX_CHARS = 18000;
+const COURSE_COMMENT_MAX_CHARS = 2200;
+const COURSE_REQUEST_MAX_CHARS = 700;
+const COURSE_REVIEW_MAX_CHARS = 1200;
+const COURSE_RATING_REVIEW_MAX_CHARS = 900;
+const COURSE_LESSON_QUIZ_MAX_QUESTIONS = 12;
+const COURSE_LESSON_QUIZ_MAX_OPTIONS = 6;
 
 const courseMaterialUpload = multer({
   storage: multer.memoryStorage(),
@@ -17085,6 +17091,214 @@ function normalizeCourseMaterials(rawList) {
   return out;
 }
 
+function normalizeCourseShortText(value, max = 240) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+function normalizeCourseLongText(value, max = 5000) {
+  return String(value || '').replace(/\r\n/g, '\n').trim().slice(0, max);
+}
+
+function normalizeCourseRatingValue(rawValue) {
+  const n = Math.round(Number(rawValue || 0));
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(1, Math.min(5, n));
+}
+
+function buildLessonQuizOptionKey(index) {
+  return String.fromCharCode(65 + Math.max(0, Math.min(25, Number(index || 0))));
+}
+
+function normalizeCourseQuizOptions(rawOptions) {
+  if (!Array.isArray(rawOptions)) return [];
+  const out = [];
+  for (let i = 0; i < rawOptions.length; i += 1) {
+    const option = rawOptions[i] || {};
+    const text = normalizeCourseShortText(option.text || option.label || option.value || '', 240);
+    if (!text) continue;
+    const rawKey = String(option.key || '').trim().toUpperCase();
+    const key = rawKey || buildLessonQuizOptionKey(out.length);
+    out.push({ key, text });
+    if (out.length >= COURSE_LESSON_QUIZ_MAX_OPTIONS) break;
+  }
+  return out;
+}
+
+function normalizeCourseQuizQuestions(rawQuestions) {
+  if (!Array.isArray(rawQuestions)) return [];
+  const out = [];
+  for (let i = 0; i < rawQuestions.length; i += 1) {
+    const question = rawQuestions[i] || {};
+    const text = normalizeCourseLongText(question.text || question.question || '', 520);
+    const options = normalizeCourseQuizOptions(question.options);
+    if (!text || options.length < 2) continue;
+    let answerKey = String(question.answerKey || question.correctKey || question.answer || '').trim().toUpperCase();
+    if (!options.some((option) => option.key === answerKey)) {
+      answerKey = String(options[0]?.key || 'A');
+    }
+    out.push({
+      id: normalizeCourseShortText(question.id || `q${out.length + 1}`, 60) || `q${out.length + 1}`,
+      text,
+      options,
+      answerKey,
+      explanation: normalizeCourseLongText(question.explanation || '', 520)
+    });
+    if (out.length >= COURSE_LESSON_QUIZ_MAX_QUESTIONS) break;
+  }
+  return out;
+}
+
+function normalizeLessonQuizPayload(raw = {}) {
+  const quizQuestions = normalizeCourseQuizQuestions(raw.quizQuestions || raw.questions);
+  const rawQuizEnabled = raw.quizEnabled;
+  const quizEnabled = rawQuizEnabled === true
+    || String(rawQuizEnabled || '').toLowerCase() === 'true'
+    || quizQuestions.length > 0;
+  const passPct = Math.max(1, Math.min(100, Number(raw.quizPassPct || raw.passPct || 60) || 60));
+  return {
+    durationMinutes: Math.max(0, Number(raw.durationMinutes || raw.durationMin || 0) || 0),
+    isPreview: raw.isPreview === true || String(raw.isPreview || '').toLowerCase() === 'true',
+    quizEnabled: !!quizEnabled,
+    quizTitle: normalizeCourseShortText(raw.quizTitle || raw.quizName || '', 180),
+    quizPassPct: passPct,
+    quizQuestions
+  };
+}
+
+function sanitizeCourseContentForRole(rawItem, includeAnswers = false) {
+  const item = rawItem && typeof rawItem.toObject === 'function'
+    ? rawItem.toObject()
+    : { ...(rawItem || {}) };
+  const quizQuestions = normalizeCourseQuizQuestions(item.quizQuestions);
+  item.durationMinutes = Math.max(0, Number(item.durationMinutes || 0) || 0);
+  item.isPreview = !!item.isPreview;
+  item.quizEnabled = !!(item.quizEnabled && quizQuestions.length);
+  item.quizTitle = normalizeCourseShortText(item.quizTitle || '', 180);
+  item.quizPassPct = Math.max(1, Math.min(100, Number(item.quizPassPct || 60) || 60));
+  item.quizQuestions = quizQuestions.map((question) => includeAnswers ? question : ({
+    id: String(question.id || ''),
+    text: question.text,
+    options: Array.isArray(question.options) ? question.options : []
+  }));
+  item.materials = normalizeCourseMaterials(item.materials);
+  return item;
+}
+
+function buildCourseNotificationLink(courseId) {
+  return `/course.html?id=${encodeURIComponent(String(courseId || ''))}`;
+}
+
+function getDisplayNameFromUser(user) {
+  return normalizeCourseShortText(
+    user?.fullName || user?.fullname || user?.name || user?.nickname || user?.username || 'Foydalanuvchi',
+    120
+  ) || 'Foydalanuvchi';
+}
+
+async function createUserNotification({ userId, title, body, link = '' }) {
+  if (!userId) return null;
+  const notification = await Notification.create({
+    userId,
+    title: normalizeCourseShortText(title || '', 180),
+    body: normalizeCourseLongText(body || '', 600),
+    link: String(link || '').trim().slice(0, 260)
+  });
+  emitToUser(String(userId), 'notification', notification);
+  return notification;
+}
+
+async function enrollUserIntoCourse({ course, userId, role = 'student', enforceVisibility = true }) {
+  const me = await User.findById(userId);
+  if (!me) {
+    const err = new Error('User not found');
+    err.status = 404;
+    throw err;
+  }
+
+  const normalizedRole = String(role || 'student').toLowerCase();
+  if (enforceVisibility && normalizedRole === 'student' && String(course?.status || '') !== 'published') {
+    const err = new Error('Course is not published');
+    err.status = 403;
+    throw err;
+  }
+
+  let isSourceGroupStudent = false;
+  if (normalizedRole === 'student') {
+    const cFaculty = String(course?.faculty || '').trim();
+    const uFaculty = String(userFaculty(me) || '').trim();
+    if (cFaculty && uFaculty && cFaculty !== uFaculty) {
+      const err = new Error('Course is for another faculty');
+      err.status = 403;
+      throw err;
+    }
+    const allowedGroups = (course?.groups || []).map((x) => String(x).trim()).filter(Boolean);
+    const meGroup = String(userGroup(me) || '').trim();
+    const sourceGroup = String(course?.sourceStudyGroup || '').trim();
+    isSourceGroupStudent = !!(course?.freeForSourceGroup && meGroup && sourceGroup && meGroup.toLowerCase() === sourceGroup.toLowerCase());
+    if (allowedGroups.length) {
+      if (!meGroup) {
+        const err = new Error('User group is missing');
+        err.status = 403;
+        throw err;
+      }
+      const allowed = allowedGroups.some((group) => group.toLowerCase() === meGroup.toLowerCase());
+      if (!allowed && !isSourceGroupStudent) {
+        const err = new Error('Course is not open for your group');
+        err.status = 403;
+        throw err;
+      }
+    }
+  }
+
+  const existed = await CourseEnrollment.findOne({ courseId: course._id, userId: me._id }).lean();
+  if (existed) {
+    return {
+      success: true,
+      alreadyJoined: true,
+      paidAmount: Number(existed.paidAmount || 0),
+      isSourceGroupStudent
+    };
+  }
+
+  let paidAmount = 0;
+  if (normalizedRole === 'student' && String(course?.type || 'free') === 'paid' && !isSourceGroupStudent) {
+    const price = normalizeMoneyValue(course?.price || 0);
+    if (price < 1) {
+      const err = new Error('Invalid course price');
+      err.status = 400;
+      throw err;
+    }
+    if (Number(me.coins || 0) < price) {
+      const err = new Error('Insufficient balance');
+      err.status = 400;
+      throw err;
+    }
+
+    paidAmount = price;
+    const teacherShare = Math.floor(price * 0.5);
+    const adminShare = price - teacherShare;
+    me.coins = Number(me.coins || 0) - price;
+
+    const teacher = await User.findById(course.teacherId);
+    if (teacher) {
+      teacher.teacherBalance = Number(teacher.teacherBalance || 0) + teacherShare;
+      await teacher.save();
+    }
+
+    await PlatformWallet.findOneAndUpdate(
+      { key: 'platform_wallet' },
+      { $inc: { adminBalance: adminShare } },
+      { upsert: true, new: true }
+    );
+
+    await me.save();
+  }
+
+  await CourseEnrollment.create({ courseId: course._id, userId: me._id, paidAmount });
+  await Course.updateOne({ _id: course._id }, { $inc: { enrolledCount: 1 } });
+  return { success: true, alreadyJoined: false, paidAmount, isSourceGroupStudent };
+}
+
 function buildCourseContentDocFromLesson(lesson, courseId, index) {
   const l = lesson || {};
   const rawType = String(l.type || l.kind || '').toLowerCase().trim();
@@ -17110,17 +17324,24 @@ function buildCourseContentDocFromLesson(lesson, courseId, index) {
 
   if (type === 'video' && !videoUrl && youtubeUrl) videoUrl = youtubeUrl;
   if (type === 'youtube' && !youtubeUrl && videoUrl && isYoutubeLikeUrl(videoUrl)) youtubeUrl = videoUrl;
+  const quizMeta = normalizeLessonQuizPayload(l);
 
   return {
     courseId,
     order: Number(l.order || (index + 1)),
     type,
     title: String(l.title || l.name || `Bolim ${index + 1}`).trim(),
-    text: type === 'text' ? text : '',
+    text: type === 'text' ? text : String(text || '').trim(),
     youtubeUrl: type === 'youtube' ? youtubeUrl : '',
     videoUrl: type === 'video' ? videoUrl : '',
     pdfUrl: type === 'pdf' ? pdfUrl : '',
-    materials: normalizeCourseMaterials(l.materials)
+    materials: normalizeCourseMaterials(l.materials),
+    durationMinutes: quizMeta.durationMinutes,
+    isPreview: quizMeta.isPreview,
+    quizEnabled: quizMeta.quizEnabled,
+    quizTitle: quizMeta.quizTitle,
+    quizPassPct: quizMeta.quizPassPct,
+    quizQuestions: quizMeta.quizQuestions
   };
 }
 
@@ -17273,6 +17494,10 @@ const CourseSchema = new mongoose.Schema({
   price: { type: Number, default: 0, min: 0 },
   pricingCurrency: { type: String, default: 'UZS' }, // display currency (so'm)
   status: { type: String, enum: ['draft', 'published'], default: 'draft' },
+  joinMode: { type: String, enum: ['open', 'approval'], default: 'open' },
+  allowComments: { type: Boolean, default: true },
+  allowRatings: { type: Boolean, default: true },
+  allowSequential: { type: Boolean, default: true },
   category: { type: String, default: '', trim: true },
   level: { type: String, default: 'beginner', trim: true }, // beginner/intermediate/advanced
   language: { type: String, default: 'uz', trim: true },
@@ -17309,6 +17534,24 @@ const CourseContentSchema = new mongoose.Schema({
   youtubeUrl: { type: String, default: '' },
   videoUrl: { type: String, default: '' },
   pdfUrl: { type: String, default: '' },
+  durationMinutes: { type: Number, default: 0, min: 0 },
+  isPreview: { type: Boolean, default: false },
+  quizEnabled: { type: Boolean, default: false },
+  quizTitle: { type: String, default: '', trim: true },
+  quizPassPct: { type: Number, default: 60, min: 1, max: 100 },
+  quizQuestions: {
+    type: [{
+      id: { type: String, default: '' },
+      text: { type: String, default: '' },
+      options: [{
+        key: { type: String, default: '' },
+        text: { type: String, default: '' }
+      }],
+      answerKey: { type: String, default: '' },
+      explanation: { type: String, default: '' }
+    }],
+    default: []
+  },
   materials: {
     type: [{
       name: { type: String, default: '', trim: true },
@@ -17334,9 +17577,43 @@ const CourseProgressSchema = new mongoose.Schema({
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   progress: { type: mongoose.Schema.Types.Mixed, default: {} }, // { contentId: true }
-  testsPassed: { type: mongoose.Schema.Types.Mixed, default: {} } // { testId: true }
+  testsPassed: { type: mongoose.Schema.Types.Mixed, default: {} }, // { testId: true }
+  lessonQuizResults: { type: mongoose.Schema.Types.Mixed, default: {} },
+  lastLessonId: { type: String, default: '' },
+  lastActivityAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 CourseProgressSchema.index({ courseId: 1, userId: 1 }, { unique: true });
+
+const CourseRatingSchema = new mongoose.Schema({
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  authorName: { type: String, default: '', trim: true },
+  rating: { type: Number, required: true, min: 1, max: 5 },
+  reviewText: { type: String, default: '' }
+}, { timestamps: true });
+CourseRatingSchema.index({ courseId: 1, userId: 1 }, { unique: true });
+
+const CourseCommentSchema = new mongoose.Schema({
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  authorName: { type: String, default: '', trim: true },
+  authorRole: { type: String, default: 'student', trim: true },
+  parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'CourseComment', default: null, index: true },
+  body: { type: String, default: '' }
+}, { timestamps: true });
+CourseCommentSchema.index({ courseId: 1, createdAt: -1 });
+
+const CourseEnrollmentRequestSchema = new mongoose.Schema({
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending', index: true },
+  message: { type: String, default: '' },
+  reviewNote: { type: String, default: '' },
+  reviewedAt: { type: Date, default: null },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
+}, { timestamps: true });
+CourseEnrollmentRequestSchema.index({ courseId: 1, userId: 1 }, { unique: true });
 
 const TestSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
@@ -17409,6 +17686,9 @@ const Course = mongoose.models.Course || mongoose.model('Course', CourseSchema);
 const CourseContent = mongoose.models.CourseContent || mongoose.model('CourseContent', CourseContentSchema);
 const CourseEnrollment = mongoose.models.CourseEnrollment || mongoose.model('CourseEnrollment', CourseEnrollmentSchema);
 const CourseProgress = mongoose.models.CourseProgress || mongoose.model('CourseProgress', CourseProgressSchema);
+const CourseRating = mongoose.models.CourseRating || mongoose.model('CourseRating', CourseRatingSchema);
+const CourseComment = mongoose.models.CourseComment || mongoose.model('CourseComment', CourseCommentSchema);
+const CourseEnrollmentRequest = mongoose.models.CourseEnrollmentRequest || mongoose.model('CourseEnrollmentRequest', CourseEnrollmentRequestSchema);
 const Test = mongoose.models.Test || mongoose.model('Test', TestSchema);
 const TestSubmission = mongoose.models.TestSubmission || mongoose.model('TestSubmission', TestSubmissionSchema);
 const Certificate = mongoose.models.Certificate || mongoose.model('Certificate', CertificateSchema);
@@ -17425,6 +17705,93 @@ try {
 app.use(['/api/courses', '/api/tests', '/api/certificates'], authenticateToken, attachUserRole);
 
 // ==================== COURSES ====================
+
+async function getCourseStatsMap(courseIds = []) {
+  const normalizedIds = Array.from(
+    new Set((courseIds || []).map((id) => String(id || '').trim()).filter((id) => mongoose.Types.ObjectId.isValid(id)))
+  ).map((id) => new mongoose.Types.ObjectId(id));
+  if (!normalizedIds.length) return new Map();
+
+  const [ratingAgg, lessonAgg, commentAgg, pendingAgg] = await Promise.all([
+    CourseRating.aggregate([
+      { $match: { courseId: { $in: normalizedIds } } },
+      { $group: { _id: '$courseId', average: { $avg: '$rating' }, count: { $sum: 1 } } }
+    ]),
+    CourseContent.aggregate([
+      { $match: { courseId: { $in: normalizedIds } } },
+      { $group: { _id: '$courseId', count: { $sum: 1 } } }
+    ]),
+    CourseComment.aggregate([
+      { $match: { courseId: { $in: normalizedIds } } },
+      { $group: { _id: '$courseId', count: { $sum: 1 } } }
+    ]),
+    CourseEnrollmentRequest.aggregate([
+      { $match: { courseId: { $in: normalizedIds }, status: 'pending' } },
+      { $group: { _id: '$courseId', count: { $sum: 1 } } }
+    ])
+  ]);
+
+  const map = new Map();
+  for (const id of normalizedIds) {
+    map.set(String(id), {
+      ratingAverage: 0,
+      ratingCount: 0,
+      lessonCount: 0,
+      commentCount: 0,
+      pendingRequests: 0
+    });
+  }
+
+  for (const row of ratingAgg || []) {
+    const item = map.get(String(row?._id)) || {};
+    item.ratingAverage = Number(row?.average || 0);
+    item.ratingCount = Number(row?.count || 0);
+    map.set(String(row?._id), item);
+  }
+  for (const row of lessonAgg || []) {
+    const item = map.get(String(row?._id)) || {};
+    item.lessonCount = Number(row?.count || 0);
+    map.set(String(row?._id), item);
+  }
+  for (const row of commentAgg || []) {
+    const item = map.get(String(row?._id)) || {};
+    item.commentCount = Number(row?.count || 0);
+    map.set(String(row?._id), item);
+  }
+  for (const row of pendingAgg || []) {
+    const item = map.get(String(row?._id)) || {};
+    item.pendingRequests = Number(row?.count || 0);
+    map.set(String(row?._id), item);
+  }
+
+  return map;
+}
+
+async function getCourseViewerState(course, userId) {
+  if (!course || !userId) {
+    return {
+      joined: false,
+      requestStatus: '',
+      pendingRequest: false,
+      requestId: '',
+      myRating: 0
+    };
+  }
+
+  const [joinedDoc, requestDoc, ratingDoc] = await Promise.all([
+    CourseEnrollment.findOne({ courseId: course._id, userId }).select('_id').lean(),
+    CourseEnrollmentRequest.findOne({ courseId: course._id, userId }).sort({ updatedAt: -1 }).lean(),
+    CourseRating.findOne({ courseId: course._id, userId }).select('rating').lean()
+  ]);
+
+  return {
+    joined: !!joinedDoc,
+    requestStatus: String(requestDoc?.status || ''),
+    pendingRequest: String(requestDoc?.status || '') === 'pending',
+    requestId: requestDoc?._id ? String(requestDoc._id) : '',
+    myRating: Number(ratingDoc?.rating || 0)
+  };
+}
 
 // List courses
 app.get('/api/courses', async (req, res) => {
@@ -17450,7 +17817,12 @@ app.get('/api/courses', async (req, res) => {
     }
 
     const list = await Course.find(query).sort({ createdAt: -1 }).lean();
-    res.json({ courses: list });
+    const statsMap = await getCourseStatsMap(list.map((course) => course._id));
+    const courses = list.map((course) => ({
+      ...course,
+      ...(statsMap.get(String(course._id)) || {})
+    }));
+    res.json({ courses });
   } catch (e) {
     console.error('GET /api/courses error:', e);
     res.status(500).json({ error: 'Failed to load courses' });
@@ -17467,7 +17839,19 @@ app.get('/api/courses/:id', async (req, res) => {
     if (role === 'student' && c.status !== 'published') {
       return res.status(403).json({ error: 'Course is not published' });
     }
-    res.json({ course: c });
+    if (role === 'teacher' && String(c.teacherId || '') !== String(req.userId || '') && c.status !== 'published') {
+      return res.status(403).json({ error: 'Course is not published' });
+    }
+    const statsMap = await getCourseStatsMap([c._id]);
+    const viewer = await getCourseViewerState(c, req.userId);
+    res.json({
+      course: {
+        ...c,
+        ...(statsMap.get(String(c._id)) || {}),
+        viewer,
+        isOwner: String(c.teacherId || '') === String(req.userId || '')
+      }
+    });
   } catch (e) {
     console.error('GET /api/courses/:id error:', e);
     res.status(500).json({ error: 'Failed to load course' });
@@ -17488,6 +17872,10 @@ app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teache
     const price = normalizeMoneyValue(req.body.price);
     const pricingCurrency = String(req.body.pricingCurrency || 'UZS').toUpperCase();
     const freeForSourceGroup = (req.body.freeForSourceGroup !== false);
+    const joinMode = String(req.body.joinMode || 'open').toLowerCase() === 'approval' ? 'approval' : 'open';
+    const allowComments = req.body.allowComments !== false;
+    const allowRatings = req.body.allowRatings !== false;
+    const allowSequential = req.body.allowSequential !== false;
     const testIdsInput = Array.isArray(req.body.testIds) ? req.body.testIds : [];
     const testIds = Array.from(new Set(testIdsInput.map((x) => String(x || '').trim()).filter((x) => mongoose.Types.ObjectId.isValid(x))))
       .map((x) => new mongoose.Types.ObjectId(x));
@@ -17508,6 +17896,10 @@ app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teache
       price: type === 'paid' ? price : 0,
       pricingCurrency,
       status: (req.body.status || 'draft') === 'published' ? 'published' : 'draft',
+      joinMode,
+      allowComments,
+      allowRatings,
+      allowSequential,
       category: String(req.body.category || '').trim(),
       level: String(req.body.level || 'beginner').trim().toLowerCase(),
       language: String(req.body.language || 'uz').trim().toLowerCase(),
@@ -17707,6 +18099,10 @@ app.put('/api/courses/:id', authenticateToken, attachUserRole, requireRole(['tea
     if (req.body.title !== undefined) c.title = String(req.body.title).trim();
     if (req.body.description !== undefined) c.description = String(req.body.description || '').trim();
     if (req.body.status !== undefined) c.status = (req.body.status === 'published') ? 'published' : 'draft';
+    if (req.body.joinMode !== undefined) c.joinMode = String(req.body.joinMode || 'open').toLowerCase() === 'approval' ? 'approval' : 'open';
+    if (req.body.allowComments !== undefined) c.allowComments = req.body.allowComments !== false;
+    if (req.body.allowRatings !== undefined) c.allowRatings = req.body.allowRatings !== false;
+    if (req.body.allowSequential !== undefined) c.allowSequential = req.body.allowSequential !== false;
     if (req.body.category !== undefined) c.category = String(req.body.category || '').trim();
     if (req.body.level !== undefined) c.level = String(req.body.level || 'beginner').trim().toLowerCase();
     if (req.body.language !== undefined) c.language = String(req.body.language || 'uz').trim().toLowerCase();
@@ -17788,83 +18184,92 @@ app.put('/api/courses/:id', authenticateToken, attachUserRole, requireRole(['tea
   }
 });
 
+app.delete('/api/courses/:id', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const role = String(req.userRole || '').toLowerCase();
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    if (role === 'teacher' && String(course.teacherId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Not owner' });
+    }
+
+    const contents = await CourseContent.find({ courseId: course._id }).select('materials').lean();
+    for (const content of contents || []) {
+      const materials = Array.isArray(content?.materials) ? content.materials : [];
+      for (const material of materials) {
+        if (material?.publicId) {
+          cloudinary.uploader.destroy(String(material.publicId), { resource_type: 'raw', invalidate: true }).catch(() => null);
+        }
+      }
+    }
+
+    await Promise.all([
+      CourseContent.deleteMany({ courseId: course._id }),
+      CourseEnrollment.deleteMany({ courseId: course._id }),
+      CourseEnrollmentRequest.deleteMany({ courseId: course._id }),
+      CourseProgress.deleteMany({ courseId: course._id }),
+      CourseRating.deleteMany({ courseId: course._id }),
+      CourseComment.deleteMany({ courseId: course._id }),
+      Course.deleteOne({ _id: course._id })
+    ]);
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('DELETE /api/courses/:id error:', e);
+    res.status(500).json({ error: 'Failed to delete course' });
+  }
+});
+
 // Join course (student)
 app.post('/api/courses/:id/join', authenticateToken, attachUserRole, requireRole(['student', 'admin', 'teacher']), async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
     if (!course) return res.status(404).json({ error: 'Course not found' });
+    const role = String(req.userRole || 'student').toLowerCase();
 
-    const me = await User.findById(req.userId);
-    if (!me) return res.status(404).json({ error: 'User not found' });
+    if (role === 'student' && String(course.joinMode || 'open') === 'approval') {
+      const existing = await CourseEnrollment.findOne({ courseId: course._id, userId: req.userId }).lean();
+      if (existing) return res.json({ success: true, alreadyJoined: true, joined: true });
 
-    // Only students can "buy/join" normally; allow admin/teacher for testing but no payment
-    const role = (req.userRole || 'student').toLowerCase();
-
-    // Published check for student
-    if (role === 'student' && course.status !== 'published') {
-      return res.status(403).json({ error: 'Course is not published' });
-    }
-
-    let isSourceGroupStudent = false;
-
-    // Faculty/group restriction for student
-    if (role === 'student') {
-      const cFaculty = String(course.faculty || '').trim();
-      const uFaculty = String(userFaculty(me) || '').trim();
-      if (cFaculty && uFaculty && cFaculty !== uFaculty) {
-        return res.status(403).json({ error: 'Course is for another faculty' });
-      }
-      const allowedGroups = (course.groups || []).map(x => String(x).trim()).filter(Boolean);
-      const mg = String(userGroup(me) || '').trim();
-      const sourceGroup = String(course.sourceStudyGroup || '').trim();
-      isSourceGroupStudent = !!(course.freeForSourceGroup && mg && sourceGroup && mg.toLowerCase() === sourceGroup.toLowerCase());
-      if (allowedGroups.length) {
-        if (!mg) return res.status(403).json({ error: 'User group is missing' });
-        const ok = allowedGroups.some(g => g.toLowerCase() === mg.toLowerCase());
-        if (!ok && !isSourceGroupStudent) return res.status(403).json({ error: 'Course is not open for your group' });
-      }
-    }
-
-    // Prevent duplicate join
-    const existed = await CourseEnrollment.findOne({ courseId: course._id, userId: me._id }).lean();
-    if (existed) return res.json({ success: true, alreadyJoined: true });
-
-    let paidAmount = 0;
-
-    if (role === 'student' && course.type === 'paid' && !isSourceGroupStudent) {
-      const price = normalizeMoneyValue(course.price || 0);
-      if (price < 1) return res.status(400).json({ error: 'Invalid course price' });
-      if (Number(me.coins || 0) < price) return res.status(400).json({ error: 'Insufficient balance' });
-
-      // Split: 50% teacherBalance, 50% platform adminBalance
-      paidAmount = price;
-      const teacherShare = Math.floor(price * 0.5);
-      const adminShare = price - teacherShare;
-
-      me.coins = Number(me.coins || 0) - price;
-
-      const teacher = await User.findById(course.teacherId);
-      if (teacher) teacher.teacherBalance = Number(teacher.teacherBalance || 0) + teacherShare;
-
-      const wallet = await PlatformWallet.findOneAndUpdate(
-        { key: 'platform_wallet' },
-        { $inc: { adminBalance: adminShare } },
-        { upsert: true, new: true }
+      const message = normalizeCourseLongText(req.body?.message || '', COURSE_REQUEST_MAX_CHARS);
+      const requestDoc = await CourseEnrollmentRequest.findOneAndUpdate(
+        { courseId: course._id, userId: req.userId },
+        {
+          $set: {
+            teacherId: course.teacherId,
+            status: 'pending',
+            message,
+            reviewNote: '',
+            reviewedAt: null,
+            reviewedBy: null
+          }
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
       );
 
-      await me.save();
-      if (teacher) await teacher.save();
+      if (String(course.teacherId || '') !== String(req.userId || '')) {
+        await createUserNotification({
+          userId: course.teacherId,
+          title: 'Yangi kurs so\'rovi',
+          body: `Kurs: ${course.title}. Talaba qo'shilish uchun so'rov yubordi.`,
+          link: `/course-progress.html?id=${encodeURIComponent(String(course._id))}`
+        });
+      }
+
+      return res.json({
+        success: true,
+        requested: true,
+        status: 'pending',
+        requestId: String(requestDoc?._id || '')
+      });
     }
 
-    await CourseEnrollment.create({ courseId: course._id, userId: me._id, paidAmount });
-    course.enrolledCount = Number(course.enrolledCount || 0) + 1;
-    await course.save();
-
-    res.json({ success: true });
+    const result = await enrollUserIntoCourse({ course, userId: req.userId, role });
+    res.json({ success: true, ...result });
   } catch (e) {
     console.error('POST /api/courses/:id/join error:', e);
     if (String(e?.code) === '11000') return res.json({ success: true, alreadyJoined: true });
-    res.status(500).json({ error: 'Failed to join course' });
+    res.status(Number(e?.status || 500)).json({ error: e?.message || 'Failed to join course' });
   }
 });
 
@@ -17882,8 +18287,9 @@ app.get('/api/courses/:id/content', async (req, res) => {
       if (String(course.teacherId) !== String(req.userId)) return res.status(403).json({ error: 'Not owner' });
     }
 
+    const includeAnswers = role === 'admin' || (role === 'teacher' && String(course.teacherId) === String(req.userId));
     const items = await CourseContent.find({ courseId: course._id }).sort({ order: 1, createdAt: 1 }).lean();
-    res.json({ items });
+    res.json({ items: items.map((item) => sanitizeCourseContentForRole(item, includeAnswers)) });
   } catch (e) {
     console.error('GET /api/courses/:id/content error:', e);
     res.status(500).json({ error: 'Failed to load course content' });
@@ -17907,6 +18313,7 @@ app.post('/api/courses/:id/content', authenticateToken, attachUserRole, requireR
     const order = Number(req.body.order || 0);
     const maxOrder = await CourseContent.findOne({ courseId: course._id }).sort({ order: -1 }).lean();
     const nextOrder = Number.isFinite(order) && order > 0 ? order : ((maxOrder?.order || 0) + 1);
+    const quizMeta = normalizeLessonQuizPayload(req.body || {});
 
     const item = await CourseContent.create({
       courseId: course._id,
@@ -17917,10 +18324,16 @@ app.post('/api/courses/:id/content', authenticateToken, attachUserRole, requireR
       youtubeUrl: String(req.body.youtubeUrl || ''),
       videoUrl: String(req.body.videoUrl || req.body.url || ''),
       pdfUrl: String(req.body.pdfUrl || ''),
-      materials: normalizeCourseMaterials(req.body.materials)
+      materials: normalizeCourseMaterials(req.body.materials),
+      durationMinutes: quizMeta.durationMinutes,
+      isPreview: quizMeta.isPreview,
+      quizEnabled: quizMeta.quizEnabled,
+      quizTitle: quizMeta.quizTitle,
+      quizPassPct: quizMeta.quizPassPct,
+      quizQuestions: quizMeta.quizQuestions
     });
 
-    res.status(201).json({ item });
+    res.status(201).json({ item: sanitizeCourseContentForRole(item, true) });
   } catch (e) {
     console.error('POST /api/courses/:id/content error:', e);
     res.status(500).json({ error: 'Failed to add content' });
@@ -17953,9 +18366,29 @@ app.put('/api/courses/:id/content/:contentId', authenticateToken, attachUserRole
     if (req.body.videoUrl !== undefined || req.body.url !== undefined) item.videoUrl = String(req.body.videoUrl || req.body.url || '');
     if (req.body.pdfUrl !== undefined) item.pdfUrl = String(req.body.pdfUrl || '');
     if (req.body.materials !== undefined) item.materials = normalizeCourseMaterials(req.body.materials);
+    if (
+      req.body.durationMinutes !== undefined ||
+      req.body.durationMin !== undefined ||
+      req.body.isPreview !== undefined ||
+      req.body.quizEnabled !== undefined ||
+      req.body.quizTitle !== undefined ||
+      req.body.quizName !== undefined ||
+      req.body.quizPassPct !== undefined ||
+      req.body.passPct !== undefined ||
+      req.body.quizQuestions !== undefined ||
+      req.body.questions !== undefined
+    ) {
+      const quizMeta = normalizeLessonQuizPayload({ ...item.toObject(), ...req.body });
+      item.durationMinutes = quizMeta.durationMinutes;
+      item.isPreview = quizMeta.isPreview;
+      item.quizEnabled = quizMeta.quizEnabled;
+      item.quizTitle = quizMeta.quizTitle;
+      item.quizPassPct = quizMeta.quizPassPct;
+      item.quizQuestions = quizMeta.quizQuestions;
+    }
 
     await item.save();
-    res.json({ item });
+    res.json({ item: sanitizeCourseContentForRole(item, true) });
   } catch (e) {
     console.error('PUT /api/courses/:id/content/:contentId error:', e);
     res.status(500).json({ error: 'Failed to update content' });
@@ -17978,6 +18411,68 @@ app.delete('/api/courses/:id/content/:contentId', authenticateToken, attachUserR
   } catch (e) {
     console.error('DELETE /api/courses/:id/content/:contentId error:', e);
     res.status(500).json({ error: 'Failed to delete content' });
+  }
+});
+
+app.post('/api/courses/:id/content/:contentId/asset', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), upload.single('file'), async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+
+    const role = String(req.userRole || '').toLowerCase();
+    if (role === 'teacher' && String(course.teacherId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Not owner' });
+    }
+
+    const item = await CourseContent.findOne({ _id: req.params.contentId, courseId: req.params.id });
+    if (!item) return res.status(404).json({ error: 'Content not found' });
+    if (!req.file) return res.status(400).json({ error: 'file required' });
+
+    const ext = String(path.extname(req.file.originalname || '') || '').toLowerCase();
+    const mime = String(req.file.mimetype || '').toLowerCase();
+    const localUrl = `/uploads/${req.file.filename}`;
+    const target = String(req.body?.target || 'auto').toLowerCase();
+    const isPdf = mime.includes('pdf') || ext === '.pdf';
+    const isVideo = mime.startsWith('video/') || ['.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv'].includes(ext);
+    const isImage = mime.startsWith('image/');
+
+    if (target === 'cover' && isImage) {
+      course.coverUrl = localUrl;
+      await course.save();
+      return res.json({ success: true, coverUrl: localUrl, course });
+    }
+
+    if ((target === 'pdf' || (target === 'auto' && isPdf))) {
+      item.type = 'pdf';
+      item.pdfUrl = localUrl;
+      item.videoUrl = '';
+      item.youtubeUrl = '';
+    } else if ((target === 'video' || (target === 'auto' && isVideo))) {
+      item.type = 'video';
+      item.videoUrl = localUrl;
+      item.youtubeUrl = '';
+      item.pdfUrl = '';
+    } else {
+      const existing = normalizeCourseMaterials(item.materials);
+      if (existing.length >= COURSE_MATERIAL_MAX_FILES) {
+        return res.status(400).json({ error: 'Max 3 materials allowed per lesson' });
+      }
+      existing.push(normalizeCourseMaterialEntry({
+        name: req.file.originalname || 'material',
+        url: localUrl,
+        mimeType: mime,
+        sizeBytes: Number(req.file.size || 0),
+        textExtract: '',
+        publicId: ''
+      }));
+      item.materials = normalizeCourseMaterials(existing);
+    }
+
+    await item.save();
+    res.json({ success: true, fileUrl: localUrl, item: sanitizeCourseContentForRole(item, true) });
+  } catch (e) {
+    console.error('POST /api/courses/:id/content/:contentId/asset error:', e);
+    res.status(500).json({ error: 'Failed to upload lesson asset' });
   }
 });
 
@@ -18071,6 +18566,610 @@ app.delete('/api/courses/:id/content/:contentId/materials/:materialId', authenti
   } catch (e) {
     console.error('DELETE /api/courses/:id/content/:contentId/materials/:materialId error:', e);
     return res.status(500).json({ error: 'Failed to delete lesson material' });
+  }
+});
+
+app.get('/api/courses/:id/join-state', async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).lean();
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    const viewer = await getCourseViewerState(course, req.userId);
+    res.json({
+      success: true,
+      joined: viewer.joined,
+      requestStatus: viewer.requestStatus,
+      pendingRequest: viewer.pendingRequest,
+      requestId: viewer.requestId,
+      joinMode: String(course.joinMode || 'open'),
+      isOwner: String(course.teacherId || '') === String(req.userId || '')
+    });
+  } catch (e) {
+    console.error('GET /api/courses/:id/join-state error:', e);
+    res.status(500).json({ error: 'Failed to load join state' });
+  }
+});
+
+app.get('/api/courses/:id/ratings', async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).lean();
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    if (String(req.userRole || 'student').toLowerCase() === 'student' && String(course.status || '') !== 'published') {
+      return res.status(403).json({ error: 'Course is not published' });
+    }
+
+    const [ratings, myRatingDoc] = await Promise.all([
+      CourseRating.find({ courseId: course._id }).sort({ createdAt: -1 }).lean(),
+      req.userId ? CourseRating.findOne({ courseId: course._id, userId: req.userId }).lean() : null
+    ]);
+
+    const summary = {
+      average: ratings.length
+        ? Number((ratings.reduce((sum, item) => sum + Number(item.rating || 0), 0) / ratings.length).toFixed(2))
+        : 0,
+      count: ratings.length,
+      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+    };
+    for (const rating of ratings) {
+      const key = String(normalizeCourseRatingValue(rating.rating));
+      if (summary.distribution[key] !== undefined) summary.distribution[key] += 1;
+    }
+
+    res.json({
+      success: true,
+      summary,
+      myRating: Number(myRatingDoc?.rating || 0),
+      ratings: ratings.map((rating) => ({
+        id: String(rating._id),
+        userId: String(rating.userId || ''),
+        authorName: rating.authorName || 'Talaba',
+        rating: Number(rating.rating || 0),
+        reviewText: String(rating.reviewText || ''),
+        createdAt: rating.createdAt,
+        updatedAt: rating.updatedAt
+      }))
+    });
+  } catch (e) {
+    console.error('GET /api/courses/:id/ratings error:', e);
+    res.status(500).json({ error: 'Failed to load ratings' });
+  }
+});
+
+app.post('/api/courses/:id/ratings', authenticateToken, attachUserRole, requireRole(['student', 'admin']), async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    if (!course.allowRatings) return res.status(403).json({ error: 'Ratings are disabled for this course' });
+
+    const joined = await CourseEnrollment.findOne({ courseId: course._id, userId: req.userId }).lean();
+    if (String(req.userRole || '').toLowerCase() === 'student' && !joined) {
+      return res.status(403).json({ error: 'Only joined students can rate this course' });
+    }
+
+    const ratingValue = normalizeCourseRatingValue(req.body?.rating);
+    if (!ratingValue) return res.status(400).json({ error: 'rating must be between 1 and 5' });
+
+    const me = await User.findById(req.userId).select('fullName fullname nickname username').lean();
+    const rating = await CourseRating.findOneAndUpdate(
+      { courseId: course._id, userId: req.userId },
+      {
+        $set: {
+          authorName: getDisplayNameFromUser(me),
+          rating: ratingValue,
+          reviewText: normalizeCourseLongText(req.body?.reviewText || req.body?.text || '', COURSE_RATING_REVIEW_MAX_CHARS)
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).lean();
+
+    if (String(course.teacherId || '') !== String(req.userId || '')) {
+      await createUserNotification({
+        userId: course.teacherId,
+        title: 'Kurs baholandi',
+        body: `"${course.title}" kursiga ${ratingValue} yulduzli baho qoldirildi.`,
+        link: buildCourseNotificationLink(course._id)
+      });
+    }
+
+    const statsMap = await getCourseStatsMap([course._id]);
+    res.json({
+      success: true,
+      rating,
+      summary: statsMap.get(String(course._id)) || { ratingAverage: ratingValue, ratingCount: 1 }
+    });
+  } catch (e) {
+    console.error('POST /api/courses/:id/ratings error:', e);
+    res.status(500).json({ error: 'Failed to save rating' });
+  }
+});
+
+app.get('/api/courses/:id/comments', async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).lean();
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    if (String(req.userRole || 'student').toLowerCase() === 'student' && String(course.status || '') !== 'published') {
+      return res.status(403).json({ error: 'Course is not published' });
+    }
+
+    const comments = await CourseComment.find({ courseId: course._id }).sort({ createdAt: 1 }).limit(500).lean();
+    res.json({
+      success: true,
+      comments: comments.map((comment) => ({
+        id: String(comment._id),
+        courseId: String(comment.courseId || ''),
+        userId: String(comment.userId || ''),
+        authorName: comment.authorName || 'Talaba',
+        authorRole: comment.authorRole || 'student',
+        parentId: comment.parentId ? String(comment.parentId) : '',
+        body: String(comment.body || ''),
+        createdAt: comment.createdAt,
+        updatedAt: comment.updatedAt
+      }))
+    });
+  } catch (e) {
+    console.error('GET /api/courses/:id/comments error:', e);
+    res.status(500).json({ error: 'Failed to load comments' });
+  }
+});
+
+app.post('/api/courses/:id/comments', authenticateToken, attachUserRole, requireRole(['student', 'teacher', 'admin']), async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    if (!course.allowComments) return res.status(403).json({ error: 'Comments are disabled for this course' });
+
+    const role = String(req.userRole || 'student').toLowerCase();
+    const isOwner = String(course.teacherId || '') === String(req.userId || '');
+    if (!isOwner && role !== 'admin') {
+      const joined = await CourseEnrollment.findOne({ courseId: course._id, userId: req.userId }).lean();
+      if (!joined) return res.status(403).json({ error: 'Only joined students can comment on this course' });
+    }
+
+    const body = normalizeCourseLongText(req.body?.body || req.body?.text || '', COURSE_COMMENT_MAX_CHARS);
+    if (!body) return res.status(400).json({ error: 'Comment text required' });
+
+    const parentId = toObjectIdOrNull(req.body?.parentId);
+    let parentComment = null;
+    if (parentId) {
+      parentComment = await CourseComment.findOne({ _id: parentId, courseId: course._id }).lean();
+      if (!parentComment) return res.status(404).json({ error: 'Reply target not found' });
+    }
+
+    const me = await User.findById(req.userId).select('fullName fullname nickname username').lean();
+    const comment = await CourseComment.create({
+      courseId: course._id,
+      userId: req.userId,
+      authorName: getDisplayNameFromUser(me),
+      authorRole: role,
+      parentId: parentId || null,
+      body
+    });
+
+    if (parentComment && String(parentComment.userId || '') !== String(req.userId || '')) {
+      await createUserNotification({
+        userId: parentComment.userId,
+        title: 'Kurs kommentiga javob keldi',
+        body: `"${course.title}" kursidagi kommentingizga javob yozildi.`,
+        link: buildCourseNotificationLink(course._id)
+      });
+    } else if (!parentComment && String(course.teacherId || '') !== String(req.userId || '')) {
+      await createUserNotification({
+        userId: course.teacherId,
+        title: 'Yangi kurs kommenti',
+        body: `"${course.title}" kursiga yangi komment qoldirildi.`,
+        link: buildCourseNotificationLink(course._id)
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      comment: {
+        id: String(comment._id),
+        courseId: String(comment.courseId || ''),
+        userId: String(comment.userId || ''),
+        authorName: comment.authorName || 'Talaba',
+        authorRole: comment.authorRole || role,
+        parentId: comment.parentId ? String(comment.parentId) : '',
+        body: String(comment.body || ''),
+        createdAt: comment.createdAt,
+        updatedAt: comment.updatedAt
+      }
+    });
+  } catch (e) {
+    console.error('POST /api/courses/:id/comments error:', e);
+    res.status(500).json({ error: 'Failed to save comment' });
+  }
+});
+
+app.post('/api/courses/:id/requests', authenticateToken, attachUserRole, requireRole(['student']), async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    if (String(course.status || '') !== 'published') return res.status(403).json({ error: 'Course is not published' });
+    if (String(course.joinMode || 'open') !== 'approval') {
+      return res.status(400).json({ error: 'This course does not require approval' });
+    }
+
+    const existingEnrollment = await CourseEnrollment.findOne({ courseId: course._id, userId: req.userId }).lean();
+    if (existingEnrollment) return res.json({ success: true, alreadyJoined: true, joined: true });
+
+    const message = normalizeCourseLongText(req.body?.message || '', COURSE_REQUEST_MAX_CHARS);
+    const requestDoc = await CourseEnrollmentRequest.findOneAndUpdate(
+      { courseId: course._id, userId: req.userId },
+      {
+        $set: {
+          teacherId: course.teacherId,
+          status: 'pending',
+          message,
+          reviewNote: '',
+          reviewedAt: null,
+          reviewedBy: null
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).lean();
+
+    if (String(course.teacherId || '') !== String(req.userId || '')) {
+      await createUserNotification({
+        userId: course.teacherId,
+        title: 'Yangi kurs so\'rovi',
+        body: `Talaba "${course.title}" kursiga qo'shilish uchun so'rov yubordi.`,
+        link: `/course-progress.html?id=${encodeURIComponent(String(course._id))}`
+      });
+    }
+
+    res.json({ success: true, request: requestDoc });
+  } catch (e) {
+    console.error('POST /api/courses/:id/requests error:', e);
+    res.status(500).json({ error: 'Failed to create join request' });
+  }
+});
+
+app.get('/api/courses/:id/requests', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).lean();
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    const role = String(req.userRole || '').toLowerCase();
+    if (role === 'teacher' && String(course.teacherId || '') !== String(req.userId || '')) {
+      return res.status(403).json({ error: 'Not owner' });
+    }
+
+    const requests = await CourseEnrollmentRequest.find({ courseId: course._id }).sort({ createdAt: -1 }).lean();
+    const users = await User.find({ _id: { $in: requests.map((request) => request.userId).filter(Boolean) } })
+      .select('fullName fullname nickname username faculty studyGroup group')
+      .lean();
+    const userMap = new Map(users.map((user) => [String(user._id), user]));
+
+    res.json({
+      success: true,
+      requests: requests.map((request) => {
+        const user = userMap.get(String(request.userId || '')) || {};
+        return {
+          id: String(request._id),
+          userId: String(request.userId || ''),
+          fullName: getDisplayNameFromUser(user),
+          faculty: String(user?.faculty || ''),
+          group: String(userGroup(user) || ''),
+          message: String(request.message || ''),
+          reviewNote: String(request.reviewNote || ''),
+          status: String(request.status || 'pending'),
+          createdAt: request.createdAt,
+          reviewedAt: request.reviewedAt
+        };
+      })
+    });
+  } catch (e) {
+    console.error('GET /api/courses/:id/requests error:', e);
+    res.status(500).json({ error: 'Failed to load requests' });
+  }
+});
+
+app.post('/api/courses/:id/requests/:requestId/review', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    const role = String(req.userRole || '').toLowerCase();
+    if (role === 'teacher' && String(course.teacherId || '') !== String(req.userId || '')) {
+      return res.status(403).json({ error: 'Not owner' });
+    }
+
+    const requestDoc = await CourseEnrollmentRequest.findOne({ _id: req.params.requestId, courseId: course._id });
+    if (!requestDoc) return res.status(404).json({ error: 'Request not found' });
+
+    const nextStatus = String(req.body?.status || '').toLowerCase();
+    if (!['approved', 'rejected'].includes(nextStatus)) {
+      return res.status(400).json({ error: 'status must be approved or rejected' });
+    }
+
+    requestDoc.status = nextStatus;
+    requestDoc.reviewNote = normalizeCourseLongText(req.body?.reviewNote || req.body?.note || '', COURSE_REVIEW_MAX_CHARS);
+    requestDoc.reviewedAt = new Date();
+    requestDoc.reviewedBy = req.userId;
+
+    let enrollResult = null;
+    if (nextStatus === 'approved') {
+      enrollResult = await enrollUserIntoCourse({ course, userId: requestDoc.userId, role: 'student' });
+    }
+
+    await requestDoc.save();
+
+    await createUserNotification({
+      userId: requestDoc.userId,
+      title: nextStatus === 'approved' ? 'Kurs so\'rovi tasdiqlandi' : 'Kurs so\'rovi rad etildi',
+      body: nextStatus === 'approved'
+        ? `"${course.title}" kursiga kirish siz uchun ochildi.`
+        : `"${course.title}" kursi uchun so'rovingiz rad etildi.`,
+      link: buildCourseNotificationLink(course._id)
+    });
+
+    res.json({ success: true, request: requestDoc, enrollResult });
+  } catch (e) {
+    console.error('POST /api/courses/:id/requests/:requestId/review error:', e);
+    res.status(Number(e?.status || 500)).json({ error: e?.message || 'Failed to review request' });
+  }
+});
+
+app.post('/api/courses/:id/content/:contentId/lesson-quiz/submit', authenticateToken, attachUserRole, requireRole(['student', 'teacher', 'admin']), async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).lean();
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+
+    const role = String(req.userRole || '').toLowerCase();
+    if (role === 'student') {
+      const joined = await CourseEnrollment.findOne({ courseId: course._id, userId: req.userId }).lean();
+      if (!joined) return res.status(403).json({ error: 'Not joined' });
+    } else if (role === 'teacher' && String(course.teacherId || '') !== String(req.userId || '')) {
+      return res.status(403).json({ error: 'Not owner' });
+    }
+
+    const item = await CourseContent.findOne({ _id: req.params.contentId, courseId: req.params.id });
+    if (!item) return res.status(404).json({ error: 'Content not found' });
+
+    const questions = normalizeCourseQuizQuestions(item.quizQuestions);
+    if (!item.quizEnabled || !questions.length) {
+      return res.status(400).json({ error: 'Lesson quiz is not configured' });
+    }
+
+    const answers = (req.body?.answers && typeof req.body.answers === 'object') ? req.body.answers : {};
+    let correct = 0;
+    const review = [];
+    for (const question of questions) {
+      const answer = String(answers[question.id] || '').trim().toUpperCase();
+      const answerKey = String(question.answerKey || '').trim().toUpperCase();
+      const isCorrect = !!answer && answer === answerKey;
+      if (isCorrect) correct += 1;
+      review.push({
+        id: String(question.id || ''),
+        text: question.text,
+        yourAnswer: answer,
+        correctKey: answerKey,
+        explanation: String(question.explanation || ''),
+        correct: isCorrect
+      });
+    }
+
+    const total = questions.length;
+    const score = total ? Math.round((correct / total) * 100) : 0;
+    const passPct = Math.max(1, Math.min(100, Number(item.quizPassPct || 60) || 60));
+    const passed = score >= passPct;
+
+    let attempts = 0;
+    if (role === 'student') {
+      const progressDoc = await CourseProgress.findOne({ courseId: course._id, userId: req.userId });
+      const quizMap = (progressDoc?.lessonQuizResults && typeof progressDoc.lessonQuizResults === 'object')
+        ? { ...progressDoc.lessonQuizResults }
+        : {};
+      const prev = (quizMap[String(item._id)] && typeof quizMap[String(item._id)] === 'object')
+        ? quizMap[String(item._id)]
+        : {};
+      attempts = Number(prev.attempts || 0) + 1;
+      quizMap[String(item._id)] = {
+        bestScore: Math.max(Number(prev.bestScore || 0), score),
+        lastScore: score,
+        attempts,
+        passed: !!(prev.passed || passed),
+        correct,
+        total,
+        passPct,
+        quizTitle: item.quizTitle || item.title || '',
+        submittedAt: new Date().toISOString()
+      };
+      await CourseProgress.findOneAndUpdate(
+        { courseId: course._id, userId: req.userId },
+        {
+          $set: {
+            lessonQuizResults: quizMap,
+            lastLessonId: String(item._id),
+            lastActivityAt: new Date()
+          }
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    res.json({
+      success: true,
+      result: {
+        score,
+        correct,
+        total,
+        passPct,
+        passed,
+        attempts,
+        review
+      }
+    });
+  } catch (e) {
+    console.error('POST /api/courses/:id/content/:contentId/lesson-quiz/submit error:', e);
+    res.status(500).json({ error: 'Failed to submit lesson quiz' });
+  }
+});
+
+app.get('/api/courses/:id/analytics', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).lean();
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    const role = String(req.userRole || '').toLowerCase();
+    if (role === 'teacher' && String(course.teacherId || '') !== String(req.userId || '')) {
+      return res.status(403).json({ error: 'Not owner' });
+    }
+
+    const [contents, enrollments, progressDocs, requestDocs, ratingDocs, commentDocs] = await Promise.all([
+      CourseContent.find({ courseId: course._id }).sort({ order: 1, createdAt: 1 }).lean(),
+      CourseEnrollment.find({ courseId: course._id }).sort({ joinedAt: -1 }).lean(),
+      CourseProgress.find({ courseId: course._id }).lean(),
+      CourseEnrollmentRequest.find({ courseId: course._id }).sort({ createdAt: -1 }).lean(),
+      CourseRating.find({ courseId: course._id }).sort({ createdAt: -1 }).lean(),
+      CourseComment.find({ courseId: course._id }).sort({ createdAt: -1 }).limit(200).lean()
+    ]);
+
+    const userIds = Array.from(new Set([
+      ...enrollments.map((row) => String(row.userId || '')).filter(Boolean),
+      ...requestDocs.map((row) => String(row.userId || '')).filter(Boolean)
+    ])).filter((id) => mongoose.Types.ObjectId.isValid(id));
+    const users = await User.find({ _id: { $in: userIds } })
+      .select('fullName fullname nickname username faculty studyGroup group')
+      .lean();
+    const userMap = new Map(users.map((user) => [String(user._id), user]));
+    const contentMap = new Map(contents.map((content) => [String(content._id), content]));
+    const progressMap = new Map(progressDocs.map((doc) => [String(doc.userId), doc]));
+    const totalLessons = contents.length;
+
+    const students = enrollments.map((enrollment) => {
+      const user = userMap.get(String(enrollment.userId || '')) || {};
+      const progressDoc = progressMap.get(String(enrollment.userId || '')) || {};
+      const progressMapRaw = (progressDoc.progress && typeof progressDoc.progress === 'object') ? progressDoc.progress : {};
+      const doneIds = Object.keys(progressMapRaw).filter((key) => progressMapRaw[key]);
+      const doneCount = doneIds.length;
+      const progressPercent = totalLessons ? Math.round((doneCount / totalLessons) * 100) : 0;
+      const quizResults = (progressDoc.lessonQuizResults && typeof progressDoc.lessonQuizResults === 'object')
+        ? progressDoc.lessonQuizResults
+        : {};
+      const quizResultValues = Object.values(quizResults).filter((value) => value && typeof value === 'object');
+      const quizPassedCount = quizResultValues.filter((value) => value.passed).length;
+      const quizAttemptCount = quizResultValues.reduce((sum, value) => sum + Number(value.attempts || 0), 0);
+      const lastLessonId = String(progressDoc.lastLessonId || '');
+      const lastLesson = contentMap.get(lastLessonId);
+      return {
+        userId: String(enrollment.userId || ''),
+        fullName: getDisplayNameFromUser(user),
+        faculty: String(user?.faculty || ''),
+        group: String(userGroup(user) || ''),
+        joinedAt: enrollment.joinedAt,
+        paidAmount: Number(enrollment.paidAmount || 0),
+        progressPercent,
+        doneCount,
+        totalLessons,
+        lastLessonId,
+        lastLessonTitle: String(lastLesson?.title || ''),
+        quizPassedCount,
+        quizAttemptCount,
+        lastActivityAt: progressDoc.lastActivityAt || progressDoc.updatedAt || enrollment.joinedAt
+      };
+    });
+
+    const lessonStats = contents.map((content) => {
+      const contentId = String(content._id);
+      let quizAttempts = 0;
+      let quizPassedUsers = 0;
+      let bestScoreSum = 0;
+      let bestScoreCount = 0;
+      let completedUsers = 0;
+
+      for (const progressDoc of progressDocs) {
+        const progressRaw = (progressDoc.progress && typeof progressDoc.progress === 'object') ? progressDoc.progress : {};
+        if (progressRaw[contentId]) completedUsers += 1;
+        const result = progressDoc.lessonQuizResults?.[contentId];
+        if (result && typeof result === 'object') {
+          quizAttempts += Number(result.attempts || 0);
+          if (result.passed) quizPassedUsers += 1;
+          if (result.bestScore !== undefined) {
+            bestScoreSum += Number(result.bestScore || 0);
+            bestScoreCount += 1;
+          }
+        }
+      }
+
+      return {
+        contentId,
+        title: String(content.title || ''),
+        type: String(content.type || 'text'),
+        order: Number(content.order || 0),
+        quizEnabled: !!(content.quizEnabled && Array.isArray(content.quizQuestions) && content.quizQuestions.length),
+        quizPassPct: Math.max(1, Math.min(100, Number(content.quizPassPct || 60) || 60)),
+        completedUsers,
+        quizAttempts,
+        quizPassedUsers,
+        avgBestScore: bestScoreCount ? Number((bestScoreSum / bestScoreCount).toFixed(1)) : 0
+      };
+    });
+
+    const averageRating = ratingDocs.length
+      ? Number((ratingDocs.reduce((sum, rating) => sum + Number(rating.rating || 0), 0) / ratingDocs.length).toFixed(2))
+      : 0;
+    const averageProgress = students.length
+      ? Number((students.reduce((sum, student) => sum + Number(student.progressPercent || 0), 0) / students.length).toFixed(1))
+      : 0;
+    const completedStudents = students.filter((student) => Number(student.progressPercent || 0) >= 100).length;
+
+    res.json({
+      success: true,
+      course: {
+        ...course,
+        lessonCount: totalLessons,
+        ratingAverage: averageRating,
+        ratingCount: ratingDocs.length,
+        commentCount: commentDocs.length,
+        pendingRequests: requestDocs.filter((request) => String(request.status || '') === 'pending').length
+      },
+      summary: {
+        totalLessons,
+        quizLessonCount: lessonStats.filter((lesson) => lesson.quizEnabled).length,
+        enrolledCount: enrollments.length,
+        pendingRequests: requestDocs.filter((request) => String(request.status || '') === 'pending').length,
+        averageRating,
+        ratingCount: ratingDocs.length,
+        commentCount: commentDocs.length,
+        averageProgress,
+        completionRate: students.length ? Math.round((completedStudents / students.length) * 100) : 0
+      },
+      students,
+      requests: requestDocs.map((request) => {
+        const user = userMap.get(String(request.userId || '')) || {};
+        return {
+          id: String(request._id),
+          userId: String(request.userId || ''),
+          fullName: getDisplayNameFromUser(user),
+          faculty: String(user?.faculty || ''),
+          group: String(userGroup(user) || ''),
+          message: String(request.message || ''),
+          reviewNote: String(request.reviewNote || ''),
+          status: String(request.status || 'pending'),
+          createdAt: request.createdAt,
+          reviewedAt: request.reviewedAt
+        };
+      }),
+      lessonStats,
+      ratings: ratingDocs.map((rating) => ({
+        id: String(rating._id),
+        userId: String(rating.userId || ''),
+        authorName: rating.authorName || 'Talaba',
+        rating: Number(rating.rating || 0),
+        reviewText: String(rating.reviewText || ''),
+        createdAt: rating.createdAt
+      })),
+      comments: commentDocs.map((comment) => ({
+        id: String(comment._id),
+        userId: String(comment.userId || ''),
+        authorName: comment.authorName || 'Talaba',
+        authorRole: comment.authorRole || 'student',
+        parentId: comment.parentId ? String(comment.parentId) : '',
+        body: String(comment.body || ''),
+        createdAt: comment.createdAt
+      }))
+    });
+  } catch (e) {
+    console.error('GET /api/courses/:id/analytics error:', e);
+    res.status(500).json({ error: 'Failed to load analytics' });
   }
 });
 
@@ -19944,12 +21043,19 @@ async function getCourseTestStatus(userId, courseId) {
 app.get('/api/progress/:courseId', authenticateToken, attachUserRole, requireRole(['student','admin','teacher']), async (req, res) => {
   try {
     const courseId = req.params.courseId;
-    const info = await getCourseCompletion(req.userId, courseId);
-    const test = await getCourseTestStatus(req.userId, courseId);
+    const [info, test, progressDoc] = await Promise.all([
+      getCourseCompletion(req.userId, courseId),
+      getCourseTestStatus(req.userId, courseId),
+      CourseProgress.findOne({ courseId, userId: req.userId }).lean()
+    ]);
     res.json({
       ok: true,
       courseId,
       ...info,
+      lastLessonId: String(progressDoc?.lastLessonId || ''),
+      lessonQuizResults: (progressDoc?.lessonQuizResults && typeof progressDoc.lessonQuizResults === 'object')
+        ? progressDoc.lessonQuizResults
+        : {},
       testPassed: !!test.passed,
       requiredFinalTest: !!test.required,
       finalTestId: test.finalTestId || '',
@@ -19978,10 +21084,23 @@ app.post('/api/progress/:courseId', authenticateToken, attachUserRole, requireRo
 
     const cur = await CourseProgress.findOne({ courseId, userId: req.userId });
     const merged = Object.assign({}, (cur?.progress && typeof cur.progress === 'object') ? cur.progress : {}, setMap);
+    const mergedLessonQuizResults = (
+      body.lessonQuizResults && typeof body.lessonQuizResults === 'object'
+    ) ? Object.assign({}, (cur?.lessonQuizResults && typeof cur.lessonQuizResults === 'object') ? cur.lessonQuizResults : {}, body.lessonQuizResults) : (
+      (cur?.lessonQuizResults && typeof cur.lessonQuizResults === 'object') ? cur.lessonQuizResults : {}
+    );
+    const lastLessonId = String(body.lastLessonId || body.contentId || cur?.lastLessonId || '').trim();
 
     const updated = await CourseProgress.findOneAndUpdate(
       { courseId, userId: req.userId },
-      { $set: { progress: merged } },
+      {
+        $set: {
+          progress: merged,
+          lessonQuizResults: mergedLessonQuizResults,
+          lastLessonId,
+          lastActivityAt: new Date()
+        }
+      },
       { upsert: true, new: true }
     ).lean();
 
@@ -19991,6 +21110,10 @@ app.post('/api/progress/:courseId', authenticateToken, attachUserRole, requireRo
       ok: true,
       progress: updated?.progress || {},
       ...info,
+      lastLessonId: String(updated?.lastLessonId || ''),
+      lessonQuizResults: (updated?.lessonQuizResults && typeof updated.lessonQuizResults === 'object')
+        ? updated.lessonQuizResults
+        : {},
       testPassed: !!test.passed,
       requiredFinalTest: !!test.required,
       finalTestId: test.finalTestId || '',
@@ -20007,12 +21130,19 @@ app.get('/api/progress', authenticateToken, attachUserRole, requireRole(['studen
   try {
     const courseId = String(req.query.courseId || req.query.id || '').trim();
     if (!courseId) return res.status(400).json({ error: 'courseId required' });
-    const info = await getCourseCompletion(req.userId, courseId);
-    const test = await getCourseTestStatus(req.userId, courseId);
+    const [info, test, progressDoc] = await Promise.all([
+      getCourseCompletion(req.userId, courseId),
+      getCourseTestStatus(req.userId, courseId),
+      CourseProgress.findOne({ courseId, userId: req.userId }).lean()
+    ]);
     res.json({
       ok: true,
       courseId,
       ...info,
+      lastLessonId: String(progressDoc?.lastLessonId || ''),
+      lessonQuizResults: (progressDoc?.lessonQuizResults && typeof progressDoc.lessonQuizResults === 'object')
+        ? progressDoc.lessonQuizResults
+        : {},
       testPassed: !!test.passed,
       requiredFinalTest: !!test.required,
       finalTestId: test.finalTestId || '',
@@ -20043,9 +21173,21 @@ app.post('/api/progress', authenticateToken, attachUserRole, requireRole(['stude
 
     const cur = await CourseProgress.findOne({ courseId, userId: req.userId }).lean();
     const merged = Object.assign({}, (cur?.progress && typeof cur.progress === 'object') ? cur.progress : {}, setMap);
-    await CourseProgress.findOneAndUpdate(
+    const mergedLessonQuizResults = (
+      body.lessonQuizResults && typeof body.lessonQuizResults === 'object'
+    ) ? Object.assign({}, (cur?.lessonQuizResults && typeof cur.lessonQuizResults === 'object') ? cur.lessonQuizResults : {}, body.lessonQuizResults) : (
+      (cur?.lessonQuizResults && typeof cur.lessonQuizResults === 'object') ? cur.lessonQuizResults : {}
+    );
+    const updated = await CourseProgress.findOneAndUpdate(
       { courseId, userId: req.userId },
-      { $set: { progress: merged } },
+      {
+        $set: {
+          progress: merged,
+          lessonQuizResults: mergedLessonQuizResults,
+          lastLessonId: String(body.lastLessonId || body.contentId || cur?.lastLessonId || '').trim(),
+          lastActivityAt: new Date()
+        }
+      },
       { upsert: true, new: true }
     ).lean();
 
@@ -20055,6 +21197,10 @@ app.post('/api/progress', authenticateToken, attachUserRole, requireRole(['stude
       ok: true,
       courseId,
       ...info,
+      lastLessonId: String(updated?.lastLessonId || ''),
+      lessonQuizResults: (updated?.lessonQuizResults && typeof updated.lessonQuizResults === 'object')
+        ? updated.lessonQuizResults
+        : {},
       testPassed: !!test.passed,
       requiredFinalTest: !!test.required,
       finalTestId: test.finalTestId || '',

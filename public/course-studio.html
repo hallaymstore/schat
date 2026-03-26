@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Course Studio | HALLAYM edu</title>
+  <link rel="stylesheet" href="/ui-glass-theme.css">
+  <link rel="stylesheet" href="/course-suite.css">
+</head>
+<body class="course-body">
+  <header class="course-topbar">
+    <div class="course-shell">
+      <div class="course-nav">
+        <div class="course-brand">
+          <div class="course-brand-mark"></div>
+          <div class="course-brand-copy">
+            <h1>Course Studio</h1>
+            <p>Teacher uchun course builder</p>
+          </div>
+          <span id="roleBadge" class="course-pill course-role-pill">TEACHER</span>
+          <span id="mePill" class="course-pill"></span>
+        </div>
+        <div class="course-nav-actions">
+          <button class="course-button ghost" id="themeBtn">Tema</button>
+          <a class="course-link-button ghost" href="/courses.html">Kurslar</a>
+          <a class="course-link-button ghost" id="dashboardLink" href="/teacher-dashboard.html">Dashboard</a>
+          <button class="course-button danger" id="logoutBtn">Chiqish</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="course-main">
+    <div class="course-shell">
+      <div id="pageAlert" class="course-alert"></div>
+      <div id="studioHero"></div>
+
+      <section class="course-card section-gap">
+        <div class="course-split">
+          <div>
+            <h2 class="course-section-title">Kurs sozlamalari</h2>
+            <div class="course-grid" style="margin-top:18px">
+              <div class="course-col-6"><div class="course-form-group"><label for="courseTitle">Kurs nomi</label><input id="courseTitle" class="course-input"></div></div>
+              <div class="course-col-3"><div class="course-form-group"><label for="courseType">Narx turi</label><select id="courseType" class="course-select"><option value="free">Bepul</option><option value="paid">Pullik</option></select></div></div>
+              <div class="course-col-3"><div class="course-form-group"><label for="coursePrice">Narx</label><input id="coursePrice" class="course-input" type="number" min="0"></div></div>
+              <div class="course-col-4"><div class="course-form-group"><label for="courseStatus">Status</label><select id="courseStatus" class="course-select"><option value="draft">Draft</option><option value="published">Published</option></select></div></div>
+              <div class="course-col-4"><div class="course-form-group"><label for="courseJoinMode">Join mode</label><select id="courseJoinMode" class="course-select"><option value="open">Darhol kirish</option><option value="approval">Teacher approval</option></select></div></div>
+              <div class="course-col-4"><div class="course-form-group"><label for="courseFaculty">Fakultet</label><input id="courseFaculty" class="course-input"></div></div>
+              <div class="course-col-12"><div class="course-form-group"><label for="courseDescription">Tavsif</label><textarea id="courseDescription" class="course-textarea"></textarea></div></div>
+              <div class="course-col-6"><div class="course-form-group"><label for="courseGroups">Guruhlar</label><input id="courseGroups" class="course-input" placeholder="MMT-520-25, EKT-110-26"></div></div>
+              <div class="course-col-3"><div class="course-form-group"><label for="courseLanguage">Til</label><input id="courseLanguage" class="course-input" value="uz"></div></div>
+              <div class="course-col-3"><div class="course-form-group"><label for="courseLevel">Daraja</label><select id="courseLevel" class="course-select"><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></div></div>
+              <div class="course-col-6"><div class="course-form-group"><label for="courseYoutube">Hero video URL</label><input id="courseYoutube" class="course-input"></div></div>
+              <div class="course-col-6"><div class="course-form-group"><label for="courseCover">Cover image URL</label><input id="courseCover" class="course-input"></div></div>
+              <div class="course-col-6"><div class="course-form-group"><label for="courseRequirements">Talablar</label><textarea id="courseRequirements" class="course-textarea"></textarea></div></div>
+              <div class="course-col-6"><div class="course-form-group"><label for="courseOutcomes">Natijalar</label><textarea id="courseOutcomes" class="course-textarea"></textarea></div></div>
+            </div>
+            <div class="course-inline-actions" style="margin-top:18px">
+              <label class="course-pill"><input type="checkbox" id="courseAllowComments" checked> Kommentlar</label>
+              <label class="course-pill"><input type="checkbox" id="courseAllowRatings" checked> Baholar</label>
+              <label class="course-pill"><input type="checkbox" id="courseAllowSequential" checked> Ketma-ket o'tish</label>
+            </div>
+            <div class="course-inline-actions" style="margin-top:18px">
+              <button class="course-button primary" id="saveCourseBtn">Kursni saqlash</button>
+            </div>
+          </div>
+          <div class="course-card tight">
+            <h2 class="course-section-title">Tavsiyalar</h2>
+            <div class="course-stack" style="margin-top:16px">
+              <div class="course-surface-note">Avval kursni saqlang, keyin dars bo'limlarini qo'shing.</div>
+              <div class="course-surface-note">Har mavzuga video yoki PDF va optional quiz biriktirilsa, student progressi aniqroq kuzatiladi.</div>
+              <div class="course-surface-note">Approval join mode yoqilsa, so'rovlar analytics sahifasida tasdiqlanadi.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="course-card section-gap">
+        <div class="course-lesson-editor">
+          <div>
+            <div class="course-inline-actions" style="justify-content:space-between">
+              <h2 class="course-section-title">Mavzular</h2>
+              <button class="course-button primary" id="addLessonBtn">Yangi mavzu</button>
+            </div>
+            <div id="lessonList" class="course-stack" style="margin-top:18px"></div>
+          </div>
+          <div>
+            <h2 class="course-section-title">Mavzu editor</h2>
+            <div class="course-grid" style="margin-top:18px">
+              <div class="course-col-6"><div class="course-form-group"><label for="lessonTitle">Sarlavha</label><input id="lessonTitle" class="course-input"></div></div>
+              <div class="course-col-3"><div class="course-form-group"><label for="lessonType">Tur</label><select id="lessonType" class="course-select"><option value="video">Video</option><option value="youtube">YouTube</option><option value="pdf">PDF</option><option value="text">Matn</option></select></div></div>
+              <div class="course-col-3"><div class="course-form-group"><label for="lessonOrder">Tartib</label><input id="lessonOrder" class="course-input" type="number" min="1"></div></div>
+              <div class="course-col-3"><div class="course-form-group"><label for="lessonDuration">Davomiylik (min)</label><input id="lessonDuration" class="course-input" type="number" min="0"></div></div>
+              <div class="course-col-9"><div class="course-form-group"><label for="lessonText">Izoh / matn</label><textarea id="lessonText" class="course-textarea"></textarea></div></div>
+              <div class="course-col-6"><div class="course-form-group"><label for="lessonYoutube">YouTube URL</label><input id="lessonYoutube" class="course-input"></div></div>
+              <div class="course-col-6"><div class="course-form-group"><label for="lessonVideo">Video URL</label><input id="lessonVideo" class="course-input"></div></div>
+              <div class="course-col-12"><div class="course-form-group"><label for="lessonPdf">PDF URL</label><input id="lessonPdf" class="course-input"></div></div>
+            </div>
+            <div class="course-inline-actions" style="margin-top:18px">
+              <label class="course-pill"><input type="checkbox" id="lessonPreview"> Preview lesson</label>
+              <label class="course-pill"><input type="checkbox" id="lessonQuizEnabled"> Lesson quiz yoqilsin</label>
+            </div>
+
+            <section class="course-card tight section-gap">
+              <div class="course-grid">
+                <div class="course-col-6"><div class="course-form-group"><label for="lessonQuizTitle">Quiz sarlavhasi</label><input id="lessonQuizTitle" class="course-input"></div></div>
+                <div class="course-col-3"><div class="course-form-group"><label for="lessonQuizPass">Pass %</label><input id="lessonQuizPass" class="course-input" type="number" min="1" max="100" value="60"></div></div>
+                <div class="course-col-3" style="display:flex;align-items:end"><button class="course-button" id="addQuestionBtn">Savol qo'shish</button></div>
+              </div>
+              <div id="quizQuestions" class="course-stack" style="margin-top:18px"></div>
+            </section>
+
+            <section class="course-card tight section-gap">
+              <div class="course-inline-actions" style="justify-content:space-between">
+                <h2 class="course-section-title">Upload va materiallar</h2>
+              </div>
+              <div class="course-grid" style="margin-top:18px">
+                <div class="course-col-6"><div class="course-form-group"><label for="lessonAssetInput">Asosiy video/PDF fayl</label><input id="lessonAssetInput" class="course-input" type="file"></div></div>
+                <div class="course-col-6" style="display:flex;align-items:end"><button class="course-button" id="lessonAssetUploadBtn">Asosiy faylni yuklash</button></div>
+                <div class="course-col-6"><div class="course-form-group"><label for="lessonMaterialsInput">Qo'shimcha materiallar</label><input id="lessonMaterialsInput" class="course-input" type="file" multiple></div></div>
+                <div class="course-col-6" style="display:flex;align-items:end"><button class="course-button" id="lessonMaterialsUploadBtn">Materiallarni yuklash</button></div>
+              </div>
+              <div id="lessonMaterialsList" class="course-stack" style="margin-top:18px"></div>
+            </section>
+
+            <div class="course-inline-actions" style="margin-top:18px">
+              <button class="course-button primary" id="saveLessonBtn">Mavzuni saqlash</button>
+              <button class="course-button danger" id="lessonDeleteBtn" style="display:none">Mavzuni o'chirish</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="course-footer">HALLAYM edu — course studio</footer>
+
+  <script src="/course-suite.js"></script>
+  <script src="/course-studio.js"></script>
+</body>
+</html>
