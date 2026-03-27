@@ -254,12 +254,12 @@
     els.projectTitle.textContent = project.startupName || 'Untitled startup';
     els.projectSubtitle.textContent = project.summary || 'Competition-ready landing, auth va lead oqimi tayyor.';
     els.projectMetaRow.innerHTML = [
-      metaChip('fa-solid fa-link', `${project.slug}.edu.hallaym.site`),
+      metaChip('fa-solid fa-link', project.publishedUrl || `${project.slug}.edu.hallaym.site`),
       metaChip('fa-solid fa-layer-group', project.templateId || 'startup-pitch'),
       metaChip('fa-solid fa-globe', project.status === 'published' ? 'Published' : 'Draft'),
       metaChip('fa-solid fa-users', `${Number(project.memberCount || 0)} member`),
       metaChip('fa-solid fa-envelope-open-text', `${Number(project.leadCount || 0)} lead`)
-    ].concat(features.map((item) => metaChip('fa-solid fa-check', item))).join('');
+    ].concat(project.publishedAliasUrl ? [metaChip('fa-solid fa-sitemap', project.publishedAliasUrl)] : []).concat(features.map((item) => metaChip('fa-solid fa-check', item))).join('');
   }
 
   function renderMiniList(container, items, emptyText, itemRenderer) {
@@ -281,7 +281,7 @@
     const publishedSince = project.publishedAt ? formatDate(project.publishedAt) : 'hali yo\'q';
     const updatedAt = project.updatedAt ? formatDate(project.updatedAt) : '-';
     const featureLine = formatFeatures(project.serverFeatures).join(', ') || 'Landing only';
-    els.projectStats.innerHTML = `<div class="stat-box"><p class="badge-label">Subdomain</p><strong>${escapeHtml(project.slug || '-')}</strong><span>${escapeHtml(project.publishedUrl || '-')}</span></div><div class="stat-box"><p class="badge-label">Status</p><strong>${escapeHtml(project.status === 'published' ? 'LIVE' : 'DRAFT')}</strong><span>Oxirgi yangilanish: ${escapeHtml(updatedAt)}</span></div><div class="stat-box"><p class="badge-label">Audience</p><strong>${escapeHtml(project.audience || project.category || 'Startup')}</strong><span>${escapeHtml(featureLine)}</span></div><div class="stat-box"><p class="badge-label">Traffic</p><strong>${escapeHtml(String(Number(project.memberCount || 0) + Number(project.leadCount || 0)))}</strong><span>${escapeHtml(`Published: ${publishedSince}`)}</span></div>`;
+    els.projectStats.innerHTML = `<div class="stat-box"><p class="badge-label">Website URL</p><strong>${escapeHtml(project.slug || '-')}</strong><span>${escapeHtml(project.publishedUrl || '-')}</span>${project.publishedAliasUrl ? `<span>${escapeHtml(`Alias: ${project.publishedAliasUrl}`)}</span>` : ''}</div><div class="stat-box"><p class="badge-label">Status</p><strong>${escapeHtml(project.status === 'published' ? 'LIVE' : 'DRAFT')}</strong><span>Oxirgi yangilanish: ${escapeHtml(updatedAt)}</span></div><div class="stat-box"><p class="badge-label">Audience</p><strong>${escapeHtml(project.audience || project.category || 'Startup')}</strong><span>${escapeHtml(featureLine)}</span></div><div class="stat-box"><p class="badge-label">Traffic</p><strong>${escapeHtml(String(Number(project.memberCount || 0) + Number(project.leadCount || 0)))}</strong><span>${escapeHtml(`Published: ${publishedSince}`)}</span></div>`;
     renderMiniList(els.leadList, detail && Array.isArray(detail.recentLeads) ? detail.recentLeads : [], 'Hozircha lead yo\'q. Contact yoki waitlist form ishlaganidan keyin shu yerda ko\'rinadi.', function (lead) {
       const meta = [lead.leadType, lead.email, lead.company].filter(Boolean).join(' | ');
       return `<div class="mini-item"><strong>${escapeHtml(lead.name || 'Lead')}</strong><p>${escapeHtml(lead.message || meta || 'Ma\'lumot yuborgan foydalanuvchi.')}</p><span>${escapeHtml(meta || formatDate(lead.createdAt) || 'Lead')}</span></div>`;

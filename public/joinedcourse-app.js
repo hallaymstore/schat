@@ -127,9 +127,9 @@ function finalTestLink(){
 
 function certificateLink(){
   if(JOINED_STATE.certificate?.certId){
-    return `/certificate.html?verify=${encodeURIComponent(JOINED_STATE.certificate.certId)}`;
+    return `${location.origin}/certificate.html?verify=${encodeURIComponent(JOINED_STATE.certificate.certId)}`;
   }
-  return `/certificate.html?courseId=${encodeURIComponent(JOINED_STATE.course.id)}`;
+  return `${location.origin}/certificate.html?courseId=${encodeURIComponent(JOINED_STATE.course.id)}`;
 }
 
 function optionTextFor(question, key){

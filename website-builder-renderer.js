@@ -49,17 +49,38 @@ function normalizePageSlug(value) {
   return 'index';
 }
 
-function buildWebsiteLinks(slug) {
+function normalizeOrigin(origin) {
+  return String(origin || '').trim().replace(/\/+$/, '');
+}
+
+function buildWebsiteLinks(slug, options = {}) {
   const safeSlug = normalizeSlug(slug);
+  const origin = normalizeOrigin(options.origin || '');
+  const previewBase = `/site-preview/${safeSlug}`;
+  const publishedBase = `/site/${safeSlug}`;
+  const wildcardUrl = `https://${safeSlug}.edu.hallaym.site`;
+  const withOrigin = (path) => origin ? `${origin}${path}` : path;
   return {
     slug: safeSlug,
-    previewBase: `/site-preview/${safeSlug}`,
-    previewUrl: `/site-preview/${safeSlug}`,
-    registerPreviewUrl: `/site-preview/${safeSlug}/register`,
-    loginPreviewUrl: `/site-preview/${safeSlug}/login`,
-    accountPreviewUrl: `/site-preview/${safeSlug}/account`,
-    publishedUrl: `https://${safeSlug}.edu.hallaym.site`
+    origin,
+    previewBase,
+    previewUrl: withOrigin(previewBase),
+    registerPreviewUrl: withOrigin(`${previewBase}/register`),
+    loginPreviewUrl: withOrigin(`${previewBase}/login`),
+    accountPreviewUrl: withOrigin(`${previewBase}/account`),
+    publishedBase,
+    publishedUrl: withOrigin(publishedBase),
+    registerPublishedUrl: withOrigin(`${publishedBase}/register`),
+    loginPublishedUrl: withOrigin(`${publishedBase}/login`),
+    accountPublishedUrl: withOrigin(`${publishedBase}/account`),
+    wildcardUrl
   };
+}
+
+function buildPageHref(routeBase, pageSlug) {
+  const base = String(routeBase || '').trim().replace(/\/+$/, '');
+  if (!pageSlug || pageSlug === 'index') return base ? `${base}/` : '/';
+  return base ? `${base}/${pageSlug}` : `/${pageSlug}`;
 }
 
 function sectionCards(section = {}) {
@@ -86,11 +107,14 @@ function sectionCards(section = {}) {
   `;
 }
 
-function renderIndexPage(project) {
+function renderIndexPage(project, nav = {}) {
   const metrics = Array.isArray(project.metrics) ? project.metrics : [];
   const highlights = Array.isArray(project.highlights) ? project.highlights : [];
   const sections = Array.isArray(project.sections) ? project.sections : [];
   const feature = project.serverFeatures || {};
+  const registerHref = feature.authEnabled ? (nav.registerHref || '/register') : '#contact-form';
+  const loginHref = feature.authEnabled ? (nav.loginHref || '/login') : '#benefits';
+  const contactHref = nav.contactHref || '#contact-form';
   return `
     <section class="hero panel">
       <div class="hero-copy">
@@ -98,8 +122,8 @@ function renderIndexPage(project) {
         <h1>${escapeHtml(project.heroTitle || project.startupName || 'Startup landing')}</h1>
         <p>${escapeHtml(project.heroSubtitle || project.summary || '')}</p>
         <div class="actions">
-          <a class="btn primary" href="${feature.authEnabled ? './register' : '#contact-form'}">${escapeHtml(project.ctaPrimary || 'Boshlash')}</a>
-          <a class="btn" href="${feature.authEnabled ? './login' : '#benefits'}">${escapeHtml(project.ctaSecondary || 'Batafsil')}</a>
+          <a class="btn primary" href="${escapeHtml(registerHref)}">${escapeHtml(project.ctaPrimary || 'Boshlash')}</a>
+          <a class="btn" href="${escapeHtml(loginHref)}">${escapeHtml(project.ctaSecondary || 'Batafsil')}</a>
         </div>
         <div class="hero-badges">
           ${highlights.map((item) => `<span>${escapeHtml(item)}</span>`).join('')}
@@ -140,8 +164,8 @@ function renderIndexPage(project) {
         <p>${escapeHtml(project.finalCtaBody || 'Ro\'yxatdan o\'tish, login va lead yig\'ish oqimi shu saytda ishlaydi.')}</p>
       </div>
       <div class="actions">
-        <a class="btn primary" href="${feature.authEnabled ? './register' : '#contact-form'}">${escapeHtml(project.finalCtaPrimary || 'Akkaunt ochish')}</a>
-        ${feature.contactEnabled || feature.waitlistEnabled ? `<a class="btn" href="#contact-form">${escapeHtml(project.finalCtaSecondary || 'Aloqa qoldirish')}</a>` : ''}
+        <a class="btn primary" href="${escapeHtml(registerHref)}">${escapeHtml(project.finalCtaPrimary || 'Akkaunt ochish')}</a>
+        ${feature.contactEnabled || feature.waitlistEnabled ? `<a class="btn" href="${escapeHtml(contactHref)}">${escapeHtml(project.finalCtaSecondary || 'Aloqa qoldirish')}</a>` : ''}
       </div>
     </section>
 
@@ -214,9 +238,12 @@ function renderAccountPage(project) {
 
 function renderWebsiteProjectHtml(project, options = {}) {
   const slug = normalizeSlug(project?.slug || project?.subdomain || 'startup-site');
-  const links = buildWebsiteLinks(slug);
+  const links = buildWebsiteLinks(slug, { origin: options.origin || '' });
   const pageSlug = normalizePageSlug(options.pageSlug || 'index');
-  const basePrefix = options.preview ? links.previewBase : '';
+  const routeBase = typeof options.routeBase === 'string'
+    ? String(options.routeBase || '').trim().replace(/\/+$/, '')
+    : (options.preview ? links.previewBase : '');
+  const basePrefix = routeBase;
   const palette = Object.assign({
     accent: '#14968b',
     accentSoft: '#6fd8cb',
@@ -229,13 +256,23 @@ function renderWebsiteProjectHtml(project, options = {}) {
     slug,
     apiBase: `/api/website-builder/public/${slug}`,
     basePrefix,
+    routeBase,
+    publishedUrl: links.publishedUrl,
+    wildcardUrl: links.wildcardUrl,
     authEnabled: !!feature.authEnabled,
     waitlistEnabled: !!feature.waitlistEnabled,
     contactEnabled: !!feature.contactEnabled
   };
+  const nav = {
+    homeHref: buildPageHref(routeBase, 'index'),
+    registerHref: buildPageHref(routeBase, 'register'),
+    loginHref: buildPageHref(routeBase, 'login'),
+    accountHref: buildPageHref(routeBase, 'account'),
+    contactHref: '#contact-form'
+  };
   const bodyHtml = pageSlug === 'register' || pageSlug === 'login'
     ? renderAuthPage(project, pageSlug)
-    : (pageSlug === 'account' ? renderAccountPage(project) : renderIndexPage(project));
+    : (pageSlug === 'account' ? renderAccountPage(project) : renderIndexPage(project, nav));
 
   return `<!doctype html>
 <html lang="uz">
@@ -264,9 +301,9 @@ function renderWebsiteProjectHtml(project, options = {}) {
 </head>
 <body>
   ${options.preview ? `<div class="preview-banner"><div>Preview mode: ${escapeHtml(links.publishedUrl)}</div></div>` : ''}
-  <header class="topbar"><div class="shell"><div class="brand"><div class="mark"></div><div><h1>${escapeHtml(project.startupName || 'Startup site')}</h1><p>${escapeHtml(project.brandLine || project.summary || 'Built by HALLAYM AI')}</p></div></div><div class="nav-actions"><a class="btn" href="${basePrefix || ''}/">Home</a><a class="btn" href="${basePrefix || ''}/register">Register</a><a class="btn" href="${basePrefix || ''}/login">Login</a><a class="btn" href="${basePrefix || ''}/account">Account</a></div></div></header>
+  <header class="topbar"><div class="shell"><div class="brand"><div class="mark"></div><div><h1>${escapeHtml(project.startupName || 'Startup site')}</h1><p>${escapeHtml(project.brandLine || project.summary || 'Built by HALLAYM AI')}</p></div></div><div class="nav-actions"><a class="btn" href="${escapeHtml(nav.homeHref)}">Home</a><a class="btn" href="${escapeHtml(nav.registerHref)}">Register</a><a class="btn" href="${escapeHtml(nav.loginHref)}">Login</a><a class="btn" href="${escapeHtml(nav.accountHref)}">Account</a></div></div></header>
   <main class="layout"><div class="shell">${bodyHtml}</div></main>
-  <footer><div class="footer-inner">${escapeHtml(project.footerText || `${project.startupName || 'Startup'} powered by HALLAYM AI website studio`)}<div style="margin-top:8px">${escapeHtml(links.publishedUrl)}</div></div></footer>
+  <footer><div class="footer-inner">${escapeHtml(project.footerText || `${project.startupName || 'Startup'} powered by HALLAYM AI website studio`)}<div style="margin-top:8px">${escapeHtml(links.publishedUrl)}</div>${links.wildcardUrl ? `<div style="margin-top:6px;font-size:12px;opacity:.72">Wildcard alias: ${escapeHtml(links.wildcardUrl)}</div>` : ''}</div></footer>
   <script>
     window.__HALLAYM_SITE__ = ${JSON.stringify(projectConfig)};
     (function(){

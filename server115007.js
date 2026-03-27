@@ -5410,8 +5410,19 @@ async function generateStartupWebsiteProject({ user, startupName, slug, prompt, 
   }
 }
 
-function serializeWebsiteProject(project, stats = {}) {
-  const links = buildWebsiteLinks(project?.slug || '');
+function getPublicAppOrigin(req) {
+  const direct = String(process.env.PUBLIC_APP_URL || process.env.PUBLIC_ORIGIN || process.env.APP_URL || '').trim().replace(/\/+$/, '');
+  if (direct) return direct;
+  if (req && typeof req.protocol === 'string' && typeof req.get === 'function') {
+    const host = String(req.get('host') || '').trim();
+    if (host) return `${req.protocol}://${host}`.replace(/\/+$/, '');
+  }
+  return 'https://edu.hallaym.site';
+}
+
+function serializeWebsiteProject(project, stats = {}, options = {}) {
+  const origin = String(options?.origin || '').trim();
+  const links = buildWebsiteLinks(project?.slug || '', { origin });
   return {
     id: String(project?._id || ''),
     startupName: cleanText(project?.startupName, 90),
@@ -5430,11 +5441,18 @@ function serializeWebsiteProject(project, stats = {}) {
     generationMode: cleanText(project?.generationMode, 32),
     previewUrl: links.previewUrl,
     publishedUrl: links.publishedUrl,
+    publishedAliasUrl: links.wildcardUrl,
     pageLinks: {
       index: links.previewUrl,
       register: links.registerPreviewUrl,
       login: links.loginPreviewUrl,
       account: links.accountPreviewUrl
+    },
+    publishedPageLinks: {
+      index: links.publishedUrl,
+      register: links.registerPublishedUrl,
+      login: links.loginPublishedUrl,
+      account: links.accountPublishedUrl
     },
     leadCount: Number(stats?.leadCount || 0),
     memberCount: Number(stats?.memberCount || 0),
@@ -5459,12 +5477,14 @@ async function loadWebsiteProjectBySlug(slug, { allowDraft = false } = {}) {
   return WebsiteProject.findOne(query).lean();
 }
 
-async function tryServeGeneratedWebsiteRequest({ req, res, slug, pageSlug, allowDraft = false, preview = false }) {
+async function tryServeGeneratedWebsiteRequest({ req, res, slug, pageSlug, allowDraft = false, preview = false, routeBase = '' }) {
   const project = await loadWebsiteProjectBySlug(slug, { allowDraft });
   if (!project) return false;
   const html = renderWebsiteProjectHtml(project, {
     pageSlug: normalizeWebsiteRenderPageSlug(pageSlug),
-    preview
+    preview,
+    origin: getPublicAppOrigin(req),
+    routeBase
   });
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(html);
@@ -5506,7 +5526,7 @@ app.get('/api/websites', authenticateToken, async (req, res) => {
         WebsiteLead.countDocuments({ websiteId: project._id }),
         WebsiteMember.countDocuments({ websiteId: project._id })
       ]);
-      return serializeWebsiteProject(project, { leadCount, memberCount });
+      return serializeWebsiteProject(project, { leadCount, memberCount }, { origin: getPublicAppOrigin(req) });
     }));
     return res.json({ success: true, templates: WEBSITE_TEMPLATE_PRESETS, projects: enriched });
   } catch (e) {
@@ -5553,7 +5573,7 @@ app.post('/api/websites/generate', authenticateToken, async (req, res) => {
 
     return res.json({
       success: true,
-      project: serializeWebsiteProject(created),
+      project: serializeWebsiteProject(created, {}, { origin: getPublicAppOrigin(req) }),
       templates: WEBSITE_TEMPLATE_PRESETS
     });
   } catch (e) {
@@ -5576,7 +5596,7 @@ app.get('/api/websites/:projectId', authenticateToken, async (req, res) => {
     ]);
     return res.json({
       success: true,
-      project: serializeWebsiteProject(project, { leadCount, memberCount }),
+      project: serializeWebsiteProject(project, { leadCount, memberCount }, { origin: getPublicAppOrigin(req) }),
       recentLeads: (recentLeads || []).map((item) => ({
         id: String(item._id || ''),
         leadType: cleanText(item.leadType, 20),
@@ -5616,7 +5636,7 @@ app.post('/api/websites/:projectId/publish', authenticateToken, async (req, res)
       WebsiteLead.countDocuments({ websiteId: updated._id }),
       WebsiteMember.countDocuments({ websiteId: updated._id })
     ]);
-    return res.json({ success: true, project: serializeWebsiteProject(updated, { leadCount, memberCount }) });
+    return res.json({ success: true, project: serializeWebsiteProject(updated, { leadCount, memberCount }, { origin: getPublicAppOrigin(req) }) });
   } catch (e) {
     console.error('POST /api/websites/:projectId/publish error:', e);
     return res.status(500).json({ error: 'Failed to update publish status' });
@@ -5642,19 +5662,41 @@ app.delete('/api/websites/:projectId', authenticateToken, async (req, res) => {
 
 app.get(['/site-preview/:slug', '/site-preview/:slug/:pageSlug'], async (req, res) => {
   try {
+    const safeSlug = normalizeWebsiteSlugInput(req.params.slug);
     const handled = await tryServeGeneratedWebsiteRequest({
       req,
       res,
-      slug: normalizeWebsiteSlugInput(req.params.slug),
+      slug: safeSlug,
       pageSlug: req.params.pageSlug || 'index',
       allowDraft: true,
-      preview: true
+      preview: true,
+      routeBase: `/site-preview/${safeSlug}`
     });
     if (handled) return;
     return res.status(404).send('Website preview not found');
   } catch (e) {
     console.error('GET /site-preview error:', e);
     return res.status(500).send('Website preview unavailable');
+  }
+});
+
+app.get(['/site/:slug', '/site/:slug/:pageSlug'], async (req, res) => {
+  try {
+    const safeSlug = normalizeWebsiteSlugInput(req.params.slug);
+    const handled = await tryServeGeneratedWebsiteRequest({
+      req,
+      res,
+      slug: safeSlug,
+      pageSlug: req.params.pageSlug || 'index',
+      allowDraft: false,
+      preview: false,
+      routeBase: `/site/${safeSlug}`
+    });
+    if (handled) return;
+    return res.status(404).send('Website not found');
+  } catch (e) {
+    console.error('GET /site error:', e);
+    return res.status(500).send('Website unavailable');
   }
 });
 
@@ -17688,8 +17730,10 @@ function buildCertificateSignature({ certId, serial, userId, sourceId, secureKey
   return crypto.createHmac('sha256', getCertificateSignSecret()).update(body).digest('hex');
 }
 
-function buildCertificateVerifyUrl(certId) {
-  return `/certificate.html?verify=${encodeURIComponent(String(certId || ''))}`;
+function buildCertificateVerifyUrl(certId, req) {
+  const path = `/certificate.html?verify=${encodeURIComponent(String(certId || ''))}`;
+  const origin = getPublicAppOrigin(req);
+  return origin ? `${origin}${path}` : path;
 }
 
 function buildCertificateQrUrl(verifyUrl) {
@@ -20607,7 +20651,7 @@ app.post('/api/certificates/generate', requireRole(['student']), async (req, res
       [String(me?.faculty || '').trim(), String(me?.studyGroup || '').trim()].filter(Boolean).join(' • ')
     ).trim().slice(0, 200);
     if (!fullName) return res.status(400).json({ error: 'fullName required' });
-    const verifyUrl = buildCertificateVerifyUrl(certId);
+    const verifyUrl = buildCertificateVerifyUrl(certId, req);
     const qrCodeUrl = buildCertificateQrUrl(verifyUrl);
     const issuedAt = new Date();
     const holderHash = buildCertificateHolderHash({
@@ -22019,7 +22063,7 @@ app.post('/api/certificates', authenticateToken, attachUserRole, requireRole(['s
     const serial = String(body.serial || makeSerial('COURSE', courseId)).trim();
     const secureKey = String(body.secureKey || makeCertificateSecureKey('SK')).trim();
     const issuedAt = new Date();
-    const verifyUrl = String(body.verifyUrl || buildCertificateVerifyUrl(certId)).trim();
+    const verifyUrl = String(body.verifyUrl || buildCertificateVerifyUrl(certId, req)).trim();
     const qrCodeUrl = String(body.qrCodeUrl || buildCertificateQrUrl(verifyUrl)).trim();
     const holderHash = buildCertificateHolderHash({
       userId: req.userId,

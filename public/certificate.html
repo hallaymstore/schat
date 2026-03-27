@@ -231,6 +231,20 @@
     function setSecureKey(text){ $("secureKeyVal").textContent = text || DASH; }
     function updatePreviewHint(text){ $("previewHint").textContent = text; }
 
+    function absoluteCertificateUrl(raw){
+      const value = String(raw || "").trim();
+      if(!value) return "";
+      if(/^https?:\/\//i.test(value)) return value;
+      if(value.startsWith("/")) return `${location.origin}${value}`;
+      return `${location.origin}/${value.replace(/^\/+/, "")}`;
+    }
+
+    function buildQrCodeUrlFromVerify(verifyUrl){
+      const safe = absoluteCertificateUrl(verifyUrl);
+      if(!safe) return "";
+      return `https://quickchart.io/qr?size=300&text=${encodeURIComponent(safe)}`;
+    }
+
     function renderQrImage(url){
       const img = $("qrImg");
       const link = $("qrLink");
@@ -452,9 +466,10 @@
     function certRecordToPayload(info, fallbackId = ""){
       const certId = info?.certId || info?.serial || fallbackId || randomId();
       const issuedAt = info?.dateISO || info?.issuedAt || todayISO();
+      const verifyUrl = absoluteCertificateUrl(info?.verifyUrl || (location.origin ? `${location.origin}/certificate.html?verify=${encodeURIComponent(certId)}` : `/certificate.html?verify=${encodeURIComponent(certId)}`));
       return {
         certId,
-        verifyUrl: info?.verifyUrl || (location.origin ? `${location.origin}/certificate.html?verify=${encodeURIComponent(certId)}` : `/certificate.html?verify=${encodeURIComponent(certId)}`),
+        verifyUrl,
         fullName: info?.fullName || $("fullNameInp").value || $("fullNameVal").textContent || DASH,
         fg: info?.facultyGroup || info?.fg || $("fgInp").value || $("fgVal").textContent || DASH,
         courseTitle: info?.courseTitle || info?.title || state.course?.title || DASH,
@@ -463,7 +478,7 @@
         dateHuman: humanDate(issuedAt),
         signature: info?.signature || $("signInp").value || "HALLAYM edu",
         secureKey: info?.secureKey || "",
-        qrCodeUrl: info?.qrCodeUrl || "",
+        qrCodeUrl: buildQrCodeUrlFromVerify(verifyUrl),
         platformName: info?.issuedByPlatform || "HALLAYM edu"
       };
     }
@@ -691,7 +706,7 @@
       const certId = state.certificate?.certId || state.certId || randomId();
       state.certId = certId;
       const dateISO = $("dateInp").value || todayISO();
-      const verifyUrl = ($("verifyUrlInp").value || "").trim() || (location.origin ? `${location.origin}/certificate.html?verify=${encodeURIComponent(certId)}` : `/certificate.html?verify=${encodeURIComponent(certId)}`);
+      const verifyUrl = absoluteCertificateUrl(($("verifyUrlInp").value || "").trim() || (location.origin ? `${location.origin}/certificate.html?verify=${encodeURIComponent(certId)}` : `/certificate.html?verify=${encodeURIComponent(certId)}`));
       return {
         certId,
         verifyUrl,
@@ -703,7 +718,7 @@
         dateHuman: humanDate(dateISO),
         signature: String($("signInp").value || "HALLAYM edu").trim(),
         secureKey: state.certificate?.secureKey || "",
-        qrCodeUrl: state.certificate?.qrCodeUrl || "",
+        qrCodeUrl: buildQrCodeUrlFromVerify(verifyUrl),
         platformName: "HALLAYM edu"
       };
     }
