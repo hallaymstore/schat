@@ -13,6 +13,13 @@ const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/cl
 const { Readable, Writable } = require('stream');
 const { v4: uuidv4 } = require('uuid');
 const { renderDeckSlidePngBuffers } = require('./slide-export-renderer');
+const {
+  WEBSITE_TEMPLATE_PRESETS,
+  buildWebsiteLinks,
+  normalizeWebsiteRenderSlug,
+  normalizeWebsiteRenderPageSlug,
+  renderWebsiteProjectHtml
+} = require('./website-builder-renderer');
 // const { AccessToken } = require('livekit-server-sdk'); // (disabled) using pure WebRTC signaling now
 const cors = require('cors');
 const path = require('path');
@@ -199,6 +206,29 @@ app.get('/api/rtc-config', (req, res) => {
 */
 
 app.use(express.urlencoded({ extended: true }));
+app.use(async (req, res, next) => {
+  try {
+    const pathName = String(req.path || '').trim();
+    if (!pathName || pathName.startsWith('/api/') || pathName.startsWith('/socket.io/') || pathName.startsWith('/uploads/')) {
+      return next();
+    }
+    const host = String(req.headers.host || '').trim().toLowerCase();
+    const slug = extractWebsiteBuilderSlugFromHost(host);
+    if (!slug) return next();
+    const handled = await tryServeGeneratedWebsiteRequest({
+      req,
+      res,
+      slug,
+      pageSlug: pathName === '/' ? 'index' : pathName.replace(/^\/+/, ''),
+      allowDraft: false,
+      preview: false
+    });
+    if (handled) return;
+  } catch (e) {
+    console.error('website subdomain middleware error:', e);
+  }
+  return next();
+});
 app.use(express.static('public'));
 
 
@@ -5107,6 +5137,620 @@ app.delete('/api/slides/:deckId', authenticateToken, async (req, res) => {
     return res.status(500).json({ error: 'Failed to delete slide deck' });
   }
 });
+
+function normalizeWebsiteColor(value, fallback) {
+  const raw = String(value || '').trim();
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw;
+  return fallback;
+}
+
+function normalizeWebsiteSlugInput(value, fallback = 'startup-site') {
+  const out = normalizeWebsiteRenderSlug(String(value || '').trim());
+  return out || normalizeWebsiteRenderSlug(fallback || 'startup-site');
+}
+
+function normalizeWebsiteFeatureFlags(raw) {
+  return {
+    authEnabled: raw?.authEnabled !== false,
+    waitlistEnabled: raw?.waitlistEnabled !== false,
+    contactEnabled: raw?.contactEnabled !== false
+  };
+}
+
+function normalizeWebsiteMetrics(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => ({
+      label: cleanText(item?.label, 70),
+      value: cleanText(item?.value, 40)
+    }))
+    .filter((item) => item.label && item.value)
+    .slice(0, 4);
+}
+
+function normalizeWebsiteItems(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => ({
+      title: cleanText(item?.title || item?.label, 120),
+      body: cleanText(item?.body || item?.detail || item?.quote, 260),
+      value: cleanText(item?.value, 48),
+      meta: cleanText(item?.meta || item?.author, 120)
+    }))
+    .filter((item) => item.title || item.body || item.value)
+    .slice(0, 6);
+}
+
+function normalizeWebsiteSections(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((section) => ({
+      type: cleanText(section?.type, 40) || 'section',
+      kicker: cleanText(section?.kicker, 80),
+      title: cleanText(section?.title, 120),
+      subtitle: cleanText(section?.subtitle, 240),
+      items: normalizeWebsiteItems(section?.items)
+    }))
+    .filter((section) => section.title && section.items.length)
+    .slice(0, 5);
+}
+
+function normalizeWebsiteList(list, { maxItems = 6, maxLen = 120 } = {}) {
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => cleanText(item, maxLen)).filter(Boolean).slice(0, maxItems);
+}
+
+function normalizeWebsiteCopyBlock(raw, defaults = {}) {
+  const block = raw && typeof raw === 'object' ? raw : {};
+  return {
+    headline: cleanText(block.headline, 140) || defaults.headline || '',
+    subheadline: cleanText(block.subheadline, 220) || defaults.subheadline || '',
+    helper: cleanText(block.helper, 200) || defaults.helper || '',
+    benefits: normalizeWebsiteList(block.benefits, { maxItems: 5, maxLen: 90 }),
+    checklist: normalizeWebsiteList(block.checklist, { maxItems: 5, maxLen: 90 })
+  };
+}
+
+function normalizeWebsiteProjectPayload(raw, input = {}, meta = {}) {
+  const featureFlags = normalizeWebsiteFeatureFlags(raw?.serverFeatures || input?.serverFeatures || {});
+  const startupName = cleanText(raw?.startupName || input?.startupName || input?.prompt || 'Startup site', 90) || 'Startup site';
+  const summary = cleanText(raw?.summary || input?.prompt || `${startupName} uchun premium startup landing.`, 320);
+  return {
+    startupName,
+    slug: normalizeWebsiteSlugInput(raw?.slug || raw?.subdomainSuggestion || input?.slug || startupName, startupName),
+    prompt: cleanText(input?.prompt, 1600),
+    audience: cleanText(raw?.audience || input?.audience, 140),
+    category: cleanText(raw?.category || input?.category, 80),
+    tone: cleanText(raw?.tone || input?.tone, 80),
+    templateId: cleanText(raw?.templateId || input?.templateId, 40) || 'startup-pitch',
+    seoTitle: cleanText(raw?.seoTitle || `${startupName} | HALLAYM startup site`, 120),
+    seoDescription: cleanText(raw?.seoDescription || summary, 220),
+    kicker: cleanText(raw?.kicker || 'HALLAYM AI website', 80),
+    summary,
+    brandLine: cleanText(raw?.brandLine || `${startupName} competition-ready website`, 140),
+    heroTitle: cleanText(raw?.heroTitle || startupName, 140),
+    heroSubtitle: cleanText(raw?.heroSubtitle || summary, 260),
+    heroCardTitle: cleanText(raw?.heroCardTitle || 'AI bilan tayyorlangan landing va auth oqimi', 120),
+    heroChecklist: normalizeWebsiteList(raw?.heroChecklist || ['Landing page', 'Register / Login', 'Lead yig\'ish', 'Subdomain publish'], { maxItems: 5, maxLen: 70 }),
+    ctaPrimary: cleanText(raw?.ctaPrimary || 'Boshlash', 50),
+    ctaSecondary: cleanText(raw?.ctaSecondary || 'Batafsil', 50),
+    finalCtaTitle: cleanText(raw?.finalCtaTitle || `${startupName} ni ishga tushirishga tayyormisiz?`, 140),
+    finalCtaBody: cleanText(raw?.finalCtaBody || 'Minimal server funksiyalar va startup competition uchun kerakli landing bu yerda tayyor.', 220),
+    finalCtaPrimary: cleanText(raw?.finalCtaPrimary || 'Akkaunt ochish', 60),
+    finalCtaSecondary: cleanText(raw?.finalCtaSecondary || 'Aloqa qoldirish', 60),
+    highlights: normalizeWebsiteList(raw?.highlights || ['Tanlov uchun mos landing', 'Tez registratsiya', 'Lead yig\'ish'], { maxItems: 6, maxLen: 70 }),
+    metrics: normalizeWebsiteMetrics(raw?.metrics || []),
+    sections: normalizeWebsiteSections(raw?.sections || []),
+    registerCopy: normalizeWebsiteCopyBlock(raw?.registerCopy, {
+      headline: `${startupName} ga qo'shiling`,
+      subheadline: 'Yangi foydalanuvchi uchun minimal register sahifasi.',
+      helper: 'Form backend bilan bog\'langan.'
+    }),
+    loginCopy: normalizeWebsiteCopyBlock(raw?.loginCopy, {
+      headline: `${startupName} akkauntiga kiring`,
+      subheadline: 'Mavjud foydalanuvchi uchun minimal login sahifasi.',
+      helper: 'Session local token orqali saqlanadi.'
+    }),
+    accountCopy: normalizeWebsiteCopyBlock(raw?.accountCopy, {
+      headline: 'A\'zo kabineti',
+      subheadline: 'Ro\'yxatdan o\'tgan foydalanuvchi uchun minimal account sahifasi.'
+    }),
+    serverFeatures: featureFlags,
+    palette: {
+      accent: normalizeWebsiteColor(raw?.palette?.accent, '#14968b'),
+      accentSoft: normalizeWebsiteColor(raw?.palette?.accentSoft, '#6fd8cb'),
+      highlight: normalizeWebsiteColor(raw?.palette?.highlight, '#f0b348'),
+      dark: normalizeWebsiteColor(raw?.palette?.dark, '#082026'),
+      surface: normalizeWebsiteColor(raw?.palette?.surface, '#f6fcfb')
+    },
+    footerText: cleanText(raw?.footerText || `${startupName} powered by HALLAYM AI website studio`, 180),
+    aiProvider: cleanText(meta?.aiProvider || raw?.aiProvider || 'template', 32),
+    aiModel: cleanText(meta?.aiModel || raw?.aiModel, 120),
+    generationMode: cleanText(meta?.generationMode || raw?.generationMode || 'template', 32),
+    status: raw?.status === 'draft' ? 'draft' : 'published',
+    publishedAt: meta?.publishedAt || new Date()
+  };
+}
+
+function buildWebsiteProjectFallback(input = {}) {
+  const startupName = cleanText(input.startupName || input.prompt || 'Startup site', 90) || 'Startup site';
+  const templateId = cleanText(input.templateId, 40) || 'startup-pitch';
+  const prompt = cleanText(input.prompt, 1600);
+  const audience = cleanText(input.audience, 140) || 'startup jury va early users';
+  const category = cleanText(input.category, 80) || 'startup';
+  return normalizeWebsiteProjectPayload({
+    startupName,
+    templateId,
+    summary: prompt || `${startupName} uchun startup competition-ready landing page.`,
+    brandLine: `${category} yo'nalishidagi premium web taqdimot`,
+    heroTitle: `${startupName} bilan ${audience} uchun aniq va chiroyli yechim`,
+    heroSubtitle: prompt || `${startupName} uchun landing page, login/register va lead yig'ish oqimi bitta saytda ishlaydi.`,
+    heroChecklist: ['Landing page', 'Register / Login', 'Contact / Waitlist', 'Subdomain publish'],
+    highlights: ['AI tayyorlangan copy', 'Minimal server funksiyalar', 'Tanlov uchun tayyor ko\'rinish'],
+    metrics: [
+      { value: '1 kun', label: 'Tez ishga tushirish' },
+      { value: '4 sahifa', label: 'Landing + auth + account' },
+      { value: '24/7', label: 'Online preview' }
+    ],
+    sections: [
+      {
+        type: 'features',
+        kicker: 'Why it works',
+        title: 'Startup tanlovlari uchun kerakli asosiy bloklar',
+        subtitle: 'Investor yoki hakam bir qarashda g\'oyani tushunishi uchun.',
+        items: [
+          { title: 'Aniq pitch', body: 'Muammo, yechim va qiymat taklifi qisqa va ravshan bloklarda beriladi.' },
+          { title: 'Minimal auth', body: 'Register va login oqimi early access yoki demo foydalanuvchilar uchun tayyor bo\'ladi.' },
+          { title: 'Lead yig\'ish', body: 'Waitlist yoki contact form orqali qiziqqan foydalanuvchilar saqlanadi.' }
+        ]
+      },
+      {
+        type: 'steps',
+        kicker: 'Launch flow',
+        title: 'Qanday ishlaydi',
+        subtitle: 'HALLAYM AI tayyorlaydi, siz esa publish qilib yuborasiz.',
+        items: [
+          { title: '1. G\'oya kiritiladi', body: 'Startup nima qilishi va kim uchun ekanini yozasiz.' },
+          { title: '2. AI website tayyorlaydi', body: 'Landing, register, login va account sahifalari yaratiladi.' },
+          { title: '3. Subdomain beriladi', body: 'Slug asosida edu.hallaym.site subdomain tayyor bo\'ladi.' }
+        ]
+      }
+    ],
+    registerCopy: {
+      headline: `${startupName} early access`,
+      subheadline: 'Demo va beta foydalanuvchilar uchun tez register sahifasi.',
+      benefits: ['Tez kirish', 'Minimal forma', 'Competition-ready flow']
+    },
+    loginCopy: {
+      headline: `${startupName} ga qayta kirish`,
+      subheadline: 'Mavjud foydalanuvchi akkauntiga kiradi.',
+      benefits: ['Email login', 'Minimal auth', 'Account preview']
+    },
+    accountCopy: {
+      headline: `${startupName} account`,
+      subheadline: 'User ichki sahifasi va keyingi qadamlar.',
+      checklist: ['Demo ko\'rish', 'Pitch deck tayyorlash', 'Jamoa bilan ulashish']
+    },
+    serverFeatures: input.serverFeatures || { authEnabled: true, waitlistEnabled: true, contactEnabled: true }
+  }, input, { aiProvider: 'hallaym-ai', generationMode: 'template' });
+}
+
+async function ensureUniqueWebsiteSlug(baseSlug, ignoreId = '') {
+  let slug = normalizeWebsiteSlugInput(baseSlug);
+  let index = 2;
+  while (true) {
+    const found = await WebsiteProject.findOne({
+      slug,
+      ...(ignoreId && mongoose.Types.ObjectId.isValid(ignoreId) ? { _id: { $ne: ignoreId } } : {})
+    }).select('_id').lean();
+    if (!found) return slug;
+    slug = `${normalizeWebsiteSlugInput(baseSlug).slice(0, 26)}-${index}`;
+    index += 1;
+  }
+}
+
+async function requestGroqWebsiteProjectJson({ systemPrompt, userMessage }) {
+  const apiKey = String(process.env.GROQ_API_KEY || '').trim();
+  const model = String(process.env.GROQ_WEBSITE_MODEL || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+  if (!apiKey) throw new Error('GROQ_API_KEY missing');
+  const { content } = await requestOpenAiCompatibleChat({
+    baseUrl: 'https://api.groq.com/openai/v1',
+    apiKey,
+    model,
+    systemPrompt,
+    history: [],
+    userMessage,
+    temperature: 0.35,
+    maxTokens: 2600,
+    responseFormat: { type: 'json_object' }
+  });
+  const parsed = parseJsonObjectLoose(content);
+  if (!parsed || typeof parsed !== 'object') throw new Error('Website AI JSON parse failed');
+  return { parsed, model, generationMode: 'ai' };
+}
+
+async function generateStartupWebsiteProject({ user, startupName, slug, prompt, audience, category, tone, templateId, serverFeatures }) {
+  const input = {
+    startupName,
+    slug,
+    prompt,
+    audience,
+    category,
+    tone,
+    templateId,
+    serverFeatures
+  };
+  const fallback = buildWebsiteProjectFallback(input);
+  try {
+    const systemPrompt = [
+      'You are HALLAYM AI and you create startup competition-ready micro websites for a university platform.',
+      'Return only JSON. Do not mention Groq, providers, prompts, JSON, or internal tooling.',
+      'The result must include a premium landing page and minimal register, login, and member area copy.',
+      'Keep it realistic, polished, modern, and investor-friendly.',
+      'All visible copy must stay in Uzbek unless the prompt explicitly asks for another language.',
+      'Prefer crisp sections, clear CTA text, and compact content blocks.',
+      'Use tasteful color palette values as hex colors.'
+    ].join('\n');
+    const userMessage = [
+      `Startup name: ${startupName}`,
+      `Preferred slug: ${slug}`,
+      `Prompt: ${prompt}`,
+      `Audience: ${audience || 'startup jury and early users'}`,
+      `Category: ${category || 'startup'}`,
+      `Tone: ${tone || 'premium and simple'}`,
+      `Template direction: ${templateId || 'startup-pitch'}`,
+      `Server features: auth=${serverFeatures?.authEnabled !== false}, waitlist=${serverFeatures?.waitlistEnabled !== false}, contact=${serverFeatures?.contactEnabled !== false}`,
+      `Owner name: ${cleanText(user?.fullName || user?.username, 80) || 'Founder'}`
+    ].join('\n');
+    const { parsed, model, generationMode } = await requestGroqWebsiteProjectJson({ systemPrompt, userMessage });
+    return normalizeWebsiteProjectPayload(parsed, input, { aiProvider: 'hallaym-ai', aiModel: model, generationMode });
+  } catch (e) {
+    console.warn('website ai generation fallback:', String(e?.message || e || 'fallback'));
+    return fallback;
+  }
+}
+
+function serializeWebsiteProject(project, stats = {}) {
+  const links = buildWebsiteLinks(project?.slug || '');
+  return {
+    id: String(project?._id || ''),
+    startupName: cleanText(project?.startupName, 90),
+    slug: cleanText(project?.slug, 40),
+    summary: cleanText(project?.summary, 320),
+    templateId: cleanText(project?.templateId, 40),
+    status: cleanText(project?.status, 20) || 'published',
+    audience: cleanText(project?.audience, 140),
+    category: cleanText(project?.category, 80),
+    tone: cleanText(project?.tone, 80),
+    prompt: cleanText(project?.prompt, 1600),
+    serverFeatures: project?.serverFeatures || {},
+    palette: project?.palette || {},
+    aiProvider: cleanText(project?.aiProvider, 40),
+    aiModel: cleanText(project?.aiModel, 120),
+    generationMode: cleanText(project?.generationMode, 32),
+    previewUrl: links.previewUrl,
+    publishedUrl: links.publishedUrl,
+    pageLinks: {
+      index: links.previewUrl,
+      register: links.registerPreviewUrl,
+      login: links.loginPreviewUrl,
+      account: links.accountPreviewUrl
+    },
+    leadCount: Number(stats?.leadCount || 0),
+    memberCount: Number(stats?.memberCount || 0),
+    createdAt: project?.createdAt,
+    updatedAt: project?.updatedAt,
+    publishedAt: project?.publishedAt
+  };
+}
+
+function extractWebsiteBuilderSlugFromHost(host) {
+  const cleanHost = String(host || '').split(':')[0].trim().toLowerCase();
+  const suffix = '.edu.hallaym.site';
+  if (!cleanHost.endsWith(suffix)) return '';
+  const prefix = cleanHost.slice(0, -suffix.length);
+  if (!prefix || prefix.includes('.')) return '';
+  return normalizeWebsiteSlugInput(prefix);
+}
+
+async function loadWebsiteProjectBySlug(slug, { allowDraft = false } = {}) {
+  if (!slug) return null;
+  const query = allowDraft ? { slug } : { slug, status: 'published' };
+  return WebsiteProject.findOne(query).lean();
+}
+
+async function tryServeGeneratedWebsiteRequest({ req, res, slug, pageSlug, allowDraft = false, preview = false }) {
+  const project = await loadWebsiteProjectBySlug(slug, { allowDraft });
+  if (!project) return false;
+  const html = renderWebsiteProjectHtml(project, {
+    pageSlug: normalizeWebsiteRenderPageSlug(pageSlug),
+    preview
+  });
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+  return true;
+}
+
+function signWebsiteMemberToken(member, project) {
+  return jwt.sign({
+    scope: 'site-member',
+    websiteId: String(project?._id || ''),
+    siteMemberId: String(member?._id || ''),
+    subdomain: String(project?.slug || '')
+  }, process.env.JWT_SECRET, { expiresIn: '30d' });
+}
+
+async function authenticateWebsiteMember(req, slug) {
+  const auth = String(req.headers.authorization || '').trim();
+  if (!auth.toLowerCase().startsWith('bearer ')) throw new Error('Token required');
+  const token = auth.slice(7).trim();
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  if (decoded?.scope !== 'site-member') throw new Error('Invalid token');
+  const project = await loadWebsiteProjectBySlug(slug, { allowDraft: true });
+  if (!project) throw new Error('Website not found');
+  if (String(decoded.websiteId || '') !== String(project._id || '')) throw new Error('Token mismatch');
+  const member = await WebsiteMember.findOne({ _id: decoded.siteMemberId, websiteId: project._id }).lean();
+  if (!member) throw new Error('Member not found');
+  return { project, member };
+}
+
+app.get('/api/websites/templates', authenticateToken, async (req, res) => {
+  return res.json({ success: true, templates: WEBSITE_TEMPLATE_PRESETS });
+});
+
+app.get('/api/websites', authenticateToken, async (req, res) => {
+  try {
+    const projects = await WebsiteProject.find({ ownerId: req.userId }).sort({ updatedAt: -1 }).limit(24).lean();
+    const enriched = await Promise.all((projects || []).map(async (project) => {
+      const [leadCount, memberCount] = await Promise.all([
+        WebsiteLead.countDocuments({ websiteId: project._id }),
+        WebsiteMember.countDocuments({ websiteId: project._id })
+      ]);
+      return serializeWebsiteProject(project, { leadCount, memberCount });
+    }));
+    return res.json({ success: true, templates: WEBSITE_TEMPLATE_PRESETS, projects: enriched });
+  } catch (e) {
+    console.error('GET /api/websites error:', e);
+    return res.status(500).json({ error: 'Failed to load websites' });
+  }
+});
+
+app.post('/api/websites/generate', authenticateToken, async (req, res) => {
+  try {
+    if (denyIfMuted(req, res)) return;
+    const startupName = cleanText(req.body?.startupName, 90);
+    const prompt = cleanText(req.body?.prompt, 1800);
+    if (!startupName || !prompt) {
+      return res.status(400).json({ error: 'startupName and prompt required' });
+    }
+    const audience = cleanText(req.body?.audience, 140);
+    const category = cleanText(req.body?.category, 80);
+    const tone = cleanText(req.body?.tone, 80);
+    const templateId = cleanText(req.body?.templateId, 40) || 'startup-pitch';
+    const desiredSlug = normalizeWebsiteSlugInput(req.body?.slug || startupName, startupName);
+    const uniqueSlug = await ensureUniqueWebsiteSlug(desiredSlug);
+    const serverFeatures = normalizeWebsiteFeatureFlags(req.body?.serverFeatures || {});
+    const me = await User.findById(req.userId).select('fullName username').lean().catch(() => null);
+    const projectPayload = await generateStartupWebsiteProject({
+      user: me || {},
+      startupName,
+      slug: uniqueSlug,
+      prompt,
+      audience,
+      category,
+      tone,
+      templateId,
+      serverFeatures
+    });
+    projectPayload.slug = await ensureUniqueWebsiteSlug(projectPayload.slug || uniqueSlug);
+    projectPayload.status = 'published';
+    projectPayload.publishedAt = new Date();
+
+    const created = await WebsiteProject.create({
+      ownerId: req.userId,
+      ...projectPayload
+    });
+
+    return res.json({
+      success: true,
+      project: serializeWebsiteProject(created),
+      templates: WEBSITE_TEMPLATE_PRESETS
+    });
+  } catch (e) {
+    console.error('POST /api/websites/generate error:', e);
+    return res.status(500).json({ error: 'Failed to generate website' });
+  }
+});
+
+app.get('/api/websites/:projectId', authenticateToken, async (req, res) => {
+  try {
+    const projectId = String(req.params.projectId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(projectId)) return res.status(400).json({ error: 'Invalid project id' });
+    const project = await WebsiteProject.findOne({ _id: projectId, ownerId: req.userId }).lean();
+    if (!project) return res.status(404).json({ error: 'Website project not found' });
+    const [leadCount, memberCount, recentLeads, recentMembers] = await Promise.all([
+      WebsiteLead.countDocuments({ websiteId: project._id }),
+      WebsiteMember.countDocuments({ websiteId: project._id }),
+      WebsiteLead.find({ websiteId: project._id }).sort({ createdAt: -1 }).limit(8).lean(),
+      WebsiteMember.find({ websiteId: project._id }).sort({ createdAt: -1 }).limit(8).lean()
+    ]);
+    return res.json({
+      success: true,
+      project: serializeWebsiteProject(project, { leadCount, memberCount }),
+      recentLeads: (recentLeads || []).map((item) => ({
+        id: String(item._id || ''),
+        leadType: cleanText(item.leadType, 20),
+        name: cleanText(item.name, 90),
+        email: cleanText(item.email, 120),
+        company: cleanText(item.company, 120),
+        message: cleanText(item.message, 240),
+        createdAt: item.createdAt
+      })),
+      recentMembers: (recentMembers || []).map((item) => ({
+        id: String(item._id || ''),
+        fullName: cleanText(item.fullName, 120),
+        email: cleanText(item.email, 120),
+        company: cleanText(item.company, 120),
+        createdAt: item.createdAt,
+        lastLoginAt: item.lastLoginAt
+      }))
+    });
+  } catch (e) {
+    console.error('GET /api/websites/:projectId error:', e);
+    return res.status(500).json({ error: 'Failed to load website project' });
+  }
+});
+
+app.post('/api/websites/:projectId/publish', authenticateToken, async (req, res) => {
+  try {
+    const projectId = String(req.params.projectId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(projectId)) return res.status(400).json({ error: 'Invalid project id' });
+    const status = String(req.body?.status || 'published').trim().toLowerCase() === 'draft' ? 'draft' : 'published';
+    const updated = await WebsiteProject.findOneAndUpdate(
+      { _id: projectId, ownerId: req.userId },
+      { $set: { status, publishedAt: status === 'published' ? new Date() : null } },
+      { new: true }
+    ).lean();
+    if (!updated) return res.status(404).json({ error: 'Website project not found' });
+    const [leadCount, memberCount] = await Promise.all([
+      WebsiteLead.countDocuments({ websiteId: updated._id }),
+      WebsiteMember.countDocuments({ websiteId: updated._id })
+    ]);
+    return res.json({ success: true, project: serializeWebsiteProject(updated, { leadCount, memberCount }) });
+  } catch (e) {
+    console.error('POST /api/websites/:projectId/publish error:', e);
+    return res.status(500).json({ error: 'Failed to update publish status' });
+  }
+});
+
+app.delete('/api/websites/:projectId', authenticateToken, async (req, res) => {
+  try {
+    const projectId = String(req.params.projectId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(projectId)) return res.status(400).json({ error: 'Invalid project id' });
+    const project = await WebsiteProject.findOneAndDelete({ _id: projectId, ownerId: req.userId }).lean();
+    if (!project) return res.status(404).json({ error: 'Website project not found' });
+    await Promise.all([
+      WebsiteLead.deleteMany({ websiteId: project._id }),
+      WebsiteMember.deleteMany({ websiteId: project._id })
+    ]);
+    return res.json({ success: true, projectId });
+  } catch (e) {
+    console.error('DELETE /api/websites/:projectId error:', e);
+    return res.status(500).json({ error: 'Failed to delete website project' });
+  }
+});
+
+app.get(['/site-preview/:slug', '/site-preview/:slug/:pageSlug'], async (req, res) => {
+  try {
+    const handled = await tryServeGeneratedWebsiteRequest({
+      req,
+      res,
+      slug: normalizeWebsiteSlugInput(req.params.slug),
+      pageSlug: req.params.pageSlug || 'index',
+      allowDraft: true,
+      preview: true
+    });
+    if (handled) return;
+    return res.status(404).send('Website preview not found');
+  } catch (e) {
+    console.error('GET /site-preview error:', e);
+    return res.status(500).send('Website preview unavailable');
+  }
+});
+
+app.post('/api/website-builder/public/:slug/register', async (req, res) => {
+  try {
+    const project = await loadWebsiteProjectBySlug(normalizeWebsiteSlugInput(req.params.slug), { allowDraft: true });
+    if (!project) return res.status(404).json({ error: 'Website not found' });
+    const fullName = cleanText(req.body?.fullName, 120);
+    const email = cleanText(req.body?.email, 160).toLowerCase();
+    const company = cleanText(req.body?.company, 120);
+    const password = String(req.body?.password || '');
+    if (!fullName || !email || password.length < 5) {
+      return res.status(400).json({ error: 'fullName, email, and password required' });
+    }
+    const exists = await WebsiteMember.findOne({ websiteId: project._id, email }).lean();
+    if (exists) return res.status(409).json({ error: 'Bu email bilan akkaunt allaqachon mavjud' });
+    const passwordHash = await bcrypt.hash(password, 10);
+    const member = await WebsiteMember.create({ websiteId: project._id, fullName, email, company, passwordHash, lastLoginAt: new Date() });
+    const token = signWebsiteMemberToken(member, project);
+    return res.json({
+      success: true,
+      token,
+      member: { id: String(member._id || ''), fullName, email, company }
+    });
+  } catch (e) {
+    console.error('POST /api/website-builder/public/:slug/register error:', e);
+    return res.status(500).json({ error: 'Register ishlamadi' });
+  }
+});
+
+app.post('/api/website-builder/public/:slug/login', async (req, res) => {
+  try {
+    const project = await loadWebsiteProjectBySlug(normalizeWebsiteSlugInput(req.params.slug), { allowDraft: true });
+    if (!project) return res.status(404).json({ error: 'Website not found' });
+    const email = cleanText(req.body?.email, 160).toLowerCase();
+    const password = String(req.body?.password || '');
+    const member = await WebsiteMember.findOne({ websiteId: project._id, email });
+    if (!member) return res.status(404).json({ error: 'Akkaunt topilmadi' });
+    const ok = await bcrypt.compare(password, member.passwordHash || '');
+    if (!ok) return res.status(401).json({ error: 'Parol noto\'g\'ri' });
+    member.lastLoginAt = new Date();
+    await member.save();
+    const token = signWebsiteMemberToken(member, project);
+    return res.json({
+      success: true,
+      token,
+      member: { id: String(member._id || ''), fullName: cleanText(member.fullName, 120), email: cleanText(member.email, 160), company: cleanText(member.company, 120) }
+    });
+  } catch (e) {
+    console.error('POST /api/website-builder/public/:slug/login error:', e);
+    return res.status(500).json({ error: 'Login ishlamadi' });
+  }
+});
+
+app.get('/api/website-builder/public/:slug/me', async (req, res) => {
+  try {
+    const { project, member } = await authenticateWebsiteMember(req, normalizeWebsiteSlugInput(req.params.slug));
+    return res.json({
+      success: true,
+      website: { startupName: cleanText(project.startupName, 90), slug: cleanText(project.slug, 40) },
+      member: {
+        id: String(member._id || ''),
+        fullName: cleanText(member.fullName, 120),
+        email: cleanText(member.email, 160),
+        company: cleanText(member.company, 120),
+        createdAt: member.createdAt,
+        lastLoginAt: member.lastLoginAt
+      }
+    });
+  } catch (e) {
+    return res.status(401).json({ error: 'Session topilmadi' });
+  }
+});
+
+async function storeWebsiteLeadByType(req, res, leadType) {
+  try {
+    const project = await loadWebsiteProjectBySlug(normalizeWebsiteSlugInput(req.params.slug), { allowDraft: true });
+    if (!project) return res.status(404).json({ error: 'Website not found' });
+    const name = cleanText(req.body?.name, 120);
+    const email = cleanText(req.body?.email, 160).toLowerCase();
+    const company = cleanText(req.body?.company, 120);
+    const message = cleanText(req.body?.message, 500);
+    if (!name || !email) return res.status(400).json({ error: 'name and email required' });
+    await WebsiteLead.create({ websiteId: project._id, leadType, name, email, company, message });
+    return res.json({
+      success: true,
+      message: leadType === 'waitlist' ? 'Waitlistga qo\'shildingiz.' : 'Xabaringiz yuborildi.'
+    });
+  } catch (e) {
+    console.error(`POST /api/website-builder/public/:slug/${leadType} error:`, e);
+    return res.status(500).json({ error: 'Lead saqlanmadi' });
+  }
+}
+
+app.post('/api/website-builder/public/:slug/contact', async (req, res) => storeWebsiteLeadByType(req, res, 'contact'));
+app.post('/api/website-builder/public/:slug/waitlist', async (req, res) => storeWebsiteLeadByType(req, res, 'waitlist'));
 
 // ==================== GROUP LESSONS API ====================
 // List group lessons (recordings) - accessible to group members
@@ -17676,6 +18320,67 @@ const CertificateSchema = new mongoose.Schema({
   issuedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
+const WebsiteProjectSchema = new mongoose.Schema({
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  startupName: { type: String, required: true, trim: true },
+  slug: { type: String, required: true, trim: true, unique: true, index: true },
+  prompt: { type: String, default: '' },
+  audience: { type: String, default: '' },
+  category: { type: String, default: '' },
+  tone: { type: String, default: '' },
+  templateId: { type: String, default: 'startup-pitch' },
+  seoTitle: { type: String, default: '' },
+  seoDescription: { type: String, default: '' },
+  kicker: { type: String, default: '' },
+  summary: { type: String, default: '' },
+  brandLine: { type: String, default: '' },
+  heroTitle: { type: String, default: '' },
+  heroSubtitle: { type: String, default: '' },
+  heroCardTitle: { type: String, default: '' },
+  heroChecklist: { type: [String], default: [] },
+  ctaPrimary: { type: String, default: '' },
+  ctaSecondary: { type: String, default: '' },
+  finalCtaTitle: { type: String, default: '' },
+  finalCtaBody: { type: String, default: '' },
+  finalCtaPrimary: { type: String, default: '' },
+  finalCtaSecondary: { type: String, default: '' },
+  highlights: { type: [String], default: [] },
+  metrics: { type: mongoose.Schema.Types.Mixed, default: [] },
+  sections: { type: mongoose.Schema.Types.Mixed, default: [] },
+  registerCopy: { type: mongoose.Schema.Types.Mixed, default: {} },
+  loginCopy: { type: mongoose.Schema.Types.Mixed, default: {} },
+  accountCopy: { type: mongoose.Schema.Types.Mixed, default: {} },
+  serverFeatures: { type: mongoose.Schema.Types.Mixed, default: {} },
+  palette: { type: mongoose.Schema.Types.Mixed, default: {} },
+  footerText: { type: String, default: '' },
+  aiProvider: { type: String, default: 'template' },
+  aiModel: { type: String, default: '' },
+  generationMode: { type: String, default: 'template' },
+  status: { type: String, enum: ['draft', 'published'], default: 'published', index: true },
+  publishedAt: { type: Date, default: null },
+  previewEnabled: { type: Boolean, default: true }
+}, { timestamps: true });
+
+const WebsiteMemberSchema = new mongoose.Schema({
+  websiteId: { type: mongoose.Schema.Types.ObjectId, ref: 'WebsiteProject', required: true, index: true },
+  fullName: { type: String, default: '' },
+  email: { type: String, required: true, trim: true, index: true },
+  company: { type: String, default: '' },
+  passwordHash: { type: String, required: true },
+  lastLoginAt: { type: Date, default: null }
+}, { timestamps: true });
+
+WebsiteMemberSchema.index({ websiteId: 1, email: 1 }, { unique: true });
+
+const WebsiteLeadSchema = new mongoose.Schema({
+  websiteId: { type: mongoose.Schema.Types.ObjectId, ref: 'WebsiteProject', required: true, index: true },
+  leadType: { type: String, enum: ['contact', 'waitlist'], required: true, index: true },
+  name: { type: String, default: '' },
+  email: { type: String, default: '', index: true },
+  company: { type: String, default: '' },
+  message: { type: String, default: '' }
+}, { timestamps: true });
+
 const PlatformWalletSchema = new mongoose.Schema({
   key: { type: String, unique: true, default: 'platform_wallet' },
   adminBalance: { type: Number, default: 0 }
@@ -17692,6 +18397,9 @@ const CourseEnrollmentRequest = mongoose.models.CourseEnrollmentRequest || mongo
 const Test = mongoose.models.Test || mongoose.model('Test', TestSchema);
 const TestSubmission = mongoose.models.TestSubmission || mongoose.model('TestSubmission', TestSubmissionSchema);
 const Certificate = mongoose.models.Certificate || mongoose.model('Certificate', CertificateSchema);
+const WebsiteProject = mongoose.models.WebsiteProject || mongoose.model('WebsiteProject', WebsiteProjectSchema);
+const WebsiteMember = mongoose.models.WebsiteMember || mongoose.model('WebsiteMember', WebsiteMemberSchema);
+const WebsiteLead = mongoose.models.WebsiteLead || mongoose.model('WebsiteLead', WebsiteLeadSchema);
 const PlatformWallet = mongoose.models.PlatformWallet || mongoose.model('PlatformWallet', PlatformWalletSchema);
 
 // ---------- Ensure User schema has faculty field (non-breaking) ----------

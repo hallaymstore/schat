@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HALLAYM Website Studio</title>
+  <meta name="description" content="HALLAYM AI bilan startup competition-ready website yasang, preview qiling va subdomain publish oling." />
+  <script>
+    (function(){
+      const key = 'theme';
+      const saved = localStorage.getItem(key);
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode = saved || (prefersDark ? 'dark' : 'light');
+      if(mode === 'dark') document.documentElement.classList.add('dark');
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <link rel="stylesheet" href="/website-studio.css" />
+</head>
+<body class="uni-theme-body">
+  <div class="studio-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <a class="brand-mark" href="/index.html" aria-label="HALLAYM home">
+          <img src="/assets/landing-hero-illustration.svg" alt="" />
+        </a>
+        <div class="brand-copy">
+          <p>HALLAYM AI</p>
+          <h1>Website Studio</h1>
+          <span id="welcomeLine">Startup va tanlovlar uchun premium website builder.</span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <a class="action-btn" href="/index.html"><i class="fa-solid fa-house"></i> Bosh sahifa</a>
+        <a class="action-btn" id="dashboardLink" href="/student-dashboard.html"><i class="fa-solid fa-table-cells-large"></i> Dashboard</a>
+        <button class="action-btn" type="button" id="themeToggleBtn"><i class="fa-solid fa-moon"></i> Tema</button>
+        <button class="action-btn danger" type="button" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i> Chiqish</button>
+      </div>
+    </header>
+
+    <main class="studio-layout">
+      <aside class="control-stack">
+        <section class="panel-card welcome-panel">
+          <p class="section-kicker">HALLAYM AI Website Builder</p>
+          <h2 class="section-title">Landing + register/login + server functions</h2>
+          <p class="section-subtitle">Startup nomi va g'oyani yozing. HALLAYM AI sizga competition-ready landing, minimal auth sahifalari va subdomain preview tayyorlaydi.</p>
+        </section>
+
+        <section class="panel-card">
+          <div class="inline-actions spread">
+            <div>
+              <p class="section-kicker">Yangi website</p>
+              <h3 class="section-title small-title">AI bilan yaratish</h3>
+            </div>
+            <button class="action-btn primary alt" type="button" id="demoProjectBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> Demo</button>
+          </div>
+
+          <form id="projectForm" class="field-grid">
+            <div class="two-col">
+              <div>
+                <label class="field-label" for="startupNameInput">Startup nomi</label>
+                <input id="startupNameInput" type="text" placeholder="Masalan: NewWeb" required />
+              </div>
+              <div>
+                <label class="field-label" for="slugInput">Subdomain</label>
+                <input id="slugInput" type="text" placeholder="newweb" />
+              </div>
+            </div>
+
+            <div>
+              <label class="field-label" for="promptInput">Startup g'oyasi</label>
+              <textarea id="promptInput" placeholder="Startup nima qiladi, kim uchun, tanlovda nimasi bilan ajraladi?" required></textarea>
+            </div>
+
+            <div class="two-col">
+              <div>
+                <label class="field-label" for="audienceInput">Auditoriya</label>
+                <input id="audienceInput" type="text" placeholder="Investorlar, hakamlar, early users..." />
+              </div>
+              <div>
+                <label class="field-label" for="categoryInput">Yo'nalish</label>
+                <input id="categoryInput" type="text" placeholder="EdTech, SaaS, marketplace, fintech..." />
+              </div>
+            </div>
+
+            <div class="two-col">
+              <div>
+                <label class="field-label" for="toneInput">Ohang</label>
+                <input id="toneInput" type="text" placeholder="Rasmiy, premium, sodda, investor-friendly" />
+              </div>
+              <div>
+                <label class="field-label" for="templateInput">Template</label>
+                <select id="templateInput"></select>
+              </div>
+            </div>
+
+            <div>
+              <label class="field-label">Server funksiyalar</label>
+              <div class="toggle-grid">
+                <label class="toggle-pill"><input type="checkbox" id="featureAuth" checked /> Register / Login</label>
+                <label class="toggle-pill"><input type="checkbox" id="featureWaitlist" checked /> Waitlist</label>
+                <label class="toggle-pill"><input type="checkbox" id="featureContact" checked /> Contact form</label>
+              </div>
+            </div>
+
+            <div class="inline-actions">
+              <button class="action-btn primary" id="generateBtn" type="submit"><i class="fa-solid fa-sparkles"></i> AI bilan yasash</button>
+              <button class="action-btn" id="resetFormBtn" type="button"><i class="fa-solid fa-rotate-left"></i> Tozalash</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel-card">
+          <div class="inline-actions spread">
+            <div>
+              <p class="section-kicker">Tarix</p>
+              <h3 class="section-title small-title">Mening website'larim</h3>
+            </div>
+            <button class="action-btn primary alt" type="button" id="refreshProjectsBtn"><i class="fa-solid fa-rotate"></i> Yangilash</button>
+          </div>
+          <div class="history-list" id="projectList"></div>
+        </section>
+      </aside>
+
+      <section class="workspace-stack">
+        <section class="panel-card workspace-head">
+          <div class="workspace-header-row">
+            <div class="deck-summary">
+              <p class="section-kicker">Preview</p>
+              <h2 id="projectTitle">Website Studio tayyor</h2>
+              <p id="projectSubtitle">Chap tomondan startup ma'lumotlarini kiriting va AI website preview'ni shu yerda ko'ring.</p>
+              <div class="deck-meta-row" id="projectMetaRow"></div>
+            </div>
+            <div class="workspace-actions">
+              <button class="action-btn" type="button" id="copyPublishedBtn"><i class="fa-solid fa-copy"></i> Publish URL</button>
+              <button class="action-btn" type="button" id="openPreviewBtn"><i class="fa-solid fa-arrow-up-right-from-square"></i> Preview</button>
+              <button class="action-btn" type="button" id="togglePublishBtn"><i class="fa-solid fa-globe"></i> Publish</button>
+              <button class="action-btn danger" type="button" id="deleteProjectBtn"><i class="fa-solid fa-trash"></i> O'chirish</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel-card preview-panel">
+          <div class="page-switcher" id="pageSwitcher"></div>
+          <div class="preview-frame-wrap">
+            <iframe id="previewFrame" title="Website preview"></iframe>
+          </div>
+        </section>
+
+        <section class="panel-card note-card">
+          <div class="stats-grid" id="projectStats"></div>
+          <div class="detail-grid">
+            <div>
+              <p class="section-kicker">Leads</p>
+              <div class="mini-list" id="leadList"></div>
+            </div>
+            <div>
+              <p class="section-kicker">Members</p>
+              <div class="mini-list" id="memberList"></div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+  <script src="/website-studio.js" defer></script>
+  <script src="/ui-premium-icons.js" defer></script>
+</body>
+</html>
