@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kanal • HALLAYM</title>
+  <title>Kanal вЂў HALLAYM</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="/socket.io/socket.io.js"></script>
@@ -311,6 +311,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
 </style>
 
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src='/global-loader.js'></script>
 </head>
 
 <body class="min-h-screen">
@@ -398,9 +399,9 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
             </div>
             <div class="text-green/90 text-sm">
               <span id="channelUsername"></span>
-              <span class="mx-2">•</span>
+              <span class="mx-2">вЂў</span>
               <span id="channelCategory"></span>
-              <span class="mx-2">•</span>
+              <span class="mx-2">вЂў</span>
               <span id="channelUniversity"></span>
             </div>
           </div>
@@ -430,7 +431,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                 </span>
                 <div>
                   <div class="font-semibold text-gray-900">Jonli efir</div>
-                  <div id="liveStatusText" class="text-sm text-gray-600">Holat tekshirilmoqda…</div>
+                  <div id="liveStatusText" class="text-sm text-gray-600">Holat tekshirilmoqdaвЂ¦</div>
                 </div>
               </div>
               <div id="liveHint" class="text-xs text-gray-500 mt-1">
@@ -635,7 +636,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
   if (!isObjectId(channelId)) {
     const uname = urlParams.get('username') || urlParams.get('u');
     if (uname) {
-      showError('Resolving channel by username…');
+      showError('Resolving channel by usernameвЂ¦');
       (async () => {
         try {
           const res = await fetch(`/api/channels/by-username/${encodeURIComponent(uname)}`, {
@@ -737,7 +738,7 @@ function canManageChannel(){
     if (!liveIsLive) { el.textContent = ''; return; }
     const dt = liveStartedAt ? new Date(liveStartedAt) : null;
     const when = dt ? dt.toLocaleString() : '';
-    el.textContent = `Host: ${liveHostId || '-'}  •  Mode: ${liveMode || '-'}  •  Started: ${when}`;
+    el.textContent = `Host: ${liveHostId || '-'}  вЂў  Mode: ${liveMode || '-'}  вЂў  Started: ${when}`;
   }
 
   function showLivePlayer(show){
@@ -1003,7 +1004,7 @@ function canManageChannel(){
         liveMode = payload.mode || null;
 
         if (liveIsLive) {
-          setLiveStatusText('🔴 LIVE now • Viewers: ' + (payload.viewersCount ?? '—'));
+          setLiveStatusText('рџ”ґ LIVE now вЂў Viewers: ' + (payload.viewersCount ?? 'вЂ”'));
         } else {
           setLiveStatusText('Offline');
           // If live ended while watching, cleanup viewer PC
@@ -1123,7 +1124,7 @@ function canManageChannel(){
       try {
         if (!payload || String(payload.channelId||'') !== String(channelId)) return;
         // Host confirmation
-        setLiveStatusText('🔴 LIVE now');
+        setLiveStatusText('рџ”ґ LIVE now');
         showLivePlayer(true);
         setLiveMeta();
         renderLiveControls();
@@ -1134,7 +1135,7 @@ function canManageChannel(){
       try {
         if (!payload || String(payload.channelId||'') !== String(channelId)) return;
         // Viewer joined: wait for offer
-        setLiveStatusText('Joining live…');
+        setLiveStatusText('Joining liveвЂ¦');
         showLivePlayer(true);
         setLiveMeta();
       } catch(e){}
@@ -1159,9 +1160,9 @@ function canManageChannel(){
   function norm(s){ return String(s||'').trim(); }
   function slugifyUz(s){
     return norm(s).toLowerCase()
-      .replace(/['"’`]/g,'')
+      .replace(/['"вЂ™`]/g,'')
       .replace(/\s+/g,'-')
-      .replace(/[^a-z0-9\-а-яёқғҳўӣҷ]+/gi,'')
+      .replace(/[^a-z0-9\-Р°-СЏС‘Т›Т“ТіСћУЈТ·]+/gi,'')
       .replace(/\-\-+/g,'-')
       .replace(/^\-+|\-+$/g,'');
   }
@@ -1191,12 +1192,12 @@ function canManageChannel(){
     const catSel = document.getElementById('editCategory');
     if(uniSel){
       const current = uniSel.value;
-      uniSel.innerHTML = '<option value="">— Tanlang —</option>' + __uniList.map(u=>`<option value="${escapeHtml(u.name||u)}">${escapeHtml(u.name||u)}</option>`).join('');
+      uniSel.innerHTML = '<option value="">вЂ” Tanlang вЂ”</option>' + __uniList.map(u=>`<option value="${escapeHtml(u.name||u)}">${escapeHtml(u.name||u)}</option>`).join('');
       if(current) uniSel.value = current;
     }
     if(catSel){
       const current = catSel.value;
-      catSel.innerHTML = '<option value="">— Tanlang —</option>' + __catList.map(c=>`<option value="${escapeHtml(c.slug||c.name||c)}">${escapeHtml(c.name||c)}</option>`).join('');
+      catSel.innerHTML = '<option value="">вЂ” Tanlang вЂ”</option>' + __catList.map(c=>`<option value="${escapeHtml(c.slug||c.name||c)}">${escapeHtml(c.name||c)}</option>`).join('');
       if(current) catSel.value = current;
     }
     __catalogsLoaded = true;
@@ -1355,8 +1356,8 @@ function canManageChannel(){
     if (!posts.length){
       container.innerHTML = `
         <div class="bg-white rounded-2xl p-8 text-center text-gray-500 border">
-          <div class="text-lg font-semibold text-gray-700">Hali post yo‘q</div>
-          <div class="text-sm mt-1">Birinchi bo‘lib post joylang.</div>
+          <div class="text-lg font-semibold text-gray-700">Hali post yoвЂq</div>
+          <div class="text-sm mt-1">Birinchi boвЂlib post joylang.</div>
         </div>`;
       return;
     }
@@ -1375,7 +1376,7 @@ function canManageChannel(){
               ${p.title ? `<div class="text-lg font-bold text-gray-900">${escapeHtml(p.title)}</div>` : ''}
               <div class="text-xs text-gray-500 mt-1">
                 <span>${new Date(p.createdAt).toLocaleString()}</span></span>
-                <span class="mx-2">•</span>
+                <span class="mx-2">вЂў</span>
                 <span><i class="fas fa-eye mr-1"></i><span data-views>${p.viewsCount ?? 0}</span></span>
               </div>
             </div>

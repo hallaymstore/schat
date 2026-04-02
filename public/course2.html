@@ -42,6 +42,7 @@
     code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src='/global-loader.js'></script>
 </head>
 <body>
   <header>
@@ -74,14 +75,14 @@
         <div class="muted" id="desc" style="margin-top:12px">-</div>
 
         <div class="row" style="margin-top:14px">
-          <div class="muted"><b>O‘qituvchi:</b> <span id="teacher">-</span></div>
+          <div class="muted"><b>OвЂqituvchi:</b> <span id="teacher">-</span></div>
         </div>
         <div class="row" style="margin-top:6px">
           <div class="muted"><b>Guruhlar:</b> <span id="groups">-</span></div>
         </div>
 
         <div class="row" style="margin-top:14px">
-          <button class="btn primary" id="joinBtn" style="display:none">Kursga qo‘shilish</button>
+          <button class="btn primary" id="joinBtn" style="display:none">Kursga qoвЂshilish</button>
           <a class="btn primary" id="openBtn" href="#" style="display:none">Kursni ochish</a>
           <a class="btn" id="editBtn" href="#" style="display:none">Edit (teacher)</a>
         </div>
@@ -91,7 +92,7 @@
 
       <div class="card col-5">
         <h3>Preview</h3>
-        <div class="muted">YouTube preview bo‘lsa shu yerda ko‘rinadi.</div>
+        <div class="muted">YouTube preview boвЂlsa shu yerda koвЂrinadi.</div>
         <div style="margin-top:12px" class="ytWrap" id="ytWrap">
           <iframe id="ytFrame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
@@ -100,15 +101,15 @@
           <h3 style="margin:0 0 8px 0">Qoidalar</h3>
           <div class="muted">
             <ul style="margin:0;padding-left:18px">
-              <li>Student faqat o‘z fakultet/guruhiga mos kursga qo‘shiladi.</li>
+              <li>Student faqat oвЂz fakultet/guruhiga mos kursga qoвЂshiladi.</li>
               <li>Pullik kurs: coin student balansidan yechiladi.</li>
-              <li>Teacher balansiga 50% qo‘shiladi (backend bosqichida).</li>
+              <li>Teacher balansiga 50% qoвЂshiladi (backend bosqichida).</li>
             </ul>
           </div>
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          Backend endpointlar bo‘lsa: <code>POST /api/courses/:id/join</code> yoki <code>/api/join-course</code> ishlaydi.
+          Backend endpointlar boвЂlsa: <code>POST /api/courses/:id/join</code> yoki <code>/api/join-course</code> ishlaydi.
           Aks holda demo join localStorage orqali.
         </div>
       </div>
@@ -116,7 +117,7 @@
   </div>
 
   <footer>
-    Qarshi Davlat Texnika Universiteti — LMS (Course)
+    Qarshi Davlat Texnika Universiteti вЂ” LMS (Course)
   </footer>
 
 <script>
@@ -277,7 +278,7 @@
     badge.style.background = isTeacher ? "#2563eb" : (isAdmin ? "#f59e0b" : "#10b981");
 
     const mePill = document.getElementById("mePill");
-    mePill.textContent = (me.fullname || me.name || me.username || "") + " • " + (me.group || "Guruh yo‘q");
+    mePill.textContent = (me.fullname || me.name || me.username || "") + " вЂў " + (me.group || "Guruh yoвЂq");
     mePill.style.display = "inline-block";
 
     document.getElementById("dashLink").href = isTeacher ? "/teacher-dashboard.html" : isAdmin ? "/admin-dashboard.html" : "/student-dashboard.html";
@@ -340,7 +341,7 @@
         openBtn.style.display = "inline-block";
         openBtn.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id);
         hint.style.display = "block";
-        hint.textContent = "Siz bu kursga qo‘shilgansiz. Davom etish uchun “Kursni ochish” ni bosing.";
+        hint.textContent = "Siz bu kursga qoвЂshilgansiz. Davom etish uchun вЂњKursni ochishвЂќ ni bosing.";
         return;
       }
 
@@ -349,11 +350,11 @@
         joinBtn.style.display = "inline-block";
         hint.style.display = "block";
         hint.textContent = (course.type==="paid")
-          ? `Bu kurs pullik. Narx: ${course.price||0} coin. “Kursga qo‘shilish” bosilganda coin yechish backend orqali bajariladi.`
-          : "Bu kurs bepul. “Kursga qo‘shilish” ni bosing.";
+          ? `Bu kurs pullik. Narx: ${course.price||0} coin. вЂњKursga qoвЂshilishвЂќ bosilganda coin yechish backend orqali bajariladi.`
+          : "Bu kurs bepul. вЂњKursga qoвЂshilishвЂќ ni bosing.";
       }else{
         hint.style.display = "block";
-        hint.textContent = "Qo‘shilish mumkin emas: " + check.reason;
+        hint.textContent = "QoвЂshilish mumkin emas: " + check.reason;
       }
     }
   }
@@ -361,7 +362,7 @@
   async function tryJoin(course, me){
     const check = canStudentJoin(course, me);
     if(!check.ok){
-      setErr("Qo‘shilish mumkin emas: " + check.reason);
+      setErr("QoвЂshilish mumkin emas: " + check.reason);
       return;
     }
 
@@ -381,7 +382,7 @@
         });
       }
       if(!res.ok) throw new Error("API join failed");
-      setOk("Kursga qo‘shildingiz (API). Yo‘naltirilmoqda...");
+      setOk("Kursga qoвЂshildingiz (API). YoвЂnaltirilmoqda...");
       setTimeout(()=> location.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id), 600);
       return;
     }catch(e){
@@ -399,7 +400,7 @@
         // cannot update server coins; store in localStorage cache for UI demonstration
         localStorage.setItem("demoCoins_override_" + uid, String(newCoins));
       }
-      setOk("Kursga qo‘shildingiz (demo). Yo‘naltirilmoqda...");
+      setOk("Kursga qoвЂshildingiz (demo). YoвЂnaltirilmoqda...");
       setTimeout(()=> location.href = "/joinedcourse.html?id=" + encodeURIComponent(course.id), 600);
     }
   }
@@ -448,7 +449,7 @@
     location.href = "/login.html";
   });
 
-  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib koвЂring."));
 </script>
   <script src="/ui-actions-menu.js" defer></script>
   <script src="/global-assistant.js" defer></script>

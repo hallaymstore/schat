@@ -38,6 +38,7 @@
     code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src='/global-loader.js'></script>
 </head>
 <body>
   <header>
@@ -62,7 +63,7 @@
       <div class="card col-5">
         <h2>Sertifikat generator</h2>
         <div class="muted">
-          Sertifikat canvas’da chiziladi va PDF ko‘rinishida yuklab olinadi.
+          Sertifikat canvasвЂ™da chiziladi va PDF koвЂrinishida yuklab olinadi.
           Ism-familiya va guruh avtomatik olinadi.
         </div>
 
@@ -93,7 +94,7 @@
         </div>
 
         <div class="tiny" style="margin-top:12px">
-          PDF export uchun CDN kutubxonalar ishlatiladi: <code>jspdf</code>. Agar CDN blok bo‘lsa — brauzerning Print-to-PDF funksiyasidan foydalaning.
+          PDF export uchun CDN kutubxonalar ishlatiladi: <code>jspdf</code>. Agar CDN blok boвЂlsa вЂ” brauzerning Print-to-PDF funksiyasidan foydalaning.
         </div>
       </div>
 
@@ -106,7 +107,7 @@
     </div>
   </div>
 
-  <footer>Qarshi Davlat Texnika Universiteti — LMS (Certificate)</footer>
+  <footer>Qarshi Davlat Texnika Universiteti вЂ” LMS (Certificate)</footer>
 
   <!-- jsPDF (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -257,7 +258,7 @@
     // Group & faculty
     ctx.font = "28px Arial";
     ctx.fillStyle = "#374151";
-    ctx.fillText("Guruh: " + (data.group || "-") + "    •    Fakultet: " + (data.faculty || "-"), W/2, 565);
+    ctx.fillText("Guruh: " + (data.group || "-") + "    вЂў    Fakultet: " + (data.faculty || "-"), W/2, 565);
 
     // Achievement line
     ctx.font = "30px Arial";
@@ -315,7 +316,7 @@
     ctx.textAlign = "center";
     ctx.fillStyle = "#6b7280";
     ctx.font = "18px Arial";
-    ctx.fillText("QDTU LMS • Onlayn ta'lim platformasi", W/2, H-70);
+    ctx.fillText("QDTU LMS вЂў Onlayn ta'lim platformasi", W/2, H-70);
   }
 
   function wrapText(ctx, text, x, y, maxWidth, lineHeight){
@@ -433,7 +434,7 @@
       win.document.write("<img style='width:100%' src='" + imgData + "'/>");
       win.document.close();
       win.focus();
-      setOk("PDF uchun: yangi oynada Print (Ctrl+P) → Save as PDF.");
+      setOk("PDF uchun: yangi oynada Print (Ctrl+P) в†’ Save as PDF.");
     }
   }
 
@@ -448,7 +449,7 @@
     badge.style.background = role==="teacher" ? "#2563eb" : (role==="admin" ? "#f59e0b" : "#10b981");
 
     const mePill = document.getElementById("mePill");
-    mePill.textContent = (window.ME.fullname||window.ME.name||window.ME.username||"") + " • " + (window.ME.group || "Guruh yo‘q");
+    mePill.textContent = (window.ME.fullname||window.ME.name||window.ME.username||"") + " вЂў " + (window.ME.group || "Guruh yoвЂq");
     mePill.style.display = "inline-block";
 
     document.getElementById("dashLink").href = role==="teacher" ? "/teacher-dashboard.html" : role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html";
@@ -500,7 +501,7 @@
     document.getElementById("scoreInp").disabled = (t !== "test");
   });
 
-  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib koвЂring."));
 </script>
   <script src="/ui-actions-menu.js" defer></script>
   <script src="/global-assistant.js" defer></script>

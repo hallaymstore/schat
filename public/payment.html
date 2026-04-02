@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Premium Payment Center — HALLAYM edu</title>
-  <meta name="description" content="Premium user va universitet tariflari, screenshot bilan to‘lov so‘rovi va admin approval oqimi."/>
+  <title>Premium Payment Center вЂ” HALLAYM edu</title>
+  <meta name="description" content="Premium user va universitet tariflari, screenshot bilan toвЂlov soвЂrovi va admin approval oqimi."/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -19,6 +19,7 @@
       document.documentElement.classList.toggle('dark', mode === 'dark');
     })();
   </script>
+  <script src='/global-loader.js'></script>
 </head>
 <body>
   <div class="account-shell">
@@ -28,7 +29,7 @@
           <div class="brand-mark"><i class="fa-solid fa-crown"></i></div>
           <div>
             <div class="brand-title">Premium Payment Center</div>
-            <div class="brand-sub">User premium, campus planlar va admin tasdiqlaydigan to‘lov oqimi</div>
+            <div class="brand-sub">User premium, campus planlar va admin tasdiqlaydigan toвЂlov oqimi</div>
           </div>
         </div>
         <nav class="nav-pills">
@@ -44,8 +45,8 @@
     <section class="hero-grid">
       <article class="glass-card">
         <div class="hero-kicker"><i class="fa-solid fa-wallet"></i> Screenshot based approval</div>
-        <h1 class="hero-title">Premiumni faollashtiring: kartaga to‘lang, screenshot yuboring, admin tasdiqlagach funksiyalar ochiladi.</h1>
-        <p class="hero-text">Hozircha avtomatik gateway emas: to‘lovdan keyin screenshot yuklanadi, admin tekshiradi va tasdiqlagach premium, AI credits, verified badge va animated stickerlar avtomatik faollashadi.</p>
+        <h1 class="hero-title">Premiumni faollashtiring: kartaga toвЂlang, screenshot yuboring, admin tasdiqlagach funksiyalar ochiladi.</h1>
+        <p class="hero-text">Hozircha avtomatik gateway emas: toвЂlovdan keyin screenshot yuklanadi, admin tekshiradi va tasdiqlagach premium, AI credits, verified badge va animated stickerlar avtomatik faollashadi.</p>
         <div class="hero-actions">
           <div class="billing-switch" id="billingSwitch">
             <button class="active" type="button" data-cycle="monthly">Oylik</button>
@@ -61,7 +62,7 @@
         <div class="section-head">
           <div>
             <h2 class="section-title">Admin karta</h2>
-            <p class="section-sub">To‘lovni shu rekvizitga yuboring, keyin screenshotni form bilan jo‘nating.</p>
+            <p class="section-sub">ToвЂlovni shu rekvizitga yuboring, keyin screenshotni form bilan joвЂnating.</p>
           </div>
         </div>
         <div class="payment-card" id="paymentCard"></div>
@@ -95,7 +96,7 @@
       <article class="glass-card">
         <div class="section-head">
           <div>
-            <h2 class="section-title">To‘lov so‘rovi yuborish</h2>
+            <h2 class="section-title">ToвЂlov soвЂrovi yuborish</h2>
             <p class="section-sub">Tarifni tanlang, screenshot yuklang va admin tasdiqlashini kuting.</p>
           </div>
         </div>
@@ -125,7 +126,7 @@
             <input class="field-input" id="paymentScreenshotInput" type="file" accept="image/*" required/>
           </label>
           <div class="full-span">
-            <button class="primary-btn" id="submitPaymentBtn" type="submit"><i class="fa-solid fa-paper-plane"></i> So‘rov yuborish</button>
+            <button class="primary-btn" id="submitPaymentBtn" type="submit"><i class="fa-solid fa-paper-plane"></i> SoвЂrov yuborish</button>
           </div>
         </form>
       </article>
@@ -133,8 +134,8 @@
       <aside class="glass-card">
         <div class="section-head">
           <div>
-            <h2 class="section-title">So‘rovlar tarixi</h2>
-            <p class="section-sub">Pending, approved yoki rejected holati shu yerda ko‘rinadi.</p>
+            <h2 class="section-title">SoвЂrovlar tarixi</h2>
+            <p class="section-sub">Pending, approved yoki rejected holati shu yerda koвЂrinadi.</p>
           </div>
         </div>
         <div class="list-stack" id="paymentHistory"></div>
@@ -145,5 +146,6 @@
   <div class="toast hidden" id="toast"></div>
 
   <script src="/payment.js" defer></script>
+  <script src='/global-assistant.js' defer></script>
 </body>
 </html>

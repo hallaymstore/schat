@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Notification Center — HALLAYM edu</title>
+  <title>Notification Center вЂ” HALLAYM edu</title>
   <meta name="description" content="In-app bildirishnomalar, premium, kurs, chat va tizim xabarlarini boshqarish markazi."/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,6 +19,7 @@
       document.documentElement.classList.toggle('dark', mode === 'dark');
     })();
   </script>
+  <script src='/global-loader.js'></script>
 </head>
 <body>
   <div class="account-shell">
@@ -44,10 +45,10 @@
     <section class="hero-grid">
       <article class="glass-card">
         <div class="hero-kicker"><i class="fa-solid fa-wave-square"></i> Real-time inbox</div>
-        <h1 class="hero-title">Hech nima ko‘zdan qochmasin, barcha notificationlarni bir joyda boshqaring.</h1>
-        <p class="hero-text">Admin xabarnomalari, premium to‘lov holati, kurs yangiliklari va support javoblari shu markazga tushadi. Unread bo‘lganlari aniq ajratiladi.</p>
+        <h1 class="hero-title">Hech nima koвЂzdan qochmasin, barcha notificationlarni bir joyda boshqaring.</h1>
+        <p class="hero-text">Admin xabarnomalari, premium toвЂlov holati, kurs yangiliklari va support javoblari shu markazga tushadi. Unread boвЂlganlari aniq ajratiladi.</p>
         <div class="hero-actions">
-          <button class="primary-btn" id="markAllBtn" type="button"><i class="fa-solid fa-envelope-open"></i> Hammasini o‘qildi qilish</button>
+          <button class="primary-btn" id="markAllBtn" type="button"><i class="fa-solid fa-envelope-open"></i> Hammasini oвЂqildi qilish</button>
           <a class="ghost-btn" href="/settings-center.html"><i class="fa-solid fa-gear"></i> Notification sozlamalari</a>
         </div>
         <div class="hero-stats" id="statsGrid"></div>
@@ -57,7 +58,7 @@
         <div class="section-head">
           <div>
             <h2 class="section-title">Filtrlar</h2>
-            <p class="section-sub">Faqat kerakli oqimni ko‘rib, qolganini keyinroq ochishingiz mumkin.</p>
+            <p class="section-sub">Faqat kerakli oqimni koвЂrib, qolganini keyinroq ochishingiz mumkin.</p>
           </div>
         </div>
         <div class="billing-switch" id="filterSwitch">
@@ -75,7 +76,7 @@
         <div class="section-head">
           <div>
             <h2 class="section-title">Inbox</h2>
-            <p class="section-sub">Notification ustiga bossangiz o‘qildi bo‘ladi va link bo‘lsa tegishli sahifaga o‘tadi.</p>
+            <p class="section-sub">Notification ustiga bossangiz oвЂqildi boвЂladi va link boвЂlsa tegishli sahifaga oвЂtadi.</p>
           </div>
           <button class="ghost-btn" id="refreshBtn" type="button"><i class="fa-solid fa-rotate"></i> Yangilash</button>
         </div>
@@ -87,5 +88,6 @@
   <div class="toast hidden" id="toast"></div>
 
   <script src="/notification-center.js" defer></script>
+  <script src='/global-assistant.js' defer></script>
 </body>
 </html>

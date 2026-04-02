@@ -172,6 +172,7 @@ button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
 }
 </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src='/global-loader.js'></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 <nav class="gradient-bg text-white h-16 flex items-center px-4">
@@ -250,8 +251,8 @@ button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
 <label class="text-sm text-gray-600">Sort</label>
 <select class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2" id="sort">
 <option value="new">Newest</option>
-<option value="price_asc">Price ↑</option>
-<option value="price_desc">Price ↓</option>
+<option value="price_asc">Price в†‘</option>
+<option value="price_desc">Price в†“</option>
 </select>
 </div>
 <div class="flex items-end">
@@ -387,7 +388,7 @@ button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
           <div class="flex items-start justify-between gap-2">
             <div>
               <div class="font-semibold text-gray-800 line-clamp-2">${escapeHtml(service.title)}</div>
-              <div class="text-sm text-gray-500 mt-1">${escapeHtml(service.category)} • <span class="font-medium">${escapeHtml(priceLabel)}</span></div>
+              <div class="text-sm text-gray-500 mt-1">${escapeHtml(service.category)} вЂў <span class="font-medium">${escapeHtml(priceLabel)}</span></div>
             </div>
             <a href="/service.html?id=${service._id}" class="text-purple-700 hover:text-purple-900">
               <i class="fas fa-arrow-right"></i>
@@ -423,7 +424,7 @@ button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
         return;
       }
       pages = j.pages || 1;
-      document.getElementById('contextLine').textContent = `University: ${me?.university || '-'} • Total: ${j.total} • Page ${j.page}/${j.pages}`;
+      document.getElementById('contextLine').textContent = `University: ${me?.university || '-'} вЂў Total: ${j.total} вЂў Page ${j.page}/${j.pages}`;
       document.getElementById('prevBtn').disabled = page <= 1;
       document.getElementById('nextBtn').disabled = page >= pages;
 

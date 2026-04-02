@@ -59,6 +59,7 @@
     }
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src='/global-loader.js'></script>
 </head>
 <body class="min-h-screen">
   <main class="max-w-7xl mx-auto px-3 sm:px-5 py-5 sm:py-8">
@@ -66,7 +67,7 @@
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 class="text-2xl sm:text-3xl font-black">Organizer Panel</h1>
-          <p class="muted text-sm mt-1">Faqat biriktirilgan fakultet bo‘yicha o‘quv turi, o‘quv guruh, yo‘nalish, guruh va kanallarni boshqarish.</p>
+          <p class="muted text-sm mt-1">Faqat biriktirilgan fakultet boвЂyicha oвЂquv turi, oвЂquv guruh, yoвЂnalish, guruh va kanallarni boshqarish.</p>
         </div>
         <div class="flex items-center gap-2">
           <a href="/profile.html" class="glass rounded-xl px-3 py-2 text-sm font-bold hover:bg-white/10">Profil</a>
@@ -96,16 +97,16 @@
         <div class="text-xs muted mt-1">Admin boshqa universitet scope tanlashi mumkin.</div>
         <div class="mt-3 flex flex-wrap gap-2">
           <input id="scopeInput" class="field rounded-xl px-3 py-2 text-sm w-full sm:w-96" placeholder="Universitet nomi" />
-          <button id="scopeApplyBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">Qo‘llash</button>
+          <button id="scopeApplyBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">QoвЂllash</button>
         </div>
       </div>
     </section>
 
     <section class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-2">
       <button class="tab tab-active glass rounded-xl px-3 py-2 text-sm" data-tab="overview">Overview</button>
-      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="studytypes">O‘quv turlari</button>
-      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="studygroups">O‘quv guruhlar</button>
-      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="programs">Yo‘nalishlar</button>
+      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="studytypes">OвЂquv turlari</button>
+      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="studygroups">OвЂquv guruhlar</button>
+      <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="programs">YoвЂnalishlar</button>
       <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="groups">Guruhlar</button>
       <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="channels">Kanallar</button>
       <button class="tab glass rounded-xl px-3 py-2 text-sm font-bold" data-tab="videocalls">Video calllar</button>
@@ -221,12 +222,12 @@
 
       state.activeUniversity = String(j.scope?.university || '').trim();
       state.activeFaculty = String(j.scope?.faculty || '').trim();
-      $('#scopeLabel').textContent = state.activeUniversity || '—';
+      $('#scopeLabel').textContent = state.activeUniversity || 'вЂ”';
       const fallbackRole = state.me?.isAdmin ? 'admin' : String(state.me?.role || '');
       const role = String(j.scope?.role || fallbackRole || '').toLowerCase();
       state.scopeRole = role;
       $('#roleLabel').textContent = role ? role.toUpperCase() : '-';
-      $('#facultyLabel').textContent = state.activeFaculty || '—';
+      $('#facultyLabel').textContent = state.activeFaculty || 'вЂ”';
 
       if (!isScopeAdmin() && !state.activeFaculty) {
         throw new Error('Organizer profilda fakultet biriktirilmagan');
@@ -253,7 +254,7 @@
       state.faculties = Array.isArray(j.faculties) ? j.faculties : [];
       if (!state.activeFaculty && state.faculties.length) {
         state.activeFaculty = String(state.faculties[0] || '').trim();
-        $('#facultyLabel').textContent = state.activeFaculty || '—';
+        $('#facultyLabel').textContent = state.activeFaculty || 'вЂ”';
       }
       return state.faculties;
     }
@@ -324,7 +325,7 @@
       panel.innerHTML = `
         <div class="flex flex-wrap gap-2 mb-4">
           <input id="newFaculty" class="field rounded-xl px-3 py-2 text-sm w-full sm:w-96" placeholder="Yangi fakultet nomi" />
-          <button id="addFacultyBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">Qo‘shish</button>
+          <button id="addFacultyBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">QoвЂshish</button>
         </div>
         <div id="facultyList"></div>
       `;
@@ -332,7 +333,7 @@
       const draw = () => {
         const list = $('#facultyList');
         if (!state.faculties.length) {
-          list.innerHTML = '<div class="muted text-sm">Fakultetlar yo‘q.</div>';
+          list.innerHTML = '<div class="muted text-sm">Fakultetlar yoвЂq.</div>';
           return;
         }
         list.innerHTML = state.faculties.map((f) => `
@@ -340,7 +341,7 @@
             <div class="font-semibold">${esc(f)}</div>
             <div class="flex gap-2">
               <button class="renFac glass rounded-lg px-3 py-1 text-xs font-bold" data-name="${esc(f)}">Tahrirlash</button>
-              <button class="delFac glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-name="${esc(f)}">O‘chirish</button>
+              <button class="delFac glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-name="${esc(f)}">OвЂchirish</button>
             </div>
           </div>
         `).join('');
@@ -365,16 +366,16 @@
         $$('.delFac').forEach((btn) => {
           btn.onclick = async () => {
             const faculty = btn.dataset.name || '';
-            if (!confirm(`"${faculty}" fakultetini o‘chirasizmi?`)) return;
+            if (!confirm(`"${faculty}" fakultetini oвЂchirasizmi?`)) return;
             const { res, j } = await api('/api/organizer/catalog/faculties', {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ university: state.activeUniversity, faculty })
             });
-            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            if (!res.ok) return toast(j?.error || 'OвЂchirilmadi', 'error');
             await loadFacultiesCache();
             draw();
-            toast('O‘chirildi', 'success');
+            toast('OвЂchirildi', 'success');
           };
         });
       };
@@ -387,11 +388,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ university: state.activeUniversity, faculty })
         });
-        if (!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        if (!res.ok) return toast(j?.error || 'QoвЂshilmadi', 'error');
         $('#newFaculty').value = '';
         await loadFacultiesCache();
         draw();
-        toast('Qo‘shildi', 'success');
+        toast('QoвЂshildi', 'success');
       };
 
       draw();
@@ -410,7 +411,7 @@
         <div class="text-xs muted mb-3">Fakultet: <span class="font-extrabold">${esc(faculty)}</span></div>
         <div class="grid lg:grid-cols-4 gap-3 mb-4">
           <input id="stNameCreate" class="field rounded-xl px-3 py-2 text-sm" placeholder="Masalan: Kunduzgi" />
-          <button id="stAddBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">O‘quv tur qo‘shish</button>
+          <button id="stAddBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">OвЂquv tur qoвЂshish</button>
           <input id="stSearch" class="field rounded-xl px-3 py-2 text-sm" placeholder="Qidirish..." />
           <button id="stRefreshBtn" class="glass rounded-xl px-4 py-2 text-sm font-bold">Yangilash</button>
         </div>
@@ -427,7 +428,7 @@
         }
         const list = Array.isArray(j.studyTypes) ? j.studyTypes : [];
         if (!list.length) {
-          listEl.innerHTML = '<div class="muted text-sm">O‘quv turlari topilmadi.</div>';
+          listEl.innerHTML = '<div class="muted text-sm">OвЂquv turlari topilmadi.</div>';
           return;
         }
 
@@ -436,7 +437,7 @@
             <div class="font-semibold">${esc(item.name || '-')}</div>
             <div class="flex gap-2">
               <button class="stEdit glass rounded-lg px-3 py-1 text-xs font-bold" data-id="${esc(item._id)}" data-name="${esc(item.name || '')}">Tahrirlash</button>
-              <button class="stDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(item._id)}">O‘chirish</button>
+              <button class="stDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(item._id)}">OвЂchirish</button>
             </div>
           </div>
         `).join('');
@@ -445,7 +446,7 @@
           btn.onclick = async () => {
             const id = btn.dataset.id || '';
             const oldName = btn.dataset.name || '';
-            const name = prompt('O‘quv turi nomi:', oldName);
+            const name = prompt('OвЂquv turi nomi:', oldName);
             if (!name || name.trim() === oldName) return;
             const { res, j } = await api('/api/organizer/catalog/study-types/' + encodeURIComponent(id), {
               method: 'PATCH',
@@ -461,27 +462,27 @@
         $$('.stDel').forEach((btn) => {
           btn.onclick = async () => {
             const id = btn.dataset.id || '';
-            if (!confirm('O‘quv turini o‘chirasizmi? Shu turdagi o‘quv guruhlar ham o‘chadi.')) return;
+            if (!confirm('OвЂquv turini oвЂchirasizmi? Shu turdagi oвЂquv guruhlar ham oвЂchadi.')) return;
             const { res, j } = await api(buildUrl('/api/organizer/catalog/study-types/' + encodeURIComponent(id)), { method: 'DELETE' });
-            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            if (!res.ok) return toast(j?.error || 'OвЂchirilmadi', 'error');
             await loadList();
-            toast('O‘chirildi', 'success');
+            toast('OвЂchirildi', 'success');
           };
         });
       };
 
       $('#stAddBtn').onclick = async () => {
         const name = $('#stNameCreate').value.trim();
-        if (!name) return toast('O‘quv turi nomini kiriting', 'error');
+        if (!name) return toast('OвЂquv turi nomini kiriting', 'error');
         const { res, j } = await api('/api/organizer/catalog/study-types', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ university: state.activeUniversity, name })
         });
-        if (!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        if (!res.ok) return toast(j?.error || 'QoвЂshilmadi', 'error');
         $('#stNameCreate').value = '';
         await loadList();
-        toast('Qo‘shildi', 'success');
+        toast('QoвЂshildi', 'success');
       };
 
       $('#stRefreshBtn').onclick = loadList;
@@ -509,15 +510,15 @@
             <option value="">Yuklanmoqda...</option>
           </select>
           <input id="sgNameCreate" class="field rounded-xl px-3 py-2 text-sm" placeholder="Masalan: MMT-520-25" />
-          <button id="sgAddBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">O‘quv guruh qo‘shish</button>
+          <button id="sgAddBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">OвЂquv guruh qoвЂshish</button>
           <button id="sgRefreshBtn" class="glass rounded-xl px-4 py-2 text-sm font-bold">Yangilash</button>
         </div>
         <div class="grid lg:grid-cols-3 gap-3 mb-4">
           <select id="sgTypeFilter" class="field rounded-xl px-3 py-2 text-sm" disabled>
-            <option value="">Barcha o‘quv turlari</option>
+            <option value="">Barcha oвЂquv turlari</option>
           </select>
           <input id="sgSearch" class="field rounded-xl px-3 py-2 text-sm" placeholder="Qidirish..." />
-          <div class="text-xs muted flex items-center">Filtr faqat biriktirilgan fakultetga qo‘llanadi.</div>
+          <div class="text-xs muted flex items-center">Filtr faqat biriktirilgan fakultetga qoвЂllanadi.</div>
         </div>
         <div id="sgList" class="muted text-sm">Yuklanmoqda...</div>
       `;
@@ -526,7 +527,7 @@
         const createSel = $('#sgTypeCreate');
         const filterSel = $('#sgTypeFilter');
         createSel.innerHTML = '<option value="">Yuklanmoqda...</option>';
-        filterSel.innerHTML = '<option value="">Barcha o‘quv turlari</option>';
+        filterSel.innerHTML = '<option value="">Barcha oвЂquv turlari</option>';
         createSel.disabled = true;
         filterSel.disabled = true;
         const { res, j } = await api(buildUrl('/api/organizer/catalog/study-types'));
@@ -535,8 +536,8 @@
           return [];
         }
         const list = Array.isArray(j.studyTypes) ? j.studyTypes : [];
-        createSel.innerHTML = '<option value="">O‘quv turini tanlang</option>';
-        filterSel.innerHTML = '<option value="">Barcha o‘quv turlari</option>';
+        createSel.innerHTML = '<option value="">OвЂquv turini tanlang</option>';
+        filterSel.innerHTML = '<option value="">Barcha oвЂquv turlari</option>';
         list.forEach((item) => {
           const name = String(item?.name || '').trim();
           if (!name) return;
@@ -566,14 +567,14 @@
         }
         const list = Array.isArray(j.studyGroups) ? j.studyGroups : [];
         if (!list.length) {
-          listEl.innerHTML = '<div class="muted text-sm">O‘quv guruhlar topilmadi.</div>';
+          listEl.innerHTML = '<div class="muted text-sm">OвЂquv guruhlar topilmadi.</div>';
           return;
         }
         listEl.innerHTML = list.map((g) => `
           <div class="glass rounded-xl p-3 mb-2 flex items-center justify-between gap-2">
             <div>
               <div class="font-semibold">${esc(g.name || '-')}</div>
-              <div class="text-xs muted">${esc(g.faculty || '-')} • ${esc(g.studyType || '-')}</div>
+              <div class="text-xs muted">${esc(g.faculty || '-')} вЂў ${esc(g.studyType || '-')}</div>
             </div>
             <div class="flex gap-2">
               <button class="sgEdit glass rounded-lg px-3 py-1 text-xs font-bold"
@@ -581,7 +582,7 @@
                 data-name="${esc(g.name || '')}"
                 data-faculty="${esc(g.faculty || '')}"
                 data-study-type="${esc(g.studyType || '')}">Tahrirlash</button>
-              <button class="sgDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(g._id)}">O‘chirish</button>
+              <button class="sgDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(g._id)}">OвЂchirish</button>
             </div>
           </div>
         `).join('');
@@ -591,9 +592,9 @@
             const id = btn.dataset.id || '';
             const oldName = btn.dataset.name || '';
             const oldStudyType = btn.dataset.studyType || '';
-            const name = prompt('O‘quv guruh nomi:', oldName);
+            const name = prompt('OвЂquv guruh nomi:', oldName);
             if (!name) return;
-            const studyType = prompt('O‘quv turi:', oldStudyType) || oldStudyType;
+            const studyType = prompt('OвЂquv turi:', oldStudyType) || oldStudyType;
             const { res, j } = await api('/api/organizer/catalog/study-groups/' + encodeURIComponent(id), {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
@@ -608,11 +609,11 @@
         $$('.sgDel').forEach((btn) => {
           btn.onclick = async () => {
             const id = btn.dataset.id || '';
-            if (!confirm('O‘quv guruhni o‘chirasizmi?')) return;
+            if (!confirm('OвЂquv guruhni oвЂchirasizmi?')) return;
             const { res, j } = await api(buildUrl('/api/organizer/catalog/study-groups/' + encodeURIComponent(id)), { method: 'DELETE' });
-            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            if (!res.ok) return toast(j?.error || 'OвЂchirilmadi', 'error');
             await loadList();
-            toast('O‘chirildi', 'success');
+            toast('OвЂchirildi', 'success');
           };
         });
       };
@@ -620,16 +621,16 @@
       $('#sgAddBtn').onclick = async () => {
         const studyType = $('#sgTypeCreate').value.trim();
         const name = $('#sgNameCreate').value.trim();
-        if (!studyType || !name) return toast('O‘quv turi va nomni kiriting', 'error');
+        if (!studyType || !name) return toast('OвЂquv turi va nomni kiriting', 'error');
         const { res, j } = await api('/api/organizer/catalog/study-groups', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ university: state.activeUniversity, studyType, name })
         });
-        if (!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        if (!res.ok) return toast(j?.error || 'QoвЂshilmadi', 'error');
         $('#sgNameCreate').value = '';
         await loadList();
-        toast('Qo‘shildi', 'success');
+        toast('QoвЂshildi', 'success');
       };
 
       $('#sgRefreshBtn').onclick = loadList;
@@ -656,8 +657,8 @@
         <div class="text-xs muted mb-3">Fakultet: <span class="font-extrabold">${esc(faculty)}</span></div>
         <div class="grid lg:grid-cols-3 gap-3 mb-4">
           <input id="programCode" class="field rounded-xl px-3 py-2 text-sm" placeholder="Kod (ixtiyoriy)" />
-          <input id="programName" class="field rounded-xl px-3 py-2 text-sm" placeholder="Yo‘nalish nomi" />
-          <button id="addProgramBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">Qo‘shish</button>
+          <input id="programName" class="field rounded-xl px-3 py-2 text-sm" placeholder="YoвЂnalish nomi" />
+          <button id="addProgramBtn" class="btn-primary rounded-xl px-4 py-2 text-sm">QoвЂshish</button>
         </div>
         <div class="flex flex-wrap gap-2 mb-4">
           <input id="programSearch" class="field rounded-xl px-3 py-2 text-sm w-full sm:w-80" placeholder="Qidirish..." />
@@ -676,29 +677,29 @@
         }
         const list = Array.isArray(j.programs) ? j.programs : [];
         if (!list.length) {
-          listEl.innerHTML = '<div class="muted text-sm">Yo‘nalishlar topilmadi.</div>';
+          listEl.innerHTML = '<div class="muted text-sm">YoвЂnalishlar topilmadi.</div>';
           return;
         }
         listEl.innerHTML = list.map((p) => `
           <div class="glass rounded-xl p-3 mb-2 flex items-center justify-between gap-2">
             <div>
               <div class="font-semibold">${esc(p.name || '-')}</div>
-              <div class="text-xs muted">${esc(p.code || 'kod yo‘q')} • ${esc(p.faculty || '-')}</div>
+              <div class="text-xs muted">${esc(p.code || 'kod yoвЂq')} вЂў ${esc(p.faculty || '-')}</div>
             </div>
             <div class="flex gap-2">
               <button class="programEdit glass rounded-lg px-3 py-1 text-xs font-bold" data-id="${esc(p._id)}" data-name="${esc(p.name || '')}" data-code="${esc(p.code || '')}" data-faculty="${esc(p.faculty || '')}">Tahrirlash</button>
-              <button class="programDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(p._id)}">O‘chirish</button>
+              <button class="programDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(p._id)}">OвЂchirish</button>
             </div>
           </div>
         `).join('');
 
         $$('.programDel').forEach((btn) => {
           btn.onclick = async () => {
-            if (!confirm('Yo‘nalishni o‘chirasizmi?')) return;
+            if (!confirm('YoвЂnalishni oвЂchirasizmi?')) return;
             const { res, j } = await api('/api/organizer/catalog/programs/' + encodeURIComponent(btn.dataset.id), { method: 'DELETE' });
-            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            if (!res.ok) return toast(j?.error || 'OвЂchirilmadi', 'error');
             await loadList();
-            toast('O‘chirildi', 'success');
+            toast('OвЂchirildi', 'success');
           };
         });
 
@@ -707,7 +708,7 @@
             const id = btn.dataset.id || '';
             const oldName = btn.dataset.name || '';
             const oldCode = btn.dataset.code || '';
-            const name = prompt('Yo‘nalish nomi:', oldName);
+            const name = prompt('YoвЂnalish nomi:', oldName);
             if (!name) return;
             const code = prompt('Kod (ixtiyoriy):', oldCode) ?? oldCode;
             const { res, j } = await api('/api/organizer/catalog/programs/' + encodeURIComponent(id), {
@@ -725,17 +726,17 @@
       $('#addProgramBtn').onclick = async () => {
         const code = $('#programCode').value.trim();
         const name = $('#programName').value.trim();
-        if (!name) return toast('Yo‘nalish nomini kiriting', 'error');
+        if (!name) return toast('YoвЂnalish nomini kiriting', 'error');
         const { res, j } = await api('/api/organizer/catalog/programs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ university: state.activeUniversity, code, name })
         });
-        if (!res.ok) return toast(j?.error || 'Qo‘shilmadi', 'error');
+        if (!res.ok) return toast(j?.error || 'QoвЂshilmadi', 'error');
         $('#programCode').value = '';
         $('#programName').value = '';
         await loadList();
-        toast('Qo‘shildi', 'success');
+        toast('QoвЂshildi', 'success');
       };
 
       $('#refreshProgramsBtn').onclick = loadList;
@@ -774,18 +775,18 @@
           <div class="glass rounded-xl p-3 mb-2 flex items-center justify-between gap-2">
             <div>
               <div class="font-semibold">${esc(g.name || '-')}</div>
-              <div class="text-xs muted">@${esc(g.username || '-')} • ${esc(g.faculty || '-')} • ${esc(g.studyType || '-')} • ${esc(g.studyGroup || '-')}</div>
+              <div class="text-xs muted">@${esc(g.username || '-')} вЂў ${esc(g.faculty || '-')} вЂў ${esc(g.studyType || '-')} вЂў ${esc(g.studyGroup || '-')}</div>
             </div>
-            <button class="groupDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(g._id)}">O‘chirish</button>
+            <button class="groupDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(g._id)}">OвЂchirish</button>
           </div>
         `).join('');
         $$('.groupDel').forEach((btn) => {
           btn.onclick = async () => {
-            if (!confirm('Guruhni o‘chirasizmi?')) return;
+            if (!confirm('Guruhni oвЂchirasizmi?')) return;
             const { res, j } = await api(buildUrl('/api/organizer/groups/' + encodeURIComponent(btn.dataset.id)), { method: 'DELETE' });
-            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            if (!res.ok) return toast(j?.error || 'OвЂchirilmadi', 'error');
             await loadList();
-            toast('O‘chirildi', 'success');
+            toast('OвЂchirildi', 'success');
           };
         });
       };
@@ -825,19 +826,19 @@
           <div class="glass rounded-xl p-3 mb-2 flex items-center justify-between gap-2">
             <div>
               <div class="font-semibold">${esc(c.name || '-')}</div>
-              <div class="text-xs muted">@${esc(c.username || '-')} • ${esc(c.category || '-')} • ${esc(c.university || '-')}</div>
+              <div class="text-xs muted">@${esc(c.username || '-')} вЂў ${esc(c.category || '-')} вЂў ${esc(c.university || '-')}</div>
             </div>
-            <button class="channelDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(c._id)}">O‘chirish</button>
+            <button class="channelDel glass rounded-lg px-3 py-1 text-xs font-bold text-rose-300" data-id="${esc(c._id)}">OвЂchirish</button>
           </div>
         `).join('');
 
         $$('.channelDel').forEach((btn) => {
           btn.onclick = async () => {
-            if (!confirm('Kanalni o‘chirasizmi?')) return;
+            if (!confirm('Kanalni oвЂchirasizmi?')) return;
             const { res, j } = await api(buildUrl('/api/organizer/channels/' + encodeURIComponent(btn.dataset.id)), { method: 'DELETE' });
-            if (!res.ok) return toast(j?.error || 'O‘chirilmadi', 'error');
+            if (!res.ok) return toast(j?.error || 'OвЂchirilmadi', 'error');
             await loadList();
-            toast('O‘chirildi', 'success');
+            toast('OвЂchirildi', 'success');
           };
         });
       };
@@ -878,7 +879,7 @@
         }
         const list = Array.isArray(j.calls) ? j.calls : [];
         if (!list.length) {
-          listEl.innerHTML = '<div class="muted text-sm">Hozir faol call yo‘q.</div>';
+          listEl.innerHTML = '<div class="muted text-sm">Hozir faol call yoвЂq.</div>';
           return;
         }
         listEl.innerHTML = list.map((item) => `
@@ -886,9 +887,9 @@
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="font-semibold">${esc(item.title || 'Live dars')}</div>
-                <div class="text-xs muted mt-1">${esc(item.group?.name || '-')} • @${esc(item.group?.username || '-')}</div>
-                <div class="text-xs muted mt-1">${esc(item.group?.faculty || '-')} • ${esc(item.group?.studyType || '-')} • ${esc(item.group?.studyGroup || '-')}</div>
-                <div class="text-xs muted mt-1">O‘qituvchi: ${esc(item.startedBy?.fullName || item.startedBy?.username || 'Noma‘lum')}</div>
+                <div class="text-xs muted mt-1">${esc(item.group?.name || '-')} вЂў @${esc(item.group?.username || '-')}</div>
+                <div class="text-xs muted mt-1">${esc(item.group?.faculty || '-')} вЂў ${esc(item.group?.studyType || '-')} вЂў ${esc(item.group?.studyGroup || '-')}</div>
+                <div class="text-xs muted mt-1">OвЂqituvchi: ${esc(item.startedBy?.fullName || item.startedBy?.username || 'NomaвЂlum')}</div>
               </div>
               <div class="text-xs px-3 py-1 rounded-lg ${item.callType === 'audio' ? 'bg-amber-300/30 text-amber-100' : 'bg-emerald-300/30 text-emerald-100'}">
                 ${item.callType === 'audio' ? 'VOICE' : 'VIDEO'}
@@ -896,7 +897,7 @@
             </div>
             <div class="mt-3 flex flex-wrap items-center gap-2 text-xs muted">
               <span>Qatnashchilar: ${esc(item.participantsCount || 0)}</span>
-              <span>•</span>
+              <span>вЂў</span>
               <span>Davomiylik: ${esc(Math.max(0, Math.round(Number(item.durationSec || 0) / 60)))} daqiqa</span>
             </div>
             <div class="mt-3">
@@ -978,11 +979,11 @@
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="font-semibold">${esc(item.title || 'Live dars')}</div>
-                <div class="text-xs muted mt-1">${esc(item.group?.name || '-')} • @${esc(item.group?.username || '-')}</div>
-                <div class="text-xs muted mt-1">${esc(item.group?.faculty || '-')} • ${esc(item.group?.studyType || '-')} • ${esc(item.group?.studyGroup || '-')}</div>
-                <div class="text-xs muted mt-1">O‘qituvchi: ${esc(item.host?.fullName || item.host?.username || 'Noma‘lum')}</div>
+                <div class="text-xs muted mt-1">${esc(item.group?.name || '-')} вЂў @${esc(item.group?.username || '-')}</div>
+                <div class="text-xs muted mt-1">${esc(item.group?.faculty || '-')} вЂў ${esc(item.group?.studyType || '-')} вЂў ${esc(item.group?.studyGroup || '-')}</div>
+                <div class="text-xs muted mt-1">OвЂqituvchi: ${esc(item.host?.fullName || item.host?.username || 'NomaвЂlum')}</div>
                 <div class="text-xs muted mt-1">Boshlangan: ${esc(fmtDate(item.startedAt))}</div>
-                <div class="text-xs muted mt-1">Davomiylik: ${esc(fmtDuration(item.recordingDurationSec))} • Hajm: ${esc(fmtSize(item.recordingBytes))}</div>
+                <div class="text-xs muted mt-1">Davomiylik: ${esc(fmtDuration(item.recordingDurationSec))} вЂў Hajm: ${esc(fmtSize(item.recordingBytes))}</div>
               </div>
               <div class="text-xs px-3 py-1 rounded-lg ${item.status === 'live' ? 'bg-red-300/30 text-red-100' : 'bg-cyan-300/30 text-cyan-100'}">
                 ${esc(String(item.status || 'ended').toUpperCase())}
@@ -995,7 +996,7 @@
               </div>
               <div class="mt-3 flex flex-wrap gap-2">
                 <a href="${esc(item.recordingUrl)}" target="_blank" rel="noopener" class="btn-primary rounded-xl px-4 py-2 text-sm inline-flex items-center">
-                  <i class="fa-solid fa-play mr-2"></i>Ko‘rish
+                  <i class="fa-solid fa-play mr-2"></i>KoвЂrish
                 </a>
                 <a href="${esc(item.recordingUrl)}" target="_blank" rel="noopener" download class="glass rounded-xl px-4 py-2 text-sm font-bold inline-flex items-center">
                   <i class="fa-solid fa-download mr-2"></i>Yuklab olish
@@ -1043,7 +1044,7 @@
           await renderCurrent();
           toast('Scope yangilandi', 'success');
         } catch (e) {
-          toast(e.message || 'Scope o‘zgarmadi', 'error');
+          toast(e.message || 'Scope oвЂzgarmadi', 'error');
         }
       };
 

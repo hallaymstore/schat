@@ -91,6 +91,7 @@
       if(mode === "dark") document.documentElement.classList.add("dark");
     })();
   </script>
+  <script src='/global-loader.js'></script>
 </head>
 <body>
   <header class="topbar">
@@ -150,7 +151,7 @@
             </label>
             <label class="field">
               <span>Fakultet / Guruh</span>
-              <input id="fgInp" class="input" placeholder="Fakultet • Guruh" />
+              <input id="fgInp" class="input" placeholder="Fakultet вЂў Guruh" />
             </label>
             <label class="field">
               <span>Sana</span>
@@ -318,7 +319,7 @@
     }
 
     function facultyGroupFromUser(me){
-      return [me?.faculty || "", me?.group || me?.studyGroup || ""].filter(Boolean).join(" • ");
+      return [me?.faculty || "", me?.group || me?.studyGroup || ""].filter(Boolean).join(" вЂў ");
     }
 
     async function apiMe(){

@@ -52,6 +52,7 @@
     code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src='/global-loader.js'></script>
 </head>
 <body>
   <header>
@@ -85,14 +86,14 @@
 
       <div class="card col-4">
         <h3>Reja (ketma-ket)</h3>
-        <div class="muted">Har bir bo‘limni ketma-ket bajaring. Keyingi bo‘lim faqat oldingisi yakunlanganda ochiladi.</div>
+        <div class="muted">Har bir boвЂlimni ketma-ket bajaring. Keyingi boвЂlim faqat oldingisi yakunlanganda ochiladi.</div>
         <div style="margin-top:12px" class="progress"><div id="progBar"></div></div>
         <div class="tiny" style="margin-top:8px" id="progTxt">0%</div>
 
         <div id="steps"></div>
 
         <div class="tiny" style="margin-top:12px">
-          Backend endpointlar bo‘lsa materiallar shu orqali olinadi:
+          Backend endpointlar boвЂlsa materiallar shu orqali olinadi:
           <ul style="margin:6px 0 0 18px">
             <li><code>GET /api/courses/:id/content</code></li>
             <li><code>POST /api/courses/:id/progress</code></li>
@@ -105,7 +106,7 @@
         <div class="viewer">
           <div class="head">
             <div>
-              <div style="font-weight:700" id="viewerTitle">Bo‘lim tanlang</div>
+              <div style="font-weight:700" id="viewerTitle">BoвЂlim tanlang</div>
               <div class="tiny" id="viewerMeta">-</div>
             </div>
             <div class="row">
@@ -121,21 +122,21 @@
               <iframe id="pdfFrame"></iframe>
             </div>
             <div id="textWrap" class="textWrap" style="margin-top:12px"></div>
-            <div id="emptyWrap" class="muted">Chap tomondan bo‘limni tanlang.</div>
+            <div id="emptyWrap" class="muted">Chap tomondan boвЂlimni tanlang.</div>
           </div>
         </div>
 
         <div class="card" style="margin-top:14px;background:#f9fafb">
           <h3 style="margin:0 0 8px 0">Eslatma</h3>
           <div class="muted">
-            Sertifikat olish uchun kurs bo‘yicha barcha bo‘limlar bajarilgan bo‘lishi kerak (yakuniy bosqichda <code>certificate.html</code> bilan ulanadi).
+            Sertifikat olish uchun kurs boвЂyicha barcha boвЂlimlar bajarilgan boвЂlishi kerak (yakuniy bosqichda <code>certificate.html</code> bilan ulanadi).
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <footer>Qarshi Davlat Texnika Universiteti — LMS (Joined Course)</footer>
+  <footer>Qarshi Davlat Texnika Universiteti вЂ” LMS (Joined Course)</footer>
 
 <script>
   const API_BASE = "";
@@ -201,7 +202,7 @@
     return {
       id: raw.id || raw._id || ("s_" + Math.random().toString(16).slice(2)),
       type: raw.type || "text", // youtube|text|pdf
-      title: raw.title || "Bo‘lim",
+      title: raw.title || "BoвЂlim",
       text: raw.text || raw.content || "",
       youtubeUrl: raw.youtubeUrl || raw.youtube || "",
       pdfUrl: raw.pdfUrl || raw.pdf || raw.url || ""
@@ -215,7 +216,7 @@
 
     const seed = [
       { id:"s1", type:"youtube", title:"Kirish video", youtubeUrl: course.youtubeUrl || "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
-      { id:"s2", type:"text", title:"Nazariy qism", text:"Bu yerda kursning nazariy matni bo‘ladi.\n\nKeyingi bosqichlarda teacher paneldan real kontent qo‘shamiz." },
+      { id:"s2", type:"text", title:"Nazariy qism", text:"Bu yerda kursning nazariy matni boвЂladi.\n\nKeyingi bosqichlarda teacher paneldan real kontent qoвЂshamiz." },
       { id:"s3", type:"pdf", title:"PDF material", pdfUrl:"https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
     ];
     localStorage.setItem(k, JSON.stringify(seed));
@@ -303,7 +304,7 @@
     badge.style.background = role==="teacher" ? "#2563eb" : (role==="admin" ? "#f59e0b" : "#10b981");
 
     const mePill = document.getElementById("mePill");
-    mePill.textContent = (me.fullname||me.name||me.username||"") + " • " + (me.group || "Guruh yo‘q");
+    mePill.textContent = (me.fullname||me.name||me.username||"") + " вЂў " + (me.group || "Guruh yoвЂq");
     mePill.style.display = "inline-block";
 
     document.getElementById("dashLink").href = role==="teacher" ? "/teacher-dashboard.html" : role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html";
@@ -336,7 +337,7 @@
     STEPS.forEach(s=>{ if(PROG[s.id]===true) done++; });
     const pct = Math.round((done/total)*100);
     document.getElementById("progBar").style.width = pct + "%";
-    document.getElementById("progTxt").textContent = `${done}/${total} • ${pct}%`;
+    document.getElementById("progTxt").textContent = `${done}/${total} вЂў ${pct}%`;
   }
 
   function canOpenStep(index){
@@ -398,7 +399,7 @@
     const s = STEPS[index];
 
     document.getElementById("viewerTitle").textContent = `${index+1}. ${s.title}`;
-    document.getElementById("viewerMeta").textContent = `Turi: ${s.type.toUpperCase()} • Holat: ${PROG[s.id]===true ? "Bajarildi" : "Bajarilmagan"}`;
+    document.getElementById("viewerMeta").textContent = `Turi: ${s.type.toUpperCase()} вЂў Holat: ${PROG[s.id]===true ? "Bajarildi" : "Bajarilmagan"}`;
 
     clearViewer();
     document.getElementById("emptyWrap").style.display = "none";
@@ -410,7 +411,7 @@
         document.getElementById("ytFrame").src = emb;
       }else{
         document.getElementById("textWrap").style.display = "block";
-        document.getElementById("textWrap").textContent = "YouTube URL noto‘g‘ri yoki mavjud emas.";
+        document.getElementById("textWrap").textContent = "YouTube URL notoвЂgвЂri yoki mavjud emas.";
       }
     }else if(s.type==="pdf"){
       if(s.pdfUrl){
@@ -462,7 +463,7 @@
       setOk("Progress saqlandi (demo/localStorage).");
     }
 
-    document.getElementById("viewerMeta").textContent = `Turi: ${s.type.toUpperCase()} • Holat: Bajarildi`;
+    document.getElementById("viewerMeta").textContent = `Turi: ${s.type.toUpperCase()} вЂў Holat: Bajarildi`;
     document.getElementById("markDoneBtn").style.display = "none";
     document.getElementById("nextBtn").disabled = false;
     renderSteps();
@@ -472,7 +473,7 @@
     if(ACTIVE_INDEX<0) return;
     const cur = STEPS[ACTIVE_INDEX];
     if(PROG[cur.id]!==true){
-      setErr("Avval joriy bo‘limni 'Bajarildi' qiling.");
+      setErr("Avval joriy boвЂlimni 'Bajarildi' qiling.");
       return;
     }
     const nextIndex = ACTIVE_INDEX + 1;
@@ -506,7 +507,7 @@
       const joined = readJoined(uid);
       const ok = joined.some(x=>String(x)===String(COURSE.id));
       if(!ok){
-        setErr("Siz bu kursga qo‘shilmagansiz. Avval course.html orqali qo‘shiling.");
+        setErr("Siz bu kursga qoвЂshilmagansiz. Avval course.html orqali qoвЂshiling.");
         return;
       }
     }
@@ -520,7 +521,7 @@
     }
 
     if(!STEPS.length){
-      setErr("Bu kursda hozircha materiallar yo‘q.");
+      setErr("Bu kursda hozircha materiallar yoвЂq.");
       return;
     }
 
@@ -541,7 +542,7 @@
   document.getElementById("markDoneBtn").addEventListener("click", markDone);
   document.getElementById("nextBtn").addEventListener("click", goNext);
 
-  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib koвЂring."));
 </script>
   <script src="/ui-actions-menu.js" defer></script>
   <script src="/global-assistant.js" defer></script>

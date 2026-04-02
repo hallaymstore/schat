@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Premium Requests Admin — HALLAYM edu</title>
-  <meta name="description" content="Premium to‘lov screenshotlarini ko‘rib approve/reject qiladigan admin sahifa."/>
+  <title>Premium Requests Admin вЂ” HALLAYM edu</title>
+  <meta name="description" content="Premium toвЂlov screenshotlarini koвЂrib approve/reject qiladigan admin sahifa."/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -19,6 +19,7 @@
       document.documentElement.classList.toggle('dark', mode === 'dark');
     })();
   </script>
+  <script src='/global-loader.js'></script>
 </head>
 <body>
   <div class="account-shell">
@@ -42,7 +43,7 @@
     <section class="hero-grid">
       <article class="glass-card">
         <div class="hero-kicker"><i class="fa-solid fa-shield-check"></i> Admin approval flow</div>
-        <h1 class="hero-title">Premium to‘lov so‘rovlarini tez tekshiring va bitta tugma bilan faollashtiring.</h1>
+        <h1 class="hero-title">Premium toвЂlov soвЂrovlarini tez tekshiring va bitta tugma bilan faollashtiring.</h1>
         <p class="hero-text">Approve qilinganda premium plan avtomatik userga yoziladi, AI credits ochiladi, verified badge yoqiladi va foydalanuvchiga notification boradi.</p>
         <div class="hero-stats" id="statsGrid"></div>
       </article>
@@ -50,7 +51,7 @@
         <div class="section-head">
           <div>
             <h2 class="section-title">Filtrlar</h2>
-            <p class="section-sub">Status va plan scope bo‘yicha tez ajrating.</p>
+            <p class="section-sub">Status va plan scope boвЂyicha tez ajrating.</p>
           </div>
         </div>
         <div class="billing-switch" id="statusSwitch">
@@ -72,7 +73,7 @@
         <div class="section-head">
           <div>
             <h2 class="section-title">Requests</h2>
-            <p class="section-sub">Screenshot, user va plan ma’lumotlari shu yerda.</p>
+            <p class="section-sub">Screenshot, user va plan maвЂ™lumotlari shu yerda.</p>
           </div>
           <button class="ghost-btn" id="refreshBtn" type="button"><i class="fa-solid fa-rotate"></i> Yangilash</button>
         </div>
@@ -84,5 +85,6 @@
   <div class="toast hidden" id="toast"></div>
   <script src="/premium-ui.js" defer></script>
   <script src="/premium-requests.js" defer></script>
+  <script src='/global-assistant.js' defer></script>
 </body>
 </html>

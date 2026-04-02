@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Testlar — QDTU LMS</title>
+  <title>Testlar вЂ” QDTU LMS</title>
   <style>
     :root{
       --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
@@ -174,6 +174,7 @@
     })();
   </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src='/global-loader.js'></script>
 </head>
 <body>
   <div class="bg"></div><div class="gridbg"></div>
@@ -189,7 +190,7 @@
       </div>
 
       <div class="row">
-        <button class="btn ghost small" id="themeBtn">🌓 Tema</button>
+        <button class="btn ghost small" id="themeBtn">рџЊ“ Tema</button>
         <a class="btn ghost small" href="/courses.html">Kurslar</a>
         <a class="btn ghost small" id="dashLink" href="/student-dashboard.html">Dashboard</a>
         <a class="btn ghost small" href="/certificate.html">Sertifikat</a>
@@ -205,12 +206,12 @@
     <div class="grid">
       <div class="card col-8">
         <h2 style="margin:0 0 6px 0;font-size:18px">Testlar</h2>
-        <div class="muted">Student — test ishlaydi. Teacher — test yaratadi/tahrirlaydi. Kurs bo‘yicha filtrlash mavjud.</div>
+        <div class="muted">Student вЂ” test ishlaydi. Teacher вЂ” test yaratadi/tahrirlaydi. Kurs boвЂyicha filtrlash mavjud.</div>
 
         <div class="divider"></div>
 
         <div class="row">
-          <input id="q" class="input" placeholder="Qidirish: test nomi, kurs, o‘qituvchi..." style="flex:1;min-width:240px" />
+          <input id="q" class="input" placeholder="Qidirish: test nomi, kurs, oвЂqituvchi..." style="flex:1;min-width:240px" />
           <select id="statusFilter" style="max-width:260px">
             <option value="">Status (barchasi)</option>
             <option value="published">Published</option>
@@ -224,7 +225,7 @@
         </div>
 
         <div class="row" style="margin-top:10px">
-          <input id="courseFilter" class="input" placeholder="Kurs ID bo‘yicha filter (ixtiyoriy)" style="flex:1;min-width:240px" />
+          <input id="courseFilter" class="input" placeholder="Kurs ID boвЂyicha filter (ixtiyoriy)" style="flex:1;min-width:240px" />
           <button class="btn" id="refreshBtn">Yangilash</button>
           <button class="btn primary" id="createBtn" style="display:none">+ Yangi test</button>
         </div>
@@ -234,10 +235,10 @@
       <div class="card col-4">
         <h3 style="margin:0 0 10px 0">Rejim</h3>
         <div class="muted">
-          Internetga ulangan holatda server ma’lumotlari ishlatiladi, aks holda vaqtincha lokal rejim ishga tushadi.
+          Internetga ulangan holatda server maвЂ™lumotlari ishlatiladi, aks holda vaqtincha lokal rejim ishga tushadi.
         </div>
         <div class="divider"></div>
-        <div class="tiny" id="modeTxt">—</div>
+        <div class="tiny" id="modeTxt">вЂ”</div>
         <div class="divider"></div>
         <div class="row">
           <button class="btn small" id="clearBtn">Filterlarni tozalash</button>
@@ -248,7 +249,7 @@
         <div class="row" style="justify-content:space-between;align-items:flex-end">
           <div>
             <div class="muted" id="countTxt">Yuklanmoqda...</div>
-            <div class="tiny" id="hintTxt">—</div>
+            <div class="tiny" id="hintTxt">вЂ”</div>
           </div>
         </div>
 
@@ -268,7 +269,7 @@
           <button class="btn ghost small" id="closeModalBtn" style="border-color:rgba(255,255,255,.35);color:#fff">Yopish</button>
         </div>
         <div class="tiny" style="color:rgba(255,255,255,.9);margin-top:6px">
-          Test “published” bo‘lsa studentlar ko‘radi. “draft” bo‘lsa yopiq.
+          Test вЂњpublishedвЂќ boвЂlsa studentlar koвЂradi. вЂњdraftвЂќ boвЂlsa yopiq.
         </div>
       </header>
 
@@ -279,7 +280,7 @@
             <input id="t_title" class="input" placeholder="Masalan: 1-mavzu testi" />
           </div>
           <div class="col-4">
-            <label class="tiny">Fan / bo‘lim</label>
+            <label class="tiny">Fan / boвЂlim</label>
             <input id="t_subject" class="input" placeholder="Masalan: Moliya asoslari" />
           </div>
           <div class="col-4">
@@ -328,9 +329,9 @@
             <div class="row" style="justify-content:space-between;align-items:center">
               <div>
                 <div style="font-weight:950">Savollar</div>
-                <div class="tiny">Har savolda 4 variant. To‘g‘ri javob: A/B/C/D.</div>
+                <div class="tiny">Har savolda 4 variant. ToвЂgвЂri javob: A/B/C/D.</div>
               </div>
-              <button class="btn small" id="addQBtn">+ Savol qo‘shish</button>
+              <button class="btn small" id="addQBtn">+ Savol qoвЂshish</button>
             </div>
 
             <div id="qWrap"></div>
@@ -341,17 +342,17 @@
               <button class="btn primary" id="saveBtn">Saqlash</button>
               <button class="btn" id="saveDraftBtn">Draft saqlash</button>
             </div>
-            <button class="btn danger" id="deleteBtn" style="display:none">O‘chirish</button>
+            <button class="btn danger" id="deleteBtn" style="display:none">OвЂchirish</button>
           </div>
         </div>
 
         <div class="divider"></div>
-        <div class="tiny">Saqlangandan so‘ng testlar ro‘yxatidan darhol ishlash mumkin bo‘ladi.</div>
+        <div class="tiny">Saqlangandan soвЂng testlar roвЂyxatidan darhol ishlash mumkin boвЂladi.</div>
       </div>
     </div>
   </div>
 
-  <footer>QDTU LMS — Tests</footer>
+  <footer>QDTU LMS вЂ” Tests</footer>
 
 <script>
   const API_BASE = "";
@@ -406,7 +407,7 @@
     const seed = [
       {
         id:"t1",
-        title:"Energetika — 1-mavzu",
+        title:"Energetika вЂ” 1-mavzu",
         description:"Nazariy savollar.",
         status:"published",
         courseId:"c1",
@@ -521,7 +522,7 @@
     badge.classList.add(isTeacher ? "teacher" : isAdmin ? "admin" : "student");
     badge.textContent = (role || "student").toUpperCase();
 
-    const name = state.me?.fullname || state.me?.name || state.me?.username || "—";
+    const name = state.me?.fullname || state.me?.name || state.me?.username || "вЂ”";
     $("mePill").textContent = name;
     $("mePill").style.display = "inline-flex";
 
@@ -544,7 +545,7 @@
         : `<span class="tag lock">Draft</span>`;
       el.innerHTML = `
         <div class="title">${t.title}</div>
-        <div class="muted" style="margin-top:6px">${(t.description||"").slice(0,120)}${(t.description||"").length>120?"…":""}</div>
+        <div class="muted" style="margin-top:6px">${(t.description||"").slice(0,120)}${(t.description||"").length>120?"вЂ¦":""}</div>
         <div class="meta">
           ${statusTag}
           <span class="tag">Course: ${t.courseId || "-"}</span>
@@ -593,8 +594,8 @@
         <div class="tiny" style="font-weight:900">Savol ${idx}</div>
         <textarea class="input" data-k="q" rows="3" placeholder="Savol matni...">${q?.q || ""}</textarea>
         <div class="row" style="justify-content:space-between; margin-top:8px">
-          <div class="tiny">To‘g‘ri: A/B/C/D</div>
-          <button class="btn small danger" data-act="rm">O‘chirish</button>
+          <div class="tiny">ToвЂgвЂri: A/B/C/D</div>
+          <button class="btn small danger" data-act="rm">OвЂchirish</button>
         </div>
       </div>
       <div>
@@ -605,7 +606,7 @@
         <input class="input" data-k="d" placeholder="D" value="${q?.d || ""}" style="margin-top:8px"/>
       </div>
       <div>
-        <div class="tiny">To‘g‘ri javob</div>
+        <div class="tiny">ToвЂgвЂri javob</div>
         <select class="input" data-k="correct" style="margin-top:6px">
           <option ${q?.correct==="A"?"selected":""}>A</option>
           <option ${q?.correct==="B"?"selected":""}>B</option>
@@ -615,8 +616,8 @@
         <div class="tiny" style="margin-top:12px">Tavsiyalar:</div>
         <ul class="tiny" style="margin:6px 0 0 18px; padding:0">
           <li>Variantlarni qisqa yozing</li>
-          <li>1 savol = 1 g‘oya</li>
-          <li>To‘g‘ri javob aniq bo‘lsin</li>
+          <li>1 savol = 1 gвЂoya</li>
+          <li>ToвЂgвЂri javob aniq boвЂlsin</li>
         </ul>
       </div>
     `;
@@ -656,8 +657,8 @@
       const a = get("a"), b=get("b"), c=get("c"), d=get("d");
       const correct = (get("correct") || "A").toUpperCase();
       if(!q) continue;
-      if(!a || !b || !c || !d) throw new Error("Har savolda 4 ta variant bo‘lsin (A/B/C/D).");
-      if(!["A","B","C","D"].includes(correct)) throw new Error("To‘g‘ri javob A/B/C/D bo‘lishi kerak.");
+      if(!a || !b || !c || !d) throw new Error("Har savolda 4 ta variant boвЂlsin (A/B/C/D).");
+      if(!["A","B","C","D"].includes(correct)) throw new Error("ToвЂgвЂri javob A/B/C/D boвЂlishi kerak.");
       out.push({
         q, a, b, c, d, correct,
         text: q,
@@ -670,7 +671,7 @@
         answerKey: correct
       });
     }
-    if(out.length < 1) throw new Error("Kamida 1 ta savol bo‘lishi kerak.");
+    if(out.length < 1) throw new Error("Kamida 1 ta savol boвЂlishi kerak.");
     return out;
   }
 
@@ -686,10 +687,10 @@
     const phase = String($("t_phase").value || "after");
     const isFinal = !!$("t_isFinal").checked;
     if(!title) return setErr("Test nomi majburiy.");
-    if(!subject) return setErr("Fan/bo‘lim majburiy.");
-    if(!courseId) return setErr("Course ID majburiy (kurs bilan bog‘lash uchun).");
-    if(isNaN(timeMin) || timeMin < 1) return setErr("Time limit 1 minutdan katta bo‘lsin.");
-    if(isNaN(passPct) || passPct < 1 || passPct > 100) return setErr("Passing % 1..100 oralig‘ida bo‘lsin.");
+    if(!subject) return setErr("Fan/boвЂlim majburiy.");
+    if(!courseId) return setErr("Course ID majburiy (kurs bilan bogвЂlash uchun).");
+    if(isNaN(timeMin) || timeMin < 1) return setErr("Time limit 1 minutdan katta boвЂlsin.");
+    if(isNaN(passPct) || passPct < 1 || passPct > 100) return setErr("Passing % 1..100 oraligвЂida boвЂlsin.");
 
     let questions;
     try{ questions = collectQuestions(); }catch(e){ return setErr(e.message || "Savollar xato."); }
@@ -736,7 +737,7 @@
     // API attempt
     try{
       await apiFetch("/api/tests/" + encodeURIComponent(id), { method:"DELETE" });
-      setOk("Test o‘chirildi.");
+      setOk("Test oвЂchirildi.");
       closeModal();
       await reload();
       return;
@@ -744,7 +745,7 @@
       seedDemo();
       const list = readDemo().filter(x=>String(x.id)!==String(id));
       writeDemo(list);
-      setOk("Test o‘chirildi.");
+      setOk("Test oвЂchirildi.");
       closeModal();
       await reload();
     }
@@ -807,7 +808,7 @@
     badge.classList.add(role==="teacher" ? "teacher" : role==="admin" ? "admin" : "student");
     badge.textContent = role.toUpperCase();
 
-    const name = me.fullname || me.name || me.username || "—";
+    const name = me.fullname || me.name || me.username || "вЂ”";
     $("mePill").textContent = `${name}`;
     $("mePill").style.display = "inline-flex";
 

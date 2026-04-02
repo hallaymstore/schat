@@ -46,6 +46,7 @@
       .mini-btn{ font-size: 12px; padding: 8px 10px; }
     }
   </style>
+  <script src='/global-loader.js'></script>
 </head>
 <body class="text-slate-100">
   <main class="max-w-7xl mx-auto px-4 py-5 sm:py-6">
@@ -80,7 +81,7 @@
         <iframe id="platformFrame" name="platformFrame" class="platform-frame" allow="autoplay; clipboard-read; clipboard-write"></iframe>
         <div id="frameBlocked" class="frame-overlay hidden">
           <div>
-            <div class="text-lg font-bold mb-2"><i class="fa-solid fa-triangle-exclamation text-amber-300"></i> Preview cheklangan bo‘lishi mumkin</div>
+            <div class="text-lg font-bold mb-2"><i class="fa-solid fa-triangle-exclamation text-amber-300"></i> Preview cheklangan boвЂlishi mumkin</div>
             <p class="text-sm text-white/80">
               Ba'zi brauzerlarda tashqi sayt iframe ichida bloklanadi.
             </p>
@@ -102,7 +103,7 @@
     <div class="w-full max-w-md rounded-2xl border border-white/15 bg-slate-950/75 p-4 sm:p-5">
       <div class="text-lg font-extrabold">KSTU preview sozlamasi</div>
       <p class="text-xs text-white/75 mt-1">
-        Bu platformada captcha bo‘lishi mumkin. Shu sabab loginni iframe ichida to‘liq avtomatlashtirish har doim ishlamaydi.
+        Bu platformada captcha boвЂlishi mumkin. Shu sabab loginni iframe ichida toвЂliq avtomatlashtirish har doim ishlamaydi.
       </p>
       <div class="mt-4 space-y-3">
         <label class="block">
@@ -115,7 +116,7 @@
         </label>
         <label class="flex items-center gap-2 text-xs text-white/80">
           <input id="skipPromptCheckbox" type="checkbox" class="accent-teal-400" checked />
-          Keyingi kirishda bu oynani qayta ko‘rsatma
+          Keyingi kirishda bu oynani qayta koвЂrsatma
         </label>
       </div>
       <div class="mt-4 flex items-center justify-end gap-2">
@@ -185,7 +186,7 @@
       function showModal() {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        setStatus('Login ma\'lumotlarini kiriting. Bu bir marta so‘raladi.', false);
+        setStatus('Login ma\'lumotlarini kiriting. Bu bir marta soвЂraladi.', false);
       }
 
       function hideModal() {
@@ -195,7 +196,7 @@
 
       function markBlocked() {
         blocked.classList.remove('hidden');
-        setStatus('Iframe preview bloklangan bo‘lishi mumkin. Tashqi ochish tugmasini bosing.', true);
+        setStatus('Iframe preview bloklangan boвЂlishi mumkin. Tashqi ochish tugmasini bosing.', true);
       }
 
       function clearBlocked() {
@@ -254,7 +255,7 @@
       frame.addEventListener('load', () => {
         if (blockedTimer) clearTimeout(blockedTimer);
         clearBlocked();
-        setStatus(`${CFG.platformName} sahifasi ochildi. Login sahifasi chiqsa captcha kodni qo‘lda kiriting.`, false);
+        setStatus(`${CFG.platformName} sahifasi ochildi. Login sahifasi chiqsa captcha kodni qoвЂlda kiriting.`, false);
       });
 
       frame.addEventListener('error', () => {

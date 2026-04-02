@@ -109,7 +109,7 @@
     host.id = 'schatAssistantDock';
     host.innerHTML = [
       '<div id="schatAssistantPanel">',
-      ' <div class="schatAHead"><div style="font-weight:900;font-size:13px">Yordamchi Chat</div><button id="schatAClose" class="schatABtn" style="padding:4px 8px">Yopish</button></div>',
+      ' <div class="schatAHead"><div style="font-weight:900;font-size:13px">HALLAYM Assistant</div><button id="schatAClose" class="schatABtn" style="padding:4px 8px">Yopish</button></div>',
       ' <div class="schatATabs">',
       '   <button class="schatATab active" data-tab="bot">Tezkor Bot</button>',
       '   <button class="schatATab" data-tab="lab">Lab AI</button>',
@@ -125,7 +125,7 @@
       '   <button id="schatASendAdmin" class="schatABtn primary">Adminga</button>',
       ' </div>',
       '</div>',
-      '<div id="schatAssistantBtn" title="Yordamchi">AI<div id="schatAssistantBadge"></div></div>'
+      '<div id="schatAssistantBtn" title="HALLAYM Assistant">AI<div id="schatAssistantBadge"></div></div>'
     ].join('');
     document.body.appendChild(host);
     return host;

@@ -48,6 +48,7 @@
     footer{padding:20px 16px;color:#6b7280;text-align:center}
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src='/global-loader.js'></script>
 </head>
 <body>
   <header>
@@ -72,11 +73,11 @@
       <div class="card col-8">
         <h3>Testlar</h3>
         <div class="muted">
-          Barcha fandan testlar. Filtr va qidiruv bilan. Student — test ishlaydi. Teacher — test yaratadi.
+          Barcha fandan testlar. Filtr va qidiruv bilan. Student вЂ” test ishlaydi. Teacher вЂ” test yaratadi.
         </div>
 
         <div class="row" style="margin-top:12px">
-          <input id="q" class="input" placeholder="Qidirish: test nomi, fan, o‘qituvchi..." style="flex:1;min-width:220px" />
+          <input id="q" class="input" placeholder="Qidirish: test nomi, fan, oвЂqituvchi..." style="flex:1;min-width:220px" />
           <select id="facultyFilter" style="max-width:360px">
             <option value="">Fakultet (barchasi)</option>
           </select>
@@ -98,11 +99,11 @@
       <div class="card col-4">
         <h3>Qoidalar</h3>
         <div class="muted">
-          Testlar ham fakultet/guruh bo‘yicha cheklanishi mumkin.
+          Testlar ham fakultet/guruh boвЂyicha cheklanishi mumkin.
           Student faqat mos testni ishlaydi.
         </div>
         <div class="tiny" style="margin-top:10px">
-          Backend endpointlar bo‘lsa:
+          Backend endpointlar boвЂlsa:
           <ul style="margin:6px 0 0 18px">
             <li><code>GET /api/tests</code></li>
             <li><code>POST /api/tests</code></li>
@@ -115,7 +116,7 @@
       <div class="card col-12">
         <div class="row" style="justify-content:space-between">
           <div class="muted" id="countTxt">Yuklanmoqda...</div>
-          <div class="tiny">API bo‘lmasa demo testlar ishlaydi (localStorage).</div>
+          <div class="tiny">API boвЂlmasa demo testlar ishlaydi (localStorage).</div>
         </div>
         <div id="list" style="margin-top:10px"></div>
       </div>
@@ -154,7 +155,7 @@
             <select id="t_faculty"></select>
           </div>
           <div class="col-6">
-            <label>Guruhlar (vergul bilan, bo‘sh bo‘lsa ochiq)</label>
+            <label>Guruhlar (vergul bilan, boвЂsh boвЂlsa ochiq)</label>
             <input id="t_groups" class="input" placeholder="MMT-520-25, ..." />
           </div>
 
@@ -167,7 +168,7 @@
             <label>Savollar (oddiy format)</label>
             <textarea id="t_questions" class="input" rows="8" placeholder="Har savol blok:&#10;Q: Savol matni&#10;A) variant&#10;B) variant&#10;C) variant&#10;D) variant&#10;ANS: B&#10;&#10;Keyingi savol..."></textarea>
             <div class="tiny" style="margin-top:6px">
-              Bu sahifa faqat ro‘yxat + create uchun. Test ishlash ketma-ketligi <code>test.html</code>da bo‘ladi.
+              Bu sahifa faqat roвЂyxat + create uchun. Test ishlash ketma-ketligi <code>test.html</code>da boвЂladi.
             </div>
           </div>
 
@@ -180,7 +181,7 @@
     </div>
   </div>
 
-  <footer>Qarshi Davlat Texnika Universiteti — LMS (Tests)</footer>
+  <footer>Qarshi Davlat Texnika Universiteti вЂ” LMS (Tests)</footer>
 
 <script>
   const API_BASE = "";
@@ -229,9 +230,9 @@
     const seed = [
       {
         id:"t1",
-        title:"Fizika 1 — Kirish testi",
+        title:"Fizika 1 вЂ” Kirish testi",
         subject:"Fizika",
-        description:"Asosiy tushunchalar bo‘yicha test.",
+        description:"Asosiy tushunchalar boвЂyicha test.",
         status:"published",
         faculty:"Energetika muhandisligi fakulteti",
         groups:[],
@@ -242,7 +243,7 @@
       },
       {
         id:"t2",
-        title:"Raqamli texnologiyalar — SI asoslari",
+        title:"Raqamli texnologiyalar вЂ” SI asoslari",
         subject:"Sun'iy intellekt",
         description:"SI terminlari va bazaviy savollar.",
         status:"published",
@@ -251,7 +252,7 @@
         teacherName:"Teacher Demo",
         teacherId:"t_demo",
         createdAt: Date.now() - 3600000,
-        questionsText:"Q: Machine Learning nima?\nA) Qurilish\nB) O‘rganish algoritmlari\nC) Geologiya\nD) Transport\nANS: B"
+        questionsText:"Q: Machine Learning nima?\nA) Qurilish\nB) OвЂrganish algoritmlari\nC) Geologiya\nD) Transport\nANS: B"
       }
     ];
     writeDemoTests(seed);
@@ -432,7 +433,7 @@
     badge.style.background = isTeacher ? "#2563eb" : (isAdmin ? "#f59e0b" : "#10b981");
 
     const mePill = document.getElementById("mePill");
-    mePill.textContent = (me.fullname||me.name||me.username||"") + " • " + (me.group || "Guruh yo‘q");
+    mePill.textContent = (me.fullname||me.name||me.username||"") + " вЂў " + (me.group || "Guruh yoвЂq");
     mePill.style.display = "inline-block";
 
     document.getElementById("dashLink").href = isTeacher ? "/teacher-dashboard.html" : isAdmin ? "/admin-dashboard.html" : "/student-dashboard.html";
@@ -471,7 +472,7 @@
             </div>
           </div>
           <div>
-            <div class="muted">O‘qituvchi</div>
+            <div class="muted">OвЂqituvchi</div>
             <div style="font-weight:600">${escapeHtml(t.teacherName||"-")}</div>
           </div>
           <div>
@@ -571,7 +572,7 @@
   document.getElementById("saveTestBtn").addEventListener("click", ()=> saveTest(ME, true));
   document.getElementById("saveDraftBtn").addEventListener("click", ()=> saveTest(ME, false));
 
-  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib koвЂring."));
 </script>
   <script src="/ui-actions-menu.js" defer></script>
   <script src="/global-assistant.js" defer></script>

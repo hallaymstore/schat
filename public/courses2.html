@@ -52,6 +52,7 @@
     .tiny{font-size:12px;color:#6b7280}
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src='/global-loader.js'></script>
 </head>
 <body>
   <header>
@@ -75,10 +76,10 @@
       <div class="card col-8">
         <h3>Kurslar</h3>
         <div class="muted">
-          Kurslar ro‘yxati. Student — kurslarga qo‘shiladi. Teacher — kurs yaratadi va boshqaradi.
+          Kurslar roвЂyxati. Student вЂ” kurslarga qoвЂshiladi. Teacher вЂ” kurs yaratadi va boshqaradi.
         </div>
         <div class="row" style="margin-top:12px">
-          <input id="q" class="input" placeholder="Qidirish: kurs nomi, o‘qituvchi, fakultet..." style="flex:1;min-width:220px" />
+          <input id="q" class="input" placeholder="Qidirish: kurs nomi, oвЂqituvchi, fakultet..." style="flex:1;min-width:220px" />
           <select id="facultyFilter" style="max-width:360px">
             <option value="">Fakultet (barchasi)</option>
           </select>
@@ -100,20 +101,20 @@
         <div class="muted">
           Kurs cheklovlari:
           <ul>
-            <li>Fakultet bo‘yicha</li>
-            <li>Guruh (MMT-520-25) bo‘yicha</li>
+            <li>Fakultet boвЂyicha</li>
+            <li>Guruh (MMT-520-25) boвЂyicha</li>
           </ul>
-          Student faqat o‘z fakultet/guruhiga mos kursga qo‘shila oladi.
+          Student faqat oвЂz fakultet/guruhiga mos kursga qoвЂshila oladi.
         </div>
         <div class="muted">
-          Keyingi bosqich: backend’da kurslar CRUD, join, coin yechish, teacher/admin ulushi, materiallar ketma-ketligi.
+          Keyingi bosqich: backendвЂ™da kurslar CRUD, join, coin yechish, teacher/admin ulushi, materiallar ketma-ketligi.
         </div>
       </div>
 
       <div class="card col-12">
         <div class="row" style="justify-content:space-between">
           <div class="muted" id="countTxt">Yuklanmoqda...</div>
-          <div class="tiny">API yo‘q bo‘lsa, demo ma’lumotlar ishlaydi (localStorage).</div>
+          <div class="tiny">API yoвЂq boвЂlsa, demo maвЂ™lumotlar ishlaydi (localStorage).</div>
         </div>
 
         <div id="list" style="margin-top:10px"></div>
@@ -163,7 +164,7 @@
           <div class="col-12">
             <label>Guruhlar (vergul bilan, misol: MMT-520-25, EKT-110-26)</label>
             <input id="c_groups" class="input" placeholder="MMT-520-25, ..." />
-            <div class="tiny" style="margin-top:6px">Bo‘sh qoldirilsa, fakultet ichidagi barcha guruhlar uchun ochiq.</div>
+            <div class="tiny" style="margin-top:6px">BoвЂsh qoldirilsa, fakultet ichidagi barcha guruhlar uchun ochiq.</div>
           </div>
 
           <div class="col-12">
@@ -187,7 +188,7 @@
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          Agar backend endpointlar mavjud bo‘lsa: <code>/api/courses</code> ga POST yuboriladi.
+          Agar backend endpointlar mavjud boвЂlsa: <code>/api/courses</code> ga POST yuboriladi.
           Aks holda demo sifatida localStorage saqlanadi.
         </div>
       </div>
@@ -340,7 +341,7 @@
     if(g){
       const groups = (c.groups || []).map(x=>String(x).toLowerCase());
       if(groups.length && !groups.some(x=>x.includes(g))) return false;
-      // agar groups bo‘sh bo‘lsa, ochiq — group filter kiritilganda ham ko‘rsatamiz
+      // agar groups boвЂsh boвЂlsa, ochiq вЂ” group filter kiritilganda ham koвЂrsatamiz
     }
     return true;
   }
@@ -372,7 +373,7 @@
             <div style="margin-top:8px">${courseTagHTML(c)}</div>
           </div>
           <div>
-            <div class="muted">O‘qituvchi</div>
+            <div class="muted">OвЂqituvchi</div>
             <div style="font-weight:600">${escapeHtml(c.teacherName || "-")}</div>
           </div>
           <div>
@@ -384,7 +385,7 @@
             <div style="font-weight:600">${(c.groups && c.groups.length) ? escapeHtml(c.groups.join(", ")) : "<span class='tag'>Ochiq</span>"}</div>
           </div>
           <div class="row" style="justify-content:flex-end">
-            <a class="btn primary" href="/course.html?id=${encodeURIComponent(c.id)}">Ko‘rish</a>
+            <a class="btn primary" href="/course.html?id=${encodeURIComponent(c.id)}">KoвЂrish</a>
             ${mode==="teacher" ? `<button class="btn" data-edit="${escapeAttr(c.id)}">Edit</button>` : ``}
           </div>
         </div>
@@ -452,7 +453,7 @@
     const coverUrl = (document.getElementById("c_cover").value||"").trim();
 
     if(!title) { setErr("Kurs nomi majburiy."); return; }
-    if(type==="paid" && (isNaN(price) || price<1)){ setErr("Pullik kurs uchun narx (coin) 1 dan katta bo‘lsin."); return; }
+    if(type==="paid" && (isNaN(price) || price<1)){ setErr("Pullik kurs uchun narx (coin) 1 dan katta boвЂlsin."); return; }
 
     const editingId = document.getElementById("saveCourseBtn").dataset.editing || document.getElementById("saveDraftBtn").dataset.editing || "";
 
@@ -510,7 +511,7 @@
         });
       }
       writeDemoCourses(list);
-      setOk("Kurs saqlandi (demo/localStorage). Backend endpointlar qo‘shilganda avtomatik API ishlaydi.");
+      setOk("Kurs saqlandi (demo/localStorage). Backend endpointlar qoвЂshilganda avtomatik API ishlaydi.");
       closeModal();
       await loadAndRender();
     }
@@ -553,7 +554,7 @@
     badge.style.background = isTeacher ? "#2563eb" : (isAdmin ? "#f59e0b" : "#10b981");
 
     const mePill = document.getElementById("mePill");
-    mePill.textContent = (ME.fullname || ME.name || ME.username || "") + " • " + (ME.group || "Guruh yo‘q");
+    mePill.textContent = (ME.fullname || ME.name || ME.username || "") + " вЂў " + (ME.group || "Guruh yoвЂq");
     mePill.style.display = "inline-block";
 
     const dashLink = document.getElementById("dashLink");
@@ -607,7 +608,7 @@
   document.getElementById("saveCourseBtn").addEventListener("click", ()=> saveCourse(MODE, ME, true));
   document.getElementById("saveDraftBtn").addEventListener("click", ()=> saveCourse(MODE, ME, false));
 
-  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib koвЂring."));
 </script>
   <script src="/ui-actions-menu.js" defer></script>
   <script src="/global-assistant.js" defer></script>

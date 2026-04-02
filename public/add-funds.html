@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Coin to‘ldirish — SChat</title>
-  <meta name="description" content="Coin to‘ldirish: miqdor kiriting, narx avtomatik, screenshot yuklang, admin tasdiqlasa balans oshadi."/>
+  <title>Coin toвЂldirish вЂ” SChat</title>
+  <meta name="description" content="Coin toвЂldirish: miqdor kiriting, narx avtomatik, screenshot yuklang, admin tasdiqlasa balans oshadi."/>
   <script>
     tailwind = { config: { darkMode:'class', theme:{ extend:{
       fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
@@ -112,6 +112,7 @@
     })();
   </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src='/global-loader.js'></script>
 </head>
 
 <body class="min-h-screen text-slate-900 dark:text-slate-100">
@@ -126,8 +127,8 @@
             <i class="fa-solid fa-coins"></i>
           </div>
           <div class="leading-tight">
-            <div class="font-extrabold tracking-tight">Coin to‘ldirish</div>
-            <div class="text-xs muted">So‘rov → admin tasdiq → balans</div>
+            <div class="font-extrabold tracking-tight">Coin toвЂldirish</div>
+            <div class="text-xs muted">SoвЂrov в†’ admin tasdiq в†’ balans</div>
           </div>
         </a>
 
@@ -154,29 +155,29 @@
         <div>
           <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
             <i class="fa-solid fa-shield-heart"></i>
-            <span>“Nazoratli” coin to‘ldirish</span>
+            <span>вЂњNazoratliвЂќ coin toвЂldirish</span>
           </div>
           <h1 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
-            Coinni <span class="u-anim">xavfsiz</span> to‘ldiring
+            Coinni <span class="u-anim">xavfsiz</span> toвЂldiring
           </h1>
           <p class="mt-2 muted2 text-sm sm:text-base">
-            Miqdorni kiriting, narx avtomatik hisoblanadi. Admin kartasiga to‘lov qiling, screenshot yuklang va so‘rov yuboring.
-            Admin tasdiqlagach coin balansingizga qo‘shiladi.
+            Miqdorni kiriting, narx avtomatik hisoblanadi. Admin kartasiga toвЂlov qiling, screenshot yuklang va soвЂrov yuboring.
+            Admin tasdiqlagach coin balansingizga qoвЂshiladi.
           </p>
         </div>
 
         <div class="glass rounded-2xl px-4 py-3">
           <div class="text-xs font-extrabold muted">Kurs</div>
-          <div class="mt-1 text-sm font-extrabold">10 coin = 1000 so‘m</div>
-          <div class="text-xs muted2 mt-1">1 coin = 100 so‘m</div>
+          <div class="mt-1 text-sm font-extrabold">10 coin = 1000 soвЂm</div>
+          <div class="text-xs muted2 mt-1">1 coin = 100 soвЂm</div>
         </div>
       </div>
     </section>
 
     <section class="mt-6 grid lg:grid-cols-3 gap-6">
       <div class="glass rounded-3xl p-6 g-border animate-pop lg:col-span-2">
-        <div class="text-lg font-black">Yangi top-up so‘rovi</div>
-        <div class="text-xs muted2 mt-1">Iltimos, to‘lov screenshotini aniq qilib yuklang.</div>
+        <div class="text-lg font-black">Yangi top-up soвЂrovi</div>
+        <div class="text-xs muted2 mt-1">Iltimos, toвЂlov screenshotini aniq qilib yuklang.</div>
 
         <form id="topupForm" class="mt-5 grid sm:grid-cols-2 gap-4" enctype="multipart/form-data">
           <div>
@@ -186,20 +187,20 @@
               <input id="coinsInput" name="coins" type="number" min="1" step="1" required
                      class="field w-full rounded-2xl px-11 py-3 text-sm" placeholder="Masalan: 50" />
             </div>
-            <div class="mt-2 text-xs muted2">Masalan: 50 coin = 5000 so‘m</div>
+            <div class="mt-2 text-xs muted2">Masalan: 50 coin = 5000 soвЂm</div>
           </div>
 
           <div>
-            <label class="text-xs font-extrabold muted">Narx (so‘m)</label>
+            <label class="text-xs font-extrabold muted">Narx (soвЂm)</label>
             <div class="mt-2 relative">
               <i class="fa-solid fa-money-bill-wave absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
-              <input id="somInput" type="text" readonly class="field w-full rounded-2xl px-11 py-3 text-sm" value="0 so‘m"/>
+              <input id="somInput" type="text" readonly class="field w-full rounded-2xl px-11 py-3 text-sm" value="0 soвЂm"/>
             </div>
-            <div class="mt-2 text-xs muted2">Avtomatik hisoblanadi (coin × 100).</div>
+            <div class="mt-2 text-xs muted2">Avtomatik hisoblanadi (coin Г— 100).</div>
           </div>
 
           <div class="sm:col-span-2">
-            <label class="text-xs font-extrabold muted">To‘lov skrinshot</label>
+            <label class="text-xs font-extrabold muted">ToвЂlov skrinshot</label>
             <div class="mt-2">
               <input id="shot" name="screenshot" type="file" accept="image/*" required
                      class="field w-full rounded-2xl px-4 py-3 text-sm"/>
@@ -213,13 +214,13 @@
               <div class="mt-2 text-sm font-extrabold">
                 8600 0000 0000 0000 <span class="muted2">(namuna)</span>
               </div>
-              <div class="mt-1 text-xs muted2">Bu joyni o‘zingizning haqiqiy karta raqamingiz bilan almashtiring.</div>
+              <div class="mt-1 text-xs muted2">Bu joyni oвЂzingizning haqiqiy karta raqamingiz bilan almashtiring.</div>
             </div>
           </div>
 
           <div class="sm:col-span-2 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
             <button id="sendBtn" type="submit" class="btn-primary rounded-2xl px-6 py-3 text-sm font-extrabold text-white glow-ring">
-              So‘rov yuborish <i class="fa-solid fa-paper-plane ml-2"></i>
+              SoвЂrov yuborish <i class="fa-solid fa-paper-plane ml-2"></i>
             </button>
             <a href="/profile.html" class="glass rounded-2xl px-6 py-3 text-sm font-extrabold btn-ghost text-center glow-ring">
               Profilga qaytish
@@ -229,14 +230,14 @@
       </div>
 
       <aside class="glass rounded-3xl p-6 g-border animate-pop">
-        <div class="text-sm font-extrabold">So‘rovlar holati</div>
-        <div class="text-xs muted2 mt-1">Oxirgi top-up so‘rovlaringiz</div>
+        <div class="text-sm font-extrabold">SoвЂrovlar holati</div>
+        <div class="text-xs muted2 mt-1">Oxirgi top-up soвЂrovlaringiz</div>
         <div id="reqList" class="mt-4 space-y-2"></div>
 
         <div class="mt-4 glass rounded-2xl p-4">
           <div class="text-xs font-extrabold muted">Eslatma</div>
           <div class="mt-1 text-sm muted2">
-            Tasdiq kelmaguncha coin qo‘shilmaydi. Screenshot aniq bo‘lmasa admin rad etishi mumkin.
+            Tasdiq kelmaguncha coin qoвЂshilmaydi. Screenshot aniq boвЂlmasa admin rad etishi mumkin.
           </div>
         </div>
       </aside>
@@ -286,7 +287,7 @@
       const box = document.getElementById('reqList');
       box.innerHTML = '';
       if(!list || !list.length){
-        box.innerHTML = `<div class="text-xs muted2">Hozircha so‘rov yo‘q.</div>`;
+        box.innerHTML = `<div class="text-xs muted2">Hozircha soвЂrov yoвЂq.</div>`;
         return;
       }
       for(const r of list.slice(0,8)){
@@ -298,7 +299,7 @@
         row.className = 'glass rounded-2xl px-3 py-2 flex items-center justify-between gap-3';
         row.innerHTML = `
           <div class="min-w-0">
-            <div class="text-xs font-extrabold">${r.coins} coin <span class="muted2">(${r.amountSom} so‘m)</span></div>
+            <div class="text-xs font-extrabold">${r.coins} coin <span class="muted2">(${r.amountSom} soвЂm)</span></div>
             <div class="text-[11px] muted2 mt-0.5">${fmtDate(r.createdAt)}</div>
           </div>
           <div class="text-[11px] font-extrabold px-2 py-1 rounded-lg ${badge}">${st}</div>
@@ -328,7 +329,7 @@
     const somInput = document.getElementById('somInput');
     function updatePrice(){
       const som = calcSom(coinsInput.value);
-      somInput.value = `${som.toLocaleString('uz-UZ')} so‘m`;
+      somInput.value = `${som.toLocaleString('uz-UZ')} soвЂm`;
     }
     coinsInput.addEventListener('input', updatePrice);
     updatePrice();
@@ -358,8 +359,8 @@
           body: fd
         });
         const j = await res.json().catch(()=>null);
-        if(!res.ok) return toast(j?.error || "So‘rov yuborilmadi", 'error');
-        toast("So‘rov yuborildi. Admin tasdiqlashini kuting.", 'success');
+        if(!res.ok) return toast(j?.error || "SoвЂrov yuborilmadi", 'error');
+        toast("SoвЂrov yuborildi. Admin tasdiqlashini kuting.", 'success');
         form.reset();
         updatePrice();
         await load();
