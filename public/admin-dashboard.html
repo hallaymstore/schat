@@ -2517,6 +2517,58 @@ async function adminEndGroupCall(groupId){
       }
     });
 </script>
+<script>
+  (function(){
+    function injectPremiumQuickLink(){
+      const headerActions = document.querySelector('header .glass .flex.items-center.gap-2');
+      if(!headerActions || headerActions.querySelector('a[href="/premium-requests.html"]')) return;
+      const link = document.createElement('a');
+      link.href = '/premium-requests.html';
+      link.className = 'glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring';
+      link.innerHTML = '<i class="fa-solid fa-crown"></i><span class="ml-2 hidden sm:inline">Premium so&#39;rovlar</span>';
+      headerActions.insertBefore(link, document.getElementById('logoutBtn'));
+    }
+
+    function injectPremiumStatCard(){
+      const grid = document.querySelector('section .grid.grid-cols-2');
+      if(!grid || document.getElementById('cPremiumPending')) return;
+      grid.classList.remove('sm:grid-cols-4');
+      grid.classList.add('sm:grid-cols-5');
+      const card = document.createElement('div');
+      card.className = 'glass rounded-2xl p-4';
+      card.innerHTML = `
+        <div class="text-[11px] font-extrabold muted">Premium kutayotgan</div>
+        <div class="mt-1 text-xl font-black" id="cPremiumPending">-</div>
+      `;
+      grid.appendChild(card);
+    }
+
+    const originalLoadOverview = window.loadOverview;
+    window.loadOverview = async function(){
+      if (typeof originalLoadOverview === 'function') {
+        await originalLoadOverview();
+      }
+      const el = document.getElementById('cPremiumPending');
+      if (el && window.lastAdminOverview && typeof window.lastAdminOverview.premiumPending !== 'undefined') {
+        el.textContent = window.lastAdminOverview.premiumPending ?? '-';
+      }
+    };
+
+    const previousApi = window.api;
+    window.api = async function(url, options){
+      const result = await previousApi(url, options);
+      if (url === '/api/admin/overview' && result && result.j) {
+        window.lastAdminOverview = result.j;
+      }
+      return result;
+    };
+
+    window.addEventListener('DOMContentLoaded', function(){
+      injectPremiumQuickLink();
+      injectPremiumStatCard();
+    });
+  })();
+</script>
   <script src="/ui-actions-menu.js" defer></script>
   <script src="/global-assistant.js" defer></script>
   <script src="/ui-premium-icons.js" defer></script>

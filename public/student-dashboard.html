@@ -794,6 +794,36 @@ a,button,input,select,textarea{touch-action:manipulation}
   })();
 </script>
 
+<script>
+  (function(){
+    const centerLinks = [
+      { href: '/notification-center.html', label: 'Bildirishnomalar' },
+      { href: '/settings-center.html', label: 'Settings Center' },
+      { href: '/payment.html', label: 'Premium' }
+    ];
+
+    function ensureLink(host, href, label, beforeSelector){
+      if(!host || host.querySelector(`a[href="${href}"]`)) return;
+      const a = document.createElement('a');
+      a.className = host.classList.contains('drawerLinks') ? 'btn ghost' : 'btn ghost small';
+      a.href = href;
+      a.textContent = label;
+      const before = beforeSelector ? host.querySelector(beforeSelector) : null;
+      if(before) host.insertBefore(a, before);
+      else host.appendChild(a);
+    }
+
+    window.addEventListener('DOMContentLoaded', function(){
+      const desktopRow = document.querySelector('.row.desktopOnly');
+      const drawerLinks = document.querySelector('.drawerLinks');
+      centerLinks.forEach((item) => {
+        ensureLink(desktopRow, item.href, item.label, 'a[href="/certificate.html"], a[href="/profile.html"], #logoutBtn');
+        ensureLink(drawerLinks, item.href, item.label, 'a[href="/certificate.html"], a[href="/profile.html"], #logoutBtn2');
+      });
+    });
+  })();
+</script>
+
   <script src="/ui-actions-menu.js" defer></script>
   <script src="/global-assistant.js" defer></script>
   <script src="/ui-premium-icons.js" defer></script>

@@ -609,6 +609,391 @@ async function waitForMongoReady() {
 
 // ==================== MODELS ====================
 
+const PREMIUM_USER_PLAN_CATALOG = [
+  {
+    scope: 'user',
+    id: 'spark',
+    label: 'HALLAYM Spark',
+    monthlyPrice: 89000,
+    yearlyPrice: 890000,
+    aiCredits: 70,
+    maxWebsites: 2,
+    maxSlides: 25,
+    stickerPack: 'premium-core',
+    features: ['AI Slides', 'AI Website', 'Animated stickers', 'Verified badge']
+  },
+  {
+    scope: 'user',
+    id: 'pro',
+    label: 'HALLAYM Pro',
+    monthlyPrice: 189000,
+    yearlyPrice: 1890000,
+    aiCredits: 220,
+    maxWebsites: 8,
+    maxSlides: 90,
+    stickerPack: 'premium-pro',
+    features: ['AI Slides', 'AI Website', 'Animated stickers', 'Verified badge', 'Priority queue']
+  },
+  {
+    scope: 'user',
+    id: 'ultra',
+    label: 'HALLAYM Ultra',
+    monthlyPrice: 349000,
+    yearlyPrice: 3490000,
+    aiCredits: 520,
+    maxWebsites: 20,
+    maxSlides: 240,
+    stickerPack: 'premium-ultra',
+    features: ['AI Slides', 'AI Website', 'Animated stickers', 'Verified badge', 'Priority queue', 'Extended limits']
+  }
+];
+
+const PREMIUM_UNIVERSITY_PLAN_CATALOG = [
+  {
+    scope: 'university',
+    id: 'campus-250',
+    label: 'Campus 250',
+    monthlyPrice: 1990000,
+    yearlyPrice: 19900000,
+    seatLimit: 250,
+    features: ['250 foydalanuvchi', 'Dashboard access', 'Notification center', 'Campus analytics']
+  },
+  {
+    scope: 'university',
+    id: 'campus-500',
+    label: 'Campus 500',
+    monthlyPrice: 3490000,
+    yearlyPrice: 34900000,
+    seatLimit: 500,
+    features: ['500 foydalanuvchi', 'Dashboard access', 'Notification center', 'Campus analytics', 'Priority support']
+  },
+  {
+    scope: 'university',
+    id: 'campus-1000',
+    label: 'Campus 1000',
+    monthlyPrice: 5990000,
+    yearlyPrice: 59900000,
+    seatLimit: 1000,
+    features: ['1000 foydalanuvchi', 'Dashboard access', 'Notification center', 'Campus analytics', 'Priority support', 'Launch assistance']
+  }
+];
+
+const PREMIUM_PAYMENT_METHOD = {
+  holder: String(process.env.PREMIUM_PAYMENT_HOLDER || process.env.ADMIN_PAYMENT_HOLDER || 'HALLAYM EDU').trim(),
+  cardNumber: String(process.env.PREMIUM_PAYMENT_CARD || process.env.ADMIN_PAYMENT_CARD || '8600 0000 0000 0000').trim(),
+  bankNote: String(process.env.PREMIUM_PAYMENT_BANK_NOTE || 'To‘lovdan keyin screenshot yuklang, admin tasdiqlaydi.').trim()
+};
+
+const PREMIUM_STICKER_PACKS = [
+  {
+    id: 'premium-core',
+    label: 'Core Motion',
+    minimumUserPlanIds: ['spark', 'pro', 'ultra'],
+    stickers: [
+      { id: 'spark-rocket', label: 'Rocket', url: '/assets/stickers/spark-rocket.svg' },
+      { id: 'pulse-star', label: 'Pulse star', url: '/assets/stickers/pulse-star.svg' }
+    ]
+  },
+  {
+    id: 'premium-pro',
+    label: 'Pro Motion',
+    minimumUserPlanIds: ['pro', 'ultra'],
+    stickers: [
+      { id: 'orbit-crown', label: 'Orbit crown', url: '/assets/stickers/orbit-crown.svg' },
+      { id: 'wave-heart', label: 'Wave heart', url: '/assets/stickers/wave-heart.svg' }
+    ]
+  },
+  {
+    id: 'premium-ultra',
+    label: 'Ultra Motion',
+    minimumUserPlanIds: ['ultra'],
+    stickers: [
+      { id: 'halo-burst', label: 'Halo burst', url: '/assets/stickers/halo-burst.svg' },
+      { id: 'neon-bolt', label: 'Neon bolt', url: '/assets/stickers/neon-bolt.svg' }
+    ]
+  }
+];
+
+const PREMIUM_AI_COSTS = {
+  slides_generate: 1,
+  website_generate: 3
+};
+
+function cloneJsonSafe(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function buildDefaultNotificationSettings() {
+  return {
+    directMessages: true,
+    courseUpdates: true,
+    liveClasses: true,
+    aiProducts: true,
+    billing: true,
+    marketing: false
+  };
+}
+
+function buildDefaultPrivacySettings() {
+  return {
+    showEmail: false,
+    showPhone: false,
+    profileVisibility: 'campus'
+  };
+}
+
+function buildDefaultUserSettings() {
+  return {
+    language: 'uz',
+    theme: 'system',
+    notifications: buildDefaultNotificationSettings(),
+    privacy: buildDefaultPrivacySettings(),
+    animatedStickers: true,
+    stickerAutoplay: true,
+    compactMode: false,
+    soundEnabled: true,
+    updatedAt: new Date()
+  };
+}
+
+function buildDefaultPremiumState() {
+  return {
+    userPlan: {
+      planId: '',
+      label: '',
+      scope: 'user',
+      status: 'inactive',
+      billingCycle: '',
+      aiCreditsLimit: 0,
+      aiCreditsRemaining: 0,
+      aiCreditsUsed: 0,
+      maxWebsites: 0,
+      maxSlides: 0,
+      stickerPackId: '',
+      startedAt: null,
+      renewedAt: null,
+      expiresAt: null
+    },
+    institutionPlan: {
+      planId: '',
+      label: '',
+      scope: 'university',
+      status: 'inactive',
+      billingCycle: '',
+      seatLimit: 0,
+      startedAt: null,
+      renewedAt: null,
+      expiresAt: null
+    },
+    features: {
+      websiteGenerator: false,
+      slideGenerator: false,
+      animatedStickers: false,
+      verifiedBadge: false
+    },
+    badgeLabel: '',
+    stickerPackId: '',
+    lastCreditResetAt: null
+  };
+}
+
+function premiumCatalogByScope(scope) {
+  return String(scope || '').trim().toLowerCase() === 'university'
+    ? PREMIUM_UNIVERSITY_PLAN_CATALOG
+    : PREMIUM_USER_PLAN_CATALOG;
+}
+
+function getPremiumPlanDefinition(scope, planId) {
+  const safeId = String(planId || '').trim().toLowerCase();
+  return premiumCatalogByScope(scope).find((item) => String(item.id || '').toLowerCase() === safeId) || null;
+}
+
+function premiumDurationDays(billingCycle) {
+  return String(billingCycle || '').trim().toLowerCase() === 'yearly' ? 365 : 30;
+}
+
+function addDays(date, days) {
+  const safe = date instanceof Date && !Number.isNaN(date.getTime()) ? new Date(date.getTime()) : new Date();
+  safe.setDate(safe.getDate() + Number(days || 0));
+  return safe;
+}
+
+function ensureUserSettingsState(user) {
+  if (!user) return buildDefaultUserSettings();
+  const defaults = buildDefaultUserSettings();
+  const raw = user.settings && typeof user.settings === 'object' ? user.settings : {};
+  const next = {
+    language: ['uz', 'en', 'ru'].includes(String(raw.language || '').toLowerCase()) ? String(raw.language).toLowerCase() : defaults.language,
+    theme: ['light', 'dark', 'system'].includes(String(raw.theme || '').toLowerCase()) ? String(raw.theme).toLowerCase() : defaults.theme,
+    notifications: Object.assign({}, defaults.notifications, raw.notifications || {}),
+    privacy: Object.assign({}, defaults.privacy, raw.privacy || {}),
+    animatedStickers: raw.animatedStickers !== undefined ? !!raw.animatedStickers : defaults.animatedStickers,
+    stickerAutoplay: raw.stickerAutoplay !== undefined ? !!raw.stickerAutoplay : defaults.stickerAutoplay,
+    compactMode: raw.compactMode !== undefined ? !!raw.compactMode : defaults.compactMode,
+    soundEnabled: raw.soundEnabled !== undefined ? !!raw.soundEnabled : defaults.soundEnabled,
+    updatedAt: raw.updatedAt || defaults.updatedAt
+  };
+  user.settings = next;
+  return next;
+}
+
+function isPremiumPlanActive(plan) {
+  if (!plan || String(plan.status || '').toLowerCase() !== 'active') return false;
+  if (!plan.expiresAt) return true;
+  const exp = new Date(plan.expiresAt);
+  return !Number.isNaN(exp.getTime()) && exp.getTime() > Date.now();
+}
+
+function syncPremiumDerivedState(user) {
+  const defaults = buildDefaultPremiumState();
+  if (!user) return defaults;
+  const raw = user.premium && typeof user.premium === 'object' ? user.premium : {};
+  const userPlan = Object.assign({}, defaults.userPlan, raw.userPlan || {});
+  const institutionPlan = Object.assign({}, defaults.institutionPlan, raw.institutionPlan || {});
+  const activeUserPlan = isPremiumPlanActive(userPlan);
+  const activeInstitutionPlan = isPremiumPlanActive(institutionPlan);
+  const now = new Date();
+  const shouldResetCredits = activeUserPlan
+    && userPlan.aiCreditsLimit > 0
+    && (!userPlan.renewedAt || addDays(new Date(userPlan.renewedAt), premiumDurationDays(userPlan.billingCycle)).getTime() <= now.getTime());
+
+  if (shouldResetCredits) {
+    userPlan.aiCreditsRemaining = Number(userPlan.aiCreditsLimit || 0);
+    userPlan.aiCreditsUsed = 0;
+    userPlan.renewedAt = now;
+  } else {
+    userPlan.aiCreditsRemaining = Math.max(0, Number(userPlan.aiCreditsRemaining || 0));
+    userPlan.aiCreditsUsed = Math.max(0, Number(userPlan.aiCreditsUsed || 0));
+  }
+
+  const next = {
+    userPlan,
+    institutionPlan,
+    features: {
+      websiteGenerator: !!(activeUserPlan && Number(userPlan.maxWebsites || 0) > 0),
+      slideGenerator: !!(activeUserPlan && Number(userPlan.maxSlides || 0) > 0),
+      animatedStickers: !!activeUserPlan,
+      verifiedBadge: !!activeUserPlan
+    },
+    badgeLabel: activeUserPlan ? 'PREMIUM' : '',
+    stickerPackId: activeUserPlan ? (userPlan.stickerPackId || 'premium-core') : '',
+    lastCreditResetAt: userPlan.renewedAt || raw.lastCreditResetAt || null
+  };
+  user.premium = next;
+  return next;
+}
+
+function serializePremiumPlanCatalog() {
+  const annotate = (item) => Object.assign({}, item, {
+    yearlyDiscountLabel: item.monthlyPrice > 0 && item.yearlyPrice > 0
+      ? `${Math.max(1, Math.round((1 - (item.yearlyPrice / (item.monthlyPrice * 12))) * 100))}% chegirma`
+      : '',
+    currency: 'UZS'
+  });
+  return {
+    user: PREMIUM_USER_PLAN_CATALOG.map(annotate),
+    university: PREMIUM_UNIVERSITY_PLAN_CATALOG.map(annotate)
+  };
+}
+
+function serializePremiumState(user) {
+  const premium = syncPremiumDerivedState(user || {});
+  return {
+    userPlan: Object.assign({}, premium.userPlan),
+    institutionPlan: Object.assign({}, premium.institutionPlan),
+    features: Object.assign({}, premium.features),
+    badgeLabel: premium.badgeLabel || '',
+    stickerPackId: premium.stickerPackId || '',
+    active: {
+      user: isPremiumPlanActive(premium.userPlan),
+      institution: isPremiumPlanActive(premium.institutionPlan)
+    }
+  };
+}
+
+function hasPremiumFeature(user, featureKey) {
+  const premium = syncPremiumDerivedState(user || {});
+  return !!premium.features?.[featureKey];
+}
+
+function effectiveVerifiedFlag(user) {
+  return !!(user?.verified || hasPremiumFeature(user, 'verifiedBadge'));
+}
+
+async function consumePremiumAiCredits(userId, usageKey) {
+  const cost = Number(PREMIUM_AI_COSTS[usageKey] || 0);
+  const user = await User.findById(userId);
+  if (!user) return { ok: false, error: 'User not found' };
+  syncPremiumDerivedState(user);
+  if (!hasPremiumFeature(user, usageKey === 'website_generate' ? 'websiteGenerator' : 'slideGenerator')) {
+    return { ok: false, code: 'PREMIUM_REQUIRED', error: 'Premium plan required' };
+  }
+  const credits = Number(user.premium?.userPlan?.aiCreditsRemaining || 0);
+  if (cost > credits) {
+    return { ok: false, code: 'AI_CREDITS_EXHAUSTED', error: 'AI credits exhausted', creditsRemaining: credits };
+  }
+  user.premium.userPlan.aiCreditsRemaining = credits - cost;
+  user.premium.userPlan.aiCreditsUsed = Number(user.premium.userPlan.aiCreditsUsed || 0) + cost;
+  user.premium.userPlan.renewedAt = user.premium.userPlan.renewedAt || new Date();
+  user.markModified('premium');
+  await user.save({ validateBeforeSave: false });
+  return {
+    ok: true,
+    creditsRemaining: Number(user.premium.userPlan.aiCreditsRemaining || 0),
+    creditsUsed: Number(user.premium.userPlan.aiCreditsUsed || 0),
+    premium: serializePremiumState(user)
+  };
+}
+
+async function checkPremiumAiAccess(userId, usageKey) {
+  const cost = Number(PREMIUM_AI_COSTS[usageKey] || 0);
+  const user = await User.findById(userId).select('verified premium').lean();
+  if (!user) return { ok: false, error: 'User not found' };
+  const featureKey = usageKey === 'website_generate' ? 'websiteGenerator' : 'slideGenerator';
+  if (!hasPremiumFeature(user, featureKey)) {
+    return { ok: false, code: 'PREMIUM_REQUIRED', error: 'Premium plan required', redirect: '/payment.html?focus=user' };
+  }
+  const creditsRemaining = Number(serializePremiumState(user)?.userPlan?.aiCreditsRemaining || 0);
+  if (cost > creditsRemaining) {
+    return {
+      ok: false,
+      code: 'AI_CREDITS_EXHAUSTED',
+      error: 'AI credits exhausted',
+      redirect: '/payment.html?focus=user',
+      creditsRemaining
+    };
+  }
+  return { ok: true, creditsRemaining, premium: serializePremiumState(user) };
+}
+
+function buildStickerCatalogForUser(user) {
+  const premium = syncPremiumDerivedState(user || {});
+  const activePlanId = String(premium.userPlan?.planId || '').trim().toLowerCase();
+  const allowedPlanIds = new Set();
+  if (activePlanId) {
+    PREMIUM_USER_PLAN_CATALOG.forEach((plan) => {
+      allowedPlanIds.add(String(plan.id || '').toLowerCase());
+      if (String(plan.id || '').toLowerCase() === activePlanId) return false;
+    });
+  }
+  return PREMIUM_STICKER_PACKS.map((pack) => {
+    const allowed = hasPremiumFeature(user, 'animatedStickers')
+      && Array.isArray(pack.minimumUserPlanIds)
+      && pack.minimumUserPlanIds.includes(activePlanId);
+    return {
+      id: pack.id,
+      label: pack.label,
+      allowed,
+      stickers: Array.isArray(pack.stickers) ? pack.stickers.map((item) => Object.assign({}, item)) : []
+    };
+  });
+}
+
+function buildPremiumNotificationPrefsSummary(settings) {
+  const safe = ensureUserSettingsState({ settings });
+  return safe.notifications;
+}
+
 // User Model
 const UserSchema = new mongoose.Schema({
   fullName: { type: String, required: true },
@@ -635,6 +1020,66 @@ const UserSchema = new mongoose.Schema({
   },
   lastActive: { type: Date, default: Date.now },
   verified: { type: Boolean, default: false },
+  settings: {
+    language: { type: String, enum: ['uz', 'en', 'ru'], default: 'uz' },
+    theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
+    notifications: {
+      directMessages: { type: Boolean, default: true },
+      courseUpdates: { type: Boolean, default: true },
+      liveClasses: { type: Boolean, default: true },
+      aiProducts: { type: Boolean, default: true },
+      billing: { type: Boolean, default: true },
+      marketing: { type: Boolean, default: false }
+    },
+    privacy: {
+      showEmail: { type: Boolean, default: false },
+      showPhone: { type: Boolean, default: false },
+      profileVisibility: { type: String, enum: ['public', 'campus', 'private'], default: 'campus' }
+    },
+    animatedStickers: { type: Boolean, default: true },
+    stickerAutoplay: { type: Boolean, default: true },
+    compactMode: { type: Boolean, default: false },
+    soundEnabled: { type: Boolean, default: true },
+    updatedAt: { type: Date, default: Date.now }
+  },
+  premium: {
+    userPlan: {
+      planId: { type: String, default: '' },
+      label: { type: String, default: '' },
+      scope: { type: String, default: 'user' },
+      status: { type: String, enum: ['inactive', 'active', 'expired'], default: 'inactive' },
+      billingCycle: { type: String, enum: ['', 'monthly', 'yearly'], default: '' },
+      aiCreditsLimit: { type: Number, default: 0 },
+      aiCreditsRemaining: { type: Number, default: 0 },
+      aiCreditsUsed: { type: Number, default: 0 },
+      maxWebsites: { type: Number, default: 0 },
+      maxSlides: { type: Number, default: 0 },
+      stickerPackId: { type: String, default: '' },
+      startedAt: { type: Date, default: null },
+      renewedAt: { type: Date, default: null },
+      expiresAt: { type: Date, default: null }
+    },
+    institutionPlan: {
+      planId: { type: String, default: '' },
+      label: { type: String, default: '' },
+      scope: { type: String, default: 'university' },
+      status: { type: String, enum: ['inactive', 'active', 'expired'], default: 'inactive' },
+      billingCycle: { type: String, enum: ['', 'monthly', 'yearly'], default: '' },
+      seatLimit: { type: Number, default: 0 },
+      startedAt: { type: Date, default: null },
+      renewedAt: { type: Date, default: null },
+      expiresAt: { type: Date, default: null }
+    },
+    features: {
+      websiteGenerator: { type: Boolean, default: false },
+      slideGenerator: { type: Boolean, default: false },
+      animatedStickers: { type: Boolean, default: false },
+      verifiedBadge: { type: Boolean, default: false }
+    },
+    badgeLabel: { type: String, default: '' },
+    stickerPackId: { type: String, default: '' },
+    lastCreditResetAt: { type: Date, default: null }
+  },
   resetPasswordTokenHash: { type: String, default: null },
   resetPasswordExpires: { type: Date, default: null },
 
@@ -1417,9 +1862,12 @@ async function ensureDefaultStudyGroups() {
 
 const NotificationSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  type: { type: String, default: 'general', index: true },
+  icon: { type: String, default: 'fa-bell' },
   title: { type: String, default: '' },
   body: { type: String, default: '' },
   link: { type: String, default: '' },
+  meta: { type: mongoose.Schema.Types.Mixed, default: {} },
   read: { type: Boolean, default: false, index: true },
   createdAt: { type: Date, default: Date.now, index: true }
 });
@@ -1547,7 +1995,7 @@ const MessageSchema = new mongoose.Schema({
   receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   text: { type: String, default: '' },
   mediaUrl: { type: String, default: '' },
-  mediaType: { type: String, enum: ['image', 'video', 'audio', 'document', 'voice', 'file', ''], default: '' },
+  mediaType: { type: String, enum: ['image', 'video', 'audio', 'document', 'voice', 'file', 'sticker', ''], default: '' },
   reactions: [{
     emoji: { type: String, required: true },
     users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
@@ -1603,7 +2051,7 @@ const GroupMessageSchema = new mongoose.Schema({
   senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   text: { type: String, default: '' },
   mediaUrl: { type: String, default: '' },
-  mediaType: { type: String, enum: ['image', 'video', 'audio', 'document', 'voice', 'file', ''], default: '' },
+  mediaType: { type: String, enum: ['image', 'video', 'audio', 'document', 'voice', 'file', 'sticker', ''], default: '' },
   mediaName: { type: String, default: '' },
   mediaSize: { type: Number, default: 0 },
   mediaMime: { type: String, default: '' },
@@ -2013,6 +2461,109 @@ const TopUpRequestSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const TopUpRequest = mongoose.model('TopUpRequest', TopUpRequestSchema);
+
+const PremiumPaymentRequestSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  planScope: { type: String, enum: ['user', 'university'], required: true, index: true },
+  planId: { type: String, required: true, index: true },
+  planLabel: { type: String, default: '' },
+  billingCycle: { type: String, enum: ['monthly', 'yearly'], required: true, index: true },
+  priceAmount: { type: Number, default: 0 },
+  currency: { type: String, default: 'UZS' },
+  screenshotUrl: { type: String, default: '' },
+  note: { type: String, default: '' },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending', index: true },
+  adminNote: { type: String, default: '' },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  reviewedAt: { type: Date, default: null },
+  createdAt: { type: Date, default: Date.now, index: true }
+});
+PremiumPaymentRequestSchema.index({ userId: 1, createdAt: -1 });
+const PremiumPaymentRequest = mongoose.models.PremiumPaymentRequest || mongoose.model('PremiumPaymentRequest', PremiumPaymentRequestSchema);
+
+async function pushUserNotification(userId, payload = {}) {
+  const safeUserId = String(userId || '').trim();
+  if (!safeUserId) return null;
+  const doc = await Notification.create({
+    userId: safeUserId,
+    type: cleanText(payload.type || 'general', 40) || 'general',
+    icon: cleanText(payload.icon || 'fa-bell', 80) || 'fa-bell',
+    title: cleanText(payload.title, 140),
+    body: cleanText(payload.body, 600),
+    link: cleanText(payload.link, 240),
+    meta: payload.meta && typeof payload.meta === 'object' ? payload.meta : {},
+    read: false,
+    createdAt: new Date()
+  });
+  try {
+    const socketIds = getUserSocketIds(safeUserId);
+    socketIds.forEach((sid) => {
+      io.to(sid).emit('notification', {
+        id: String(doc._id || ''),
+        title: doc.title,
+        message: doc.body,
+        type: doc.type,
+        icon: doc.icon,
+        link: doc.link,
+        timestamp: doc.createdAt ? new Date(doc.createdAt).getTime() : Date.now()
+      });
+    });
+  } catch (_) {}
+  return doc;
+}
+
+function applyUserPremiumPlanToUserDoc(user, plan, billingCycle) {
+  const now = new Date();
+  const expiresAt = addDays(now, premiumDurationDays(billingCycle));
+  syncPremiumDerivedState(user);
+  user.premium.userPlan = {
+    planId: String(plan.id || ''),
+    label: String(plan.label || ''),
+    scope: 'user',
+    status: 'active',
+    billingCycle: String(billingCycle || 'monthly'),
+    aiCreditsLimit: Number(plan.aiCredits || 0),
+    aiCreditsRemaining: Number(plan.aiCredits || 0),
+    aiCreditsUsed: 0,
+    maxWebsites: Number(plan.maxWebsites || 0),
+    maxSlides: Number(plan.maxSlides || 0),
+    stickerPackId: String(plan.stickerPack || ''),
+    startedAt: now,
+    renewedAt: now,
+    expiresAt
+  };
+  user.premium.features = {
+    websiteGenerator: true,
+    slideGenerator: true,
+    animatedStickers: true,
+    verifiedBadge: true
+  };
+  user.premium.badgeLabel = 'PREMIUM';
+  user.premium.stickerPackId = String(plan.stickerPack || '');
+  user.premium.lastCreditResetAt = now;
+  user.verified = true;
+  user.markModified('premium');
+  return user;
+}
+
+function applyInstitutionPremiumPlanToUserDoc(user, plan, billingCycle) {
+  const now = new Date();
+  const expiresAt = addDays(now, premiumDurationDays(billingCycle));
+  syncPremiumDerivedState(user);
+  user.premium.institutionPlan = {
+    planId: String(plan.id || ''),
+    label: String(plan.label || ''),
+    scope: 'university',
+    status: 'active',
+    billingCycle: String(billingCycle || 'monthly'),
+    seatLimit: Number(plan.seatLimit || 0),
+    startedAt: now,
+    renewedAt: now,
+    expiresAt
+  };
+  user.markModified('premium');
+  return user;
+}
 
 // ==================== PET MARKET DEFAULT ITEMS (in-memory) ====================
 // Note: Items are stored in code for simplicity. You can move them to DB later.
@@ -4958,6 +5509,16 @@ app.post('/api/slides/generate', authenticateToken, async (req, res) => {
       .catch(() => null);
     if (!me) return res.status(404).json({ error: 'User not found' });
 
+    const premiumAccess = await checkPremiumAiAccess(userId, 'slides_generate');
+    if (!premiumAccess.ok) {
+      return res.status(403).json({
+        error: premiumAccess.error || 'Premium required',
+        code: premiumAccess.code || 'PREMIUM_REQUIRED',
+        redirect: premiumAccess.redirect || '/payment.html?focus=user',
+        creditsRemaining: Number(premiumAccess.creditsRemaining || 0)
+      });
+    }
+
     const deck = await generateSlideDeckWithGroq({
       user: me,
       prompt,
@@ -4990,10 +5551,14 @@ app.post('/api/slides/generate', authenticateToken, async (req, res) => {
       slides: Array.isArray(deck.slides) ? deck.slides : []
     });
 
+    const creditState = await consumePremiumAiCredits(userId, 'slides_generate');
+
     return res.json({
       success: true,
       deck: serializeSlideDeck(created),
-      themePresets: SLIDE_THEME_PRESETS
+      themePresets: SLIDE_THEME_PRESETS,
+      premium: creditState?.premium || premiumAccess.premium,
+      creditsRemaining: Number(creditState?.creditsRemaining ?? premiumAccess.creditsRemaining ?? 0)
     });
   } catch (e) {
     const msg = String(e?.message || e || 'Slide service unavailable');
@@ -5550,6 +6115,15 @@ app.post('/api/websites/generate', authenticateToken, async (req, res) => {
     const desiredSlug = normalizeWebsiteSlugInput(req.body?.slug || startupName, startupName);
     const uniqueSlug = await ensureUniqueWebsiteSlug(desiredSlug);
     const serverFeatures = normalizeWebsiteFeatureFlags(req.body?.serverFeatures || {});
+    const premiumAccess = await checkPremiumAiAccess(req.userId, 'website_generate');
+    if (!premiumAccess.ok) {
+      return res.status(403).json({
+        error: premiumAccess.error || 'Premium required',
+        code: premiumAccess.code || 'PREMIUM_REQUIRED',
+        redirect: premiumAccess.redirect || '/payment.html?focus=user',
+        creditsRemaining: Number(premiumAccess.creditsRemaining || 0)
+      });
+    }
     const me = await User.findById(req.userId).select('fullName username').lean().catch(() => null);
     const projectPayload = await generateStartupWebsiteProject({
       user: me || {},
@@ -5571,10 +6145,14 @@ app.post('/api/websites/generate', authenticateToken, async (req, res) => {
       ...projectPayload
     });
 
+    const creditState = await consumePremiumAiCredits(req.userId, 'website_generate');
+
     return res.json({
       success: true,
       project: serializeWebsiteProject(created, {}, { origin: getPublicAppOrigin(req) }),
-      templates: WEBSITE_TEMPLATE_PRESETS
+      templates: WEBSITE_TEMPLATE_PRESETS,
+      premium: creditState?.premium || premiumAccess.premium,
+      creditsRemaining: Number(creditState?.creditsRemaining ?? premiumAccess.creditsRemaining ?? 0)
     });
   } catch (e) {
     console.error('POST /api/websites/generate error:', e);
@@ -10931,6 +11509,8 @@ app.get('/api/me', authenticateToken, async (req, res) => {
       ensureInventoryArrays(user);
       ensureCompanions(user);
       ensureRobots(user);
+      ensureUserSettingsState(user);
+      syncPremiumDerivedState(user);
       // Save without full validation (legacy users may miss required fields like university)
       await user.save({ validateBeforeSave: false });
     } catch (e) {
@@ -10951,6 +11531,9 @@ app.get('/api/me', authenticateToken, async (req, res) => {
     safeUser.teachingSubjects = Array.isArray(safeUser.teachingSubjects) ? safeUser.teachingSubjects : (safeUser.teachingSubject ? [safeUser.teachingSubject] : []);
     safeUser.activeRobot = activeRobot;
     safeUser.activeCompanion = activeCompanion;
+    safeUser.settings = ensureUserSettingsState({ settings: safeUser.settings });
+    safeUser.premium = serializePremiumState(safeUser);
+    safeUser.verified = effectiveVerifiedFlag(safeUser);
 
     // Front-end compatibility: return user fields at top-level AND under {user}
     safeUser.fullname = safeUser.fullname || safeUser.fullName || safeUser.name || '';
@@ -11465,10 +12048,17 @@ app.get('/api/search/users', authenticateToken, async (req, res) => {
       ],
       _id: { $ne: req.userId }
     })
-    .select('username nickname avatar university isOnline lastSeen')
+    .select('username fullName nickname avatar university isOnline lastSeen verified premium')
     .limit(20);
+
+    const safeUsers = (users || []).map((user) => {
+      const raw = user?.toObject ? user.toObject() : user;
+      raw.verified = effectiveVerifiedFlag(raw);
+      raw.premium = serializePremiumState(raw);
+      return raw;
+    });
     
-    res.json({ success: true, users });
+    res.json({ success: true, users: safeUsers });
   } catch (error) {
     console.error('Search users error:', error);
     res.status(500).json({ error: 'Search failed' });
@@ -11516,7 +12106,8 @@ app.get('/api/user/:userId', authenticateToken, async (req, res) => {
       isOnline: !!user.isOnline,
       lastSeen: user.lastSeen,
       status: user.status || (user.isOnline ? 'online' : 'offline'),
-      verified: !!user.verified,
+      verified: effectiveVerifiedFlag(user),
+      premium: serializePremiumState(user),
       pet: user.pet || null,
       activeRobotId: user.activeRobotId || '',
       activeRobot: active ? {
@@ -11596,7 +12187,8 @@ app.get('/api/user/by-username/:username', authenticateToken, async (req, res) =
       isOnline: !!user.isOnline,
       lastSeen: user.lastSeen,
       status: user.status || (user.isOnline ? 'online' : 'offline'),
-      verified: !!user.verified,
+      verified: effectiveVerifiedFlag(user),
+      premium: serializePremiumState(user),
       pet: user.pet || null,
       activeRobotId: user.activeRobotId || '',
       activeRobot: active ? {
@@ -11704,9 +12296,12 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
         $project: {
           userId: '$_id',
           username: '$user.username',
+          fullName: '$user.fullName',
           nickname: '$user.nickname',
           avatar: '$user.avatar',
           university: '$user.university',
+          verified: '$user.verified',
+          premium: '$user.premium',
           isOnline: '$user.isOnline',
           lastSeen: '$user.lastSeen',
           lastMessage: {
@@ -11722,7 +12317,13 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
       }
     ]);
     
-    res.json({ success: true, conversations });
+    const safeConversations = (conversations || []).map((item) => {
+      const safe = Object.assign({}, item || {});
+      safe.premium = serializePremiumState(safe);
+      safe.verified = effectiveVerifiedFlag(safe);
+      return safe;
+    });
+    res.json({ success: true, conversations: safeConversations });
   } catch (error) {
     console.error('Get conversations error:', error);
     res.status(500).json({ error: 'Failed to get conversations' });
@@ -11731,9 +12332,26 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
 
 // Get Messages with a user
 async function getPopulatedPrivateMessage(messageId) {
-  return Message.findById(messageId)
-    .populate('senderId', 'username nickname avatar')
-    .populate('receiverId', 'username nickname avatar');
+  const doc = await Message.findById(messageId)
+    .populate('senderId', 'fullName username nickname avatar verified premium')
+    .populate('receiverId', 'fullName username nickname avatar verified premium');
+  return decoratePrivateMessageUsers(doc);
+}
+
+function decorateLightUserProfile(rawUser) {
+  if (!rawUser) return rawUser;
+  const safe = rawUser.toObject ? rawUser.toObject() : Object.assign({}, rawUser);
+  safe.premium = serializePremiumState(safe);
+  safe.verified = effectiveVerifiedFlag(safe);
+  return safe;
+}
+
+function decoratePrivateMessageUsers(message) {
+  if (!message) return message;
+  const safe = message.toObject ? message.toObject() : Object.assign({}, message);
+  if (safe.senderId && typeof safe.senderId === 'object') safe.senderId = decorateLightUserProfile(safe.senderId);
+  if (safe.receiverId && typeof safe.receiverId === 'object') safe.receiverId = decorateLightUserProfile(safe.receiverId);
+  return safe;
 }
 
 app.get('/api/messages/:userId', authenticateToken, async (req, res) => {
@@ -11751,8 +12369,8 @@ app.get('/api/messages/:userId', authenticateToken, async (req, res) => {
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(parseInt(limit))
-    .populate('senderId', 'username nickname avatar')
-    .populate('receiverId', 'username nickname avatar');
+    .populate('senderId', 'fullName username nickname avatar verified premium')
+    .populate('receiverId', 'fullName username nickname avatar verified premium');
     
     await Message.updateMany(
       { 
@@ -11779,7 +12397,7 @@ app.get('/api/messages/:userId', authenticateToken, async (req, res) => {
     
     res.json({ 
       success: true, 
-      messages: messages.reverse(),
+      messages: messages.reverse().map((item) => decoratePrivateMessageUsers(item)),
       page: parseInt(page),
       limit: parseInt(limit)
     });
@@ -11800,12 +12418,24 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
+    const normalizedMediaType = String(mediaType || '').trim().toLowerCase();
+    if (normalizedMediaType === 'sticker') {
+      const sender = await User.findById(req.userId).select('verified premium').lean();
+      if (!sender) return res.status(404).json({ error: 'User not found' });
+      if (!hasPremiumFeature(sender, 'animatedStickers')) {
+        return res.status(403).json({ error: 'Animated stickers only for premium users', redirect: '/payment.html?focus=user' });
+      }
+      if (!String(mediaUrl || '').trim()) {
+        return res.status(400).json({ error: 'Sticker URL required' });
+      }
+    }
+
     const message = new Message({
       senderId: req.userId,
       receiverId,
       text,
       mediaUrl,
-      mediaType,
+      mediaType: normalizedMediaType,
       mediaMetadata,
       isDelivered: false,
       isRead: false
@@ -15672,8 +16302,14 @@ app.post('/api/admin/broadcast', authenticateToken, requireAdmin, async (req, re
 // ==================== NOTIFICATIONS ROUTES ====================
 app.get('/api/notifications', authenticateToken, async (req, res) => {
   try {
-    const items = await Notification.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(200).lean();
-    res.json({ success: true, notifications: items });
+    const unreadOnly = normalizeBoolInput(req.query.unreadOnly, false);
+    const q = { userId: req.userId };
+    if (unreadOnly) q.read = false;
+    const [items, unreadCount] = await Promise.all([
+      Notification.find(q).sort({ createdAt: -1 }).limit(200).lean(),
+      Notification.countDocuments({ userId: req.userId, read: false })
+    ]);
+    res.json({ success: true, notifications: items, unreadCount });
   } catch (e) {
     res.status(500).json({ error: 'Failed to load notifications' });
   }
@@ -15692,6 +16328,255 @@ app.post('/api/notifications/read-all', authenticateToken, async (req, res) => {
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Failed to mark all read' });
+  }
+});
+
+app.delete('/api/notifications/:id', authenticateToken, async (req, res) => {
+  try {
+    await Notification.deleteOne({ _id: req.params.id, userId: req.userId });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete notification' });
+  }
+});
+
+function normalizeBoolInput(value, fallback = false) {
+  if (value === undefined || value === null) return !!fallback;
+  if (typeof value === 'boolean') return value;
+  const raw = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(raw)) return true;
+  if (['0', 'false', 'no', 'off'].includes(raw)) return false;
+  return !!fallback;
+}
+
+function normalizePremiumScope(value) {
+  return String(value || '').trim().toLowerCase() === 'university' ? 'university' : 'user';
+}
+
+function serializePremiumPaymentRequest(request) {
+  const safe = request?.toObject ? request.toObject() : Object.assign({}, request || {});
+  return {
+    id: String(safe._id || ''),
+    userId: String(safe.userId?._id || safe.userId || ''),
+    user: safe.userId && typeof safe.userId === 'object' ? {
+      _id: String(safe.userId._id || ''),
+      username: safe.userId.username || '',
+      fullName: safe.userId.fullName || '',
+      nickname: safe.userId.nickname || '',
+      avatar: safe.userId.avatar || '',
+      university: safe.userId.university || '',
+      verified: effectiveVerifiedFlag(safe.userId),
+      premium: serializePremiumState(safe.userId)
+    } : null,
+    planScope: cleanText(safe.planScope, 40),
+    planId: cleanText(safe.planId, 40),
+    planLabel: cleanText(safe.planLabel, 120),
+    billingCycle: cleanText(safe.billingCycle, 20),
+    priceAmount: Number(safe.priceAmount || 0),
+    currency: cleanText(safe.currency, 12) || 'UZS',
+    screenshotUrl: cleanText(safe.screenshotUrl, 400),
+    note: cleanText(safe.note, 500),
+    status: cleanText(safe.status, 20) || 'pending',
+    adminNote: cleanText(safe.adminNote, 400),
+    reviewedBy: String(safe.reviewedBy || ''),
+    reviewedAt: safe.reviewedAt || null,
+    createdAt: safe.createdAt || null
+  };
+}
+
+app.get('/api/settings', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('fullName username nickname email phone avatar university faculty studyType studyGroup role verified premium settings').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const settings = ensureUserSettingsState({ settings: user.settings });
+    const premium = serializePremiumState(user);
+    res.json({
+      success: true,
+      settings,
+      premium,
+      paymentMethod: PREMIUM_PAYMENT_METHOD,
+      plans: serializePremiumPlanCatalog(),
+      user: {
+        _id: String(user._id || ''),
+        fullName: user.fullName || '',
+        username: user.username || '',
+        nickname: user.nickname || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        avatar: user.avatar || '',
+        university: user.university || '',
+        faculty: user.faculty || '',
+        studyType: user.studyType || '',
+        studyGroup: user.studyGroup || '',
+        role: user.role || 'student',
+        verified: effectiveVerifiedFlag(user)
+      }
+    });
+  } catch (error) {
+    console.error('GET /api/settings error:', error);
+    res.status(500).json({ error: 'Failed to load settings' });
+  }
+});
+
+app.put('/api/settings', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('settings premium').catch(() => null);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const current = ensureUserSettingsState(user);
+    const body = req.body || {};
+    const next = {
+      language: ['uz', 'en', 'ru'].includes(String(body.language || current.language).toLowerCase()) ? String(body.language || current.language).toLowerCase() : current.language,
+      theme: ['light', 'dark', 'system'].includes(String(body.theme || current.theme).toLowerCase()) ? String(body.theme || current.theme).toLowerCase() : current.theme,
+      notifications: {
+        directMessages: normalizeBoolInput(body.notifications?.directMessages, current.notifications.directMessages),
+        courseUpdates: normalizeBoolInput(body.notifications?.courseUpdates, current.notifications.courseUpdates),
+        liveClasses: normalizeBoolInput(body.notifications?.liveClasses, current.notifications.liveClasses),
+        aiProducts: normalizeBoolInput(body.notifications?.aiProducts, current.notifications.aiProducts),
+        billing: normalizeBoolInput(body.notifications?.billing, current.notifications.billing),
+        marketing: normalizeBoolInput(body.notifications?.marketing, current.notifications.marketing)
+      },
+      privacy: {
+        showEmail: normalizeBoolInput(body.privacy?.showEmail, current.privacy.showEmail),
+        showPhone: normalizeBoolInput(body.privacy?.showPhone, current.privacy.showPhone),
+        profileVisibility: ['public', 'campus', 'private'].includes(String(body.privacy?.profileVisibility || current.privacy.profileVisibility).toLowerCase())
+          ? String(body.privacy?.profileVisibility || current.privacy.profileVisibility).toLowerCase()
+          : current.privacy.profileVisibility
+      },
+      animatedStickers: normalizeBoolInput(body.animatedStickers, current.animatedStickers),
+      stickerAutoplay: normalizeBoolInput(body.stickerAutoplay, current.stickerAutoplay),
+      compactMode: normalizeBoolInput(body.compactMode, current.compactMode),
+      soundEnabled: normalizeBoolInput(body.soundEnabled, current.soundEnabled),
+      updatedAt: new Date()
+    };
+    user.settings = next;
+    user.markModified('settings');
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, settings: next, premium: serializePremiumState(user) });
+  } catch (error) {
+    console.error('PUT /api/settings error:', error);
+    res.status(500).json({ error: 'Failed to save settings' });
+  }
+});
+
+app.get('/api/stickers/catalog', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('verified premium settings').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({
+      success: true,
+      enabled: hasPremiumFeature(user, 'animatedStickers'),
+      premium: serializePremiumState(user),
+      settings: ensureUserSettingsState({ settings: user.settings }),
+      packs: buildStickerCatalogForUser(user)
+    });
+  } catch (error) {
+    console.error('GET /api/stickers/catalog error:', error);
+    res.status(500).json({ error: 'Failed to load stickers' });
+  }
+});
+
+app.get('/api/premium/plans', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('premium verified role university').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const [pendingRequests, websiteCount, slideCount] = await Promise.all([
+      PremiumPaymentRequest.countDocuments({ userId: req.userId, status: 'pending' }),
+      WebsiteProject.countDocuments({ ownerId: req.userId }).catch(() => 0),
+      SlideDeck.countDocuments({ userId: req.userId }).catch(() => 0)
+    ]);
+    res.json({
+      success: true,
+      plans: serializePremiumPlanCatalog(),
+      paymentMethod: PREMIUM_PAYMENT_METHOD,
+      premium: serializePremiumState(user),
+      pendingRequests,
+      usage: {
+        websites: Number(websiteCount || 0),
+        slides: Number(slideCount || 0)
+      }
+    });
+  } catch (error) {
+    console.error('GET /api/premium/plans error:', error);
+    res.status(500).json({ error: 'Failed to load premium plans' });
+  }
+});
+
+app.get('/api/premium/payments', authenticateToken, async (req, res) => {
+  try {
+    const requests = await PremiumPaymentRequest.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(40).lean();
+    const user = await User.findById(req.userId).select('premium verified').lean();
+    res.json({
+      success: true,
+      requests: (requests || []).map((item) => serializePremiumPaymentRequest(item)),
+      premium: serializePremiumState(user || {})
+    });
+  } catch (error) {
+    console.error('GET /api/premium/payments error:', error);
+    res.status(500).json({ error: 'Failed to load premium payment requests' });
+  }
+});
+
+app.post('/api/premium/payments/request', authenticateToken, upload.single('screenshot'), async (req, res) => {
+  try {
+    const planScope = normalizePremiumScope(req.body?.planScope);
+    const planId = cleanText(req.body?.planId, 40).toLowerCase();
+    const billingCycle = String(req.body?.billingCycle || 'monthly').trim().toLowerCase() === 'yearly' ? 'yearly' : 'monthly';
+    const note = cleanText(req.body?.note, 500);
+    const plan = getPremiumPlanDefinition(planScope, planId);
+    if (!plan) return res.status(400).json({ error: 'Plan not found' });
+    const screenshotUrl = req.file ? (`/uploads/${req.file.filename}`) : '';
+    if (!screenshotUrl) return res.status(400).json({ error: 'Payment screenshot required' });
+
+    const existingPending = await PremiumPaymentRequest.findOne({
+      userId: req.userId,
+      status: 'pending',
+      planScope,
+      planId,
+      billingCycle
+    }).lean();
+    if (existingPending) {
+      return res.status(400).json({ error: 'Bu tarif uchun kutilayotgan so‘rov allaqachon mavjud' });
+    }
+
+    const request = await PremiumPaymentRequest.create({
+      userId: req.userId,
+      planScope,
+      planId,
+      planLabel: plan.label,
+      billingCycle,
+      priceAmount: Number(billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice),
+      currency: 'UZS',
+      screenshotUrl,
+      note,
+      status: 'pending'
+    });
+
+    await pushUserNotification(req.userId, {
+      type: 'billing',
+      icon: 'fa-wallet',
+      title: 'Premium so‘rov yuborildi',
+      body: `${plan.label} (${billingCycle === 'yearly' ? 'yillik' : 'oylik'}) so‘rovingiz admin tekshiruviga yuborildi.`,
+      link: '/payment.html'
+    }).catch(() => null);
+
+    try {
+      adminEmit('admin:premium:new', {
+        requestId: String(request._id || ''),
+        planScope,
+        planId,
+        billingCycle,
+        userId: String(req.userId || '')
+      });
+    } catch (_) {}
+
+    res.json({
+      success: true,
+      request: serializePremiumPaymentRequest(request),
+      paymentMethod: PREMIUM_PAYMENT_METHOD
+    });
+  } catch (error) {
+    console.error('POST /api/premium/payments/request error:', error);
+    res.status(500).json({ error: 'Failed to create premium request' });
   }
 });
 
@@ -17310,6 +18195,104 @@ app.post('/api/admin/topup-requests/:id/reject', authenticateToken, requireAdmin
   } catch (e) {
     console.error('reject error', e);
     res.status(500).json({ error: 'Reject failed' });
+  }
+});
+
+app.get('/api/admin/premium-requests', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const status = cleanText(req.query.status, 20);
+    const planScope = normalizePremiumScope(req.query.planScope);
+    const q = {};
+    if (status) q.status = status;
+    if (req.query.planScope) q.planScope = planScope;
+    const list = await PremiumPaymentRequest.find(q)
+      .populate('userId', 'username nickname fullName avatar university verified premium')
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean();
+    res.json({ success: true, requests: (list || []).map((item) => serializePremiumPaymentRequest(item)) });
+  } catch (error) {
+    console.error('GET /api/admin/premium-requests error:', error);
+    res.status(500).json({ error: 'Failed to load premium requests' });
+  }
+});
+
+app.post('/api/admin/premium-requests/:id/approve', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const record = await PremiumPaymentRequest.findById(req.params.id);
+    if (!record) return res.status(404).json({ error: 'Premium request not found' });
+    if (String(record.status || '') !== 'pending') return res.status(400).json({ error: 'Request already reviewed' });
+
+    const user = await User.findById(record.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const plan = getPremiumPlanDefinition(record.planScope, record.planId);
+    if (!plan) return res.status(400).json({ error: 'Plan not found' });
+
+    if (String(record.planScope) === 'university') {
+      applyInstitutionPremiumPlanToUserDoc(user, plan, record.billingCycle);
+    } else {
+      applyUserPremiumPlanToUserDoc(user, plan, record.billingCycle);
+    }
+    await user.save({ validateBeforeSave: false });
+
+    record.status = 'approved';
+    record.adminNote = cleanText(req.body?.adminNote, 400);
+    record.reviewedBy = req.userId;
+    record.reviewedAt = new Date();
+    await record.save();
+
+    await pushUserNotification(user._id, {
+      type: 'billing',
+      icon: 'fa-circle-check',
+      title: 'Premium tasdiqlandi',
+      body: `${record.planLabel} tarifi siz uchun faollashtirildi. Premium imkoniyatlar ochildi.`,
+      link: '/settings-center.html',
+      meta: { requestId: String(record._id || ''), planScope: record.planScope, planId: record.planId }
+    }).catch(() => null);
+
+    try {
+      adminEmit('admin:premium:updated', { requestId: String(record._id || ''), status: 'approved' });
+    } catch (_) {}
+
+    res.json({
+      success: true,
+      request: serializePremiumPaymentRequest(record),
+      premium: serializePremiumState(user)
+    });
+  } catch (error) {
+    console.error('POST /api/admin/premium-requests/:id/approve error:', error);
+    res.status(500).json({ error: 'Failed to approve premium request' });
+  }
+});
+
+app.post('/api/admin/premium-requests/:id/reject', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const record = await PremiumPaymentRequest.findById(req.params.id);
+    if (!record) return res.status(404).json({ error: 'Premium request not found' });
+    if (String(record.status || '') !== 'pending') return res.status(400).json({ error: 'Request already reviewed' });
+    record.status = 'rejected';
+    record.adminNote = cleanText(req.body?.adminNote, 400) || 'Rad etildi';
+    record.reviewedBy = req.userId;
+    record.reviewedAt = new Date();
+    await record.save();
+
+    await pushUserNotification(record.userId, {
+      type: 'billing',
+      icon: 'fa-circle-xmark',
+      title: 'Premium so‘rovi rad etildi',
+      body: record.adminNote || 'Screenshot yoki ma’lumotlar qayta tekshirish uchun rad etildi.',
+      link: '/payment.html'
+    }).catch(() => null);
+
+    try {
+      adminEmit('admin:premium:updated', { requestId: String(record._id || ''), status: 'rejected' });
+    } catch (_) {}
+
+    res.json({ success: true, request: serializePremiumPaymentRequest(record) });
+  } catch (error) {
+    console.error('POST /api/admin/premium-requests/:id/reject error:', error);
+    res.status(500).json({ error: 'Failed to reject premium request' });
   }
 });
 
@@ -20899,11 +21882,12 @@ function parsePaging(req){
 // Overview cards
 app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const [users, channels, groups, topupsPending, services] = await Promise.all([
+    const [users, channels, groups, topupsPending, premiumPending, services] = await Promise.all([
       User.countDocuments(),
       Channel.countDocuments(),
       Group.countDocuments(),
       TopUpRequest.countDocuments({ status: 'pending' }),
+      PremiumPaymentRequest.countDocuments({ status: 'pending' }),
       Service.countDocuments()
     ]);
 
@@ -20914,6 +21898,7 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
       groups,
       services,
       topupsPending,
+      premiumPending,
       onlineUsers: onlineUsers.size,
       activePrivateCalls: activePrivateCalls.size,
       activeGroupCalls: activeGroupCalls.size,

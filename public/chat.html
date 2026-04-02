@@ -920,9 +920,56 @@
   /* Prevent any accidental overflow */
   .container{ max-width: 100% !important; }
   img,video,canvas,svg{ max-width:100%; height:auto; }
+  .sticker-panel{
+    display:none;
+    margin-top:10px;
+    padding:12px;
+    border-radius:20px;
+    border:1px solid rgba(148,163,184,.18);
+    background:rgba(255,255,255,.78);
+    gap:10px;
+    grid-template-columns:repeat(auto-fill,minmax(86px,1fr));
+  }
+  html.dark .sticker-panel{
+    background:rgba(7,26,29,.78);
+    border-color:rgba(148,163,184,.18);
+  }
+  .sticker-panel.open{ display:grid; }
+  .sticker-chip{
+    border:1px solid rgba(148,163,184,.18);
+    border-radius:18px;
+    background:rgba(255,255,255,.88);
+    padding:10px 8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    cursor:pointer;
+    transition:transform .08s ease, filter .12s ease;
+  }
+  html.dark .sticker-chip{ background:rgba(7,26,29,.84); }
+  .sticker-chip:hover{ filter:brightness(1.03); }
+  .sticker-chip:active{ transform:translateY(1px); }
+  .sticker-chip img{ width:60px; height:60px; object-fit:contain; }
+  .sticker-chip span{ font-size:11px; font-weight:800; color:rgba(15,23,42,.72); text-align:center; }
+  html.dark .sticker-chip span{ color:rgba(226,232,240,.78); }
+  .message-sticker{
+    width:min(150px,48vw);
+    max-height:150px;
+    object-fit:contain;
+    display:block;
+    filter:drop-shadow(0 14px 20px rgba(0,0,0,.14));
+  }
+  .composer-upgrade{
+    font-size:12px;
+    color:rgba(15,23,42,.58);
+    margin-top:10px;
+  }
+  html.dark .composer-upgrade{ color:rgba(226,232,240,.58); }
 </style>
 
   <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src="/premium-ui.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 <!-- Mobile Drawer -->
@@ -1051,6 +1098,9 @@
                         <button onclick="attachVideo()" class="p-3 text-gray-600 hover:bg-gray-100 rounded-full transition" title="Send Video">
                             <i class="fas fa-video"></i>
                         </button>
+                        <button id="stickerToggleBtn" onclick="toggleStickerPanel()" class="p-3 text-gray-600 hover:bg-gray-100 rounded-full transition" title="Animated Stickers">
+                            <i class="fas fa-face-laugh-beam"></i>
+                        </button>
                     </div>
                     
                     <!-- Message Input -->
@@ -1075,6 +1125,8 @@
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
+                <div id="stickerPanel" class="sticker-panel"></div>
+                <div id="stickerUpgradeHint" class="composer-upgrade hidden">Animated stickerlar premium user uchun ochiladi. Premiumni yoqish uchun Payment Center ga o‘ting.</div>
             </div>
         </div>
         
@@ -1382,6 +1434,9 @@ const floatingRobot = (() => {
         let isLoadingMessages = false;
         let hasMoreMessages = true;
         let currentPage = 1;
+        let stickerPacks = [];
+        let stickersEnabled = false;
+        let stickerPanelOpen = false;
         
         // WebRTC variables
         let peerConnection = null;
@@ -1738,6 +1793,7 @@ const floatingRobot = (() => {
                 const data = await response.json();
                 if (data.success) {
                     currentUser = data.user;
+                    await loadStickerCatalog();
                     console.log('👤 Current user loaded:', currentUser.username);
                 } else {
                     throw new Error('Failed to load user');
@@ -1746,6 +1802,34 @@ const floatingRobot = (() => {
                 console.error('Failed to load current user:', error);
                 showNotification('Failed to load user data', 'error');
             }
+        }
+
+        function renderUserNameHtml(user, fallback) {
+            if (window.HallaymPremiumUi) {
+                return window.HallaymPremiumUi.renderNameWithBadges(user || {}, { fallback: fallback || 'Foydalanuvchi', compact: true });
+            }
+            return escapeHtml((user && (user.fullName || user.nickname || user.username)) || fallback || 'Foydalanuvchi');
+        }
+
+        async function loadStickerCatalog() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/stickers/catalog', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+                stickerPacks = Array.isArray(data.packs) ? data.packs : [];
+                stickersEnabled = !!data.enabled;
+            } catch (error) {
+                console.warn('sticker catalog load failed:', error);
+                stickerPacks = [];
+                stickersEnabled = false;
+            }
+            renderStickerPanel();
         }
         
         // Load chat user
@@ -1783,7 +1867,7 @@ const floatingRobot = (() => {
         function renderChatUserInfo(user) {
             // Update navigation
             document.getElementById('chatUserAvatar').src = user.avatar || 'https://via.placeholder.com/150';
-            document.getElementById('chatUserName').textContent = user.nickname || user.username;
+            document.getElementById('chatUserName').innerHTML = renderUserNameHtml(user, user.nickname || user.username || 'User');
             document.getElementById('chatUserUniversity').textContent = user.university || 'No university';
             
             // Update status
@@ -1791,7 +1875,7 @@ const floatingRobot = (() => {
             
             // Update sidebar
             document.getElementById('sidebarUserAvatar').src = user.avatar || 'https://via.placeholder.com/150';
-            document.getElementById('sidebarUserName').textContent = user.nickname || user.username;
+            document.getElementById('sidebarUserName').innerHTML = renderUserNameHtml(user, user.nickname || user.username || 'User');
             document.getElementById('sidebarUserUsername').textContent = `@${user.username}`;
             document.getElementById('sidebarUserUniversity').textContent = user.university || 'No university';
             document.getElementById('studyGroupText').textContent = user.studyGroup || 'Not specified';
@@ -1799,10 +1883,82 @@ const floatingRobot = (() => {
             document.getElementById('sidebarUserEmail').textContent = user.email || 'Not provided';
             
             // Update call UI
-            document.getElementById('remoteUserName').textContent = user.nickname || user.username;
+            document.getElementById('remoteUserName').innerHTML = renderUserNameHtml(user, user.fullName || user.nickname || user.username || 'User');
             document.getElementById('callerAvatar').src = user.avatar || 'https://via.placeholder.com/150';
-            document.getElementById('callerName').textContent = user.nickname || user.username;
+            document.getElementById('callerName').innerHTML = renderUserNameHtml(user, user.fullName || user.nickname || user.username || 'User');
         }
+
+        function renderStickerPanel() {
+            const panel = document.getElementById('stickerPanel');
+            const hint = document.getElementById('stickerUpgradeHint');
+            const toggleBtn = document.getElementById('stickerToggleBtn');
+            if (!panel || !hint || !toggleBtn) return;
+            if (!stickersEnabled) {
+                panel.classList.remove('open');
+                panel.innerHTML = '';
+                hint.classList.remove('hidden');
+                toggleBtn.classList.add('opacity-60');
+                return;
+            }
+            hint.classList.add('hidden');
+            toggleBtn.classList.remove('opacity-60');
+            const stickers = stickerPacks.flatMap((pack) => Array.isArray(pack.stickers) ? pack.stickers.map((sticker) => Object.assign({ packId: pack.id }, sticker)) : []);
+            panel.innerHTML = stickers.map((item) => `
+                <button class="sticker-chip" type="button" onclick="sendSticker('${encodeURIComponent(String(item.url || ''))}', '${encodeURIComponent(String(item.label || 'Sticker'))}', '${encodeURIComponent(String(item.packId || 'premium-core'))}', '${encodeURIComponent(String(item.id || 'sticker'))}')">
+                    <img src="${item.url}" alt="${escapeHtml(item.label || 'Sticker')}">
+                    <span>${escapeHtml(item.label || 'Sticker')}</span>
+                </button>
+            `).join('');
+        }
+
+        function toggleStickerPanel(forceState) {
+            if (!stickersEnabled) {
+                showNotification('Animated stickerlar premium user uchun ochiladi', 'warning');
+                return;
+            }
+            const panel = document.getElementById('stickerPanel');
+            if (!panel) return;
+            stickerPanelOpen = typeof forceState === 'boolean' ? forceState : !stickerPanelOpen;
+            panel.classList.toggle('open', stickerPanelOpen);
+        }
+        window.toggleStickerPanel = toggleStickerPanel;
+
+        async function sendSticker(stickerUrl, stickerLabel, packId, stickerId) {
+            if (!chatUserId) return;
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        receiverId: chatUserId,
+                        text: '',
+                        mediaUrl: decodeURIComponent(String(stickerUrl || '')),
+                        mediaType: 'sticker',
+                        mediaMetadata: {
+                            label: decodeURIComponent(String(stickerLabel || 'Sticker')),
+                            packId: decodeURIComponent(String(packId || 'premium-core')),
+                            stickerId: decodeURIComponent(String(stickerId || 'sticker'))
+                        }
+                    })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    if (response.status === 403 && data && data.redirect) {
+                        setTimeout(() => { window.location.href = data.redirect; }, 800);
+                    }
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+                addMessageToUI(data.message);
+                toggleStickerPanel(false);
+            } catch (error) {
+                showNotification(error.message || 'Sticker yuborilmadi', 'error');
+            }
+        }
+        window.sendSticker = sendSticker;
         
         // Update user status
         function updateUserStatus(isOnline) {
@@ -2300,7 +2456,9 @@ const floatingRobot = (() => {
             let content = '';
             
             // Check media type
-            if (message.mediaType === 'voice') {
+            if (message.mediaType === 'sticker') {
+                content = createStickerMessageContent(message);
+            } else if (message.mediaType === 'voice') {
                 content = createVoiceMessageContent(message);
             } else if (message.mediaType === 'image') {
                 content = createImageMessageContent(message);
@@ -2332,7 +2490,7 @@ const floatingRobot = (() => {
                 <div class="message-bubble ${isSent ? 'sent' : 'received'} cursor-pointer" onclick="openPrivateMessageActions('${String(message._id)}', event)">
                     ${!isSent ? `
                         <div class="flex items-center mb-1">
-                            <span class="font-medium text-sm">${chatUser.nickname}</span>
+                            <span class="font-medium text-sm">${renderUserNameHtml(message.senderId || chatUser, chatUser.nickname || chatUser.username || 'User')}</span>
                         </div>
                     ` : ''}
                     
@@ -2354,6 +2512,17 @@ const floatingRobot = (() => {
             return div;
         }
         
+        // Create voice message content
+        function createStickerMessageContent(message) {
+            const label = message.mediaMetadata?.label || 'Sticker';
+            return `
+                <div class="mb-1">
+                    <img src="${message.mediaUrl}" alt="${label}" class="message-sticker">
+                    ${message.text ? `<p class="mt-2">${message.text}</p>` : ''}
+                </div>
+            `;
+        }
+
         // Create voice message content
         function createVoiceMessageContent(message) {
             const duration = message.mediaMetadata?.duration || '0:00';
@@ -3034,7 +3203,7 @@ async function createPeerConnection() {
                 
                 // For audio calls, we might want to show something else
                 if (currentCallType === 'audio') {
-                    document.getElementById('remoteUserName').textContent = `${chatUser.nickname} (Audio Call)`;
+                    document.getElementById('remoteUserName').innerHTML = `${renderUserNameHtml(chatUser, chatUser.fullName || chatUser.nickname || chatUser.username || 'User')} <span class="opacity-80">(Audio Call)</span>`;
                 }
                 refreshCallFeedbackGuard();
             };
@@ -3118,7 +3287,7 @@ async function createPeerConnection() {
             
             // Update caller info if available
             if (data.callerInfo) {
-                document.getElementById('callerName').textContent = data.callerInfo.nickname || 'Unknown';
+                document.getElementById('callerName').innerHTML = renderUserNameHtml(data.callerInfo || {}, data.callerInfo && (data.callerInfo.fullName || data.callerInfo.nickname || data.callerInfo.username) || 'Unknown');
                 if (data.callerInfo.avatar) {
                     document.getElementById('callerAvatar').src = data.callerInfo.avatar;
                 }

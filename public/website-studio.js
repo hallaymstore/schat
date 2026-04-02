@@ -169,9 +169,13 @@
     const response = await fetch(path, Object.assign({}, options || {}, { headers }));
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         localStorage.removeItem(TOKEN_KEY);
         window.location.href = `/login.html?next=${encodeURIComponent(DEFAULT_NEXT)}`;
+      }
+      if (response.status === 403 && data && data.redirect) {
+        window.location.href = data.redirect;
+        throw new Error(data.error || 'Premium ruxsat talab qilinadi.');
       }
       throw new Error(data.error || `HTTP ${response.status}`);
     }

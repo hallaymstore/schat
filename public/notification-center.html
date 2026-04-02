@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Notification Center — HALLAYM edu</title>
+  <meta name="description" content="In-app bildirishnomalar, premium, kurs, chat va tizim xabarlarini boshqarish markazi."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <link rel="stylesheet" href="/account-centers.css"/>
+  <link rel="stylesheet" href="/ui-glass-theme.css"/>
+  <script>
+    (function(){
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode = saved || (prefersDark ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', mode === 'dark');
+    })();
+  </script>
+</head>
+<body>
+  <div class="account-shell">
+    <header class="account-topbar">
+      <div class="account-topbar-inner">
+        <div class="brand-block">
+          <div class="brand-mark"><i class="fa-solid fa-bell"></i></div>
+          <div>
+            <div class="brand-title">Notification Center</div>
+            <div class="brand-sub">Muhim xabarlar, premium, billing va kurs yangiliklari</div>
+          </div>
+        </div>
+        <nav class="nav-pills">
+          <a class="nav-pill" href="/settings-center.html"><i class="fa-solid fa-sliders"></i> Settings</a>
+          <a class="nav-pill active" href="/notification-center.html"><i class="fa-solid fa-bell"></i> Notifications</a>
+          <a class="nav-pill" href="/payment.html"><i class="fa-solid fa-credit-card"></i> Premium</a>
+          <a class="nav-pill" id="dashboardLink" href="/student-dashboard.html"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
+          <button class="ghost-btn" id="themeToggleBtn" type="button"><i class="fa-solid fa-moon"></i> Tema</button>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero-grid">
+      <article class="glass-card">
+        <div class="hero-kicker"><i class="fa-solid fa-wave-square"></i> Real-time inbox</div>
+        <h1 class="hero-title">Hech nima ko‘zdan qochmasin, barcha notificationlarni bir joyda boshqaring.</h1>
+        <p class="hero-text">Admin xabarnomalari, premium to‘lov holati, kurs yangiliklari va support javoblari shu markazga tushadi. Unread bo‘lganlari aniq ajratiladi.</p>
+        <div class="hero-actions">
+          <button class="primary-btn" id="markAllBtn" type="button"><i class="fa-solid fa-envelope-open"></i> Hammasini o‘qildi qilish</button>
+          <a class="ghost-btn" href="/settings-center.html"><i class="fa-solid fa-gear"></i> Notification sozlamalari</a>
+        </div>
+        <div class="hero-stats" id="statsGrid"></div>
+      </article>
+
+      <aside class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Filtrlar</h2>
+            <p class="section-sub">Faqat kerakli oqimni ko‘rib, qolganini keyinroq ochishingiz mumkin.</p>
+          </div>
+        </div>
+        <div class="billing-switch" id="filterSwitch">
+          <button class="active" type="button" data-filter="all">Barchasi</button>
+          <button type="button" data-filter="unread">Unread</button>
+          <button type="button" data-filter="billing">Billing</button>
+          <button type="button" data-filter="general">General</button>
+        </div>
+        <div class="mini-card" style="margin-top:14px" id="summaryCard"></div>
+      </aside>
+    </section>
+
+    <section class="section-grid" style="grid-template-columns:1fr; margin-top:18px">
+      <article class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Inbox</h2>
+            <p class="section-sub">Notification ustiga bossangiz o‘qildi bo‘ladi va link bo‘lsa tegishli sahifaga o‘tadi.</p>
+          </div>
+          <button class="ghost-btn" id="refreshBtn" type="button"><i class="fa-solid fa-rotate"></i> Yangilash</button>
+        </div>
+        <div class="list-stack" id="notificationsList"></div>
+      </article>
+    </section>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="/notification-center.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Premium Payment Center — HALLAYM edu</title>
+  <meta name="description" content="Premium user va universitet tariflari, screenshot bilan to‘lov so‘rovi va admin approval oqimi."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <link rel="stylesheet" href="/account-centers.css"/>
+  <link rel="stylesheet" href="/ui-glass-theme.css"/>
+  <script>
+    (function(){
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode = saved || (prefersDark ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', mode === 'dark');
+    })();
+  </script>
+</head>
+<body>
+  <div class="account-shell">
+    <header class="account-topbar">
+      <div class="account-topbar-inner">
+        <div class="brand-block">
+          <div class="brand-mark"><i class="fa-solid fa-crown"></i></div>
+          <div>
+            <div class="brand-title">Premium Payment Center</div>
+            <div class="brand-sub">User premium, campus planlar va admin tasdiqlaydigan to‘lov oqimi</div>
+          </div>
+        </div>
+        <nav class="nav-pills">
+          <a class="nav-pill" href="/settings-center.html"><i class="fa-solid fa-sliders"></i> Settings</a>
+          <a class="nav-pill" href="/notification-center.html"><i class="fa-solid fa-bell"></i> Notifications</a>
+          <a class="nav-pill active" href="/payment.html"><i class="fa-solid fa-credit-card"></i> Premium</a>
+          <a class="nav-pill" id="dashboardLink" href="/student-dashboard.html"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
+          <button class="ghost-btn" id="themeToggleBtn" type="button"><i class="fa-solid fa-moon"></i> Tema</button>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero-grid">
+      <article class="glass-card">
+        <div class="hero-kicker"><i class="fa-solid fa-wallet"></i> Screenshot based approval</div>
+        <h1 class="hero-title">Premiumni faollashtiring: kartaga to‘lang, screenshot yuboring, admin tasdiqlagach funksiyalar ochiladi.</h1>
+        <p class="hero-text">Hozircha avtomatik gateway emas: to‘lovdan keyin screenshot yuklanadi, admin tekshiradi va tasdiqlagach premium, AI credits, verified badge va animated stickerlar avtomatik faollashadi.</p>
+        <div class="hero-actions">
+          <div class="billing-switch" id="billingSwitch">
+            <button class="active" type="button" data-cycle="monthly">Oylik</button>
+            <button type="button" data-cycle="yearly">Yillik</button>
+          </div>
+          <button class="ghost-btn" id="focusUserBtn" type="button"><i class="fa-solid fa-user"></i> User tariff</button>
+          <button class="ghost-btn" id="focusCampusBtn" type="button"><i class="fa-solid fa-building-columns"></i> Campus tariff</button>
+        </div>
+        <div class="hero-stats" id="premiumStats"></div>
+      </article>
+
+      <aside class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Admin karta</h2>
+            <p class="section-sub">To‘lovni shu rekvizitga yuboring, keyin screenshotni form bilan jo‘nating.</p>
+          </div>
+        </div>
+        <div class="payment-card" id="paymentCard"></div>
+        <div class="mini-card" style="margin-top:14px" id="currentPremiumCard"></div>
+      </aside>
+    </section>
+
+    <section class="section-grid">
+      <article class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">User premium</h2>
+            <p class="section-sub">AI credits, website generator, slide generator, verified badge va animated stickers ochiladi.</p>
+          </div>
+        </div>
+        <div class="plan-grid" id="userPlans"></div>
+      </article>
+
+      <aside class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Campus plan</h2>
+            <p class="section-sub">Universitetlar uchun 250 / 500 / 1000 foydalanuvchigacha qamrov.</p>
+          </div>
+        </div>
+        <div class="plan-grid" id="campusPlans"></div>
+      </aside>
+    </section>
+
+    <section class="section-grid" style="margin-top:18px">
+      <article class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">To‘lov so‘rovi yuborish</h2>
+            <p class="section-sub">Tarifni tanlang, screenshot yuklang va admin tasdiqlashini kuting.</p>
+          </div>
+        </div>
+        <form id="paymentForm" class="form-grid" enctype="multipart/form-data">
+          <label class="field-wrap">
+            <span class="field-label">Plan turi</span>
+            <input class="field-input" id="selectedScopeInput" type="text" readonly/>
+          </label>
+          <label class="field-wrap">
+            <span class="field-label">Tarif</span>
+            <input class="field-input" id="selectedPlanInput" type="text" readonly/>
+          </label>
+          <label class="field-wrap">
+            <span class="field-label">Billing</span>
+            <input class="field-input" id="selectedCycleInput" type="text" readonly/>
+          </label>
+          <label class="field-wrap">
+            <span class="field-label">Narx</span>
+            <input class="field-input" id="selectedPriceInput" type="text" readonly/>
+          </label>
+          <label class="field-wrap full-span">
+            <span class="field-label">Izoh</span>
+            <textarea class="field-textarea" id="paymentNoteInput" placeholder="Masalan: user premium yoki campus start uchun yuborildi"></textarea>
+          </label>
+          <label class="field-wrap full-span">
+            <span class="field-label">Screenshot</span>
+            <input class="field-input" id="paymentScreenshotInput" type="file" accept="image/*" required/>
+          </label>
+          <div class="full-span">
+            <button class="primary-btn" id="submitPaymentBtn" type="submit"><i class="fa-solid fa-paper-plane"></i> So‘rov yuborish</button>
+          </div>
+        </form>
+      </article>
+
+      <aside class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">So‘rovlar tarixi</h2>
+            <p class="section-sub">Pending, approved yoki rejected holati shu yerda ko‘rinadi.</p>
+          </div>
+        </div>
+        <div class="list-stack" id="paymentHistory"></div>
+      </aside>
+    </section>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="/payment.js" defer></script>
+</body>
+</html>

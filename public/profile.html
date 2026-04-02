@@ -1311,6 +1311,98 @@
     }
   }
 
+  function renderProfileBadgesHtml(user){
+    const baseName = String(user?.fullName || user?.nickname || user?.username || 'Foydalanuvchi').trim() || 'Foydalanuvchi';
+    if (window.HallaymPremiumUi) {
+      return window.HallaymPremiumUi.renderNameWithBadges(user || {}, { fallback: baseName });
+    }
+    const badgeParts = [];
+    if (user?.verified || user?.premium?.features?.verifiedBadge) {
+      badgeParts.push('<span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-2 py-1 text-[11px] font-extrabold align-middle ml-2"><i class="fa-solid fa-badge-check"></i>Tasdiqlangan</span>');
+    }
+    if (user?.premium?.userPlan?.status === 'active' && user?.premium?.userPlan?.label) {
+      badgeParts.push(`<span class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 px-2 py-1 text-[11px] font-extrabold align-middle ml-2"><i class="fa-solid fa-crown"></i>${escapeHtml(String(user.premium.userPlan.label))}</span>`);
+    }
+    return `${escapeHtml(baseName)}${badgeParts.join('')}`;
+  }
+
+  function ensureProfilePremiumMeta(user){
+    let host = document.getElementById('premiumMeta');
+    if(!host){
+      const bio = document.getElementById('bio');
+      if(bio){
+        host = document.createElement('div');
+        host.id = 'premiumMeta';
+        host.className = 'mt-3 flex flex-wrap gap-2';
+        bio.insertAdjacentElement('afterend', host);
+      }
+    }
+    if(!host) return;
+
+    const premium = user?.premium || {};
+    const userPlan = premium.userPlan || {};
+    const institutionPlan = premium.institutionPlan || {};
+    const chips = [];
+
+    if (user?.verified || premium?.features?.verifiedBadge) {
+      chips.push('<span class="chip rounded-2xl px-3 py-1 text-xs font-extrabold"><i class="fa-solid fa-badge-check mr-2"></i>Tasdiqlangan profil</span>');
+    }
+    if (userPlan.status === 'active' && userPlan.label) {
+      chips.push(`<span class="chip rounded-2xl px-3 py-1 text-xs font-extrabold"><i class="fa-solid fa-crown mr-2"></i>${escapeHtml(userPlan.label)}</span>`);
+    }
+    if (institutionPlan.status === 'active' && institutionPlan.label) {
+      chips.push(`<span class="chip rounded-2xl px-3 py-1 text-xs font-extrabold"><i class="fa-solid fa-building-columns mr-2"></i>${escapeHtml(institutionPlan.label)}</span>`);
+    }
+    if (typeof userPlan.aiCreditsRemaining !== 'undefined' && userPlan.status === 'active') {
+      chips.push(`<span class="chip rounded-2xl px-3 py-1 text-xs font-extrabold"><i class="fa-solid fa-sparkles mr-2"></i>AI credit: ${Number(userPlan.aiCreditsRemaining || 0)}</span>`);
+    }
+    if (!chips.length) {
+      chips.push('<span class="chip rounded-2xl px-3 py-1 text-xs font-extrabold">Standart profil</span>');
+    }
+    host.innerHTML = chips.join('');
+  }
+
+  function ensureOwnerCenterLinks(){
+    const ownerTools = document.getElementById('ownerTools');
+    if(!ownerTools || ownerTools.dataset.premiumLinksReady === '1') return;
+    ownerTools.dataset.premiumLinksReady = '1';
+    ownerTools.insertAdjacentHTML('beforeend', `
+      <a href="/payment.html" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-primary glow-ring text-white">
+        <i class="fa-solid fa-crown mr-2"></i>Premium obuna
+      </a>
+      <a href="/settings-center.html" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
+        <i class="fa-solid fa-sliders mr-2"></i>Settings Center
+      </a>
+      <a href="/notification-center.html" class="glass rounded-2xl px-4 py-2 text-sm font-extrabold btn-ghost glow-ring">
+        <i class="fa-solid fa-bell mr-2"></i>Notification Center
+      </a>
+    `);
+  }
+
+  function setProfileUI(u){
+    document.getElementById('avatar').src = u.avatar || 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png';
+    document.getElementById('cover').style.background = u.coverBanner
+      ? `url('${u.coverBanner}') center/cover no-repeat`
+      : 'linear-gradient(90deg, rgba(245,158,11,.22), rgba(20,184,166,.20), rgba(34,211,238,.16))';
+
+    document.getElementById('name').innerHTML = renderProfileBadgesHtml(u);
+    document.getElementById('uname').textContent = '@' + (u.username || '');
+    document.getElementById('uni').textContent = u.university || 'Universitet';
+    document.getElementById('bio').textContent = u.bio || 'Bio yozilmagan.';
+    document.getElementById('status').textContent = u.status || (u.isOnline ? 'online' : 'offline');
+    ensureProfilePremiumMeta(u);
+    ensureOwnerCenterLinks();
+
+    document.getElementById('coins').textContent = isOwner ? (me?.coins || 0) : 'вЂ”';
+    document.getElementById('ownerTools').classList.toggle('hidden', !isOwner);
+    document.getElementById('publicTools').classList.toggle('hidden', isOwner);
+
+    if(!isOwner){
+      const dm = document.getElementById('dmBtn');
+      dm.href = '/chat.html?u=' + encodeURIComponent(u.username || '');
+    }
+  }
+
   function robotSVG({ body='#6366f1', outfit='#ec4899', typeId='starter' }){
     // Layers toggled by CSS classes on wrapper
     return `
@@ -2247,6 +2339,7 @@
     </div>
   </div>
 
+  <script src="/premium-ui.js" defer></script>
   <script src="/ui-actions-menu.js" defer></script>
   <script src="/global-assistant.js" defer></script>
   <script src="/ui-premium-icons.js" defer></script>
