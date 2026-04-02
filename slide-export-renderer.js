@@ -85,6 +85,28 @@ function composeSourceSummary(deck, slide) {
   return hosts.length ? `${copy.sourceLabel}: ${hosts.join(' | ')}` : `${copy.sourceLabel}: HALLAYM AI`;
 }
 
+function composeCoverMetaSummary(deck, slide) {
+  const lang = normalizeLanguage(deck && deck.language);
+  const labels = lang === 'en'
+    ? { topic: 'Topic', prepared: 'Prepared by', sources: 'Source count' }
+    : (lang === 'ru'
+        ? { topic: 'РўРµРјР°', prepared: 'РџРѕРґРіРѕС‚РѕРІРёР»', sources: 'РСЃС‚РѕС‡РЅРёРєРѕРІ' }
+        : { topic: 'Mavzu', prepared: 'Tayyorladi', sources: 'Manbalar soni' });
+  const links = Array.from(new Set(
+    []
+      .concat(Array.isArray(slide && slide.sourceLinks) ? slide.sourceLinks : [])
+      .concat(Array.isArray(deck && deck.sourceLinks) ? deck.sourceLinks : [])
+      .filter(Boolean)
+  ));
+  const parts = [];
+  const topic = cleanText(slide && slide.title || deck && deck.title, 120);
+  const prepared = cleanText(deck && deck.watermark, 180) || 'HALLAYM AI';
+  if (topic) parts.push(`${labels.topic}: ${topic}`);
+  if (prepared) parts.push(`${labels.prepared}: ${prepared}`);
+  parts.push(`${labels.sources}: ${links.length || 'HALLAYM AI'}`);
+  return cleanText(parts.join(' • '), 320);
+}
+
 function svgEscape(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -353,7 +375,7 @@ function buildSlideSvgMarkup(deck, slide, index, totalSlides) {
     add(renderChipGrid(blocks.bullets, { x: innerX, y: cursorY, w: 720, colors }));
     if (slide && slide.callout) add(renderCallout({ x: innerX, y: 650, w: 720, h: 122, colors, body: slide.callout }));
     add(renderMediaCard({ dataUri: imageDataUri, x: 980, y: 154, w: 520, h: 430, colors, title: slide && slide.imageCaption || slide && slide.title || cleanText(deck && deck.themeLabel, 80), caption: deck && deck.summary || slide && slide.subtitle || '', id: `cover-${index}` }));
-    add(renderBulletCard([], { x: 980, y: 612, w: 520, h: 156, colors, title: deck && deck.themeLabel || 'HALLAYM AI', body: deck && deck.summary || composeSourceSummary(deck, slide) }));
+    add(renderBulletCard([], { x: 980, y: 612, w: 520, h: 156, colors, title: deck && deck.themeLabel || 'HALLAYM AI', body: composeCoverMetaSummary(deck, slide) || deck && deck.summary || composeSourceSummary(deck, slide) }));
   } else if (layout === 'agenda') {
     add(renderAgendaGrid(blocks.bullets, { x: innerX, y: cursorY + 12, w: imageDataUri ? 880 : 1420, colors }));
     if (imageDataUri) add(renderMediaCard({ dataUri: imageDataUri, x: 1060, y: cursorY + 8, w: 430, h: 320, colors, title: slide && slide.imageCaption || slide && slide.title || cleanText(deck && deck.title, 80), caption: slide && slide.callout || deck && deck.summary || '', id: `agenda-${index}` }));

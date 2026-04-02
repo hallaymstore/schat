@@ -3794,15 +3794,21 @@ function buildResearchQueries(prompt) {
   if (base) {
     if (biographyLike) {
       values.push(`${base} history`);
+      values.push(`${base} early life`);
       values.push(`${base} legacy`);
       values.push(`${base} campaigns`);
+      values.push(`${base} achievements`);
+      values.push(`${base} impact`);
     } else {
       values.push(`${base} overview`);
       values.push(`${base} examples`);
       values.push(`${base} impact`);
+      values.push(`${base} case study`);
+      values.push(`${base} facts`);
+      values.push(`${base} detailed guide`);
     }
   }
-  return Array.from(new Set(values.map((item) => cleanText(item, 140)).filter(Boolean))).slice(0, 4);
+  return Array.from(new Set(values.map((item) => cleanText(item, 140)).filter(Boolean))).slice(0, 6);
 }
 
 async function fetchJsonWithTimeout(url, { timeoutMs = 9000, headers = {} } = {}) {
@@ -4031,6 +4037,32 @@ function extractHeadingSectionsFromHtml(html, baseUrl) {
   return out;
 }
 
+function extractImageCandidatesFromHtml(html, baseUrl, sourceTitle = '') {
+  const out = [];
+  const seen = new Set();
+  const regex = /<img\b[^>]*>/gi;
+  let match;
+  while ((match = regex.exec(String(html || '')))) {
+    const tag = String(match[0] || '');
+    const srcMatch = tag.match(/\b(?:src|data-src|data-lazy-src|data-original)=["']([^"']+)["']/i);
+    const altMatch = tag.match(/\balt=["']([^"']*)["']/i);
+    const src = resolveRelativeUrl(baseUrl, decodeHtmlEntities(srcMatch?.[1] || ''));
+    const alt = cleanText(decodeHtmlEntities(altMatch?.[1] || ''), 180);
+    if (!src || seen.has(src.toLowerCase())) continue;
+    if (/sprite|logo|icon|avatar|emoji|badge|favicon|spacer|pixel/i.test(`${src} ${alt}`)) continue;
+    if (/\.(svg|gif)(\?|$)/i.test(src)) continue;
+    seen.add(src.toLowerCase());
+    out.push({
+      url: cleanText(src, 500),
+      caption: alt || cleanText(sourceTitle, 160) || 'Visual',
+      sourceLink: cleanText(baseUrl, 500),
+      sourceTitle: cleanText(sourceTitle, 160)
+    });
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
 function decodeSearchResultUrl(rawHref) {
   const href = decodeHtmlEntities(String(rawHref || '').trim());
   if (!href) return '';
@@ -4069,7 +4101,7 @@ async function searchDuckDuckGoResults(query) {
       if (!url || seen.has(url) || isBlockedResearchUrl(url)) continue;
       seen.add(url);
       out.push(url);
-      if (out.length >= 6) return out;
+      if (out.length >= 8) return out;
     }
   }
   return out;
@@ -4081,8 +4113,8 @@ async function scrapeWebResearchEntry(url) {
     const html = await fetchTextWithTimeout(url, { timeoutMs: 9500 });
     const title = extractHtmlTitle(html);
     const description = extractHtmlMeta(html, 'description') || extractHtmlMeta(html, 'og:description');
-    const paragraphs = extractReadableParagraphs(html, { maxParagraphs: 4, maxChars: 1500 });
-    const summary = truncateBySentence([description, paragraphs.join(' ')].filter(Boolean).join(' '), 1000);
+    const paragraphs = extractReadableParagraphs(html, { maxParagraphs: 6, maxChars: 2200 });
+    const summary = truncateBySentence([description, paragraphs.join(' ')].filter(Boolean).join(' '), 1300);
     if (!title || !summary) return null;
     const imageUrl = resolveRelativeUrl(url, extractHtmlMeta(html, 'og:image') || extractHtmlMeta(html, 'twitter:image'));
     const lang = extractHtmlLang(html);
@@ -4093,7 +4125,8 @@ async function scrapeWebResearchEntry(url) {
       summary,
       heroImageUrl: cleanText(imageUrl, 500),
       sourceLink: cleanText(url, 500),
-      sections: extractHeadingSectionsFromHtml(html, url)
+      sections: extractHeadingSectionsFromHtml(html, url),
+      images: extractImageCandidatesFromHtml(html, url, title)
     };
   } catch (_) {
     return null;
@@ -4197,21 +4230,99 @@ function buildResearchImagePool(entries) {
   const out = [];
   const seen = new Set();
   (entries || []).forEach((entry) => {
-    const imageUrl = cleanText(entry?.heroImageUrl, 500);
     const sourceLink = cleanText(entry?.sourceLink, 500);
     const caption = cleanText(entry?.title || entry?.query || '', 160);
-    if (!imageUrl || !/^https?:\/\//i.test(imageUrl)) return;
-    const key = imageUrl.toLowerCase();
+    const directImages = []
+      .concat(entry?.heroImageUrl ? [{
+        url: cleanText(entry.heroImageUrl, 500),
+        caption,
+        sourceLink,
+        sourceTitle: caption
+      }] : [])
+      .concat(Array.isArray(entry?.images) ? entry.images : []);
+
+    directImages.forEach((image) => {
+      const imageUrl = cleanText(image?.url, 500);
+      if (!imageUrl || !/^https?:\/\//i.test(imageUrl)) return;
+      const key = imageUrl.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({
+        url: imageUrl,
+        caption: cleanText(image?.caption || caption, 160),
+        sourceLink: cleanText(image?.sourceLink || sourceLink, 500),
+        sourceTitle: cleanText(image?.sourceTitle || caption, 160)
+      });
+    });
+  });
+  return out.slice(0, 18);
+}
+
+function splitResearchSentences(text, { maxItems = 5, minLen = 48, maxLen = 240 } = {}) {
+  const sentences = String(text || '')
+    .split(/(?<=[.!?])\s+/)
+    .map((item) => cleanText(item, maxLen))
+    .filter((item) => item && item.length >= minLen);
+  return Array.from(new Set(sentences)).slice(0, maxItems);
+}
+
+function buildResearchSnippetPool(research) {
+  const out = [];
+  const seen = new Set();
+  const push = ({ text = '', heading = '', sourceLink = '', sourceTitle = '', priority = 0, type = 'section' } = {}) => {
+    const clean = cleanText(text, 260);
+    if (!clean) return;
+    const key = clean.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
     out.push({
-      url: imageUrl,
-      caption,
-      sourceLink,
-      sourceTitle: caption
+      key,
+      text: clean,
+      heading: cleanText(heading, 120),
+      sourceLink: cleanText(sourceLink, 500),
+      sourceTitle: cleanText(sourceTitle, 160),
+      priority: Number(priority || 0),
+      type
+    });
+  };
+
+  splitResearchSentences(research?.summary, { maxItems: 6, minLen: 60 }).forEach((sentence, index) => {
+    push({
+      text: sentence,
+      heading: research?.query || 'Overview',
+      sourceLink: Array.isArray(research?.sourceLinks) ? research.sourceLinks[0] : '',
+      sourceTitle: research?.query || '',
+      priority: 10 - index,
+      type: 'summary'
     });
   });
-  return out.slice(0, 12);
+
+  (research?.entries || []).forEach((entry, entryIndex) => {
+    splitResearchSentences(entry?.summary, { maxItems: 3, minLen: 55 }).forEach((sentence, sentenceIndex) => {
+      push({
+        text: sentence,
+        heading: entry?.title || research?.query || '',
+        sourceLink: entry?.sourceLink || '',
+        sourceTitle: entry?.title || '',
+        priority: 8 - entryIndex - sentenceIndex,
+        type: 'entry'
+      });
+    });
+  });
+
+  (research?.sections || []).forEach((section, sectionIndex) => {
+    splitResearchSentences(section?.text, { maxItems: 3, minLen: 55 }).forEach((sentence, sentenceIndex) => {
+      push({
+        text: sentence,
+        heading: section?.heading || '',
+        sourceLink: section?.sourceLink || '',
+        sourceTitle: section?.sourceTitle || '',
+        priority: 12 - sectionIndex - sentenceIndex,
+        type: 'section'
+      });
+    });
+  });
+  return out.sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0)).slice(0, 80);
 }
 
 async function translateResearchToLanguage(research, targetLang) {
@@ -4233,12 +4344,12 @@ async function translateResearchToLanguage(research, targetLang) {
     sourceLink: cleanText(entry?.sourceLink, 500)
   })));
   out.imagePool = Array.isArray(research.imagePool)
-    ? research.imagePool.map((item) => ({
+    ? await Promise.all(research.imagePool.map(async (item) => ({
         url: cleanText(item?.url, 500),
-        caption: cleanText(item?.caption, 160),
+        caption: await translateSlideText(item?.caption || '', language, 'auto'),
         sourceLink: cleanText(item?.sourceLink, 500),
-        sourceTitle: cleanText(item?.sourceTitle, 160)
-      })).filter((item) => item.url)
+        sourceTitle: await translateSlideText(item?.sourceTitle || '', language, 'auto')
+      }))).then((rows) => rows.filter((item) => item.url))
     : [];
   out.sourceLinks = Array.isArray(research.sourceLinks)
     ? research.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 10)
@@ -4251,11 +4362,11 @@ function buildResearchDigest(research) {
   if (!research) return '';
   const lines = [];
   if (research.summary) lines.push(`Summary: ${research.summary}`);
-  (research.entries || []).slice(0, 4).forEach((entry, idx) => {
+  (research.entries || []).slice(0, 6).forEach((entry, idx) => {
     if (!entry?.summary) return;
-    lines.push(`Source ${idx + 1} (${entry.lang || 'web'}): ${entry.summary}`);
+    lines.push(`Source ${idx + 1} (${entry.lang || 'web'}) ${entry.title || ''}: ${entry.summary}`);
   });
-  (research.sections || []).slice(0, 4).forEach((item, idx) => {
+  (research.sections || []).slice(0, 6).forEach((item, idx) => {
     const heading = cleanText(item?.heading, 120) || `Section ${idx + 1}`;
     const text = truncateBySentence(item?.text, 520);
     if (!text) return;
@@ -4328,21 +4439,21 @@ async function researchSlideTopic(prompt, language) {
       const duplicate = wikiResults.some((item) => item.title === hit.title && item.lang === hit.lang);
       if (!duplicate) wikiResults.push(hit);
     });
-    if (wikiResults.length >= 6) break;
+    if (wikiResults.length >= 8) break;
   }
 
   const webResultUrls = [];
-  const searchGroups = await Promise.all(queries.slice(0, 3).map((query) => searchDuckDuckGoResults(query).catch(() => [])));
+  const searchGroups = await Promise.all(queries.slice(0, 5).map((query) => searchDuckDuckGoResults(query).catch(() => [])));
   searchGroups.flat().forEach((url) => {
     if (!url || webResultUrls.includes(url)) return;
     webResultUrls.push(url);
   });
-  const webResults = (await Promise.all(webResultUrls.slice(0, 5).map((url) => scrapeWebResearchEntry(url))))
+  const webResults = (await Promise.all(webResultUrls.slice(0, 8).map((url) => scrapeWebResearchEntry(url))))
     .filter((item) => item && item.summary);
 
   const allResults = []
-    .concat(wikiResults.slice(0, 6))
-    .concat(webResults.slice(0, 4));
+    .concat(wikiResults.slice(0, 8))
+    .concat(webResults.slice(0, 6));
   if (!allResults.length) return null;
 
   const primary = allResults[0];
@@ -4365,15 +4476,17 @@ async function researchSlideTopic(prompt, language) {
 
   const research = {
     query: cleanText(primary.query || primary.title || prompt, 140),
-    summary: truncateBySentence(summaries.join(' '), 1800),
+    summary: truncateBySentence(summaries.join(' '), 2200),
     heroImageUrl: allResults.find((item) => item.heroImageUrl)?.heroImageUrl || '',
-    sourceLinks: Array.from(new Set(allResults.map((item) => item.sourceLink).filter(Boolean))).slice(0, 10),
-    sections: mergedSections.slice(0, 10).filter((item) => item.heading && item.text),
-    entries: allResults.slice(0, 8).map((item) => ({
+    sourceLinks: Array.from(new Set(allResults.map((item) => item.sourceLink).filter(Boolean))).slice(0, 14),
+    sections: mergedSections.slice(0, 14).filter((item) => item.heading && item.text),
+    entries: allResults.slice(0, 12).map((item) => ({
       lang: item.lang,
       title: item.title,
-      summary: truncateBySentence(item.summary, 720),
-      sourceLink: item.sourceLink
+      summary: truncateBySentence(item.summary, 920),
+      sourceLink: item.sourceLink,
+      sourceTitle: cleanText(item.title, 160),
+      heroImageUrl: cleanText(item.heroImageUrl, 500)
     })),
     imagePool: buildResearchImagePool(allResults)
   };
@@ -4464,35 +4577,35 @@ function fitSlideToAspect(slide, language) {
   safe.imageCaption = shortenByWords(safe.imageCaption, { maxWords: 12, maxChars: 110 });
 
   if (layout === 'cover') {
-    safe.body = shortenByWords(safe.body, { maxWords: 34, maxChars: 260 });
-    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 74 }).map((item) => shortenByWords(item, { maxWords: 10, maxChars: 74 }));
+    safe.body = shortenByWords(safe.body, { maxWords: 40, maxChars: 320 });
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 86 }).map((item) => shortenByWords(item, { maxWords: 12, maxChars: 86 }));
   } else if (layout === 'agenda') {
     safe.body = '';
     safe.bullets = normalizeStringList(safe.bullets, { maxItems: 6, maxLen: 62 }).map((item) => shortenByWords(item, { maxWords: 8, maxChars: 62 }));
   } else if (layout === 'split') {
-    safe.body = shortenByWords(safe.body, { maxWords: 24, maxChars: 180 }) || copy.bodyLeftHint;
-    safe.leftBullets = normalizeStringList(safe.leftBullets, { maxItems: 4, maxLen: 78 }).map((item) => shortenByWords(item, { maxWords: 11, maxChars: 78 }));
-    safe.rightBullets = normalizeStringList(safe.rightBullets, { maxItems: 4, maxLen: 78 }).map((item) => shortenByWords(item, { maxWords: 11, maxChars: 78 }));
-    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 78 }).map((item) => shortenByWords(item, { maxWords: 11, maxChars: 78 }));
+    safe.body = shortenByWords(safe.body, { maxWords: 30, maxChars: 220 }) || copy.bodyLeftHint;
+    safe.leftBullets = normalizeStringList(safe.leftBullets, { maxItems: 4, maxLen: 86 }).map((item) => shortenByWords(item, { maxWords: 12, maxChars: 86 }));
+    safe.rightBullets = normalizeStringList(safe.rightBullets, { maxItems: 4, maxLen: 86 }).map((item) => shortenByWords(item, { maxWords: 12, maxChars: 86 }));
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 86 }).map((item) => shortenByWords(item, { maxWords: 12, maxChars: 86 }));
     safe.leftTitle = shortenByWords(safe.leftTitle || copy.splitLeftTitle, { maxWords: 6, maxChars: 54 });
     safe.rightTitle = shortenByWords(safe.rightTitle || copy.splitRightTitle, { maxWords: 6, maxChars: 54 });
   } else if (layout === 'timeline') {
-    safe.body = shortenByWords(safe.body, { maxWords: 18, maxChars: 140 });
+    safe.body = shortenByWords(safe.body, { maxWords: 24, maxChars: 180 });
     safe.timeline = trimTimelineRows(safe.timeline, 4);
-    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 84 }).map((item) => shortenByWords(item, { maxWords: 12, maxChars: 84 }));
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 92 }).map((item) => shortenByWords(item, { maxWords: 13, maxChars: 92 }));
   } else if (layout === 'metrics') {
-    safe.body = shortenByWords(safe.body, { maxWords: 18, maxChars: 140 });
+    safe.body = shortenByWords(safe.body, { maxWords: 24, maxChars: 180 });
     safe.stats = trimStatsRows(safe.stats, 4);
-    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 58 }).map((item) => shortenByWords(item, { maxWords: 8, maxChars: 58 }));
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 66 }).map((item) => shortenByWords(item, { maxWords: 9, maxChars: 66 }));
   } else if (layout === 'quote') {
     safe.body = '';
     safe.quote = shortenByWords(safe.quote || originalBody || safe.title, { maxWords: 30, maxChars: 220 });
   } else if (layout === 'closing') {
-    safe.body = shortenByWords(safe.body, { maxWords: 20, maxChars: 150 });
-    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 78 }).map((item) => shortenByWords(item, { maxWords: 11, maxChars: 78 }));
+    safe.body = shortenByWords(safe.body, { maxWords: 24, maxChars: 180 });
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 4, maxLen: 86 }).map((item) => shortenByWords(item, { maxWords: 12, maxChars: 86 }));
   } else {
-    safe.body = shortenByWords(safe.body, { maxWords: 26, maxChars: 200 });
-    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 5, maxLen: 80 }).map((item) => shortenByWords(item, { maxWords: 11, maxChars: 80 }));
+    safe.body = shortenByWords(safe.body, { maxWords: 34, maxChars: 260 });
+    safe.bullets = normalizeStringList(safe.bullets, { maxItems: 5, maxLen: 90 }).map((item) => shortenByWords(item, { maxWords: 12, maxChars: 90 }));
   }
 
   safe.sourceLinks = Array.isArray(safe.sourceLinks)
@@ -4533,6 +4646,156 @@ function pickImageForSlide(slide, imagePool, usedUrls = new Set()) {
 
   if (best?.item) return best.item;
   return pool.find((item) => !usedUrls.has(item.url)) || pool[0] || null;
+}
+
+function uniqueTextValues(list, { maxItems = 999, maxLen = 220 } = {}) {
+  const out = [];
+  const seen = new Set();
+  for (const item of Array.isArray(list) ? list : []) {
+    const clean = cleanText(item, maxLen);
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(clean);
+    if (out.length >= maxItems) break;
+  }
+  return out;
+}
+
+function pickResearchSnippets(snippetPool, matchers, usedKeys, limit = 4) {
+  const out = [];
+  for (const snippet of Array.isArray(snippetPool) ? snippetPool : []) {
+    if (!snippet?.text) continue;
+    if (usedKeys?.has(snippet.key)) continue;
+    const haystack = `${snippet.heading || ''} ${snippet.text || ''}`.toLowerCase();
+    const ok = Array.isArray(matchers) && matchers.length
+      ? matchers.some((matcher) => matcher.test(haystack))
+      : true;
+    if (!ok) continue;
+    out.push(snippet);
+    if (usedKeys) usedKeys.add(snippet.key);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function pickResearchEntries(entries, matchers, usedKeys, limit = 2) {
+  const out = [];
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const key = cleanText(entry?.title || entry?.summary, 160).toLowerCase();
+    if (!key || usedKeys?.has(key)) continue;
+    const haystack = `${entry?.title || ''} ${entry?.summary || ''}`.toLowerCase();
+    const ok = Array.isArray(matchers) && matchers.length
+      ? matchers.some((matcher) => matcher.test(haystack))
+      : true;
+    if (!ok) continue;
+    out.push(entry);
+    if (usedKeys) usedKeys.add(key);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function buildSlideBodyFromResearch({ sections = [], snippets = [], entries = [], maxLen = 620 } = {}) {
+  const sentences = uniqueTextValues(
+    []
+      .concat(snippets.map((item) => item?.text))
+      .concat(sections.flatMap((item) => splitResearchSentences(item?.text, { maxItems: 2, minLen: 48, maxLen: 260 })))
+      .concat(entries.flatMap((item) => splitResearchSentences(item?.summary, { maxItems: 2, minLen: 48, maxLen: 260 }))),
+    { maxItems: 12, maxLen: 260 }
+  );
+  return truncateBySentence(sentences.join(' '), maxLen);
+}
+
+function buildSlideBulletsFromResearch({ sections = [], snippets = [], entries = [], maxItems = 5, maxLen = 118 } = {}) {
+  const bullets = uniqueTextValues(
+    []
+      .concat(snippets.map((item) => item?.text))
+      .concat(sections.map((item) => {
+        const heading = cleanText(item?.heading, 80);
+        const detail = shortenByWords(item?.text, { maxWords: 15, maxChars: 120 });
+        return heading && detail ? `${heading}: ${detail}` : (detail || heading);
+      }))
+      .concat(entries.map((item) => shortenByWords(item?.summary, { maxWords: 15, maxChars: 120 }))),
+    { maxItems: maxItems * 2, maxLen: Math.max(maxLen + 30, 140) }
+  )
+    .map((item) => shortenByWords(item, { maxWords: 16, maxChars: maxLen }))
+    .filter(Boolean);
+  return bullets.slice(0, maxItems);
+}
+
+function buildSlideHeadingsFromResearch({ sections = [], snippets = [], entries = [] } = {}) {
+  return uniqueTextValues(
+    []
+      .concat(sections.map((item) => item?.heading))
+      .concat(snippets.map((item) => item?.heading))
+      .concat(entries.map((item) => item?.title)),
+    { maxItems: 6, maxLen: 120 }
+  );
+}
+
+function buildSlideSourceLinksFromResearch({ sections = [], snippets = [], entries = [], imageCandidate = null, extraLinks = [] } = {}) {
+  return uniqueTextValues(
+    []
+      .concat(extraLinks)
+      .concat(sections.map((item) => item?.sourceLink))
+      .concat(snippets.map((item) => item?.sourceLink))
+      .concat(entries.map((item) => item?.sourceLink))
+      .concat(imageCandidate?.sourceLink ? [imageCandidate.sourceLink] : []),
+    { maxItems: 4, maxLen: 500 }
+  ).slice(0, 3);
+}
+
+function extractMetricValue(text) {
+  const src = String(text || '');
+  const match = src.match(/\b\d{3,4}(?:\s*[-–]\s*\d{2,4})?\b|\b\d+(?:[.,]\d+)?\s*%\b|\b\d+(?:[.,]\d+)?\s*(?:million|billion|mln|ming|mingta|ta|km|yil|years?|oy|months?|kun|days?)\b/iu);
+  return cleanText(match?.[0] || '', 36);
+}
+
+function buildSlideStatsFromResearch({ sections = [], snippets = [], entries = [] } = {}) {
+  const rows = [];
+  const seen = new Set();
+  const candidates = []
+    .concat(snippets.map((item) => ({ heading: item?.heading, text: item?.text })))
+    .concat(sections.map((item) => ({ heading: item?.heading, text: item?.text })))
+    .concat(entries.map((item) => ({ heading: item?.title, text: item?.summary })));
+
+  for (const candidate of candidates) {
+    const value = extractMetricValue(candidate?.text);
+    if (!value) continue;
+    const label = shortenByWords(candidate?.heading || candidate?.text?.replace(value, ''), { maxWords: 7, maxChars: 54 });
+    const key = `${label}|${value}`.toLowerCase();
+    if (!label || !value || seen.has(key)) continue;
+    seen.add(key);
+    rows.push({ label, value });
+    if (rows.length >= 4) break;
+  }
+  return rows;
+}
+
+function buildSlideTimelineFromResearch({ sections = [], snippets = [] } = {}) {
+  const rows = [];
+  const seen = new Set();
+  const sectionRows = (Array.isArray(sections) ? sections : []).map((section) => ({
+    title: cleanText(section?.heading, 120),
+    detail: truncateBySentence(section?.text, 180)
+  }));
+  const snippetRows = (Array.isArray(snippets) ? snippets : [])
+    .filter((item) => /\b\d{3,4}\b/.test(String(item?.text || '')) || /\b(before|after|during|key|major|first|later|then)\b/i.test(String(item?.text || '')))
+    .map((item) => ({
+      title: cleanText(item?.heading, 120) || shortenByWords(item?.text, { maxWords: 6, maxChars: 70 }),
+      detail: truncateBySentence(item?.text, 180)
+    }));
+
+  for (const row of sectionRows.concat(snippetRows)) {
+    const key = `${row.title}|${row.detail}`.toLowerCase();
+    if (!row.title || !row.detail || seen.has(key)) continue;
+    seen.add(key);
+    rows.push(row);
+    if (rows.length >= 4) break;
+  }
+  return rows;
 }
 
 function buildSlideResearchPlan({ prompt, slideCount, research, language }) {
@@ -4620,6 +4883,193 @@ function buildSlideResearchPlan({ prompt, slideCount, research, language }) {
           ? ['Repeat the main idea', 'State the most important takeaway', 'Move into questions']
           : (language === 'ru'
               ? ['Повторите главную мысль', 'Скажите ключевой вывод', 'Перейдите к вопросам']
+              : ['Asosiy fikrni takrorlang', 'Muhim xulosani ayting', 'Savol-javobga o\'ting'])),
+    callout: copy.closingCallout,
+    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : []
+  });
+
+  const trimmed = plan.slice(0, total);
+  if (trimmed[1] && trimmed[1].layout === 'agenda') {
+    trimmed[1].bullets = trimmed.slice(2).map((item) => cleanText(item.title, 100)).filter(Boolean).slice(0, 6);
+  }
+  return trimmed;
+}
+
+function buildSlideResearchPlan({ prompt, slideCount, research, language }) {
+  const total = clampSlideCount(slideCount);
+  const sections = Array.isArray(research?.sections) ? research.sections.filter((item) => item?.heading || item?.text) : [];
+  const entries = Array.isArray(research?.entries) ? research.entries.filter((item) => item?.title || item?.summary) : [];
+  const snippetPool = buildResearchSnippetPool(research);
+  const usedTitles = new Set();
+  const usedSnippetKeys = new Set();
+  const usedEntryKeys = new Set();
+  const isBiography = looksLikeBiographyTopic(prompt, research);
+  const copy = getSlideCopy(language);
+  const title = cleanText(research?.query, 120) || cleanText(prompt, 120) || copy.defaultTopic;
+  const plan = [];
+  const coverBullets = buildSlideBulletsFromResearch({
+    snippets: snippetPool.slice(0, 4),
+    sections: sections.slice(0, 2),
+    entries: entries.slice(0, 2),
+    maxItems: 4,
+    maxLen: 116
+  });
+
+  plan.push({
+    layout: 'cover',
+    kicker: 'HALLAYM AI',
+    title,
+    subtitle: cleanText(sections[0]?.heading, 160) || cleanText(research?.summary, 220) || `${title} ${copy.coverSubtitleSuffix}`,
+    body: buildSlideBodyFromResearch({
+      snippets: snippetPool.slice(0, 5),
+      sections: sections.slice(0, 3),
+      entries: entries.slice(0, 2),
+      maxLen: 460
+    }),
+    bullets: coverBullets,
+    callout: copy.coverCallout,
+    sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : []
+  });
+
+  if (total > 1) {
+    plan.push({
+      layout: 'agenda',
+      kicker: copy.agendaKicker,
+      title: copy.agendaTitle,
+      subtitle: '',
+      body: '',
+      bullets: [],
+      callout: copy.agendaCallout
+    });
+  }
+
+  const categoryDefs = getSlideCategoryDefinitions(isBiography, language);
+
+  for (const category of categoryDefs) {
+    if (plan.length >= total - 1) break;
+    const matched = pickResearchSections(sections, category.matchers, usedTitles, category.layout === 'timeline' ? 4 : 3);
+    const relevant = matched.length ? matched : pickResearchSections(sections, [/.+/], usedTitles, category.layout === 'timeline' ? 4 : 2);
+    const relevantSnippets = pickResearchSnippets(snippetPool, category.matchers, usedSnippetKeys, category.layout === 'timeline' ? 6 : 5);
+    const relevantEntries = pickResearchEntries(entries, category.matchers, usedEntryKeys, 2);
+    if (!relevant.length && !relevantSnippets.length && !relevantEntries.length) continue;
+
+    const headings = buildSlideHeadingsFromResearch({
+      sections: relevant,
+      snippets: relevantSnippets,
+      entries: relevantEntries
+    });
+    const combinedText = buildSlideBodyFromResearch({
+      sections: relevant,
+      snippets: relevantSnippets,
+      entries: relevantEntries,
+      maxLen: category.layout === 'quote' ? 260 : 620
+    });
+    const bullets = buildSlideBulletsFromResearch({
+      sections: relevant,
+      snippets: relevantSnippets,
+      entries: relevantEntries,
+      maxItems: category.layout === 'metrics' ? 4 : 5,
+      maxLen: 120
+    });
+    const timeline = buildSlideTimelineFromResearch({ sections: relevant, snippets: relevantSnippets });
+    const stats = buildSlideStatsFromResearch({ sections: relevant, snippets: relevantSnippets, entries: relevantEntries });
+    const splitBullets = splitListInHalf(bullets);
+    const resolvedLayout = category.layout === 'metrics' && stats.length < 2
+      ? 'content'
+      : (category.layout === 'timeline' && timeline.length < 2
+          ? 'split'
+          : category.layout);
+
+    plan.push({
+      layout: resolvedLayout,
+      title: category.title,
+      subtitle: cleanText(headings[0], 160) || category.subtitle,
+      body: truncateBySentence(combinedText, resolvedLayout === 'quote' ? 240 : 620),
+      bullets,
+      leftTitle: cleanText(headings[0], 80) || copy.splitLeftTitle,
+      leftBullets: splitBullets.left,
+      rightTitle: cleanText(headings[1], 80) || copy.splitRightTitle,
+      rightBullets: splitBullets.right,
+      timeline: resolvedLayout === 'timeline' ? timeline : [],
+      stats: resolvedLayout === 'metrics' ? stats : [],
+      quote: resolvedLayout === 'quote' ? truncateBySentence(relevantSnippets[0]?.text || combinedText, 240) : '',
+      callout: cleanText(headings.slice(0, 3).join(' | '), 180),
+      sourceLinks: buildSlideSourceLinksFromResearch({
+        sections: relevant,
+        snippets: relevantSnippets,
+        entries: relevantEntries
+      })
+    });
+  }
+
+  while (plan.length < total - 1 && (sections.length || snippetPool.length || entries.length)) {
+    const next = sections.find((item) => !usedTitles.has(String(item?.heading || '').toLowerCase()));
+    const fallbackSnippets = pickResearchSnippets(snippetPool, [/.+/], usedSnippetKeys, 4);
+    const fallbackEntries = pickResearchEntries(entries, [/.+/], usedEntryKeys, 1);
+    if (next) usedTitles.add(String(next?.heading || '').toLowerCase());
+    if (!next && !fallbackSnippets.length && !fallbackEntries.length) break;
+    const body = buildSlideBodyFromResearch({
+      sections: next ? [next] : [],
+      snippets: fallbackSnippets,
+      entries: fallbackEntries,
+      maxLen: 620
+    });
+    const bullets = buildSlideBulletsFromResearch({
+      sections: next ? [next] : [],
+      snippets: fallbackSnippets,
+      entries: fallbackEntries,
+      maxItems: 5,
+      maxLen: 120
+    });
+    const headings = buildSlideHeadingsFromResearch({
+      sections: next ? [next] : [],
+      snippets: fallbackSnippets,
+      entries: fallbackEntries
+    });
+    const splitBullets = splitListInHalf(bullets);
+    plan.push({
+      layout: plan.length % 2 === 0 ? 'content' : 'split',
+      title: cleanText(next?.heading, 160) || cleanText(headings[0], 160) || (language === 'en' ? `Section ${plan.length}` : (language === 'ru' ? `Р Р°Р·РґРµР» ${plan.length}` : `Bo'lim ${plan.length}`)),
+      subtitle: cleanText(headings[1], 160),
+      body,
+      bullets,
+      leftTitle: cleanText(headings[0], 80) || copy.splitLeftTitle,
+      leftBullets: splitBullets.left,
+      rightTitle: cleanText(headings[1], 80) || copy.splitRightTitle,
+      rightBullets: splitBullets.right,
+      callout: cleanText(headings.slice(0, 3).join(' | '), 180),
+      sourceLinks: buildSlideSourceLinksFromResearch({
+        sections: next ? [next] : [],
+        snippets: fallbackSnippets,
+        entries: fallbackEntries
+      })
+    });
+  }
+
+  const closingBullets = buildSlideBulletsFromResearch({
+    snippets: snippetPool.slice(0, 5),
+    sections: sections.slice(-2),
+    entries: entries.slice(0, 2),
+    maxItems: 3,
+    maxLen: 120
+  });
+  plan.push({
+    layout: 'closing',
+    kicker: copy.closingKicker,
+    title: isBiography ? (language === 'en' ? `${title} Legacy` : (language === 'ru' ? `РќР°СЃР»РµРґРёРµ ${title}` : `${title} merosi`)) : copy.closingTitle,
+    subtitle: copy.closingSubtitle,
+    body: truncateBySentence(buildSlideBodyFromResearch({
+      snippets: snippetPool.slice(-3),
+      sections: sections.slice(-2),
+      entries: entries.slice(0, 1),
+      maxLen: 220
+    }), 220),
+    bullets: closingBullets.length
+      ? closingBullets
+      : (language === 'en'
+          ? ['Repeat the main idea', 'State the most important takeaway', 'Move into questions']
+          : (language === 'ru'
+              ? ['РџРѕРІС‚РѕСЂРёС‚Рµ РіР»Р°РІРЅСѓСЋ РјС‹СЃР»СЊ', 'РЎРєР°Р¶РёС‚Рµ РєР»СЋС‡РµРІРѕР№ РІС‹РІРѕРґ', 'РџРµСЂРµР№РґРёС‚Рµ Рє РІРѕРїСЂРѕСЃР°Рј']
               : ['Asosiy fikrni takrorlang', 'Muhim xulosani ayting', 'Savol-javobga o\'ting'])),
     callout: copy.closingCallout,
     sourceLinks: Array.isArray(research?.sourceLinks) ? research.sourceLinks.slice(0, 3) : []
@@ -4729,6 +5179,108 @@ function enhanceDeckWithPlan(deck, plan, research) {
       .map((item) => cleanText(item, 500))
       .filter(Boolean)
   )).slice(0, 10);
+  safeDeck.language = language;
+  safeDeck.watermark = cleanText(safeDeck.watermark, 200);
+  safeDeck.themeLabel = cleanText(safeDeck.themeLabel, 120) || copy.themeDeckLabel;
+  return safeDeck;
+}
+
+function enhanceDeckWithPlan(deck, plan, research) {
+  const safeDeck = Object.assign({}, deck || {});
+  const language = normalizeSlideStudioLanguage(safeDeck.language || 'uz');
+  const copy = getSlideCopy(language);
+  const rawSlides = Array.isArray(safeDeck.slides) ? safeDeck.slides.map((item) => Object.assign({}, item)) : [];
+  const desiredCount = clampSlideCount(rawSlides.length || plan?.length || 6);
+  const planRows = Array.isArray(plan) ? plan : [];
+  const enhancedSlides = [];
+  const usedImages = new Set();
+
+  for (let i = 0; i < Math.max(desiredCount, planRows.length); i += 1) {
+    const sourceSlide = rawSlides[i] || {};
+    const planRow = planRows[i] || {};
+    const layout = (planRow.layout && SLIDE_LAYOUTS.includes(planRow.layout))
+      ? planRow.layout
+      : (SLIDE_LAYOUTS.includes(sourceSlide.layout) ? sourceSlide.layout : 'content');
+    const mergedBullets = uniqueTextValues(
+      []
+        .concat(Array.isArray(sourceSlide.bullets) ? sourceSlide.bullets : [])
+        .concat(Array.isArray(planRow.bullets) ? planRow.bullets : []),
+      { maxItems: 8, maxLen: 160 }
+    );
+    const bodyText = cleanText(sourceSlide.body, 1000);
+    const planBodyText = cleanText(planRow.body, 1000);
+    const body = bodyText.length >= Math.max(110, planBodyText.length - 20) ? bodyText : planBodyText;
+    const imageCandidate = pickImageForSlide({
+      title: sourceSlide.title || planRow.title,
+      subtitle: sourceSlide.subtitle || planRow.subtitle,
+      body,
+      kicker: sourceSlide.kicker || planRow.kicker,
+      quote: sourceSlide.quote || planRow.quote
+    }, research?.imagePool, usedImages);
+    const mergedSourceLinks = Array.from(new Set(
+      []
+        .concat(Array.isArray(sourceSlide.sourceLinks) ? sourceSlide.sourceLinks : [])
+        .concat(Array.isArray(planRow.sourceLinks) ? planRow.sourceLinks : [])
+        .concat(imageCandidate?.sourceLink ? [imageCandidate.sourceLink] : [])
+        .map((item) => cleanText(item, 500))
+        .filter(Boolean)
+    )).slice(0, 3);
+    const imageUrl = cleanText(
+      sourceSlide.imageUrl
+        || planRow.imageUrl
+        || imageCandidate?.url
+        || ((i === 0 || layout === 'cover') ? (safeDeck.heroImageUrl || research?.heroImageUrl) : ''),
+      500
+    );
+    if (imageUrl) usedImages.add(imageUrl);
+
+    const leftRight = splitListInHalf(mergedBullets);
+    const title = cleanText(sourceSlide.title, 220) || cleanText(planRow.title, 220) || `Slide ${i + 1}`;
+    const subtitle = cleanText(sourceSlide.subtitle, 260) || cleanText(planRow.subtitle, 260);
+    const speakerNote = cleanText(sourceSlide.speakerNote, 400)
+      || cleanText(planRow.body, 400)
+      || cleanText(research?.summary, 400);
+    const quote = cleanText(sourceSlide.quote, 320) || cleanText(planRow.quote, 320);
+    const callout = cleanText(sourceSlide.callout, 220) || cleanText(planRow.callout, 220);
+    const stats = normalizeStatsList(sourceSlide.stats?.length ? sourceSlide.stats : planRow.stats);
+    const timeline = normalizeTimelineList(sourceSlide.timeline?.length ? sourceSlide.timeline : planRow.timeline);
+
+    enhancedSlides.push({
+      order: i + 1,
+      layout,
+      kicker: cleanText(sourceSlide.kicker || planRow.kicker || (i === 0 ? 'HALLAYM AI' : ''), 120),
+      title,
+      subtitle,
+      body,
+      bullets: normalizeStringList(mergedBullets, { maxItems: 6, maxLen: 160 }),
+      leftTitle: cleanText(sourceSlide.leftTitle, 120) || cleanText(planRow.leftTitle, 120) || (layout === 'split' ? copy.splitLeftTitle : ''),
+      leftBullets: normalizeStringList(sourceSlide.leftBullets?.length ? sourceSlide.leftBullets : (Array.isArray(planRow.leftBullets) && planRow.leftBullets.length ? planRow.leftBullets : leftRight.left), { maxItems: 5, maxLen: 160 }),
+      rightTitle: cleanText(sourceSlide.rightTitle, 120) || cleanText(planRow.rightTitle, 120) || (layout === 'split' ? copy.splitRightTitle : ''),
+      rightBullets: normalizeStringList(sourceSlide.rightBullets?.length ? sourceSlide.rightBullets : (Array.isArray(planRow.rightBullets) && planRow.rightBullets.length ? planRow.rightBullets : leftRight.right), { maxItems: 5, maxLen: 160 }),
+      stats,
+      timeline,
+      quote,
+      quoteAuthor: cleanText(sourceSlide.quoteAuthor, 120),
+      imageUrl,
+      imageCaption: cleanText(sourceSlide.imageCaption, 160) || cleanText(planRow.imageCaption, 160) || cleanText(imageCandidate?.caption || imageCandidate?.sourceTitle || '', 160),
+      sourceLinks: mergedSourceLinks,
+      callout,
+      speakerNote
+    });
+  }
+
+  safeDeck.slides = ensureSlideVariety(enhancedSlides.slice(0, desiredCount), desiredCount).map((slide) => fitSlideToAspect(slide, language));
+  safeDeck.summary = cleanText(safeDeck.summary, 700) || cleanText(research?.summary, 700);
+  safeDeck.heroImageUrl = cleanText(safeDeck.heroImageUrl || safeDeck.slides[0]?.imageUrl || research?.heroImageUrl, 500);
+  safeDeck.researchSummary = cleanText(safeDeck.researchSummary || research?.summary, 2200);
+  safeDeck.sourceLinks = Array.from(new Set(
+    []
+      .concat(Array.isArray(safeDeck.sourceLinks) ? safeDeck.sourceLinks : [])
+      .concat(Array.isArray(research?.sourceLinks) ? research.sourceLinks : [])
+      .concat(safeDeck.slides.flatMap((slide) => Array.isArray(slide?.sourceLinks) ? slide.sourceLinks : []))
+      .map((item) => cleanText(item, 500))
+      .filter(Boolean)
+  )).slice(0, 12);
   safeDeck.language = language;
   safeDeck.watermark = cleanText(safeDeck.watermark, 200);
   safeDeck.themeLabel = cleanText(safeDeck.themeLabel, 120) || copy.themeDeckLabel;
@@ -5041,7 +5593,9 @@ async function generateSlideDeckWithGroq({ user, prompt, audience, language, sty
       'All visible text must stay in the requested language only. Do not mix Uzbek, English, Russian, or any other language.',
       'Use varied layouts across the deck so consecutive slides do not feel repetitive.',
       'First slide must work like a strong cover. Last slide must work like a strong closing slide.',
+      'The cover slide should clearly show the topic and feel premium, while the deck watermark and author remain presentation-ready.',
       'Use body text plus bullets or structured blocks so each slide feels complete.',
+      'Use the research from multiple sources across the deck instead of repeating one source perspective.',
       'Use topic-appropriate accent colors for headers, chips, callouts, and cards instead of repeating the same teal palette.',
       styleHintValue,
       colorHintValue,

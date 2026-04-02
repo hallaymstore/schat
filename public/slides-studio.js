@@ -36,6 +36,9 @@
       nextStep: 'Keyingi qadam',
       speakerFallback: 'Bu slide uchun alohida speaker note kelmagan. Sarlavha va punktlar bo‘yicha qisqa izoh bering.',
       sourceLabel: 'Manbalar',
+      topicLabel: 'Mavzu',
+      preparedLabel: 'Tayyorladi',
+      sourceCountLabel: 'Manbalar soni',
       slideWord: 'Slide'
     },
     en: {
@@ -50,6 +53,9 @@
       nextStep: 'Next step',
       speakerFallback: 'No separate speaker note was returned for this slide. Briefly explain the title and key points.',
       sourceLabel: 'Sources',
+      topicLabel: 'Topic',
+      preparedLabel: 'Prepared by',
+      sourceCountLabel: 'Source count',
       slideWord: 'Slide'
     },
     ru: {
@@ -154,6 +160,24 @@
 
   function slideText(deck) {
     return SLIDE_TEXT[deckLanguage(deck)] || SLIDE_TEXT.uz;
+  }
+
+  function coverMetaLines(deck, slide) {
+    const copy = slideText(deck);
+    const topicLabel = copy.topicLabel || 'Topic';
+    const preparedLabel = copy.preparedLabel || 'Prepared by';
+    const sourceCountLabel = copy.sourceCountLabel || 'Source count';
+    const topic = normalizeCopy(slide && slide.title || deck && deck.title || '');
+    const prepared = normalizeCopy(deck && deck.watermark || 'HALLAYM AI');
+    const sourceCount = normalizeSourceLinks([]
+      .concat(Array.isArray(slide && slide.sourceLinks) ? slide.sourceLinks : [])
+      .concat(Array.isArray(deck && deck.sourceLinks) ? deck.sourceLinks : [])
+    ).length;
+    return [
+      topic ? `${topicLabel}: ${topic}` : '',
+      prepared ? `${preparedLabel}: ${prepared}` : '',
+      `${sourceCountLabel}: ${sourceCount || 'HALLAYM AI'}`
+    ].filter(Boolean);
   }
 
   function safeCssUrl(value) {
@@ -641,6 +665,7 @@
               <div class="surface-card mini-note">
                 <strong>${escapeHtml(deck && deck.themeLabel || copy.themeDeckLabel)}</strong>
                 <span>${escapeHtml(deck && deck.summary || copy.deckSummaryFallback)}</span>
+                ${coverMetaLines(deck, slide).map((line) => `<span>${escapeHtml(line)}</span>`).join('')}
               </div>
             </div>
           </div>
