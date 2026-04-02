@@ -66,6 +66,22 @@
     return data;
   }
 
+  async function resolveAdminIdentity() {
+    try {
+      const whoami = await api('/api/admin/whoami');
+      return whoami.admin || null;
+    } catch (error) {
+      const isMissingRoute = /404|not found/i.test(String(error && error.message || ''));
+      if (!isMissingRoute) throw error;
+      const me = await api('/api/me');
+      const user = me && (me.user || me) || {};
+      if (!user || (String(user.role || '').toLowerCase() !== 'admin' && !user.isAdmin)) {
+        throw new Error('Admin access required');
+      }
+      return user;
+    }
+  }
+
   function escapeHtml(value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -184,11 +200,11 @@
     const query = new URLSearchParams();
     if (state.status) query.set('status', state.status);
     if (state.scope) query.set('planScope', state.scope);
-    const [whoami, data] = await Promise.all([
-      api('/api/admin/whoami'),
+    const [admin, data] = await Promise.all([
+      resolveAdminIdentity(),
       api(`/api/admin/premium-requests?${query.toString()}`)
     ]);
-    state.admin = whoami.admin || {};
+    state.admin = admin || {};
     state.requests = data.requests || [];
     renderStats();
     renderRequests();

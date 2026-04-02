@@ -18497,6 +18497,16 @@ app.post('/api/admin/bootstrap', async (req, res) => {
   try {
     const { username, secret } = req.body || {};
     if (!process.env.ADMIN_BOOTSTRAP_SECRET) return res.status(400).json({ error: 'Bootstrap disabled' });
+    if (secret !== process.env.ADMIN_BOOTSTRAP_SECRET) return res.status(403).json({ error: 'Invalid secret' });
+    const user = await User.findOne({ username });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.isAdmin = true;
+    await user.save();
+    res.json({ success: true, adminUser: { id: user._id, username: user.username } });
+  } catch (e) {
+    res.status(500).json({ error: 'Bootstrap failed' });
+  }
+});
 
 
 // ==================== ADMIN (Test / Smoke) ====================
@@ -18566,16 +18576,6 @@ app.post('/api/admin/test/reset-pet', authenticateToken, requireAdmin, async (re
   } catch (e) {
     console.error('admin test reset-pet error', e);
     res.status(500).json({ error: 'Failed to reset pet' });
-  }
-});
-    if (secret !== process.env.ADMIN_BOOTSTRAP_SECRET) return res.status(403).json({ error: 'Invalid secret' });
-    const user = await User.findOne({ username });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    user.isAdmin = true;
-    await user.save();
-    res.json({ success: true, adminUser: { id: user._id, username: user.username } });
-  } catch (e) {
-    res.status(500).json({ error: 'Bootstrap failed' });
   }
 });
 
