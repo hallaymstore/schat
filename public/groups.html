@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guruhlar вЂ” HALLAYM edu</title>
+    <title>Guruhlar — HALLAYM edu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -231,7 +231,7 @@
 
 <style id="hallaymMobileCompactV2">
 
-/* MOBILE COMPACT V2 вЂ” prevent overflow, tiny UI, glass + teal/gold harmony */
+/* MOBILE COMPACT V2 — prevent overflow, tiny UI, glass + teal/gold harmony */
 *{box-sizing:border-box}
 html,body{max-width:100%;overflow-x:hidden}
 img,video,canvas,svg{max-width:100%;height:auto}
@@ -307,7 +307,8 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 
 </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body class="h-full text-slate-900 dark:text-slate-100">
 <!-- Mobile Drawer -->
@@ -328,7 +329,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         <i class="fas fa-globe w-5 text-center"></i><span>Sizga mos + barcha</span>
       </button>
       <button type="button" onclick="openGroupTabFromMenu('joined')" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
-        <i class="fas fa-people-group w-5 text-center"></i><span>QoвЂshilgan guruhlar</span>
+        <i class="fas fa-people-group w-5 text-center"></i><span>Qo‘shilgan guruhlar</span>
       </button>
       <button type="button" onclick="openGroupTabFromMenu('my')" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
         <i class="fas fa-user-friends w-5 text-center"></i><span>Men yaratgan guruhlar</span>
@@ -444,7 +445,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
           </div>
         </a>
         <nav class="hidden md:flex items-center gap-1">
-          <a href="/search.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">рџ”Ќ Search...</a>
+          <a href="/search.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">🔍 Search...</a>
           <a href="/messages.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Xabarlar</a>
           <a href="/groups.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Guruhlar</a>
           <a href="/channels.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Kanallar</a>
@@ -457,7 +458,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             </button>
             <div id="groupQuickMenuPanel" class="hidden absolute right-0 mt-2 w-64 rounded-2xl glass border border-white/20 p-2 z-[90]">
               <button type="button" onclick="openGroupTabFromMenu('all')"><i class="fas fa-globe mr-2"></i>Sizga mos + barcha</button>
-              <button type="button" onclick="openGroupTabFromMenu('joined')"><i class="fas fa-people-group mr-2"></i>QoвЂshilgan guruhlar</button>
+              <button type="button" onclick="openGroupTabFromMenu('joined')"><i class="fas fa-people-group mr-2"></i>Qo‘shilgan guruhlar</button>
               <button type="button" onclick="openGroupTabFromMenu('my')"><i class="fas fa-user-friends mr-2"></i>Men yaratgan guruhlar</button>
               <div class="h-px bg-white/15 my-2"></div>
               <button type="button" onclick="openCreateModalFromMenu()"><i class="fas fa-plus-circle mr-2"></i>Yangi guruh yaratish</button>
@@ -483,8 +484,8 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             <div class="w-20 h-20 gradient-bg rounded-full ring-1 ring-white/20 shadow-glass flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-users text-white text-3xl"></i>
             </div>
-            <h1 class="text-3xl font-bold text-gray-800">OвЂquv guruhlari</h1>
-            <p class="muted2">Kursdoshlar bilan guruhlarga qoвЂshiling yoki yangi guruh yarating</p>
+            <h1 class="text-3xl font-bold text-gray-800">O‘quv guruhlari</h1>
+            <p class="muted2">Kursdoshlar bilan guruhlarga qo‘shiling yoki yangi guruh yarating</p>
         </div>
         
         <!-- Create Group Button (moved to menu) -->
@@ -497,9 +498,9 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         
         <div class="glass rounded-2xl p-4 mb-6 flex items-center justify-between gap-3">
           <div class="min-w-0">
-            <div class="text-xs muted2">KoвЂrinish</div>
+            <div class="text-xs muted2">Ko‘rinish</div>
             <div id="currentGroupTabLabel" class="font-bold text-base sm:text-lg text-teal-200">Sizga mos + barcha guruhlar</div>
-            <div id="profileStudyGroupHint" class="text-xs muted2 mt-1">OвЂquv guruhi: вЂ”</div>
+            <div id="profileStudyGroupHint" class="text-xs muted2 mt-1">O‘quv guruhi: —</div>
           </div>
           <button type="button" onclick="toggleGroupQuickMenu()" class="btn-primary text-white px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap">
             <i class="fas fa-sliders mr-2"></i>Menyu
@@ -512,7 +513,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
     <i class="fas fa-user-friends mr-2"></i> Mening guruhlarim
   </button>
   <button type="button" class="group-tab px-4 py-2 rounded-xl font-semibold btn-ghost whitespace-nowrap" data-tab="joined" aria-pressed="false">
-    <i class="fas fa-users mr-2"></i> QoвЂshilgan guruhlar
+    <i class="fas fa-users mr-2"></i> Qo‘shilgan guruhlar
   </button>
   <button type="button" class="group-tab px-4 py-2 rounded-xl font-semibold btn-ghost whitespace-nowrap" data-tab="all" aria-pressed="false">
     <i class="fas fa-globe mr-2"></i> Barcha guruhlar
@@ -610,19 +611,19 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium muted mb-2">OвЂquv turi *</label>
+                        <label class="block text-sm font-medium muted mb-2">O‘quv turi *</label>
                         <select id="studyTypeSelect" name="studyType"
                                 class="w-full px-4 py-3 field rounded-2xl focus:outline-none" required disabled>
-                            <option value="" selected disabled>OвЂquv turini tanlang</option>
+                            <option value="" selected disabled>O‘quv turini tanlang</option>
                         </select>
                         <div id="typeHint" class="mt-2 text-xs text-white/60">Avval fakultet tanlang.</div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium muted mb-2">OвЂquv guruhi *</label>
+                        <label class="block text-sm font-medium muted mb-2">O‘quv guruhi *</label>
                         <select id="studyGroupInput" name="studyGroup" required
                                 class="w-full px-4 py-3 field rounded-2xl focus:outline-none" disabled>
-                            <option value="" selected disabled>OвЂquv guruhini tanlang</option>
+                            <option value="" selected disabled>O‘quv guruhini tanlang</option>
                         </select>
                     </div>
                     
@@ -664,13 +665,13 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             const st = String(meProfile?.studyType || '').trim();
             const fac = String(meProfile?.faculty || '').trim();
             if (!sg) {
-                el.textContent = 'OвЂquv guruhi: belgilanmagan';
+                el.textContent = 'O‘quv guruhi: belgilanmagan';
                 return;
             }
-            const extra = [fac, st].filter(Boolean).join(' вЂў ');
+            const extra = [fac, st].filter(Boolean).join(' • ');
             el.textContent = extra
-              ? `OвЂquv guruhi: ${sg} (${extra})`
-              : `OвЂquv guruhi: ${sg}`;
+              ? `O‘quv guruhi: ${sg} (${extra})`
+              : `O‘quv guruhi: ${sg}`;
         }
 
         function getGroupRelevanceScore(group){
@@ -754,7 +755,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             const sel = document.getElementById('studyTypeSelect');
             const hint = document.getElementById('typeHint');
             if(!sel) return;
-            sel.innerHTML = '<option value="" selected disabled>OвЂquv turini tanlang</option>';
+            sel.innerHTML = '<option value="" selected disabled>O‘quv turini tanlang</option>';
             sel.disabled = true;
             allowedStudyTypes = [];
             await loadStudyGroupCatalog('', '', '', '');
@@ -779,18 +780,18 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 }
                 if(selectedStudyType && allowedStudyTypes.includes(selectedStudyType)) sel.value = selectedStudyType;
                 sel.disabled = allowedStudyTypes.length === 0;
-                if(hint) hint.textContent = allowedStudyTypes.length ? `Katalog: ${allowedStudyTypes.length} ta oвЂquv turi` : 'Bu fakultet uchun oвЂquv turi topilmadi.';
+                if(hint) hint.textContent = allowedStudyTypes.length ? `Katalog: ${allowedStudyTypes.length} ta o‘quv turi` : 'Bu fakultet uchun o‘quv turi topilmadi.';
                 sel.onchange = () => loadStudyGroupCatalog(uni, fac, sel.value, '');
                 await loadStudyGroupCatalog(uni, fac, sel.value, selectedStudyGroup || '');
             }catch(e){
-                if(hint) hint.textContent = 'OвЂquv turlari yuklanmadi (server xatolik).';
+                if(hint) hint.textContent = 'O‘quv turlari yuklanmadi (server xatolik).';
             }
         }
 
         async function loadStudyGroupCatalog(university, faculty, studyType, selectedStudyGroup=''){
             const sel = document.getElementById('studyGroupInput');
             if(!sel) return;
-            sel.innerHTML = '<option value="" selected disabled>OвЂquv guruhini tanlang</option>';
+            sel.innerHTML = '<option value="" selected disabled>O‘quv guruhini tanlang</option>';
             sel.disabled = true;
             allowedStudyGroups = [];
 
@@ -857,7 +858,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 
                 sel.onchange = () => loadFacultyCatalog(sel.value, '', '');
                 const hint = document.getElementById('uniHint');
-                if(hint) hint.textContent = allowedUniversities.length ? `Katalog: ${allowedUniversities.length} ta universitet` : 'Universitet katalogi boвЂsh.';
+                if(hint) hint.textContent = allowedUniversities.length ? `Katalog: ${allowedUniversities.length} ta universitet` : 'Universitet katalogi bo‘sh.';
             }catch(e){
                 console.warn('loadUniversityCatalog failed', e);
                 const hint = document.getElementById('uniHint');
@@ -961,7 +962,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                             </div>
                             <div class="flex items-center space-x-2">
                                 ${isMyStudyGroup ?
-                                    '<span class="text-xs bg-amber-300/20 text-amber-200 px-2 py-1 rounded">Sizning oвЂquv guruhingiz</span>' : ''
+                                    '<span class="text-xs bg-amber-300/20 text-amber-200 px-2 py-1 rounded">Sizning o‘quv guruhingiz</span>' : ''
                                 }
                                 ${group.isPrivate ? 
                                     '<span class="text-xs bg-gray-100 muted2 px-2 py-1 rounded">Private</span>' : 
@@ -996,7 +997,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                                 </div>
                                 <div class="flex items-center">
                                     <i class="fas fa-school mr-1"></i>
-                                    <span>${group.studyType || 'OвЂquv turi belgilanmagan'}</span>
+                                    <span>${group.studyType || 'O‘quv turi belgilanmagan'}</span>
                                 </div>
                                 <div class="flex items-center">
                                     <i class="fas fa-graduation-cap mr-1"></i>
@@ -1079,7 +1080,7 @@ function switchGroupTab(tab){
   currentGroupTab = tab;
   const tabLabelMap = {
     my: 'Men yaratgan guruhlar',
-    joined: 'QoвЂshilgan guruhlar',
+    joined: 'Qo‘shilgan guruhlar',
     all: 'Sizga mos + barcha guruhlar'
   };
   const labelEl = document.getElementById('currentGroupTabLabel');
@@ -1176,7 +1177,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
                 return;
             }
             if (Array.isArray(allowedUniversities) && allowedUniversities.length && !allowedUniversities.includes(chosenUni)) {
-                alert('Universitet roвЂyxatda yoвЂq. Admin paneldagi katalogdan tanlang.');
+                alert('Universitet ro‘yxatda yo‘q. Admin paneldagi katalogdan tanlang.');
                 return;
             }
             if (!chosenFac) {
@@ -1184,23 +1185,23 @@ document.addEventListener('DOMContentLoaded', ()=>{
                 return;
             }
             if (Array.isArray(allowedFaculties) && allowedFaculties.length && !allowedFaculties.includes(chosenFac)) {
-                alert('Fakultet roвЂyxatda yoвЂq. Katalogdan tanlang.');
+                alert('Fakultet ro‘yxatda yo‘q. Katalogdan tanlang.');
                 return;
             }
             if (!chosenType) {
-                alert('OвЂquv turini tanlang.');
+                alert('O‘quv turini tanlang.');
                 return;
             }
             if (Array.isArray(allowedStudyTypes) && allowedStudyTypes.length && !allowedStudyTypes.includes(chosenType)) {
-                alert('OвЂquv turi roвЂyxatda yoвЂq. Katalogdan tanlang.');
+                alert('O‘quv turi ro‘yxatda yo‘q. Katalogdan tanlang.');
                 return;
             }
             if (!chosenGroup) {
-                alert('OвЂquv guruhini tanlang.');
+                alert('O‘quv guruhini tanlang.');
                 return;
             }
             if (Array.isArray(allowedStudyGroups) && allowedStudyGroups.length && !allowedStudyGroups.includes(chosenGroup)) {
-                alert('OвЂquv guruhi roвЂyxatda yoвЂq. Katalogdan tanlang.');
+                alert('O‘quv guruhi ro‘yxatda yo‘q. Katalogdan tanlang.');
                 return;
             }
 try {

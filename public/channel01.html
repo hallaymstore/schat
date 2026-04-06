@@ -81,7 +81,8 @@
 })();
 </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 
 <body class="bg-gray-50 min-h-screen">
@@ -169,9 +170,9 @@
             </div>
             <div class="text-white/90 text-sm">
               <span id="channelUsername"></span>
-              <span class="mx-2">вЂў</span>
+              <span class="mx-2">•</span>
               <span id="channelCategory"></span>
-              <span class="mx-2">вЂў</span>
+              <span class="mx-2">•</span>
               <span id="channelUniversity"></span>
             </div>
           </div>
@@ -201,7 +202,7 @@
                 </span>
                 <div>
                   <div class="font-semibold text-gray-900">Live stream</div>
-                  <div id="liveStatusText" class="text-sm text-gray-600">Checking statusвЂ¦</div>
+                  <div id="liveStatusText" class="text-sm text-gray-600">Checking status…</div>
                 </div>
               </div>
               <div id="liveHint" class="text-xs text-gray-500 mt-1">
@@ -406,7 +407,7 @@
   if (!isObjectId(channelId)) {
     const uname = urlParams.get('username') || urlParams.get('u');
     if (uname) {
-      showError('Resolving channel by usernameвЂ¦');
+      showError('Resolving channel by username…');
       (async () => {
         try {
           const res = await fetch(`/api/channels/by-username/${encodeURIComponent(uname)}`, {
@@ -506,7 +507,7 @@ function canManageChannel(){
     if (!liveIsLive) { el.textContent = ''; return; }
     const dt = liveStartedAt ? new Date(liveStartedAt) : null;
     const when = dt ? dt.toLocaleString() : '';
-    el.textContent = `Host: ${liveHostId || '-'}  вЂў  Mode: ${liveMode || '-'}  вЂў  Started: ${when}`;
+    el.textContent = `Host: ${liveHostId || '-'}  •  Mode: ${liveMode || '-'}  •  Started: ${when}`;
   }
 
   function showLivePlayer(show){
@@ -772,7 +773,7 @@ function canManageChannel(){
         liveMode = payload.mode || null;
 
         if (liveIsLive) {
-          setLiveStatusText('рџ”ґ LIVE now вЂў Viewers: ' + (payload.viewersCount ?? 'вЂ”'));
+          setLiveStatusText('🔴 LIVE now • Viewers: ' + (payload.viewersCount ?? '—'));
         } else {
           setLiveStatusText('Offline');
           // If live ended while watching, cleanup viewer PC
@@ -892,7 +893,7 @@ function canManageChannel(){
       try {
         if (!payload || String(payload.channelId||'') !== String(channelId)) return;
         // Host confirmation
-        setLiveStatusText('рџ”ґ LIVE now');
+        setLiveStatusText('🔴 LIVE now');
         showLivePlayer(true);
         setLiveMeta();
         renderLiveControls();
@@ -903,7 +904,7 @@ function canManageChannel(){
       try {
         if (!payload || String(payload.channelId||'') !== String(channelId)) return;
         // Viewer joined: wait for offer
-        setLiveStatusText('Joining liveвЂ¦');
+        setLiveStatusText('Joining live…');
         showLivePlayer(true);
         setLiveMeta();
       } catch(e){}
@@ -1087,7 +1088,7 @@ function canManageChannel(){
               ${p.title ? `<div class="text-lg font-bold text-gray-900">${escapeHtml(p.title)}</div>` : ''}
               <div class="text-xs text-gray-500 mt-1">
                 <span>${new Date(p.createdAt).toLocaleString()}</span>
-                <span class="mx-2">вЂў</span>
+                <span class="mx-2">•</span>
                 <span><i class="fas fa-eye mr-1"></i>${p.viewsCount ?? 0}</span>
               </div>
             </div>

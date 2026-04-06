@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guruhlar вЂ” HALLAYM edu</title>
+    <title>Guruhlar — HALLAYM edu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -173,7 +173,8 @@
 })();
 </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body class="h-full text-slate-900 dark:text-slate-100">
 <!-- Mobile Drawer -->
@@ -258,7 +259,7 @@
           </div>
         </a>
         <nav class="hidden md:flex items-center gap-1">
-          <a href="/search.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">рџ”Ќ Search...</a>
+          <a href="/search.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">🔍 Search...</a>
           <a href="/messages.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Xabarlar</a>
           <a href="/groups.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Guruhlar</a>
           <a href="/channels.html" class="px-3 py-2 rounded-xl btn-ghost muted text-sm font-semibold">Kanallar</a>
@@ -285,8 +286,8 @@
             <div class="w-20 h-20 gradient-bg rounded-full ring-1 ring-white/20 shadow-glass flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-users text-white text-3xl"></i>
             </div>
-            <h1 class="text-3xl font-bold text-gray-800">OвЂquv guruhlari</h1>
-            <p class="muted2">Kursdoshlar bilan guruhlarga qoвЂshiling yoki yangi guruh yarating</p>
+            <h1 class="text-3xl font-bold text-gray-800">O‘quv guruhlari</h1>
+            <p class="muted2">Kursdoshlar bilan guruhlarga qo‘shiling yoki yangi guruh yarating</p>
         </div>
         
         <!-- Create Group Button -->
@@ -303,7 +304,7 @@
     <i class="fas fa-user-friends mr-2"></i> Mening guruhlarim
   </button>
   <button type="button" class="group-tab px-4 py-2 rounded-xl font-semibold btn-ghost whitespace-nowrap" data-tab="joined" aria-pressed="false">
-    <i class="fas fa-users mr-2"></i> QoвЂshilgan guruhlar
+    <i class="fas fa-users mr-2"></i> Qo‘shilgan guruhlar
   </button>
   <button type="button" class="group-tab px-4 py-2 rounded-xl font-semibold btn-ghost whitespace-nowrap" data-tab="all" aria-pressed="false">
     <i class="fas fa-globe mr-2"></i> Barcha guruhlar
@@ -429,7 +430,7 @@
                     sel.appendChild(opt);
                 }
                 const hint = document.getElementById('uniHint');
-                if(hint) hint.textContent = allowedUniversities.length ? `Katalog: ${allowedUniversities.length} ta universitet` : 'Universitet katalogi boвЂsh.';
+                if(hint) hint.textContent = allowedUniversities.length ? `Katalog: ${allowedUniversities.length} ta universitet` : 'Universitet katalogi bo‘sh.';
             }catch(e){
                 console.warn('loadUniversityCatalog failed', e);
                 const hint = document.getElementById('uniHint');
@@ -708,7 +709,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
             if (chosenUni && Array.isArray(allowedUniversities) && allowedUniversities.length) {
                 const ok = allowedUniversities.includes(chosenUni);
                 if (!ok) {
-                    alert('Universitet roвЂyxatda yoвЂq. Admin paneldagi katalogdan tanlang.');
+                    alert('Universitet ro‘yxatda yo‘q. Admin paneldagi katalogdan tanlang.');
                     return;
                 }
             }

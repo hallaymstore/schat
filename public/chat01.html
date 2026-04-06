@@ -717,7 +717,8 @@
 })();
 </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 <!-- Mobile Drawer -->
@@ -773,7 +774,7 @@
                         <div id="chatUserStatus" class="status-dot offline"></div>
                     </div>
                     <div>
-                        <h1 id="chatUserName" class="font-bold text-lg">YuklanmoqdaвЂ¦</h1>
+                        <h1 id="chatUserName" class="font-bold text-lg">Yuklanmoqda…</h1>
                         <p id="chatUserUniversity" class="text-sm text-white/80"></p>
                     </div>
                 </div>
@@ -801,7 +802,7 @@
                 <!-- Loading indicator -->
                 <div id="loadingIndicator" class="text-center py-8">
                     <div class="loading-spinner"></div>
-                    <p class="text-gray-500 mt-2">Xabarlar yuklanmoqdaвЂ¦</p>
+                    <p class="text-gray-500 mt-2">Xabarlar yuklanmoqda…</p>
                 </div>
                 <!-- Messages will be loaded here -->
             </div>
@@ -1075,8 +1076,8 @@ const floatingRobot = (() => {
     function label(m){
         if (m==='happy') return "Xursand";
         if (m==='sad') return "Xafa";
-        if (m==='thinking') return "OвЂylayapti";
-        if (m==='read') return "OвЂqildi";
+        if (m==='thinking') return "O‘ylayapti";
+        if (m==='read') return "O‘qildi";
         if (m==='online') return "Onlayn";
         if (m==='offline') return "Oflayn";
         return "Neytral";
@@ -1199,7 +1200,7 @@ const floatingRobot = (() => {
         
         // DOM Content Loaded
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log('рџљЂ Chat page loaded');
+            console.log('🚀 Chat page loaded');
             
             // Get chat user ID from URL
             await getChatUserIdFromURL();
@@ -1225,7 +1226,7 @@ const floatingRobot = (() => {
             // Setup scroll listener for infinite scroll
             setupInfiniteScroll();
             
-            console.log('вњ… Chat initialized successfully');
+            console.log('✅ Chat initialized successfully');
             try{ floatingRobot.ensure(); }catch(e){}
         });
         
@@ -1242,7 +1243,7 @@ const floatingRobot = (() => {
                 throw new Error('User ID not found');
             }
             
-            console.log('рџ‘¤ Chat User ID:', chatUserId);
+            console.log('👤 Chat User ID:', chatUserId);
         }
         
         // Authentication check
@@ -1287,7 +1288,7 @@ const floatingRobot = (() => {
                 const data = await response.json();
                 if (data.success) {
                     currentUser = data.user;
-                    console.log('рџ‘¤ Current user loaded:', currentUser.username);
+                    console.log('👤 Current user loaded:', currentUser.username);
                 } else {
                     throw new Error('Failed to load user');
                 }
@@ -1313,7 +1314,7 @@ const floatingRobot = (() => {
                 if (data.success) {
                     chatUser = data.user;
                     renderChatUserInfo(chatUser);
-                    console.log('рџ‘¤ Chat user loaded:', chatUser.username);
+                    console.log('👤 Chat user loaded:', chatUser.username);
                 } else {
                     showNotification('User not found', 'error');
                     setTimeout(() => {
@@ -1382,7 +1383,7 @@ const floatingRobot = (() => {
                 btn.classList.toggle('cursor-not-allowed', !isOnline);
             });
             
-            console.log(`рџ“Љ User status updated: ${statusText}`);
+            console.log(`📊 User status updated: ${statusText}`);
         }
         
         // Initialize socket connection
@@ -1399,36 +1400,36 @@ const floatingRobot = (() => {
             
             // Connection events
             socket.on('connect', () => {
-                console.log('рџ”Њ Socket.IO connected:', socket.id);
+                console.log('🔌 Socket.IO connected:', socket.id);
                 
                 // Authenticate with token
                 socket.emit('authenticate', token);
             });
             
             socket.on('connect_error', (error) => {
-                console.error('вќЊ Socket.IO connection error:', error);
+                console.error('❌ Socket.IO connection error:', error);
                 showNotification('Connection error. Trying to reconnect...', 'error');
             });
             
             socket.on('disconnect', (reason) => {
-                console.log('рџ”Њ Socket.IO disconnected:', reason);
+                console.log('🔌 Socket.IO disconnected:', reason);
                 if (reason === 'io server disconnect') {
                     socket.connect();
                 }
             });
             
             socket.on('reconnecting', (attemptNumber) => {
-                console.log(`рџ”„ Reconnecting attempt ${attemptNumber}`);
+                console.log(`🔄 Reconnecting attempt ${attemptNumber}`);
             });
             
             socket.on('reconnect', () => {
-                console.log('вњ… Socket reconnected');
+                console.log('✅ Socket reconnected');
                 showNotification('Reconnected to server', 'success');
             });
             
             // Authentication response
             socket.on('authenticated', (data) => {
-                console.log('вњ… Socket authenticated successfully:', data);
+                console.log('✅ Socket authenticated successfully:', data);
                 
                 // Join chat room
                 socket.emit('joinChat', {
@@ -1455,7 +1456,7 @@ const floatingRobot = (() => {
             });
             
             socket.on('authenticationError', (data) => {
-                console.error('вќЊ Socket authentication error:', data);
+                console.error('❌ Socket authentication error:', data);
                 showNotification('Authentication failed. Please login again.', 'error');
                 setTimeout(() => {
                     window.location.href = '/login.html';
@@ -1464,13 +1465,13 @@ const floatingRobot = (() => {
             
             // Chat room joined
             socket.on('chatJoined', (data) => {
-                console.log('вњ… Joined chat room:', data.roomName);
+                console.log('✅ Joined chat room:', data.roomName);
             });
             
             // New message received
             socket.on('newMessage', (message) => {
                 try{ floatingRobot.setMood('happy','Yangi xabar'); floatingRobot.moveToLastBubble('received'); }catch(e){}
-                console.log('рџ“Ё New message received:', message);
+                console.log('📨 New message received:', message);
 
 	                // Normalize ids (senderId/receiverId can be populated objects or plain strings)
 	                const senderId = (message.senderId && message.senderId._id) ? message.senderId._id : message.senderId;
@@ -1502,7 +1503,7 @@ const floatingRobot = (() => {
             
 	            // Message sent confirmation
 	            socket.on('messageSent', (message) => {
-	                console.log('вњ“ Message sent confirmation:', message._id);
+	                console.log('✓ Message sent confirmation:', message._id);
 	                // Reconcile optimistic message (replace temp id with real id)
 	                if (message.clientTempId) {
 	                    const tempEl = document.querySelector(`[data-message-id="${message.clientTempId}"]`);
@@ -1524,26 +1525,26 @@ const floatingRobot = (() => {
             
             // Message delivered
             socket.on('messageDelivered', (data) => {
-                console.log('вњ“ Message delivered:', data.messageId);
+                console.log('✓ Message delivered:', data.messageId);
                 updateMessageStatus(data.messageId, 'delivered');
             });
             
             // Message read
             socket.on('messageRead', (data) => {
-                try{ floatingRobot.setMood('read','OвЂqildi'); floatingRobot.moveToLastBubble('sent'); }catch(e){}
-                console.log('вњ“ Message read:', data.messageId);
+                try{ floatingRobot.setMood('read','O‘qildi'); floatingRobot.moveToLastBubble('sent'); }catch(e){}
+                console.log('✓ Message read:', data.messageId);
                 updateMessageStatus(data.messageId, 'read');
             });
             
             // Message error
             socket.on('messageError', (data) => {
-                console.error('вќЊ Message error:', data);
+                console.error('❌ Message error:', data);
                 showNotification('Failed to send message: ' + data.error, 'error');
             });
             
             // Typing indicator
             socket.on('userTyping', (data) => {
-                try{ floatingRobot.setMood('thinking','YozayaptiвЂ¦'); floatingRobot.moveToLastBubble('received'); }catch(e){}
+                try{ floatingRobot.setMood('thinking','Yozayapti…'); floatingRobot.moveToLastBubble('received'); }catch(e){}
                 if (data.userId === chatUserId) {
                     if (data.isTyping) {
                         document.getElementById('typingText').textContent = `${chatUser.nickname} is typing...`;
@@ -1573,7 +1574,7 @@ const floatingRobot = (() => {
             
             // Call signaling
             socket.on('callOffer', (data) => {
-                console.log('рџ“ћ Incoming call offer:', data);
+                console.log('📞 Incoming call offer:', data);
                 if (data.from === chatUserId && !isInCall) {
                     // Store the offer for when user accepts
                     pendingOffer = data.offer;
@@ -1582,21 +1583,21 @@ const floatingRobot = (() => {
             });
             
             socket.on('callAnswer', async (data) => {
-                console.log('вњ… Call answer received:', data);
+                console.log('✅ Call answer received:', data);
                 if (data.from === chatUserId) {
                     await handleCallAnswer(data);
                 }
             });
             
             socket.on('iceCandidate', async (data) => {
-                console.log('вќ„пёЏ ICE candidate received:', data);
+                console.log('❄️ ICE candidate received:', data);
                 if (data.from === chatUserId) {
                     await handleIceCandidate(data);
                 }
             });
             
             socket.on('callEnded', (data) => {
-                console.log('рџ“ћ Call ended:', data);
+                console.log('📞 Call ended:', data);
                 if (data.from === chatUserId) {
                     endCall();
                     if (data.duration > 0) {
@@ -1608,7 +1609,7 @@ const floatingRobot = (() => {
             });
             
             socket.on('callRejected', (data) => {
-                console.log('вќЊ Call rejected:', data);
+                console.log('❌ Call rejected:', data);
                 if (data.from === chatUserId) {
                     hideCallUI();
                     showNotification('Call rejected', 'warning');
@@ -1616,7 +1617,7 @@ const floatingRobot = (() => {
             });
             
             socket.on('callTimeout', (data) => {
-                console.log('вЏ° Call timeout:', data);
+                console.log('⏰ Call timeout:', data);
                 if (data.to === currentUser._id) {
                     hideCallUI();
                     showNotification('Call timed out. No answer.', 'warning');
@@ -1624,7 +1625,7 @@ const floatingRobot = (() => {
             });
             
             socket.on('callError', (data) => {
-                console.error('вќЊ Call error:', data);
+                console.error('❌ Call error:', data);
                 showNotification('Call error: ' + data.error, 'error');
                 hideCallUI();
             });
@@ -1658,7 +1659,7 @@ const floatingRobot = (() => {
 
                 if (!response.ok) {
                     const msg = (data && (data.error || data.message)) ? (data.error || data.message) : `HTTP ${response.status}`;
-                    console.error('вќЊ loadMessages failed:', msg);
+                    console.error('❌ loadMessages failed:', msg);
                     if (loadingEl) loadingEl.style.display = 'none';
                     if (response.status === 401 || response.status === 403) {
                         showNotification('Sessiya tugagan. Qayta kiring.', 'error');
@@ -1666,7 +1667,7 @@ const floatingRobot = (() => {
                         setTimeout(()=> window.location.href='/login.html', 800);
                         return;
                     }
-                    showNotification('Xabarlarni yuklab boвЂlmadi: ' + msg, 'error');
+                    showNotification('Xabarlarni yuklab bo‘lmadi: ' + msg, 'error');
                     return;
                 }
                 
@@ -2340,7 +2341,7 @@ const floatingRobot = (() => {
                     { urls: 'stun:stun2.l.google.com:19302' },
                     { urls: 'stun:stun3.l.google.com:19302' },
                                         { urls: 'stun:stun4.l.google.com:19302' },
-                    // вњ… TURN (optional). If you don't understand TURN yet, leave these empty.
+                    // ✅ TURN (optional). If you don't understand TURN yet, leave these empty.
                     // Example:
                     // { urls: 'turn:YOUR_TURN_HOST:3478', username: 'USER', credential: 'PASS' },
                     // Runtime (optional): set in console => window.TURN_URL='turn:...'; window.TURN_USERNAME='...'; window.TURN_CREDENTIAL='...';
@@ -3182,7 +3183,7 @@ const floatingRobot = (() => {
         
         // Test function
         window.testConnection = async () => {
-            console.log('рџ§Є Testing connection...');
+            console.log('🧪 Testing connection...');
             console.log('Current User:', currentUser);
             console.log('Chat User:', chatUser);
             console.log('Socket Connected:', socket?.connected);
@@ -3223,8 +3224,8 @@ const floatingRobot = (() => {
     if (loaded()) return;
     var s = document.createElement('script');
     s.src = "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js";
-    s.onload = function(){ console.log("вњ… LiveKit client loaded (fallback jsdelivr)"); };
-    s.onerror = function(){ console.warn("вќЊ LiveKit client failed to load from fallback CDN"); };
+    s.onload = function(){ console.log("✅ LiveKit client loaded (fallback jsdelivr)"); };
+    s.onerror = function(){ console.warn("❌ LiveKit client failed to load from fallback CDN"); };
     document.head.appendChild(s);
   })();
 </script>

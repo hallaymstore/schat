@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kirish вЂ” HALLAYM edu</title>
-  <meta name="description" content="HALLAYM eduвЂ™ga kirish: username va parol orqali." />
+  <title>Kirish — HALLAYM edu</title>
+  <meta name="description" content="HALLAYM edu’ga kirish: username va parol orqali." />
 
   <script>
     tailwind = {
@@ -238,7 +238,8 @@
     })();
   </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 
 <body class="min-h-screen text-slate-900 dark:text-slate-100">
@@ -292,7 +293,7 @@
             <span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
           </button>
           <a href="/register.html" class="btn-primary rounded-xl px-4 py-2 text-sm font-extrabold text-white glow-ring">
-            RoвЂyxatdan oвЂtish
+            Ro‘yxatdan o‘tish
           </a>
         </div>
       </div>
@@ -311,10 +312,10 @@
           Platformani <span class="u-anim">tezda</span> oching
         </h2>
         <p class="mt-3 muted text-base leading-relaxed">
-          Login (username) va parolni kiriting. Agar server token qaytarsa, u avtomatik saqlanadi va siz /student-dashboard.html sahifasiga oвЂtasiz.
+          Login (username) va parolni kiriting. Agar server token qaytarsa, u avtomatik saqlanadi va siz /student-dashboard.html sahifasiga o‘tasiz.
         </p>
         <div class="mt-5 text-sm muted2">
-          Agar login ishlamasa: F12 в†’ Network в†’ <span class="font-extrabold">/api/login</span> responseвЂ™ni koвЂring.
+          Agar login ishlamasa: F12 → Network → <span class="font-extrabold">/api/login</span> response’ni ko‘ring.
         </div>
       </section>
 
@@ -328,10 +329,10 @@
               <span class="muted2">xush kelibsiz</span>
             </div>
             <h1 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
-              HALLAYM eduвЂ™ga <span class="u-anim">kiring</span>
+              HALLAYM edu’ga <span class="u-anim">kiring</span>
             </h1>
             <p class="mt-2 text-sm sm:text-base muted2">
-              Email emas вЂ” <span class="font-extrabold">username</span> bilan.
+              Email emas — <span class="font-extrabold">username</span> bilan.
             </p>
           </div>
 
@@ -374,7 +375,7 @@
             </svg>
 
             <div class="mt-2 text-center text-xs muted2">
-              <span id="robotHint">Parol bekitilganda: koвЂzlarini yumadi</span>
+              <span id="robotHint">Parol bekitilganda: ko‘zlarini yumadi</span>
             </div>
           </div>
         </div>
@@ -401,7 +402,7 @@
                      placeholder="Parolingiz" autocomplete="current-password" />
               <button type="button" id="togglePassword"
                       class="absolute right-3 top-1/2 -translate-y-1/2 glass rounded-xl px-3 py-2 btn-ghost glow-ring"
-                      aria-label="Parolni koвЂrsatish/bekitish" title="KoвЂrsatish/Bekitish">
+                      aria-label="Parolni ko‘rsatish/bekitish" title="Ko‘rsatish/Bekitish">
                 <i id="toggleIcon" class="fa-solid fa-eye"></i>
               </button>
             </div>
@@ -412,7 +413,7 @@
           </button>
 
           <div class="text-xs muted2 text-center">
-            Hisobingiz yoвЂqmi? <a href="/register.html" class="font-extrabold underline">RoвЂyxatdan oвЂting</a>
+            Hisobingiz yo‘qmi? <a href="/register.html" class="font-extrabold underline">Ro‘yxatdan o‘ting</a>
           </div>
         </form>
       </section>
@@ -555,17 +556,17 @@
           if(isSuccess(res, result)){
             const token = extractToken(result);
             if(token) localStorage.setItem('token', token);
-            showMessage("Muvaffaqiyatli kirildi! YoвЂnaltirilmoqda...", 'success');
+            showMessage("Muvaffaqiyatli kirildi! Yo‘naltirilmoqda...", 'success');
             setTimeout(()=> fetchMeAndRedirect(token || localStorage.getItem('token')), 300);
             return;
           }
 
-          const err = normalizeError(result) || `Login yoki parol notoвЂgвЂri (HTTP ${res.status}).`;
+          const err = normalizeError(result) || `Login yoki parol noto‘g‘ri (HTTP ${res.status}).`;
           showMessage(err, 'error');
           console.error('Login failed:', { status: res.status, result });
 
         } catch (err){
-          showMessage("Tarmoq xatosi. Server ishlayaptimi? Qayta urinib koвЂring.", 'error');
+          showMessage("Tarmoq xatosi. Server ishlayaptimi? Qayta urinib ko‘ring.", 'error');
           console.error('Login network/error:', err);
         } finally {
           submitBtn.innerHTML = original;
@@ -604,10 +605,10 @@
           blinkR.style.opacity='0';
           eyeL.querySelector('circle').style.opacity='1';
           eyeR.querySelector('circle').style.opacity='1';
-          if(hint) hint.textContent = "Parol ochiq: robot bitta koвЂzi bilan bazoвЂr qaraydi";
+          if(hint) hint.textContent = "Parol ochiq: robot bitta ko‘zi bilan bazo‘r qaraydi";
         } else {
           eyeR.setAttribute('transform','translate(128 112) scale(1,1)');
-          if(hint) hint.textContent = "Parol bekitilganda: koвЂzlarini yumadi";
+          if(hint) hint.textContent = "Parol bekitilganda: ko‘zlarini yumadi";
         }
       }
 

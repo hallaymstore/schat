@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Guruh dars yozuvlari вЂў HALLAYM edu</title>
+  <title>Guruh dars yozuvlari • HALLAYM edu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -177,7 +177,8 @@
     }
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 
 <body>
@@ -187,28 +188,28 @@
         <div>
           <div class="flex items-center gap-3">
             <div class="w-11 h-11 rounded-2xl border border-white/15 bg-white/10 flex items-center justify-center">
-              <span style="font-size:20px">рџ“љ</span>
+              <span style="font-size:20px">📚</span>
             </div>
             <div>
               <h1 class="titleGlow text-2xl sm:text-3xl">Guruh dars yozuvlari</h1>
-              <div class="text-sm muted2 mt-1">Faqat shu guruh aвЂ™zolari koвЂra oladi.</div>
+              <div class="text-sm muted2 mt-1">Faqat shu guruh a’zolari ko‘ra oladi.</div>
             </div>
           </div>
 
           <div class="mt-4 flex flex-wrap items-center gap-2">
-            <span class="chip">Group ID: <span class="font-mono text-[11px]" id="gid">вЂ”</span></span>
-            <span class="chip">URL: <span class="font-mono text-[11px]" id="retInfo">вЂ”</span></span>
+            <span class="chip">Group ID: <span class="font-mono text-[11px]" id="gid">—</span></span>
+            <span class="chip">URL: <span class="font-mono text-[11px]" id="retInfo">—</span></span>
           </div>
         </div>
 
         <div class="flex gap-2">
-          <a id="backLink" href="/groups.html" class="btn btn-primary">в†ђ Orqaga</a>
-          <button id="refreshBtn" class="btn">вџі Yangilash</button>
+          <a id="backLink" href="/groups.html" class="btn btn-primary">← Orqaga</a>
+          <button id="refreshBtn" class="btn">⟳ Yangilash</button>
         </div>
       </div>
 
       <div class="mt-4 text-xs muted2">
-        Agar URLвЂ™da <code>?groupId=...</code> boвЂlmasa, bu sahifa ishlamaydi.
+        Agar URL’da <code>?groupId=...</code> bo‘lmasa, bu sahifa ishlamaydi.
         <span class="opacity-70"> (Tavsiya: group.html sahifasidan <code>return</code> param bilan oching.)</span>
       </div>
     </div>
@@ -220,7 +221,7 @@
     <div id="attModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-[9999]">
       <div class="glass ring max-w-3xl w-full p-4 sm:p-5">
         <div class="flex items-center justify-between gap-3">
-          <div class="font-extrabold text-lg">рџ“‹ Davomat</div>
+          <div class="font-extrabold text-lg">📋 Davomat</div>
           <button id="attClose" class="btn">Yopish</button>
         </div>
         <div id="attBody" class="mt-3 text-sm text-white/80"></div>
@@ -288,7 +289,7 @@ async function addLessonToCourse(lessonId){
   if(title === null) return;
   const cleanTitle = String(title || '').trim();
   if(!cleanTitle){
-    alert('Kurs nomi boвЂsh boвЂlmasin.');
+    alert('Kurs nomi bo‘sh bo‘lmasin.');
     return;
   }
 
@@ -302,7 +303,7 @@ async function addLessonToCourse(lessonId){
     if(p === null) return;
     const val = Number(String(p).replace(/[^\d]/g, ''));
     if(!Number.isFinite(val) || val < 1){
-      alert("Narx 1 so'mdan katta boвЂlishi kerak.");
+      alert("Narx 1 so'mdan katta bo‘lishi kerak.");
       return;
     }
     price = Math.round(val);
@@ -329,12 +330,12 @@ async function addLessonToCourse(lessonId){
   });
   const data = await res.json().catch(()=>null);
   if(!res.ok || !data?.success){
-    alert(data?.error || `Kursga qoвЂshib boвЂlmadi (HTTP ${res.status})`);
+    alert(data?.error || `Kursga qo‘shib bo‘lmadi (HTTP ${res.status})`);
     return;
   }
 
   const courseId = String(data?.course?._id || '');
-  alert("Dars kursga qoвЂshildi (draft).");
+  alert("Dars kursga qo‘shildi (draft).");
   if(courseId){
     window.open(`/course.html?id=${encodeURIComponent(courseId)}`, '_blank');
   }
@@ -366,12 +367,12 @@ function resolveBackLink(){
     back.title = 'Shu guruh chatiga qaytish';
   } else {
     back.href = '/groups.html';
-    back.title = 'Guruhlar roвЂyxati';
+    back.title = 'Guruhlar ro‘yxati';
   }
 }
 
 function fmt(d){
-  if(!d) return 'вЂ”';
+  if(!d) return '—';
   const x=new Date(d);
   return x.toLocaleString([], {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 }
@@ -461,7 +462,7 @@ async function showAttendance(lessonId){
       headers: { 'Authorization': `Bearer ${getToken()}` }
     });
     if(!res.ok){
-      body.innerHTML = `<div class="muted">Davomatni koвЂrsatib boвЂlmadi (HTTP ${res.status}). Bu funksiya faqat darsni oвЂtgan oвЂqituvchi, admin yoki fakultet organizer uchun.</div>`;
+      body.innerHTML = `<div class="muted">Davomatni ko‘rsatib bo‘lmadi (HTTP ${res.status}). Bu funksiya faqat darsni o‘tgan o‘qituvchi, admin yoki fakultet organizer uchun.</div>`;
       return;
     }
     const data = await res.json();
@@ -478,7 +479,7 @@ async function showAttendance(lessonId){
     const aRows = absent.map(x => `<li class="py-0.5">${x.fullName||x.username||x.userId}</li>`).join('');
 
     body.innerHTML = `
-      <div class="text-xs muted mb-2">Kirdi: <b>${joined.length}</b> вЂў Kirmadi: <b>${absent.length}</b></div>
+      <div class="text-xs muted mb-2">Kirdi: <b>${joined.length}</b> • Kirmadi: <b>${absent.length}</b></div>
       <div class="glass p-3" style="box-shadow:none;border-radius:18px">
         <table class="w-full text-sm">
           <thead class="muted">
@@ -494,7 +495,7 @@ async function showAttendance(lessonId){
       </div>
       <div class="mt-3">
         <div class="font-semibold mb-1">Kirmagan talabalar</div>
-        <ul class="text-sm muted">${aRows || '<li class="muted2">YoвЂq</li>'}</ul>
+        <ul class="text-sm muted">${aRows || '<li class="muted2">Yo‘q</li>'}</ul>
       </div>
     `;
   }catch(e){
@@ -589,9 +590,9 @@ async function load(){
   await loadCurrentUser();
 
   const groupId = q('groupId');
-  document.getElementById('gid').textContent = groupId || 'вЂ”';
+  document.getElementById('gid').textContent = groupId || '—';
   if(!groupId){
-    document.getElementById('msg').innerHTML = 'URLga <code>?groupId=...</code> qoвЂshing.';
+    document.getElementById('msg').innerHTML = 'URLga <code>?groupId=...</code> qo‘shing.';
     return;
   }
 
@@ -610,7 +611,7 @@ async function load(){
   list.innerHTML = '';
   lessonMap = new Map();
   const lessons = data.lessons || [];
-  document.getElementById('msg').textContent = lessons.length ? `${lessons.length} ta dars topildi` : 'Hali dars yozuvlari yoвЂq';
+  document.getElementById('msg').textContent = lessons.length ? `${lessons.length} ta dars topildi` : 'Hali dars yozuvlari yo‘q';
 
   lessons.forEach(l => {
     lessonMap.set(String(l._id), l);
@@ -624,19 +625,19 @@ async function load(){
         <div class="w-full max-w-[520px]">
           <video class="w-full rounded-2xl border border-white/10 bg-black/30" controls preload="metadata" src="${toPlayableUrl(l.recordingUrl)}"></video>
           <div class="mt-2 flex gap-2 flex-wrap">
-            <a class="btn btn-primary" href="${l.recordingUrl}" target="_blank" rel="noreferrer">в–¶ Ochish</a>
-            <button class="btn" onclick="downloadRecording('${l.recordingUrl}', '${safeName}')">в¬‡ Yuklab olish</button>
+            <a class="btn btn-primary" href="${l.recordingUrl}" target="_blank" rel="noreferrer">▶ Ochish</a>
+            <button class="btn" onclick="downloadRecording('${l.recordingUrl}', '${safeName}')">⬇ Yuklab olish</button>
           </div>
-          <div class="text-xs muted2 mt-1">Agar video oвЂynamasa: вЂњOchishвЂќ ni bosib alohida tabda koвЂring.</div>
+          <div class="text-xs muted2 mt-1">Agar video o‘ynamasa: “Ochish” ni bosib alohida tabda ko‘ring.</div>
         </div>`
-      : `<span class="chip">Yozuv yoвЂq</span>`;
+      : `<span class="chip">Yozuv yo‘q</span>`;
     const importBtn = (l.recordingUrl && canImportLessonToCourse(l))
-      ? `<button class="btn btn-primary" onclick="addLessonToCourse('${l._id}')">рџЋ“ Kursga qoвЂshish</button>`
+      ? `<button class="btn btn-primary" onclick="addLessonToCourse('${l._id}')">🎓 Kursga qo‘shish</button>`
       : '';
 
     const title = (l.title && String(l.title).trim()) ? String(l.title).trim() : 'Live dars';
     const attendanceBtn = canViewAttendanceLesson(l)
-      ? `<button class="btn" onclick="showAttendance('${l._id}')">рџ“‹ Davomat</button>`
+      ? `<button class="btn" onclick="showAttendance('${l._id}')">📋 Davomat</button>`
       : '';
 
     div.innerHTML = `
@@ -645,14 +646,14 @@ async function load(){
           <div class="text-lg sm:text-xl font-extrabold">${title}</div>
           <div class="text-xs muted mt-1">
             Teacher: <span class="font-semibold">${l.host?.fullName || 'Teacher'}</span>
-            вЂў Boshlanish: ${fmt(l.startedAt)} вЂў Tugash: ${fmt(l.endedAt)}
+            • Boshlanish: ${fmt(l.startedAt)} • Tugash: ${fmt(l.endedAt)}
           </div>
 
           <div class="kpi">
             <span class="chip">Live: <span data-live-duration="${l._id}">${fmtDur(l.liveDurationSec || 0)}</span></span>
             <span class="chip">Video: <span data-video-duration="${l._id}">${fmtDur(l.recordingDurationSec || 0)}</span></span>
             <span class="chip">Rejim: ${l.mode || 'camera'}</span>
-            <span class="chip">Status: ${l.status || 'вЂ”'}</span>
+            <span class="chip">Status: ${l.status || '—'}</span>
           </div>
         </div>
 

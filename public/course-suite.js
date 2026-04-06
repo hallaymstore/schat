@@ -5,7 +5,7 @@
   function qs(name){ return new URLSearchParams(window.location.search).get(name); }
   function getToken(){ return localStorage.getItem("token") || ""; }
   function escapeHtml(value){
-    return String(value ?? "")
+    return String(value || "")
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")

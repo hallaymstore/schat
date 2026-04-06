@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Jonli efirlar вЂ” Lives</title>
+  <title>Jonli efirlar — Lives</title>
   <style>
     :root{
       --bg1:#070a17; --bg2:#0b1533;
@@ -101,7 +101,8 @@
     @media(max-width:720px){ .two{grid-template-columns:1fr} }
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body>
   <div class="topbar">
@@ -111,7 +112,7 @@
           <div class="logo"></div>
           <div>
             <div class="title">Jonli efirlar</div>
-            <div class="muted" style="font-size:12px">Teacher efir yoqadi/oвЂchiradi, schedule qiladi. Studentlar jonli koвЂradi (pullik/bepul).</div>
+            <div class="muted" style="font-size:12px">Teacher efir yoqadi/o‘chiradi, schedule qiladi. Studentlar jonli ko‘radi (pullik/bepul).</div>
           </div>
         </div>
         <div class="row">
@@ -127,7 +128,7 @@
     <div class="grid">
       <div class="card">
         <div class="row" style="justify-content:space-between">
-          <h3 style="margin:0">Efirlar roвЂyxati</h3>
+          <h3 style="margin:0">Efirlar ro‘yxati</h3>
           <div class="row">
             <input id="q" class="input" style="width:260px" placeholder="Qidirish: nom, izoh..." />
             <select id="statusSel" style="width:180px">
@@ -149,7 +150,7 @@
       <div class="card" id="teacherCard" style="display:none">
         <h3>Teacher panel: efir yaratish</h3>
         <div class="muted" style="margin-bottom:10px">
-          Efirni rejalashtirasiz. Keyin вЂњStartвЂќ bosilganda LIVE boвЂladi va studentlar вЂњJoinвЂќ qilib kutib turadi.
+          Efirni rejalashtirasiz. Keyin “Start” bosilganda LIVE bo‘ladi va studentlar “Join” qilib kutib turadi.
         </div>
 
         <div class="two">
@@ -187,7 +188,7 @@
         </div>
 
         <div class="muted" style="font-size:12px;margin-top:10px">
-          Eslatma: Pullik boвЂlsa, studentlar /api/lives/:id/enter orqali bir marta coin toвЂlaydi. Yetmasa /topup.html ga yoвЂnaltiriladi.
+          Eslatma: Pullik bo‘lsa, studentlar /api/lives/:id/enter orqali bir marta coin to‘laydi. Yetmasa /topup.html ga yo‘naltiriladi.
         </div>
       </div>
 
@@ -237,7 +238,7 @@
     function pill(me){
       const role=(me.role || (me.isAdmin?'admin':'student')) || "student";
       const nm=me.fullName || me.nickname || me.username || "User";
-      document.getElementById("mePill").textContent = nm + " вЂў " + role + " вЂў " + (me.coins||0) + " coin";
+      document.getElementById("mePill").textContent = nm + " • " + role + " • " + (me.coins||0) + " coin";
       document.getElementById("teacherCard").style.display = (role==="teacher"||role==="admin") ? "block" : "none";
     }
 
@@ -302,7 +303,7 @@
       const list = data.lives || [];
       const box=document.getElementById("list");
       if(!list.length){
-        box.innerHTML = `<div class="muted">Hozircha jonli efirlar yoвЂq.</div>`;
+        box.innerHTML = `<div class="muted">Hozircha jonli efirlar yo‘q.</div>`;
         return;
       }
       box.innerHTML = list.map(l=>itemHTML(l, me)).join("");
@@ -316,7 +317,7 @@
       const price=Number(document.getElementById("t_price").value||0);
 
       if(!title) return setErr("Efir nomi majburiy.");
-      if(type==="paid" && price<1) return setErr("Pullik efir narxi 1 coindan katta boвЂlsin.");
+      if(type==="paid" && price<1) return setErr("Pullik efir narxi 1 coindan katta bo‘lsin.");
 
       const token=getToken();
       const res=await fetch(API_BASE + "/api/lives", {
@@ -325,7 +326,7 @@
         body: JSON.stringify({ title, description, startAt: startAt? new Date(startAt).toISOString() : null, type, price })
       });
       const data=await res.json().catch(()=> ({}));
-      if(!res.ok) return setErr(data.error || "Efir yaratib boвЂlmadi.");
+      if(!res.ok) return setErr(data.error || "Efir yaratib bo‘lmadi.");
       setOk("Efir yaratildi!");
       document.getElementById("t_title").value="";
       document.getElementById("t_desc").value="";
@@ -339,7 +340,7 @@
         headers:{ "Authorization":"Bearer " + token }
       });
       const data=await res.json().catch(()=> ({}));
-      if(!res.ok) return setErr(data.error || "Start boвЂlmadi.");
+      if(!res.ok) return setErr(data.error || "Start bo‘lmadi.");
       setOk("LIVE boshlandi.");
       await refresh();
       window.open("/live.html?id=" + encodeURIComponent(id) + "&host=1", "_blank");
@@ -352,7 +353,7 @@
         headers:{ "Authorization":"Bearer " + token }
       });
       const data=await res.json().catch(()=> ({}));
-      if(!res.ok) return setErr(data.error || "Stop boвЂlmadi.");
+      if(!res.ok) return setErr(data.error || "Stop bo‘lmadi.");
       setOk("LIVE tugadi.");
       await refresh();
     }
@@ -372,7 +373,7 @@
           setTimeout(()=> location.href = data.redirect, 900);
           return;
         }
-        return setErr(data.error || "Join boвЂlmadi.");
+        return setErr(data.error || "Join bo‘lmadi.");
       }
 
       const isHost = (me._id && data.ok && String(me._id)===String(me._id)); // noop

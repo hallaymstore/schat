@@ -3,58 +3,36 @@
   window.__schatGlobalLoaderReady = true;
 
   var doc = document;
-  var root = doc.documentElement;
   var state = {
     pending: 0,
     booting: true,
     manualBlocks: 0,
     overlay: null,
-    progress: null,
-    progressInner: null,
-    progressTimer: null,
     settleTimer: null,
     maxBootTimer: null,
     minVisibleUntil: Date.now() + 700
   };
-
-  root.classList.add('schat-page-loading');
 
   function injectStyle() {
     if (doc.getElementById('schat-global-loader-style')) return;
     var style = doc.createElement('style');
     style.id = 'schat-global-loader-style';
     style.textContent = [
-      'html.schat-page-loading body > *{opacity:0!important;visibility:hidden!important}',
-      'html.schat-page-loading body > script{display:none!important}',
-      '#schatGlobalLoader,#schatGlobalLoaderBar{visibility:visible!important;opacity:1!important}',
-      '#schatGlobalLoader{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;padding:24px;',
-      'background:radial-gradient(circle at top,rgba(20,184,166,.18),transparent 34%),linear-gradient(180deg,rgba(3,12,19,.88),rgba(7,18,28,.94));',
-      'backdrop-filter:blur(12px)}',
+      '#schatGlobalLoader{visibility:visible!important;opacity:1!important;position:fixed;right:18px;bottom:18px;z-index:2147483646;display:none;align-items:center;justify-content:center;width:min(250px,calc(100vw - 36px));pointer-events:none;}',
       '#schatGlobalLoader.visible{display:flex}',
-      '.schat-loader-card{width:min(460px,92vw);padding:28px 26px;border-radius:24px;border:1px solid rgba(255,255,255,.16);',
-      'background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.08));box-shadow:0 30px 90px rgba(0,0,0,.34);',
-      'color:#ecfeff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}',
-      '.schat-loader-line{display:flex;align-items:center;gap:14px}',
-      '.schat-loader-badge{min-width:54px;height:54px;border-radius:18px;display:grid;place-items:center;font-weight:900;font-size:13px;color:#fff;',
-      'background:linear-gradient(135deg,#14b8a6,#f59e0b);box-shadow:0 18px 44px rgba(20,184,166,.24)}',
-      '.schat-loader-copy strong{display:block;font-size:18px;line-height:1.2;margin:0 0 6px}',
-      '.schat-loader-copy p{margin:0;font-size:13px;line-height:1.6;color:rgba(236,254,255,.78)}',
-      '.schat-loader-dots{display:inline-flex;gap:8px;margin-top:18px}',
-      '.schat-loader-dots span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.24);animation:schatLoaderBounce 1.1s infinite ease-in-out}',
+      '.schat-loader-card{width:100%;padding:10px 12px;border-radius:18px;border:1px solid rgba(13,38,35,.10);background:rgba(255,255,255,.92);box-shadow:0 18px 40px rgba(8,31,29,.12);color:#10332f;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;backdrop-filter:blur(14px)}',
+      'html.dark .schat-loader-card{background:rgba(8,28,30,.94);border-color:rgba(255,255,255,.10);color:#e7fbf7}',
+      '.schat-loader-line{display:flex;align-items:center;gap:10px}',
+      '.schat-loader-badge{min-width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-weight:900;font-size:11px;color:#fff;background:linear-gradient(135deg,#14b8a6,#f59e0b);box-shadow:0 12px 28px rgba(20,184,166,.18)}',
+      '.schat-loader-copy strong{display:block;font-size:13px;line-height:1.2;margin:0 0 2px}',
+      '.schat-loader-copy p{margin:0;font-size:11px;line-height:1.45;color:rgba(16,51,47,.72)}',
+      'html.dark .schat-loader-copy p{color:rgba(231,251,247,.72)}',
+      '.schat-loader-dots{display:inline-flex;gap:5px;margin-top:10px}',
+      '.schat-loader-dots span{width:7px;height:7px;border-radius:999px;background:rgba(15,143,131,.28);animation:schatLoaderBounce 1.1s infinite ease-in-out}',
       '.schat-loader-dots span:nth-child(2){animation-delay:.14s}',
       '.schat-loader-dots span:nth-child(3){animation-delay:.28s}',
-      '.schat-loader-bar{margin-top:18px;height:7px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(255,255,255,.08)}',
-      '.schat-loader-bar i{display:block;height:100%;width:42%;border-radius:inherit;background:linear-gradient(90deg,#14b8a6,#facc15,#f59e0b);animation:schatLoaderSweep 1.25s infinite ease-in-out}',
-      '#schatGlobalLoaderBar{position:fixed;left:18px;right:18px;top:14px;z-index:2147483645;display:none;align-items:center;gap:10px;',
-      'padding:10px 14px;border-radius:999px;border:1px solid rgba(13,38,35,.12);background:rgba(255,255,255,.92);box-shadow:0 14px 44px rgba(10,35,32,.12);',
-      'font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#10332f}',
-      'html.dark #schatGlobalLoaderBar{background:rgba(8,28,30,.92);border-color:rgba(255,255,255,.1);color:#dffaf5}',
-      '#schatGlobalLoaderBar.visible{display:flex}',
-      '.schat-progress-track{flex:1;height:6px;border-radius:999px;overflow:hidden;background:rgba(15,143,131,.12)}',
-      '.schat-progress-track i{display:block;height:100%;width:38%;border-radius:inherit;background:linear-gradient(90deg,#14b8a6,#f59e0b);animation:schatLoaderSweep 1.25s infinite ease-in-out}',
-      '.schat-progress-label{font-size:12px;font-weight:800;letter-spacing:.02em;white-space:nowrap}',
+      '@media (max-width:640px){#schatGlobalLoader{right:12px;left:12px;bottom:12px;width:auto}}',
       '@keyframes schatLoaderBounce{0%,80%,100%{transform:translateY(0);opacity:.42}40%{transform:translateY(-5px);opacity:1}}',
-      '@keyframes schatLoaderSweep{0%{transform:translateX(-120%)}100%{transform:translateX(290%)}}'
     ].join('');
     doc.head.appendChild(style);
   }
@@ -74,17 +52,9 @@
         '    </div>',
         '  </div>',
         '  <div class="schat-loader-dots"><span></span><span></span><span></span></div>',
-        '  <div class="schat-loader-bar"><i></i></div>',
         '</div>'
       ].join('');
       doc.body.appendChild(state.overlay);
-    }
-    if (!state.progress) {
-      state.progress = doc.createElement('div');
-      state.progress.id = 'schatGlobalLoaderBar';
-      state.progress.innerHTML = '<span class="schat-progress-label" id="schatGlobalProgressLabel">Yuklanmoqda...</span><div class="schat-progress-track"><i></i></div>';
-      doc.body.appendChild(state.progress);
-      state.progressInner = state.progress.querySelector('.schat-progress-track i');
     }
   }
 
@@ -92,40 +62,26 @@
     ensureUi();
     var titleEl = doc.getElementById('schatGlobalLoaderTitle');
     var textEl = doc.getElementById('schatGlobalLoaderText');
-    var progressLabel = doc.getElementById('schatGlobalProgressLabel');
     if (titleEl && title) titleEl.textContent = String(title);
     if (textEl && text) textEl.textContent = String(text);
-    if (progressLabel) progressLabel.textContent = String(title || 'Yuklanmoqda...');
   }
 
   function showOverlay(title, text) {
     ensureUi();
     setMessage(title || 'Sahifa yuklanmoqda', text || 'Ma\'lumotlar tayyorlanmoqda. Iltimos, bir necha soniya kuting.');
     if (state.overlay) state.overlay.classList.add('visible');
-    root.classList.add('schat-page-loading');
   }
 
   function hideOverlayIfAllowed() {
     if (state.booting || state.manualBlocks > 0) return;
     if (state.overlay) state.overlay.classList.remove('visible');
-    root.classList.remove('schat-page-loading');
-  }
-
-  function showProgressBar(label) {
-    ensureUi();
-    var progressLabel = doc.getElementById('schatGlobalProgressLabel');
-    if (progressLabel) progressLabel.textContent = String(label || 'Yuklanmoqda...');
-    if (state.progress) state.progress.classList.add('visible');
-  }
-
-  function hideProgressBar() {
-    if (state.progress) state.progress.classList.remove('visible');
   }
 
   function scheduleProgressBar(label) {
-    clearTimeout(state.progressTimer);
-    state.progressTimer = setTimeout(function () {
-      if (!state.booting && state.pending > 0) showProgressBar(label);
+    window.setTimeout(function () {
+      if (!state.booting && state.pending > 0) {
+        showOverlay(label || 'Yuklanmoqda...', 'Sahifadagi ma’lumotlar yangilanmoqda.');
+      }
     }, 180);
   }
 
@@ -140,15 +96,12 @@
       }
       state.booting = false;
       hideOverlayIfAllowed();
-      hideProgressBar();
     }, 220);
   }
 
   function finishTrackedRequest() {
     state.pending = Math.max(0, Number(state.pending || 0) - 1);
     if (state.pending === 0) {
-      clearTimeout(state.progressTimer);
-      hideProgressBar();
       settleBoot();
     }
   }
@@ -214,7 +167,6 @@
         state.manualBlocks = Math.max(0, Number(state.manualBlocks || 0) - 1);
         if (state.manualBlocks === 0 && !state.booting && state.pending === 0) {
           hideOverlayIfAllowed();
-          hideProgressBar();
         }
       },
       setText: function (title, text) {
@@ -239,6 +191,5 @@
   state.maxBootTimer = setTimeout(function () {
     state.booting = false;
     hideOverlayIfAllowed();
-    hideProgressBar();
   }, 12000);
 })();

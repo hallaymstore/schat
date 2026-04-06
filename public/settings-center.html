@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Settings Center РІР‚вЂќ HALLAYM edu</title>
+  <title>Sozlamalar markazi — HALLAYM edu</title>
   <meta name="description" content="Profil sozlamalari, xavfsizlik, premium holati va bildirishnoma boshqaruvi."/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +19,8 @@
       document.documentElement.classList.toggle('dark', mode === 'dark');
     })();
   </script>
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body>
   <div class="account-shell">
@@ -28,13 +29,13 @@
         <div class="brand-block">
           <div class="brand-mark"><i class="fa-solid fa-sliders"></i></div>
           <div>
-            <div class="brand-title">Settings Center</div>
+            <div class="brand-title">Sozlamalar markazi</div>
             <div class="brand-sub">Profil, xavfsizlik, premium va shaxsiy sozlamalar</div>
           </div>
         </div>
         <nav class="nav-pills">
-          <a class="nav-pill active" href="/settings-center.html"><i class="fa-solid fa-sliders"></i> Settings</a>
-          <a class="nav-pill" href="/notification-center.html"><i class="fa-solid fa-bell"></i> Notifications</a>
+          <a class="nav-pill active" href="/settings-center.html"><i class="fa-solid fa-sliders"></i> Sozlamalar</a>
+          <a class="nav-pill" href="/notification-center.html"><i class="fa-solid fa-bell"></i> Bildirishnomalar</a>
           <a class="nav-pill" href="/payment.html"><i class="fa-solid fa-credit-card"></i> Premium</a>
           <a class="nav-pill" id="dashboardLink" href="/student-dashboard.html"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
           <button class="ghost-btn" id="themeToggleBtn" type="button"><i class="fa-solid fa-moon"></i> Tema</button>
@@ -46,7 +47,7 @@
       <article class="glass-card">
         <div class="hero-kicker"><i class="fa-solid fa-shield-halved"></i> HALLAYM account control</div>
         <h1 class="hero-title">Profilni tartibga keltiring, premiumni boshqaring va xavfsizlikni bir joydan nazorat qiling.</h1>
-        <p class="hero-text">Bu markazda til, tema, notification, privacy, sessionlar, parol va premium holati aniq koРІР‚Вrinadi. Keyinchalik qoРІР‚Вshiladigan funksiyalar ham shu yerga yigРІР‚Вiladi.</p>
+        <p class="hero-text">Bu markazda til, tema, notification, privacy, sessionlar, parol va premium holati aniq ko‘rinadi. Keyinchalik qo‘shiladigan funksiyalar ham shu yerga yig‘iladi.</p>
         <div class="hero-actions">
           <a class="primary-btn" href="/payment.html"><i class="fa-solid fa-crown"></i> Premiumni boshqarish</a>
           <a class="ghost-btn" href="/notification-center.html"><i class="fa-solid fa-bell"></i> Notification center</a>
@@ -57,8 +58,8 @@
       <aside class="glass-card">
         <div class="section-head">
           <div>
-            <h2 class="section-title">Akkount koРІР‚Вrinishi</h2>
-            <p class="section-sub">Asosiy maРІР‚в„ўlumotlar va joriy plan shu yerda.</p>
+            <h2 class="section-title">Akkount ko‘rinishi</h2>
+            <p class="section-sub">Asosiy ma’lumotlar va joriy plan shu yerda.</p>
           </div>
         </div>
         <div class="list-stack">
@@ -73,7 +74,7 @@
         <div class="section-head">
           <div>
             <h2 class="section-title">Interface va privacy</h2>
-            <p class="section-sub">Savodi past foydalanuvchilar uchun ham soddaroq koРІР‚Вrinish, til va maxfiylik nazorati.</p>
+            <p class="section-sub">Savodi past foydalanuvchilar uchun ham soddaroq ko‘rinish, til va maxfiylik nazorati.</p>
           </div>
           <button class="primary-btn" id="saveSettingsBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> Saqlash</button>
         </div>
@@ -82,9 +83,9 @@
           <label class="field-wrap">
             <span class="field-label">Til</span>
             <select class="field-select" id="languageInput">
-              <option value="uz">OРІР‚Вzbek</option>
+              <option value="uz">O‘zbek</option>
               <option value="en">English</option>
-              <option value="ru">Р В РЎС“РЎРѓРЎРѓР С”Р С‘Р в„–</option>
+              <option value="ru">Русский</option>
             </select>
           </label>
 
@@ -98,7 +99,7 @@
           </label>
 
           <label class="field-wrap">
-            <span class="field-label">Profil koРІР‚Вrinishi</span>
+            <span class="field-label">Profil ko‘rinishi</span>
             <select class="field-select" id="profileVisibilityInput">
               <option value="public">Public</option>
               <option value="campus">Campus only</option>
@@ -109,9 +110,9 @@
           <div class="field-wrap">
             <span class="field-label">Quick controls</span>
             <div class="split-grid">
-              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Animated stickers</span><span class="switch-note">Premium boРІР‚Вlsa chatlarda sticker panel ochiladi.</span></span><input class="toggle" id="animatedStickersInput" type="checkbox"/></label>
+              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Animated stickers</span><span class="switch-note">Premium bo‘lsa chatlarda sticker panel ochiladi.</span></span><input class="toggle" id="animatedStickersInput" type="checkbox"/></label>
               <label class="switch-row"><span class="switch-copy"><span class="switch-title">Sticker autoplay</span><span class="switch-note">Sticker SVG/GIF lar avtomatik harakatlanadi.</span></span><input class="toggle" id="stickerAutoplayInput" type="checkbox"/></label>
-              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Compact mode</span><span class="switch-note">Kartalar orasidagi boРІР‚Вshliq va matn bloklari ixchamroq boРІР‚Вladi.</span></span><input class="toggle" id="compactModeInput" type="checkbox"/></label>
+              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Compact mode</span><span class="switch-note">Kartalar orasidagi bo‘shliq va matn bloklari ixchamroq bo‘ladi.</span></span><input class="toggle" id="compactModeInput" type="checkbox"/></label>
               <label class="switch-row"><span class="switch-copy"><span class="switch-title">Sound alerts</span><span class="switch-note">Muhim xabarlarda tovushli eslatma.</span></span><input class="toggle" id="soundEnabledInput" type="checkbox"/></label>
             </div>
           </div>
@@ -120,12 +121,12 @@
             <div class="section-head" style="margin-bottom:10px">
               <div>
                 <h3 class="section-title" style="font-size:20px">Privacy</h3>
-                <p class="section-sub">Profilning qaysi qismi tashqi foydalanuvchiga koРІР‚Вrinishini tanlang.</p>
+                <p class="section-sub">Profilning qaysi qismi tashqi foydalanuvchiga ko‘rinishini tanlang.</p>
               </div>
             </div>
             <div class="split-grid">
-              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Email koРІР‚Вrinsin</span><span class="switch-note">Faqat public profil ochilganda koРІР‚Вrsatiladi.</span></span><input class="toggle" id="showEmailInput" type="checkbox"/></label>
-              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Telefon koРІР‚Вrinsin</span><span class="switch-note">Telefon profilingizda koРІР‚Вrinishi mumkin.</span></span><input class="toggle" id="showPhoneInput" type="checkbox"/></label>
+              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Email ko‘rinsin</span><span class="switch-note">Faqat public profil ochilganda ko‘rsatiladi.</span></span><input class="toggle" id="showEmailInput" type="checkbox"/></label>
+              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Telefon ko‘rinsin</span><span class="switch-note">Telefon profilingizda ko‘rinishi mumkin.</span></span><input class="toggle" id="showPhoneInput" type="checkbox"/></label>
             </div>
           </div>
         </form>
@@ -135,7 +136,7 @@
         <div class="section-head">
           <div>
             <h2 class="section-title">Notification turlari</h2>
-            <p class="section-sub">Qaysi turdagi bildirishnomalar muhimligini oРІР‚Вzingiz tanlaysiz.</p>
+            <p class="section-sub">Qaysi turdagi bildirishnomalar muhimligini o‘zingiz tanlaysiz.</p>
           </div>
         </div>
         <div class="list-stack" id="notificationToggleList"></div>
@@ -186,6 +187,6 @@
 
   <script src="/premium-ui.js" defer></script>
   <script src="/settings-center.js" defer></script>
-  <script src='/global-assistant.js' defer></script>
+  <script src="/global-assistant.js" defer></script>
 </body>
 </html>

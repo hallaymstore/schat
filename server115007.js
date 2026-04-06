@@ -1230,7 +1230,7 @@ function escapeRegex(value) {
 }
 
 function cleanText(value, maxLen = 200) {
-  const s = String(value ?? '').trim();
+  const s = String(value || '').trim();
   if (!s) return '';
   return s.length > maxLen ? s.slice(0, maxLen) : s;
 }

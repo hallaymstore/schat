@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xabarlar вЂ” HALLAYM</title>
+    <title>Xabarlar — HALLAYM</title>
     
   <script>
     tailwind = {
@@ -349,7 +349,8 @@
 
   <link rel="stylesheet" href="/ui-glass-theme.css" />
   <script src="/premium-ui.js"></script>
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body class="h-screen overflow-hidden text-slate-900 dark:text-slate-100">
   <div class="bg-orbs"></div>
@@ -1077,7 +1078,7 @@ async function loadCurrentUser() {
                             <img src="${user.avatar}" class="w-10 h-10 rounded-full mr-3">
                             <div class="flex-1">
                                 <h4 class="font-semibold">${user.nickname}</h4>
-                                <p class="text-sm text-gray-600">@${user.username} вЂў ${user.university}</p>
+                                <p class="text-sm text-gray-600">@${user.username} • ${user.university}</p>
                             </div>
                             <div class="w-2 h-2 rounded-full ${user.isOnlayn ? 'bg-green-500' : 'bg-gray-400'}"></div>
                         </div>
@@ -1150,7 +1151,7 @@ async function loadCurrentUser() {
                             <img src="${user.avatar}" class="w-10 h-10 rounded-full mr-3">
                             <div class="flex-1">
                                 <h4 class="font-semibold">${renderUserNameHtml(user, user.fullName || user.nickname || user.username)}</h4>
-                                <p class="text-sm text-gray-600">@${escapeHtml(user.username || '')} вЂў ${escapeHtml(user.university || '')}</p>
+                                <p class="text-sm text-gray-600">@${escapeHtml(user.username || '')} • ${escapeHtml(user.university || '')}</p>
                             </div>
                             <div class="w-2 h-2 rounded-full ${user.isOnlayn ? 'bg-green-500' : 'bg-gray-400'}"></div>
                         </div>

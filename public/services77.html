@@ -10,7 +10,8 @@
     .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
   <nav class="gradient-bg text-white h-16 flex items-center px-4">
@@ -94,8 +95,8 @@
           <label class="text-sm text-gray-600">Sort</label>
           <select id="sort" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2">
             <option value="new">Newest</option>
-            <option value="price_asc">Price в†‘</option>
-            <option value="price_desc">Price в†“</option>
+            <option value="price_asc">Price ↑</option>
+            <option value="price_desc">Price ↓</option>
           </select>
         </div>
         <div class="flex items-end">
@@ -237,7 +238,7 @@
           <div class="flex items-start justify-between gap-2">
             <div>
               <div class="font-semibold text-gray-800 line-clamp-2">${escapeHtml(service.title)}</div>
-              <div class="text-sm text-gray-500 mt-1">${escapeHtml(service.category)} вЂў <span class="font-medium">${escapeHtml(priceLabel)}</span></div>
+              <div class="text-sm text-gray-500 mt-1">${escapeHtml(service.category)} • <span class="font-medium">${escapeHtml(priceLabel)}</span></div>
             </div>
             <a href="/service.html?id=${service._id}" class="text-purple-700 hover:text-purple-900">
               <i class="fas fa-arrow-right"></i>
@@ -273,7 +274,7 @@
         return;
       }
       pages = j.pages || 1;
-      document.getElementById('contextLine').textContent = `University: ${me?.university || '-'} вЂў Total: ${j.total} вЂў Page ${j.page}/${j.pages}`;
+      document.getElementById('contextLine').textContent = `University: ${me?.university || '-'} • Total: ${j.total} • Page ${j.page}/${j.pages}`;
       document.getElementById('prevBtn').disabled = page <= 1;
       document.getElementById('nextBtn').disabled = page >= pages;
 

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RoвЂyxatdan oвЂtish вЂ” HALLAYM edu</title>
-  <meta name="description" content="HALLAYM eduвЂ™da roвЂyxatdan oвЂting: kanallar, guruhlar va real-time chat вЂ” barchasi bitta platformada." />
+  <title>Ro‘yxatdan o‘tish — HALLAYM edu</title>
+  <meta name="description" content="HALLAYM edu’da ro‘yxatdan o‘ting: kanallar, guruhlar va real-time chat — barchasi bitta platformada." />
 
   <script>
     tailwind = {
@@ -154,7 +154,8 @@
     })();
   </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 
 <body class="min-h-screen text-slate-900 dark:text-slate-100">
@@ -225,17 +226,17 @@
           <div>
             <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
               <i class="fa-solid fa-sparkles"></i>
-              <span>RoвЂyxatdan oвЂtish</span>
+              <span>Ro‘yxatdan o‘tish</span>
               <span class="mx-2 w-1 h-1 rounded-full bg-slate-400/40"></span>
               <span class="muted2">yoqimli onboarding</span>
             </div>
 
             <h2 class="mt-4 text-2xl sm:text-3xl font-black tracking-tight">
-              Parolni tekshirish ham <span class="u-anim">qiziqarli</span> boвЂlsin
+              Parolni tekshirish ham <span class="u-anim">qiziqarli</span> bo‘lsin
             </h2>
             <p class="mt-2 text-sm sm:text-base muted2">
-              Parol yashirilsa robotcha koвЂzini yumadi, koвЂrsatilsa bitta koвЂzi bilan вЂњtekshiradiвЂќ.
-              Parollar mos kelmasa вЂ” вЂњxafaвЂќ.
+              Parol yashirilsa robotcha ko‘zini yumadi, ko‘rsatilsa bitta ko‘zi bilan “tekshiradi”.
+              Parollar mos kelmasa — “xafa”.
             </p>
           </div>
 
@@ -292,7 +293,7 @@
         <div class="mt-4 grid sm:grid-cols-3 gap-3">
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Maslahat</div>
-            <div class="mt-1 text-sm muted2">Kamida 6 belgi, harf+raqam aralash boвЂlsa zoвЂr.</div>
+            <div class="mt-1 text-sm muted2">Kamida 6 belgi, harf+raqam aralash bo‘lsa zo‘r.</div>
           </div>
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Tezlik</div>
@@ -300,7 +301,7 @@
           </div>
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Xavfsizlik</div>
-            <div class="mt-1 text-sm muted2">Parolni koвЂrsatish faqat sizga koвЂrinadi.</div>
+            <div class="mt-1 text-sm muted2">Parolni ko‘rsatish faqat sizga ko‘rinadi.</div>
           </div>
         </div>
       </section>
@@ -310,14 +311,14 @@
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <div class="text-sm font-extrabold">Hisob yaratish</div>
-            <div class="text-xs muted2 mt-1">Maydonlarni toвЂldiring вЂ” keyin platformani aylab chiqasiz</div>
+            <div class="text-xs muted2 mt-1">Maydonlarni to‘ldiring — keyin platformani aylab chiqasiz</div>
           </div>
           <div id="message" class="hidden text-sm font-bold px-3 py-2 rounded-xl glass"></div>
         </div>
 
         <form id="registerForm" class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="sm:col-span-2">
-            <label class="text-xs font-extrabold muted">ToвЂliq ism</label>
+            <label class="text-xs font-extrabold muted">To‘liq ism</label>
             <div class="mt-2 relative">
               <i class="fa-solid fa-id-card absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
               <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="fullName" placeholder="Masalan: Ali Valiyev" required />
@@ -364,7 +365,7 @@
           </div>
 
           <div>
-            <label class="text-xs font-extrabold muted">OвЂquv guruhi</label>
+            <label class="text-xs font-extrabold muted">O‘quv guruhi</label>
             <div class="mt-2 relative">
               <i class="fa-solid fa-users-rectangle absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
               <input class="field w-full rounded-2xl px-11 py-3 text-sm" name="studyGroup" placeholder="Masalan: 21-01" />
@@ -400,7 +401,7 @@
             <label class="text-xs font-extrabold muted">Bio</label>
             <div class="mt-2 relative">
               <i class="fa-solid fa-pen absolute left-4 top-4 muted2"></i>
-              <textarea class="field w-full rounded-2xl px-11 py-3 text-sm min-h-[92px]" name="bio" placeholder="Qisqacha: yoвЂnalish, qiziqishlar, maqsad..."></textarea>
+              <textarea class="field w-full rounded-2xl px-11 py-3 text-sm min-h-[92px]" name="bio" placeholder="Qisqacha: yo‘nalish, qiziqishlar, maqsad..."></textarea>
             </div>
           </div>
 
@@ -411,7 +412,7 @@
               <input id="password" class="field w-full rounded-2xl px-11 pr-12 py-3 text-sm" type="password" name="password" placeholder="Kamida 6 ta belgi" required />
               <button type="button" id="togglePassword"
                       class="absolute right-3 top-1/2 -translate-y-1/2 glass rounded-xl px-3 py-2 btn-ghost glow-ring"
-                      aria-label="Parolni koвЂrsatish/bekitish" title="KoвЂrsatish/Bekitish">
+                      aria-label="Parolni ko‘rsatish/bekitish" title="Ko‘rsatish/Bekitish">
                 <i id="toggleIcon" class="fa-solid fa-eye"></i>
               </button>
             </div>
@@ -437,7 +438,7 @@
           </div>
 
           <div class="sm:col-span-2 text-xs muted2 mt-2">
-            RoвЂyxatdan oвЂtish orqali siz platforma qoidalariga rozilik bildirasiz.
+            Ro‘yxatdan o‘tish orqali siz platforma qoidalariga rozilik bildirasiz.
           </div>
         </form>
       </section>
@@ -500,7 +501,7 @@ async function checkUsername(){
     if(j && j.success){
       _usernameOk = !!j.available;
       if(usernameHint){
-        usernameHint.textContent = j.available ? "вњ… Username boвЂsh." : "вќЊ Username band. Boshqasini tanlang.";
+        usernameHint.textContent = j.available ? "✅ Username bo‘sh." : "❌ Username band. Boshqasini tanlang.";
       }
     }
   }catch(e){
@@ -570,12 +571,12 @@ function showMessage(text, type){
         // username availability
 await checkUsername();
 if(!_usernameOk){
-  showMessage("Username band yoki notoвЂgвЂri. Boshqasini tanlang.", 'error');
+  showMessage("Username band yoki noto‘g‘ri. Boshqasini tanlang.", 'error');
   return;
 }
 
 if((data.password || '').length < 6){
-          showMessage("Parol kamida 6 ta belgidan iborat boвЂlsin.", 'error');
+          showMessage("Parol kamida 6 ta belgidan iborat bo‘lsin.", 'error');
           return;
         }
         if(data.password !== data.confirmPassword){
@@ -608,7 +609,7 @@ if((data.password || '').length < 6){
           if(isSuccess(res, result)){
             const token = extractToken(result);
             if(token) localStorage.setItem('token', token);
-            showMessage("RoвЂyxatdan oвЂtish muvaffaqiyatli! YoвЂnaltirilmoqda...", 'success');
+            showMessage("Ro‘yxatdan o‘tish muvaffaqiyatli! Yo‘naltirilmoqda...", 'success');
             setTimeout(async ()=>{
               try{
                 const t = localStorage.getItem('token');
@@ -623,12 +624,12 @@ if((data.password || '').length < 6){
             return;
           }
 
-          const err = normalizeError(result) || `RoвЂyxatdan oвЂtish muvaffaqiyatsiz (HTTP ${res.status}).`;
+          const err = normalizeError(result) || `Ro‘yxatdan o‘tish muvaffaqiyatsiz (HTTP ${res.status}).`;
           showMessage(err, 'error');
           console.error('Register failed:', { status: res.status, result });
 
         } catch (err){
-          showMessage("Tarmoq xatosi. Server ishlayaptimi? Qayta urinib koвЂring.", 'error');
+          showMessage("Tarmoq xatosi. Server ishlayaptimi? Qayta urinib ko‘ring.", 'error');
           console.error('Register network/error:', err);
         } finally {
           submitBtn.innerHTML = original;
@@ -668,7 +669,7 @@ if((data.password || '').length < 6){
           eyeR.setAttribute('transform','translate(128 112) scale(1,0.45)');
           eyeL.setAttribute('transform','translate(92 112) scale(1,1)');
           setClosed(false);
-          if(hint) hint.textContent = "Parol: koвЂrsatilgan (robot tekshiryapti)";
+          if(hint) hint.textContent = "Parol: ko‘rsatilgan (robot tekshiryapti)";
         } else {
           eyeR.setAttribute('transform','translate(128 112) scale(1,1)');
           if(hint) hint.textContent = "Parol: bekitilgan";

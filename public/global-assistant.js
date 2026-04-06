@@ -91,7 +91,7 @@
     {k:['call','video','kamera','camera','mic','mikrofon','ovoz'], a:'Call muammosi uchun: 1) internetni tekshiring, 2) browserga camera/mic ruxsat bering, 3) sahifani yangilang. Kerak bo\'lsa adminga yozing.'},
     {k:['coin','balans','balance','tolov','to\'lov','som','so\'m'], a:'Balans va coin masalalarida screenshot bilan adminga yozing. Admin javobi shu oynaga tushadi.'},
     {k:['kurs','course','test','sertifikat','certificate'], a:'Kurs/test/sertifikat bo\'yicha ma\'lumotni Profil > Kurslar/Testlar bo\'limidan tekshiring. Muammo qolsa adminga yuboring.'},
-    {k:['group','guruh','join','qoshil','qo\'shil','channel','kanal'], a:'Guruh/Kanal topilmasa Search bo\'limidan qidiring yoki username bilan kirib ko\'ring. Kerak bo\'lsa adminga yuboring.'}
+    {k:['group','guruh','join','qoshil','qo\'shil','channel','kanal'], a:'Guruh/Kanal topilmasa Search bo‘limidan qidiring yoki username bilan kirib ko‘ring. Kerak bo‘lsa adminga yuboring.'}
   ];
 
   function findKeywordAnswer(text){
@@ -109,7 +109,7 @@
     host.id = 'schatAssistantDock';
     host.innerHTML = [
       '<div id="schatAssistantPanel">',
-      ' <div class="schatAHead"><div style="font-weight:900;font-size:13px">HALLAYM Assistant</div><button id="schatAClose" class="schatABtn" style="padding:4px 8px">Yopish</button></div>',
+      ' <div class="schatAHead"><div style="font-weight:900;font-size:13px">Yordamchi Chat</div><button id="schatAClose" class="schatABtn" style="padding:4px 8px">Yopish</button></div>',
       ' <div class="schatATabs">',
       '   <button class="schatATab active" data-tab="bot">Tezkor Bot</button>',
       '   <button class="schatATab" data-tab="lab">Lab AI</button>',
@@ -125,7 +125,7 @@
       '   <button id="schatASendAdmin" class="schatABtn primary">Adminga</button>',
       ' </div>',
       '</div>',
-      '<div id="schatAssistantBtn" title="HALLAYM Assistant">AI<div id="schatAssistantBadge"></div></div>'
+      '<div id="schatAssistantBtn" title="Yordamchi">AI<div id="schatAssistantBadge"></div></div>'
     ].join('');
     document.body.appendChild(host);
     return host;
@@ -295,7 +295,7 @@
     var quick = byId('schatAQuick');
     if (!body || !quick) return;
     body.innerHTML = renderAiMessages('bot', '<div class="schatMsg note">Salom. Savol bering, men real AI orqali javob beraman. Login bo\'lmasa lokal tezkor javob rejimi ishlaydi.</div>');
-    quick.innerHTML = ['Call ishlamayapti','Coin masalasi','Kurs sertifikat','Guruhga qoshilish'].map(function(t){
+    quick.innerHTML = ['Call ishlamayapti','Coin masalasi','Kurs sertifikat','Guruhga qo‘shilish'].map(function(t){
       return '<button class="schatQBtn" data-q="'+esc(t)+'">'+esc(t)+'</button>';
     }).join('');
     quick.querySelectorAll('.schatQBtn').forEach(function(b){ b.addEventListener('click', function(){ byId('schatAText').value = b.getAttribute('data-q'); }); });
@@ -322,7 +322,7 @@
     });
     body.innerHTML = html || '<div class="schatMsg note">Hozircha xabar yo\'q.</div>';
     body.scrollTop = body.scrollHeight;
-    quick.innerHTML = '<button class="schatQBtn" id="schatMarkRead">Oqilgan deb belgilash</button>';
+    quick.innerHTML = '<button class="schatQBtn" id="schatMarkRead">O‘qilgan deb belgilash</button>';
     byId('schatMarkRead')?.addEventListener('click', async function(){
       var r = await api('/api/support/thread/read', { method:'POST' });
       if (r.res.ok) { state.unreadSupport = 0; badgeUpdate(); }

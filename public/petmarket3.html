@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Pet Market вЂ” SChat</title>
-  <meta name="description" content="Robotcha uchun ovqatlar, boвЂyoqlar va kiyimlar вЂ” coin evaziga xarid qiling."/>
+  <title>Pet Market — SChat</title>
+  <meta name="description" content="Robotcha uchun ovqatlar, bo‘yoqlar va kiyimlar — coin evaziga xarid qiling."/>
   <script>
     tailwind = { config: { darkMode:'class', theme:{ extend:{
       fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
@@ -104,7 +104,8 @@
     })();
   </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 
 <body class="min-h-screen text-slate-900 dark:text-slate-100">
@@ -120,7 +121,7 @@
           </div>
           <div class="leading-tight">
             <div class="font-extrabold tracking-tight">Pet Market</div>
-            <div class="text-xs muted">Ovqat вЂў BoвЂyoq вЂў Kiyim</div>
+            <div class="text-xs muted">Ovqat • Bo‘yoq • Kiyim</div>
           </div>
         </a>
 
@@ -129,7 +130,7 @@
             <i class="fa-solid fa-coins mr-2"></i><span id="coins">0</span> coin
           </div>
           <a href="/add-funds.html" class="btn-primary rounded-xl px-3 py-2 text-sm font-extrabold text-white glow-ring">
-            <i class="fa-solid fa-plus mr-2"></i>Coin toвЂldirish
+            <i class="fa-solid fa-plus mr-2"></i>Coin to‘ldirish
           </a>
           <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring" title="Tungi/Kunduzgi">
             <i id="themeIcon" class="fa-solid fa-moon"></i><span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
@@ -165,7 +166,7 @@
             <i class="fa-solid fa-burger mr-2"></i>Ovqat
           </button>
           <button data-tab="paints" class="tab chip rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring">
-            <i class="fa-solid fa-palette mr-2"></i>BoвЂyoq
+            <i class="fa-solid fa-palette mr-2"></i>Bo‘yoq
           </button>
           <button data-tab="outfits" class="tab chip rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring">
             <i class="fa-solid fa-shirt mr-2"></i>Kiyim
@@ -179,7 +180,7 @@
         <div class="flex items-center justify-between gap-3">
           <div>
             <div id="tabTitle" class="text-lg font-black">Ovqatlar</div>
-            <div id="tabSub" class="text-xs muted2 mt-1">Ochlikni tez toвЂldirish uchun</div>
+            <div id="tabSub" class="text-xs muted2 mt-1">Ochlikni tez to‘ldirish uchun</div>
           </div>
           <a href="/profile.html" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring">
             <i class="fa-solid fa-user-astronaut mr-2"></i>Profil
@@ -189,24 +190,24 @@
       </div>
 
       <aside class="glass rounded-3xl p-6 g-border animate-pop">
-        <div class="text-sm font-extrabold">Tezkor maвЂ™lumot</div>
+        <div class="text-sm font-extrabold">Tezkor ma’lumot</div>
         <div class="mt-3 space-y-3">
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Qanday ishlaydi?</div>
             <div class="mt-1 text-sm muted2">
-              Xarid в†’ inventar. Profil в†’ ishlatish. Ovqat ochlikni oshiradi, boвЂyoq robot rangini oвЂzgartiradi, kiyim esa outfit rangini beradi.
+              Xarid → inventar. Profil → ishlatish. Ovqat ochlikni oshiradi, bo‘yoq robot rangini o‘zgartiradi, kiyim esa outfit rangini beradi.
             </div>
           </div>
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Coin kursi</div>
             <div class="mt-1 text-sm muted2">
-              <span class="font-extrabold">10 coin = 1000 soвЂm</span> (1 coin = 100 soвЂm).
+              <span class="font-extrabold">10 coin = 1000 so‘m</span> (1 coin = 100 so‘m).
             </div>
           </div>
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Maslahat</div>
             <div class="mt-1 text-sm muted2">
-              Avval ovqat, keyin boвЂyoq. Level oshishi uchun robotni tez-tez oziqlantiring.
+              Avval ovqat, keyin bo‘yoq. Level oshishi uchun robotni tez-tez oziqlantiring.
             </div>
           </div>
         </div>
@@ -250,8 +251,8 @@
     let tab = 'foods';
 
     const tabMeta = {
-      foods: { title:'Ovqatlar', sub:'Ochlikni tez toвЂldirish uchun', icon:'fa-burger' },
-      paints: { title:'BoвЂyoqlar', sub:'Robot va kiyim rangini oвЂzgartiring', icon:'fa-palette' },
+      foods: { title:'Ovqatlar', sub:'Ochlikni tez to‘ldirish uchun', icon:'fa-burger' },
+      paints: { title:'Bo‘yoqlar', sub:'Robot va kiyim rangini o‘zgartiring', icon:'fa-palette' },
       outfits: { title:'Kiyimlar', sub:'Kiyim rangini yangilang', icon:'fa-shirt' }
     };
 
@@ -316,7 +317,7 @@
 
       const list = (market && market[tab]) ? market[tab] : [];
       const box = document.getElementById('items');
-      box.innerHTML = list.length ? list.map(it=>cardTemplate(it, tab)).join('') : `<div class="text-sm muted2">BoвЂsh.</div>`;
+      box.innerHTML = list.length ? list.map(it=>cardTemplate(it, tab)).join('') : `<div class="text-sm muted2">Bo‘sh.</div>`;
 
       box.querySelectorAll('.buy').forEach(btn=>{
         btn.addEventListener('click', ()=> buy(btn.dataset.id));

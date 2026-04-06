@@ -1450,7 +1450,7 @@
 
 <style id="hallaymMobileCompactV2">
 
-/* MOBILE COMPACT V2 вЂ” prevent overflow, tiny UI, glass + teal/gold harmony */
+/* MOBILE COMPACT V2 — prevent overflow, tiny UI, glass + teal/gold harmony */
 *{box-sizing:border-box}
 html,body{max-width:100%;overflow-x:hidden}
 img,video,canvas,svg{max-width:100%;height:auto}
@@ -1554,7 +1554,8 @@ button,a{ -webkit-tap-highlight-color: transparent; }
   }
 </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 
 <script>
@@ -1850,7 +1851,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
           if (!token) break;
           await uploadQueuedRecordingByChunks(it, token);
           await idbLessonQueue.del(it.id);
-          notify('Oldingi yozuv ham saqlandi вњ…', 'ok');
+          notify('Oldingi yozuv ham saqlandi ✅', 'ok');
         }catch(e){ /* keep in queue */ }
       }
     }catch(_){}
@@ -1869,7 +1870,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
     <div id="uploadOverlayCard" class="text-left">
       <div id="uploadOverlayHeader">
         <span id="uploadDragLabel">UPLOAD</span>
-        <button id="uploadCloseBtn" type="button" aria-label="Yopish">Г—</button>
+        <button id="uploadCloseBtn" type="button" aria-label="Yopish">×</button>
       </div>
       <div class="hallaym-title text-sm">Video yuklanmoqda...</div>
       <div id="uploadBarTrack">
@@ -1902,7 +1903,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
   <i class="fas fa-phone w-5 text-center"></i><span>Voice Call</span>
 </button>
 <button id="mLessons" onclick="goToGroupLessons(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left">
-  <i class="fas fa-book-open w-5 text-center"></i><span>OвЂtilgan darslar</span>
+  <i class="fas fa-book-open w-5 text-center"></i><span>O‘tilgan darslar</span>
 </button>
 
 <button id="mLogout2" onclick="logout(); closeMobileMenu();" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold text-left"><i class="fas fa-right-from-bracket w-5 text-center"></i><span>Logout</span></button>
@@ -1919,7 +1920,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
       if(!host) return;
       const el=document.createElement('div');
       el.style.cssText="padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(15,23,42,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 18px 55px rgba(0,0,0,.35);color:#fff;font-weight:700;font-size:13px;display:flex;gap:10px;align-items:flex-start;";
-      const icon = type==='ok'?'вњ…':(type==='warn'?'вљ пёЏ':(type==='err'?'вќЊ':'в„№пёЏ'));
+      const icon = type==='ok'?'✅':(type==='warn'?'⚠️':(type==='err'?'❌':'ℹ️'));
       el.innerHTML = `<span style="margin-top:1px">${icon}</span><div style="font-weight:650;line-height:1.3">${String(msg||'')}</div>`;
       host.appendChild(el);
       setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(-6px)'; el.style.transition='all .25s ease'; }, 4200);
@@ -2008,8 +2009,8 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             <div id="joinPrompt" class="hidden border-t border-white/15 p-4 hallaym-surface">
                 <div class="flex items-center gap-3">
                     <div class="min-w-0 flex-1">
-                        <div class="text-sm font-extrabold text-white">Bu guruhga qoвЂshilmagansiz</div>
-                        <div class="text-xs text-white/70">Xabar yozish va darsga kirish uchun avval guruhga qoвЂshiling.</div>
+                        <div class="text-sm font-extrabold text-white">Bu guruhga qo‘shilmagansiz</div>
+                        <div class="text-xs text-white/70">Xabar yozish va darsga kirish uchun avval guruhga qo‘shiling.</div>
                     </div>
                     <button id="joinGroupPrimary" onclick="joinGroup()" class="btn-primary text-white px-4 py-2 rounded-full font-extrabold hover:opacity-90 transition whitespace-nowrap">
                         <i class="fas fa-user-plus mr-2"></i>Join Group
@@ -2138,7 +2139,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         let groupId = null;
         let groupMessages = [];
         let activeGroupMessageActionId = '';
-        const GROUP_REACTION_EMOJIS = ['рџ‘Ќ','вќ¤пёЏ','рџ”Ґ','рџ‚','рџ‘Џ','рџ®'];
+        const GROUP_REACTION_EMOJIS = ['👍','❤️','🔥','😂','👏','😮'];
         const __urlParams = new URLSearchParams(window.location.search);
         const OBSERVER_MODE = (__urlParams.get('observer') === '1' || __urlParams.get('asObserver') === '1');
         let AUTO_JOIN_CALL = (__urlParams.get('autoJoin') === '1');
@@ -2393,7 +2394,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 updateMembershipGate(false);
                 container.innerHTML = `
                   <div class="hidden sm:block text-xs text-white/70 px-3 py-2 rounded-xl bg-white/10 border border-white/15">
-                    Guruhga qoвЂshilsangiz, chat va call funksiyalari ochiladi.
+                    Guruhga qo‘shilsangiz, chat va call funksiyalari ochiladi.
                   </div>
                   ${mobileWrapOpen}
                     ${mobileItem('fas fa-user-plus','Join Group','joinGroup()')}
@@ -2650,7 +2651,7 @@ function setupSocket() {
             const row = getGroupMessageById(messageId);
             if (!row) return;
             const text = String(row.text || '').trim() || String(row.mediaUrl || '').trim();
-            if (!text) return notify('Nusxa olish uchun matn yoвЂq', 'warn');
+            if (!text) return notify('Nusxa olish uchun matn yo‘q', 'warn');
             try{
                 await navigator.clipboard.writeText(text);
                 notify('Xabar nusxalandi', 'ok');
@@ -2798,7 +2799,7 @@ function setupSocket() {
             if (!file) return;
             const maxBytes = 5 * 1024 * 1024;
             if (file.size > maxBytes) {
-                notify('Fayl 5MB dan katta boвЂlmasligi kerak', 'warn');
+                notify('Fayl 5MB dan katta bo‘lmasligi kerak', 'warn');
                 return;
             }
             try{
@@ -2824,7 +2825,7 @@ function setupSocket() {
             const next = prompt('Xabarni tahrirlang:', row.text || '');
             if (next === null) return;
             const text = String(next || '').trim();
-            if (!text) return notify('BoвЂsh xabarni saqlab boвЂlmaydi', 'warn');
+            if (!text) return notify('Bo‘sh xabarni saqlab bo‘lmaydi', 'warn');
             try{
                 const token = localStorage.getItem('token') || '';
                 const res = await fetch(`/api/groups/${groupId}/messages/${messageId}`, {
@@ -2840,7 +2841,7 @@ function setupSocket() {
             }
         }
         async function deleteOwnMessage(messageId){
-            if (!confirm('Xabarni oвЂchirishni tasdiqlaysizmi?')) return;
+            if (!confirm('Xabarni o‘chirishni tasdiqlaysizmi?')) return;
             try{
                 const token = localStorage.getItem('token') || '';
                 const res = await fetch(`/api/groups/${groupId}/messages/${messageId}`, {
@@ -2851,7 +2852,7 @@ function setupSocket() {
                 if (!res.ok || !data.success) throw new Error(data?.error || 'Delete failed');
                 removeMessageById(messageId);
             }catch(e){
-                notify(e.message || 'OвЂchirishda xatolik', 'err');
+                notify(e.message || 'O‘chirishda xatolik', 'err');
             }
         }
         async function toggleReaction(messageId, emoji){
@@ -3453,7 +3454,7 @@ function setupSocket() {
                 input.disabled = !stageWhiteboard.active || !canUseStageWhiteboard();
             }
             if (meta) {
-                const next = `${Number(stageWhiteboard.textRows || 0)} satr вЂў ${Number(stageWhiteboard.textCols || 0)} ustun`;
+                const next = `${Number(stageWhiteboard.textRows || 0)} satr • ${Number(stageWhiteboard.textCols || 0)} ustun`;
                 if (meta.textContent !== next) meta.textContent = next;
             }
         }
@@ -3935,14 +3936,14 @@ function setupSocket() {
             const input = document.getElementById('wbCalcInput');
             const out = document.getElementById('wbCalcResult');
             if (input) input.value = '';
-            if (out) out.textContent = 'Natija: вЂ”';
+            if (out) out.textContent = 'Natija: —';
         }
 
         function renderWbCalcHistory() {
             const box = document.getElementById('wbCalcHistory');
             if (!box) return;
             if (!stageWhiteboard.calcHistory.length) {
-                box.innerHTML = '<div class="mini opacity-70">Tarix boвЂsh</div>';
+                box.innerHTML = '<div class="mini opacity-70">Tarix bo‘sh</div>';
                 return;
             }
             box.innerHTML = stageWhiteboard.calcHistory.map((row, idx) => `
@@ -3972,7 +3973,7 @@ function setupSocket() {
                 stageWhiteboard.calcHistory = stageWhiteboard.calcHistory.slice(0, 8);
                 renderWbCalcHistory();
             } catch (e) {
-                out.textContent = `Xato: ${String(e?.message || e || 'hisoblab boвЂlmadi')}`;
+                out.textContent = `Xato: ${String(e?.message || e || 'hisoblab bo‘lmadi')}`;
             }
         }
 
@@ -4096,7 +4097,7 @@ function setupSocket() {
                     }
                 }
                 updateCallControlUI();
-                if (!silent) notify('Oq doska oвЂchirildi', 'info');
+                if (!silent) notify('Oq doska o‘chirildi', 'info');
             } finally {
                 stageWhiteboard.busy = false;
             }
@@ -5225,11 +5226,11 @@ function runNegotiationWatchdog(delayMs = 2600) {
 
 async function publishLocalVideoTrack(constraints = null) {
     if (!supportsRealtimeCall()) {
-        throw new Error('WebRTC qoвЂllab-quvvatlanmaydi');
+        throw new Error('WebRTC qo‘llab-quvvatlanmaydi');
     }
     if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) &&
         !(navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia)) {
-        throw new Error('getUserMedia yoвЂq');
+        throw new Error('getUserMedia yo‘q');
     }
     const videoConstraints = constraints || getAdaptiveVideoConstraints();
     const camStream = await safeGetUserMedia({ video: videoConstraints, audio: false });
@@ -5270,11 +5271,11 @@ async function publishLocalVideoTrack(constraints = null) {
 
 async function publishLocalAudioTrack() {
     if (!supportsRealtimeCall()) {
-        throw new Error('WebRTC qoвЂllab-quvvatlanmaydi');
+        throw new Error('WebRTC qo‘llab-quvvatlanmaydi');
     }
     if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) &&
         !(navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia)) {
-        throw new Error('getUserMedia yoвЂq');
+        throw new Error('getUserMedia yo‘q');
     }
 
     const micStream = await safeGetUserMedia({ audio: AUDIO_CONSTRAINTS, video: false });
@@ -5707,9 +5708,9 @@ async function rebalancePeerTopology() {
     }
     const p = getPeerPolicy();
     if (p.classroomMode && !p.meIsTeacher) {
-        setGroupCallStatus(`Connected вЂў Classroom mode (${p.total}): O'qituvchi prioritet`);
+        setGroupCallStatus(`Connected • Classroom mode (${p.total}): O'qituvchi prioritet`);
     } else {
-        setGroupCallStatus(`Connected вЂў ${p.total} participant`);
+        setGroupCallStatus(`Connected • ${p.total} participant`);
     }
 }
 
@@ -5929,7 +5930,7 @@ try {
             if (!host.querySelector('.stage-placeholder')) {
                 const ph = document.createElement('div');
                 ph.className = 'stage-placeholder w-full h-full flex items-center justify-center text-white/70';
-                ph.innerHTML = '<div class="text-center"><i class="fas fa-video-slash text-3xl mb-2"></i><div class="text-sm">OвЂqituvchi video hali yoвЂq</div></div>';
+                ph.innerHTML = '<div class="text-center"><i class="fas fa-video-slash text-3xl mb-2"></i><div class="text-sm">O‘qituvchi video hali yo‘q</div></div>';
                 host.appendChild(ph);
             }
         }
@@ -6156,7 +6157,7 @@ const video = tile.querySelector('video');
                         if (!canControl) b.style.opacity = '0.6';
                         meta.appendChild(b);
                     } else if (ownerId) {
-                        meta.textContent = (String(ownerId) === String(myUserId() || '')) ? 'Siz (asosiy)' : 'Asosiy oвЂqituvchi';
+                        meta.textContent = (String(ownerId) === String(myUserId() || '')) ? 'Siz (asosiy)' : 'Asosiy o‘qituvchi';
                     }
                 }
             } catch(_) {}
@@ -6446,7 +6447,7 @@ function removeVideoTile(userId) {
         async function startGroupCall(callType) {
             if (!socket) return notify('Socket ulanmagan', 'err');
             if (!supportsRealtimeCall()) {
-                notify('Bu brauzer WebRTC videoqoвЂngвЂiroqni qoвЂllamaydi. Chrome/Edge yangiroq versiyasini ishlating.', 'err');
+                notify('Bu brauzer WebRTC videoqo‘ng‘iroqni qo‘llamaydi. Chrome/Edge yangiroq versiyasini ishlating.', 'err');
                 return;
             }
             __allowCallPageUnload = false;
@@ -6488,7 +6489,7 @@ function removeVideoTile(userId) {
         async function joinGroupCall(gid, callId, callType) {
             if (!socket) return;
             if (!supportsRealtimeCall()) {
-                notify('Bu brauzer WebRTC videoqoвЂngвЂiroqni qoвЂllamaydi. Brauzerni yangilang.', 'err');
+                notify('Bu brauzer WebRTC videoqo‘ng‘iroqni qo‘llamaydi. Brauzerni yangilang.', 'err');
                 return;
             }
             __allowCallPageUnload = false;
@@ -7217,7 +7218,7 @@ function removeVideoTile(userId) {
         }
 
         function fmtTime(dt) {
-            if (!dt) return 'вЂ”';
+            if (!dt) return '—';
             const d = new Date(dt);
             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
@@ -7252,7 +7253,7 @@ function removeVideoTile(userId) {
                     div.className = 'p-2 rounded-xl bg-white/10 border border-white/10 text-white';
                     div.innerHTML = `
                       <div class="font-semibold text-sm">${r.fullName || 'Talaba'}</div>
-                      <div class="text-xs text-white/70">Kirdi: ${fmtTime(r.joinedAt)} вЂў Chiqdi: ${fmtTime(r.leftAt)} вЂў Davomiylik: ${fmtDur(r.durationSec)}</div>
+                      <div class="text-xs text-white/70">Kirdi: ${fmtTime(r.joinedAt)} • Chiqdi: ${fmtTime(r.leftAt)} • Davomiylik: ${fmtDur(r.durationSec)}</div>
                     `;
                     joinedBox && joinedBox.appendChild(div);
                 });
@@ -7267,7 +7268,7 @@ function removeVideoTile(userId) {
                 if (hint) {
                     const lessonSec = Number(data.lessonDurationSec || 0);
                     const recSec = Number(data.recordingDurationSec || 0);
-                    hint.textContent = `Kirdi: ${(data.joined||[]).length} вЂў Kirmadi: ${(data.absent||[]).length} вЂў Dars: ${fmtDur(lessonSec)} вЂў Yozuv: ${fmtDur(recSec)}`;
+                    hint.textContent = `Kirdi: ${(data.joined||[]).length} • Kirmadi: ${(data.absent||[]).length} • Dars: ${fmtDur(lessonSec)} • Yozuv: ${fmtDur(recSec)}`;
                 }
             } catch (e) {
                 console.warn('attendance refresh failed', e);
@@ -8054,7 +8055,7 @@ async function startScreenWithCam() {
                     globalUx.showUploadDone('Dars yozuvi saqlandi');
                 }
                 emitUploadEvent('done', { text: 'Dars yozuvi saqlandi' });
-                notify('Dars yozuvi saqlandi вњ…', 'ok');
+                notify('Dars yozuvi saqlandi ✅', 'ok');
                 try { await retryQueuedRecordings(); } catch(_){}
             } catch (e) {
                 console.error('uploadRecording', e);
@@ -8072,7 +8073,7 @@ async function startScreenWithCam() {
                     } catch (_) {}
                 }
 
-                notify('Yozuv yuklanmadi вЂ” internet boвЂlsa avtomatik saqlanadi. (Queue) вљЎ', 'warn');
+                notify('Yozuv yuklanmadi — internet bo‘lsa avtomatik saqlanadi. (Queue) ⚡', 'warn');
             }
         }
 function toggleSpeaker() {
@@ -8248,7 +8249,7 @@ async function toggleTeacherPiP(){
             return;
         }
         if (!document.pictureInPictureEnabled || typeof video.requestPictureInPicture !== 'function') {
-            notify('Bu brauzerda PiP qoвЂllab-quvvatlanmaydi', 'info');
+            notify('Bu brauzerda PiP qo‘llab-quvvatlanmaydi', 'info');
             return;
         }
         if (document.pictureInPictureElement) {
@@ -8845,7 +8846,7 @@ function ensureCallMiniGameUi(){
         panel.innerHTML = `
           <div class="head">
             <div class="text-sm font-extrabold">Dars mini panel</div>
-            <button class="btn" onclick="closeCallMiniGame()">вњ•</button>
+            <button class="btn" onclick="closeCallMiniGame()">✕</button>
           </div>
           <div class="body">
             <div class="call-lab-tabs">
@@ -8904,7 +8905,7 @@ function ensureCallMiniGameUi(){
               <div class="lab-box">
                 <div class="lab-row"><label>Kuch (N)</label><input id="phyForce" type="range" min="1" max="100" value="30" oninput="renderPhysicsLab()"></div>
                 <div class="lab-row"><label>Massa (kg)</label><input id="phyMass" type="range" min="1" max="40" value="10" oninput="renderPhysicsLab()"></div>
-                <div class="mini" id="phyResult">a = 3.0 m/sВІ, masofa ~ 5.4 m</div>
+                <div class="mini" id="phyResult">a = 3.0 m/s², masofa ~ 5.4 m</div>
               </div>
             </div>
 
@@ -8945,10 +8946,10 @@ function ensureCallMiniGameUi(){
                 <div class="flex gap-2 mt-2">
                   <button class="btn" onclick="evaluateCallCalculator()">Hisobla</button>
                   <button class="btn" onclick="insertCalcToken('^')">x^y</button>
-                  <button class="btn" onclick="backspaceCallCalculator()">вЊ«</button>
+                  <button class="btn" onclick="backspaceCallCalculator()">⌫</button>
                   <button class="btn" onclick="clearCallCalculator()">C</button>
                 </div>
-                <div id="calcResult" class="mini mt-2">Natija: вЂ”</div>
+                <div id="calcResult" class="mini mt-2">Natija: —</div>
                 <div class="mini mt-2">Tarix (oxirgi 8 amal)</div>
                 <div id="calcHistory" class="mt-1"></div>
               </div>
@@ -9028,7 +9029,7 @@ function renderCallMiniBoard(){
     const st = document.getElementById('callGameStatus');
     if (!box || !st) return;
     const g = callMiniGame.activeGame;
-    st.textContent = g ? (callMiniGame.myTurn ? 'Sizning yurishingiz' : 'Raqib yurishi') : (callMiniGame.queueing ? 'Raqib kutilmoqda...' : 'Queuega qoвЂshiling');
+    st.textContent = g ? (callMiniGame.myTurn ? 'Sizning yurishingiz' : 'Raqib yurishi') : (callMiniGame.queueing ? 'Raqib kutilmoqda...' : 'Queuega qo‘shiling');
     box.innerHTML = callMiniGame.board.map((cell, i) =>
       `<button onclick="callMiniGameMove(${i})" ${(!g || !callMiniGame.myTurn || cell) ? 'disabled' : ''}>${escapeHtml(cell || '')}</button>`
     ).join('');
@@ -9066,7 +9067,7 @@ function renderPhysicsLab(){
     const t = 1.9;
     const s = 0.5 * a * t * t;
     const out = document.getElementById('phyResult');
-    if (out) out.textContent = `a = ${a.toFixed(2)} m/sВІ, masofa ~ ${s.toFixed(1)} m`;
+    if (out) out.textContent = `a = ${a.toFixed(2)} m/s², masofa ~ ${s.toFixed(1)} m`;
     emitLiveLabStateMaybe('physics', { force, mass });
 }
 const callCalcState = { history: [] };
@@ -9102,7 +9103,7 @@ function clearCallCalculator(){
     const input = document.getElementById('calcInput');
     const out = document.getElementById('calcResult');
     if (input) input.value = '';
-    if (out) out.textContent = 'Natija: вЂ”';
+    if (out) out.textContent = 'Natija: —';
 }
 function factorialCallCalc(v){
     const n = Number(v);
@@ -9117,10 +9118,10 @@ function factorialCallCalc(v){
 function normalizeCallCalcExpression(raw){
     let expr = String(raw || '').trim().toLowerCase();
     expr = expr
-      .replace(/ПЂ/g, 'pi')
-      .replace(/Г·/g, '/')
-      .replace(/[Г—x]/g, '*')
-      .replace(/в€’/g, '-')
+      .replace(/π/g, 'pi')
+      .replace(/÷/g, '/')
+      .replace(/[×x]/g, '*')
+      .replace(/−/g, '-')
       .replace(/\^/g, '**')
       .replace(/,/g, '.');
 
@@ -9130,7 +9131,7 @@ function normalizeCallCalcExpression(raw){
         expr = expr.replace(/(\d+(?:\.\d+)?|\([^()]+\))!/g, 'fact($1)');
         guard++;
     }
-    if (expr.includes('!')) throw new Error('Factorial sintaksisi notoвЂgвЂri');
+    if (expr.includes('!')) throw new Error('Factorial sintaksisi noto‘g‘ri');
     return expr;
 }
 function formatCallCalcNumber(v){
@@ -9145,7 +9146,7 @@ function formatCallCalcNumber(v){
 function evaluateCallCalcExpression(raw){
     const expr = normalizeCallCalcExpression(raw);
     if (!expr) throw new Error('Ifoda kiriting');
-    if (/[^a-z0-9_+\-*/%().,\s]/i.test(expr)) throw new Error('NotoвЂgвЂri belgi aniqlandi');
+    if (/[^a-z0-9_+\-*/%().,\s]/i.test(expr)) throw new Error('Noto‘g‘ri belgi aniqlandi');
 
     const ctx = {
         sin: Math.sin,
@@ -9196,7 +9197,7 @@ function renderCallCalculatorHistory(){
     const box = document.getElementById('calcHistory');
     if (!box) return;
     if (!Array.isArray(callCalcState.history) || !callCalcState.history.length) {
-        box.innerHTML = '<div class="mini opacity-70">Tarix boвЂsh</div>';
+        box.innerHTML = '<div class="mini opacity-70">Tarix bo‘sh</div>';
         return;
     }
     box.innerHTML = callCalcState.history.map((row, idx) => `
@@ -9228,7 +9229,7 @@ function evaluateCallCalculator(){
         callCalcState.history = callCalcState.history.slice(0, 8);
         renderCallCalculatorHistory();
     } catch (e) {
-        out.textContent = `Xato: ${String(e?.message || e || 'hisoblab boвЂlmadi')}`;
+        out.textContent = `Xato: ${String(e?.message || e || 'hisoblab bo‘lmadi')}`;
     }
 }
 let _applyRemoteLabFlag = false;
@@ -9332,7 +9333,7 @@ function syncLiveLabUi(){
         let sharedText = '';
         if (sharedId) {
             const inf = groupCall.participantInfos?.get?.(sharedId);
-            sharedText = ` вЂў Ulashilgan: ${inf?.fullName || inf?.username || sharedId}`;
+            sharedText = ` • Ulashilgan: ${inf?.fullName || inf?.username || sharedId}`;
         }
         meta.textContent = subject ? `Fan: ${subject}${sharedText}` : '';
     }
@@ -9450,7 +9451,7 @@ function callMiniGameMove(index){
         callMiniGame.board[i] = callMiniGame.mySymbol || 'X';
         const winnerNow = winnerFromBoard(callMiniGame.board);
         if (winnerNow || callMiniGame.board.every(Boolean)) {
-            const msg = winnerNow ? 'Siz yutdingiz рџЋ‰' : 'Durrang';
+            const msg = winnerNow ? 'Siz yutdingiz 🎉' : 'Durrang';
             renderCallMiniBoard();
             finishLocalAiGame(msg);
             return;
@@ -9517,7 +9518,7 @@ function bindCallMiniGameSocket(){
         callMiniGame.myTurn = false;
         callMiniGame.board = Array(9).fill('');
         renderCallMiniBoard();
-        try { notify(String(payload?.you?.message || payload?.message || 'OвЂyin yakunlandi'), 'info'); } catch(_) {}
+        try { notify(String(payload?.you?.message || payload?.message || 'O‘yin yakunlandi'), 'info'); } catch(_) {}
     });
 }
 function initCallMiniGameDrag(){
@@ -9591,7 +9592,7 @@ async function toggleMute() {
 
         async function toggleCamera() {
             if (OBSERVER_MODE) return notify('Observer mode: boshqaruv yo\'q', 'info');
-            if (groupCall.callType === 'audio') return notify('Audio call: kamera yoвЂq', 'info');
+            if (groupCall.callType === 'audio') return notify('Audio call: kamera yo‘q', 'info');
 
             const hasLocalVideo = !!(groupCall.localStream?.getVideoTracks?.().some(t => t && t.readyState === 'live'));
             const wantEnable = !!groupCall.cameraOff || !hasLocalVideo;
@@ -9858,7 +9859,7 @@ async function toggleMute() {
                     return joinGroupCall(data.groupId, data.callId, data.callType);
                 }
                 const subj = String(data?.teacherSubject || '').trim();
-                const meta = `${(data.title||'Live dars')} вЂў ${data.callType.toUpperCase()} вЂў started by ${data.from}${subj ? ` вЂў ${subj}` : ''}`;
+                const meta = `${(data.title||'Live dars')} • ${data.callType.toUpperCase()} • started by ${data.from}${subj ? ` • ${subj}` : ''}`;
                 showIncomingGroupBox(meta);
                 syncGlobalAssistantContext();
             });
@@ -9875,7 +9876,7 @@ async function toggleMute() {
                 if (AUTO_JOIN_CALL || AUTO_ACCEPT_INCOMING_GROUP_CALL) {
                     return joinGroupCall(data.groupId, data.callId, data.callType || 'video');
                 }
-                showIncomingGroupBox(`ACTIVE: ${(data.title||'Live dars')} вЂў ${String(groupCall.incoming.callType).toUpperCase()} вЂў started by ${data.startedBy}${groupCall.lessonSubject ? ` вЂў ${groupCall.lessonSubject}` : ''}`);
+                showIncomingGroupBox(`ACTIVE: ${(data.title||'Live dars')} • ${String(groupCall.incoming.callType).toUpperCase()} • started by ${data.startedBy}${groupCall.lessonSubject ? ` • ${groupCall.lessonSubject}` : ''}`);
                 syncGlobalAssistantContext();
             });
 
@@ -10001,7 +10002,7 @@ async function toggleMute() {
                 removeVideoTile(uid);
                 groupCall.participantCount = Number((data?.participants || []).length || groupCall.participantCount || 0);
 
-                // рџ”Ѓ Auto-revert stage:
+                // 🔁 Auto-revert stage:
                 // If the pinned participant left (or got disconnected), instantly bring stage back to owner teacher.
                 try {
                     if (groupCall.stage && groupCall.stage.pinnedUserId && String(groupCall.stage.pinnedUserId) === uid) {
@@ -10155,10 +10156,10 @@ async function toggleMute() {
         <button id="btnSwitchCam" onclick="switchCamera()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Old/Orqa kamera">
           <i class="fas fa-rotate"></i>
         </button>
-        <button id="btnTeacherFullscreen" onclick="toggleTeacherFullscreen()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="OвЂqituvchi ekranini toвЂliq koвЂrish">
+        <button id="btnTeacherFullscreen" onclick="toggleTeacherFullscreen()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="O‘qituvchi ekranini to‘liq ko‘rish">
           <i class="fas fa-expand"></i>
         </button>
-        <button id="btnTeacherOnlyFullscreen" onclick="toggleTeacherOnlyFullscreen()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Faqat oвЂqituvchini toвЂliq koвЂrish">
+        <button id="btnTeacherOnlyFullscreen" onclick="toggleTeacherOnlyFullscreen()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Faqat o‘qituvchini to‘liq ko‘rish">
           <i class="fas fa-user-large"></i>
         </button>
         <button id="btnTeacherWidget" onclick="toggleTeacherMiniWidget()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Mini widget">
@@ -10167,16 +10168,16 @@ async function toggleMute() {
         <button id="btnTeacherPip" onclick="toggleTeacherPiP()" class="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Picture in Picture">
           <i class="fas fa-up-right-and-down-left-from-center"></i>
         </button>
-        <button id="btnScreen" onclick="startScreenWithCam()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Ekran + kamera (oвЂqituvchi)">
+        <button id="btnScreen" onclick="startScreenWithCam()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Ekran + kamera (o‘qituvchi)">
           <i class="fas fa-desktop"></i>
         </button>
         <button id="btnWhiteboard" onclick="toggleStageWhiteboard()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="1-stage oq doska">
           <i class="fas fa-chalkboard"></i>
         </button>
-        <button id="btnRecord" onclick="toggleRecording()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Yozib olish (oвЂqituvchi)">
+        <button id="btnRecord" onclick="toggleRecording()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Yozib olish (o‘qituvchi)">
           <i class="fas fa-circle"></i>
         </button>
-        <button id="btnAttendance" onclick="toggleAttendancePanel()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Davomat (oвЂqituvchi)">
+        <button id="btnAttendance" onclick="toggleAttendancePanel()" class="hidden px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" title="Davomat (o‘qituvchi)">
           <i class="fas fa-clipboard-list"></i>
         </button>
         <button onclick="leaveOrEndGroupCall()" class="px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700" title="End/Leave">
@@ -10245,12 +10246,12 @@ async function toggleMute() {
       <div id="teacherStageWrap" class="sticky top-0 z-20 pb-2 bg-black/60 backdrop-blur-sm">
         <div class="w-full rounded-2xl overflow-hidden border border-white/10 bg-black/30 relative">
           <div class="p-2 text-white/80 text-xs flex items-center justify-between">
-            <div><i class="fas fa-chalkboard-teacher"></i> OвЂqituvchi / 1-stage</div>
+            <div><i class="fas fa-chalkboard-teacher"></i> O‘qituvchi / 1-stage</div>
             <div class="flex items-center gap-2">
-              <button id="btnTeacherFullscreenInline" onclick="toggleTeacherFullscreen()" class="px-2 py-1 rounded-lg bg-white/10 text-white hover:bg-white/20 border border-white/15" title="ToвЂliq ekran">
+              <button id="btnTeacherFullscreenInline" onclick="toggleTeacherFullscreen()" class="px-2 py-1 rounded-lg bg-white/10 text-white hover:bg-white/20 border border-white/15" title="To‘liq ekran">
                 <i class="fas fa-expand"></i>
               </button>
-              <button id="btnTeacherOnlyInline" onclick="toggleTeacherOnlyFullscreen()" class="px-2 py-1 rounded-lg bg-white/10 text-white hover:bg-white/20 border border-white/15" title="Faqat oвЂqituvchi">
+              <button id="btnTeacherOnlyInline" onclick="toggleTeacherOnlyFullscreen()" class="px-2 py-1 rounded-lg bg-white/10 text-white hover:bg-white/20 border border-white/15" title="Faqat o‘qituvchi">
                 <i class="fas fa-user-large"></i>
               </button>
               <div id="teacherStageMeta" class="opacity-70"></div>
@@ -10273,7 +10274,7 @@ async function toggleMute() {
               <select id="captionLangSelect" title="Transkripsiya tili">
                 <option value="uz">O'zbek</option>
                 <option value="en">English</option>
-                <option value="ru">Р СѓСЃСЃРєРёР№</option>
+                <option value="ru">Русский</option>
               </select>
             </div>
           </div>
@@ -10333,7 +10334,7 @@ async function toggleMute() {
           </div>
           <textarea id="wbTextInput" placeholder="Matn, formula yoki izoh yozing. Ikonani yana bossangiz panel yopiladi."></textarea>
           <div id="wbTextMeta">
-            <span id="wbTextGridMeta">0 satr вЂў 0 ustun</span>
+            <span id="wbTextGridMeta">0 satr • 0 ustun</span>
             <span>Ikona bilan ochiladi va yopiladi</span>
           </div>
         </div>
@@ -10375,10 +10376,10 @@ async function toggleMute() {
           </div>
           <div class="flex gap-2 mt-2">
             <button class="wb-btn" onclick="wbCalcEvaluate()">Hisobla</button>
-            <button class="wb-btn" onclick="wbCalcBackspace()">вЊ«</button>
+            <button class="wb-btn" onclick="wbCalcBackspace()">⌫</button>
             <button class="wb-btn" onclick="wbCalcClear()">C</button>
           </div>
-          <div id="wbCalcResult" class="mini mt-2">Natija: вЂ”</div>
+          <div id="wbCalcResult" class="mini mt-2">Natija: —</div>
           <div id="wbCalcHistory"></div>
         </div>
 
@@ -10558,7 +10559,7 @@ async function toggleMute() {
       const nm = (typeof getUserLabel === 'function') ? getUserLabel(secondaryId) : secondaryId;
       info.textContent = `Dual-stage: ${nm}`;
     }else if(ownerId){
-      info.textContent = (ownerId === str(myUserId())) ? 'Siz (asosiy)' : 'Asosiy oвЂqituvchi';
+      info.textContent = (ownerId === str(myUserId())) ? 'Siz (asosiy)' : 'Asosiy o‘qituvchi';
     }
     meta.appendChild(info);
 

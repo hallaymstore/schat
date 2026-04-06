@@ -170,7 +170,8 @@ button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
 }
 </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 <nav class="gradient-bg text-white h-16 flex items-center px-4">
@@ -248,7 +249,7 @@ button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
       if (!j.success) return alert(j.error || 'Failed');
 
       document.getElementById('title').textContent = j.signal.title;
-      document.getElementById('meta').innerHTML = `Impact: ${Number(j.signal.impactScore||0).toFixed(2)} вЂў Urgency: ${j.signal.urgency} вЂў ${badge(j.signal.status)}`;
+      document.getElementById('meta').innerHTML = `Impact: ${Number(j.signal.impactScore||0).toFixed(2)} • Urgency: ${j.signal.urgency} • ${badge(j.signal.status)}`;
       document.getElementById('tags').innerHTML = (j.signal.tags||[]).map(t=>`<span class="text-xs bg-gray-100 px-2 py-1 rounded-full">${esc(t)}</span>`).join('');
       document.getElementById('body').textContent = j.signal.body;
 

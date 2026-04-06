@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HALLAYM edu вЂ” Teacher Dashboard вЂ” HALLAYM edu вЂ” HALLAYM edu</title>
+  <title>HALLAYM edu — Teacher Dashboard — HALLAYM edu — HALLAYM edu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root{
@@ -328,7 +328,8 @@ a,button,input,select,textarea{touch-action:manipulation}
     })();
   </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body>
   <div class="bg"></div><div class="gridbg"></div>
@@ -372,7 +373,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       </div>
 
       <div class="row desktopOnly">
-        <button class="btn ghost small" id="themeBtn">рџЊ“ Tema</button>
+        <button class="btn ghost small" id="themeBtn">🌓 Tema</button>
         <a class="btn ghost small" href="/courses.html">Kurslar</a>
         <a class="btn ghost small" href="/tests.html">Testlar</a>
         <a class="btn ghost small" href="/slides.html">AI Slides</a>
@@ -382,26 +383,26 @@ a,button,input,select,textarea{touch-action:manipulation}
         <a class="btn ghost small" href="/profile.html">Profile</a>
         <button class="btn danger small" id="logoutBtn">Chiqish</button>
       </div>
-      <button class="iconBtn mobileOnly" id="menuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false">в°</button>
+      <button class="iconBtn mobileOnly" id="menuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false">☰</button>
     </div>
   </header>
 
   <div id="drawerBack" class="drawerBack" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="drawer" role="document">
-      <div class="drawerHead"><div><div class="drawerTitle">Menyu</div><div class="tiny" id="drawerMe">вЂ”</div></div><button class="iconBtn" id="drawerClose" aria-label="Close">вњ•</button></div><div class="drawerHr"></div>
+      <div class="drawerHead"><div><div class="drawerTitle">Menyu</div><div class="tiny" id="drawerMe">—</div></div><button class="iconBtn" id="drawerClose" aria-label="Close">✕</button></div><div class="drawerHr"></div>
       <div class="drawerLinks">
         <a class="btn ghost" href="/slides.html">AI Slides</a>
         <a class="btn ghost" href="/website-studio.html">Website AI</a>
-        <button class="btn ghost" id="themeBtn2">рџЊ“ Tema</button>
-        <a class="btn ghost" href="/courses.html">рџ“љ Kurslar</a>
-        <a class="btn ghost" href="/tests.html">рџ§Є Testlar</a>
-        <a class="btn ghost" href="/certificate.html">рџЏ… Sertifikat</a>
-        <a class="btn ghost" href="/mini-games.html">рџЋ® Mini o'yinlar</a>
-        <a class="btn ghost" href="/profile.html">рџ’Њ Xabarlar</a>
-        <a class="btn ghost" href="/profile.html">рџ“Ј Kanallar</a>
-        <a class="btn ghost" href="/groups.html">рџ‘Ґ Guruhlar</a>
-        <a class="btn ghost" href="/profile.html">рџ‘¤ Profil</a>
-        <button class="btn danger" id="logoutBtn2">рџљЄ Chiqish</button>
+        <button class="btn ghost" id="themeBtn2">🌓 Tema</button>
+        <a class="btn ghost" href="/courses.html">📚 Kurslar</a>
+        <a class="btn ghost" href="/tests.html">🧪 Testlar</a>
+        <a class="btn ghost" href="/certificate.html">🏅 Sertifikat</a>
+        <a class="btn ghost" href="/mini-games.html">🎮 Mini o'yinlar</a>
+        <a class="btn ghost" href="/profile.html">💌 Xabarlar</a>
+        <a class="btn ghost" href="/profile.html">📣 Kanallar</a>
+        <a class="btn ghost" href="/groups.html">👥 Guruhlar</a>
+        <a class="btn ghost" href="/profile.html">👤 Profil</a>
+        <button class="btn danger" id="logoutBtn2">🚪 Chiqish</button>
       </div>
       <div class="drawerHr"></div>
       <div class="tiny">Tip: menyu tashqarisini bosib yopasiz.</div>
@@ -414,7 +415,7 @@ a,button,input,select,textarea{touch-action:manipulation}
 
     <div class="grid">
       <div class="card col-8">
-        <h2 style="margin:0 0 6px 0;font-size:20px">HALLAYM edu вЂ” Teacher Dashboard</h2>
+        <h2 style="margin:0 0 6px 0;font-size:20px">HALLAYM edu — Teacher Dashboard</h2>
         <div class="muted">
           Kurslar, testlar, live sessionlar va yozib olingan darslardan kurs yaratish boshqaruvi bitta panelda.
         </div>
@@ -424,7 +425,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         <div class="kpi">
           <div class="box">
             <div class="label">Teacher</div>
-            <div class="val" id="nameVal">вЂ”</div>
+            <div class="val" id="nameVal">—</div>
           </div>
           <div class="box">
             <div class="label">Kurslar</div>
@@ -464,7 +465,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       <div class="card col-4">
         <h3 style="margin:0 0 10px 0">Quick Settings</h3>
         <div class="muted">
-          Bu yerda teacher oвЂz kurslarini вЂњpublished/draftвЂќ, bepul/pullik, guruh cheklovi bilan tez boshqaradi.
+          Bu yerda teacher o‘z kurslarini “published/draft”, bepul/pullik, guruh cheklovi bilan tez boshqaradi.
         </div>
         <div class="divider"></div>
 
@@ -491,7 +492,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         <div class="row" style="justify-content:space-between;align-items:flex-end">
           <div>
             <h3 style="margin:0">Mening kurslarim</h3>
-            <div class="muted" id="modeTxt">вЂ”</div>
+            <div class="muted" id="modeTxt">—</div>
           </div>
         </div>
         <div id="courseList" class="list">
@@ -527,7 +528,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         <div class="grid">
           <div class="col-8">
             <div class="tiny">Kurs nomi</div>
-            <input id="c_title" class="input" placeholder="Masalan: Energetika muhandisligi вЂ” 1-modul" />
+            <input id="c_title" class="input" placeholder="Masalan: Energetika muhandisligi — 1-modul" />
           </div>
           <div class="col-4">
             <div class="tiny">Status</div>
@@ -600,7 +601,7 @@ a,button,input,select,textarea{touch-action:manipulation}
               <button class="btn primary" id="c_saveBtn">Saqlash</button>
               <button class="btn" id="c_saveDraftBtn">Draft saqlash</button>
             </div>
-            <button class="btn danger" id="c_deleteBtn" style="display:none">OвЂchirish</button>
+            <button class="btn danger" id="c_deleteBtn" style="display:none">O‘chirish</button>
           </div>
         </div>
       </div>
@@ -621,7 +622,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         <div class="grid">
           <div class="col-8">
             <div class="tiny">Live nomi</div>
-            <input id="l_name" class="input" placeholder="Masalan: Real vaqt dars вЂ” 1" />
+            <input id="l_name" class="input" placeholder="Masalan: Real vaqt dars — 1" />
           </div>
           <div class="col-4">
             <div class="tiny">Status</div>
@@ -662,14 +663,14 @@ a,button,input,select,textarea{touch-action:manipulation}
             <div class="row">
               <button class="btn primary" id="l_saveBtn">Saqlash</button>
             </div>
-            <button class="btn danger" id="l_deleteBtn" style="display:none">OвЂchirish</button>
+            <button class="btn danger" id="l_deleteBtn" style="display:none">O‘chirish</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <footer><span class="u-anim">HALLAYM</span> edu вЂ” Teacher Dashboard</footer>
+  <footer><span class="u-anim">HALLAYM</span> edu — Teacher Dashboard</footer>
 
 <script>
   const API_BASE = "";
@@ -745,7 +746,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     const cur = readDemoLives();
     if(cur.length) return;
     const seed = [
-      { id:"live1", name:"Live demo вЂ” 1", description:"Real vaqt darsi", status:"offline", type:"free", price:0, preview:"", joinUrl:"/live-room.html?id=live1", createdAt: Date.now()-86400000 }
+      { id:"live1", name:"Live demo — 1", description:"Real vaqt darsi", status:"offline", type:"free", price:0, preview:"", joinUrl:"/live-room.html?id=live1", createdAt: Date.now()-86400000 }
     ];
     writeDemoLives(seed);
   }
@@ -882,7 +883,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       <div class="row" style="justify-content:space-between;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:8px 10px;margin-bottom:6px">
         <div style="min-width:0">
           <a href="${escapeHtml(m.url || "#")}" target="_blank" rel="noopener" class="tiny" style="font-weight:700;word-break:break-all">${idx+1}. ${escapeHtml(m.name || "material")}</a>
-          <div class="tiny">${escapeHtml(m.mimeType || "file")} вЂў ${formatBytes(m.sizeBytes || 0)}</div>
+          <div class="tiny">${escapeHtml(m.mimeType || "file")} • ${formatBytes(m.sizeBytes || 0)}</div>
         </div>
         ${m._id ? `<button class="btn ghost small" data-del-material="${escapeHtml(m._id)}" type="button">O'chirish</button>` : ``}
       </div>
@@ -1038,10 +1039,10 @@ a,button,input,select,textarea{touch-action:manipulation}
         el.className = "item";
         el.innerHTML = `
           <div class="title">${c.title}</div>
-          <div class="muted" style="margin-top:6px">${(c.description||"").slice(0,140)}${(c.description||"").length>140?"вЂ¦":""}</div>
+          <div class="muted" style="margin-top:6px">${(c.description||"").slice(0,140)}${(c.description||"").length>140?"…":""}</div>
           <div class="meta">
-            <span class="tag">${c.faculty || "вЂ”"}</span>
-            <span class="tag ${c.type==="paid" ? "paid" : "free"}">${c.type==="paid" ? ("Pullik вЂў "+Number(c.price||0)+" so'm") : "Bepul"}</span>
+            <span class="tag">${c.faculty || "—"}</span>
+            <span class="tag ${c.type==="paid" ? "paid" : "free"}">${c.type==="paid" ? ("Pullik • "+Number(c.price||0)+" so'm") : "Bepul"}</span>
             <span class="tag ${c.status==="published" ? "pub" : "draft"}">${c.status}</span>
             <span class="tag">Guruh: ${(c.groups||[]).length ? c.groups.join(", ") : "ochiq"}</span>
             <span class="tag">Dars: ${(c.lessons||[]).length}</span>
@@ -1062,7 +1063,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     const lwrap = $("liveList");
     lwrap.innerHTML = "";
     if(!state.lives.length){
-      lwrap.innerHTML = `<div class="muted" style="grid-column:span 12">Live session yoвЂq.</div>`;
+      lwrap.innerHTML = `<div class="muted" style="grid-column:span 12">Live session yo‘q.</div>`;
     }else{
       state.lives.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0)).forEach(l=>{
         const el = document.createElement("div");
@@ -1070,10 +1071,10 @@ a,button,input,select,textarea{touch-action:manipulation}
         const statusTag = l.status==="live" ? `<span class="tag pub">LIVE</span>` : l.status==="ended" ? `<span class="tag draft">ENDED</span>` : `<span class="tag">OFFLINE</span>`;
         el.innerHTML = `
           <div class="title">${l.name}</div>
-          <div class="muted" style="margin-top:6px">${(l.description||"").slice(0,140)}${(l.description||"").length>140?"вЂ¦":""}</div>
+          <div class="muted" style="margin-top:6px">${(l.description||"").slice(0,140)}${(l.description||"").length>140?"…":""}</div>
           <div class="meta">
             ${statusTag}
-            <span class="tag ${l.type==="paid" ? "paid" : "free"}">${l.type==="paid" ? ("Pullik вЂў "+Number(l.price||0)+" so'm") : "Bepul"}</span>
+            <span class="tag ${l.type==="paid" ? "paid" : "free"}">${l.type==="paid" ? ("Pullik • "+Number(l.price||0)+" so'm") : "Bepul"}</span>
             <span class="tag">Join: ${l.joinUrl || "-"}</span>
           </div>
           <div class="row" style="margin-top:10px; justify-content:flex-end">
@@ -1147,7 +1148,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     });
 
     if(!title) throw new Error("Kurs nomi majburiy.");
-    if(type==="paid" && (!Number.isFinite(price) || price<1)) throw new Error("Pullik kurs uchun narx (so'm) 1+ boвЂlsin.");
+    if(type==="paid" && (!Number.isFinite(price) || price<1)) throw new Error("Pullik kurs uchun narx (so'm) 1+ bo‘lsin.");
 
     return { title, description, status, faculty, groups, type, price, previewImage, lessons };
   }
@@ -1192,14 +1193,14 @@ a,button,input,select,textarea{touch-action:manipulation}
     // API attempt
     try{
       await apiFetch("/api/courses/" + encodeURIComponent(id), { method:"DELETE" });
-      setOk("Kurs oвЂchirildi.");
+      setOk("Kurs o‘chirildi.");
       closeCourseModal();
       await reload();
       return;
     }catch(e){
       const list = readDemoCourses().filter(x=>String(x.id)!==String(id));
       writeDemoCourses(list);
-      setOk("Kurs oвЂchirildi.");
+      setOk("Kurs o‘chirildi.");
       closeCourseModal();
       await reload();
     }
@@ -1262,7 +1263,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     const previewImage = ($("l_preview").value || "").trim();
     const joinUrl = ($("l_joinUrl").value || "").trim();
     if(!name) throw new Error("Live nomi majburiy.");
-    if(type==="paid" && (!Number.isFinite(price) || price<1)) throw new Error("Pullik live uchun narx 1+ boвЂlsin.");
+    if(type==="paid" && (!Number.isFinite(price) || price<1)) throw new Error("Pullik live uchun narx 1+ bo‘lsin.");
     return { name, description, status, type, price, previewImage, joinUrl };
   }
 
@@ -1307,7 +1308,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     // API attempt
     try{
       await apiFetch("/api/lives/" + encodeURIComponent(id), { method:"DELETE" });
-      setOk("Live oвЂchirildi.");
+      setOk("Live o‘chirildi.");
       closeLiveModal();
       await reload();
       return;
@@ -1315,7 +1316,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       seedDemoLives();
       const list = readDemoLives().filter(x=>String(x.id)!==String(id));
       writeDemoLives(list);
-      setOk("Live oвЂchirildi.");
+      setOk("Live o‘chirildi.");
       closeLiveModal();
       await reload();
     }
@@ -1386,7 +1387,7 @@ a,button,input,select,textarea{touch-action:manipulation}
               <button type="button" class="btn ghost small" id="riClose" style="border-color:rgba(255,255,255,.35);color:#fff">Yopish</button>
             </div>
             <div class="tiny" style="color:rgba(255,255,255,.9);margin-top:6px">
-              Manba: ${(selected?.groupName || selected?.studyGroup || "Guruh")} вЂў ${selected?.title || "Recorded lesson"}
+              Manba: ${(selected?.groupName || selected?.studyGroup || "Guruh")} • ${selected?.title || "Recorded lesson"}
             </div>
           </header>
           <div class="body">
@@ -1572,7 +1573,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       location.href = role==="admin" ? "/admin-dashboard.html" : (role==="organizer" ? "/organizer.html" : "/student-dashboard.html");
       return;
     }
-    const name = me.fullname || me.name || me.username || "вЂ”";
+    const name = me.fullname || me.name || me.username || "—";
     $("mePill").textContent = name;
     $("mePill").style.display="inline-flex";
     $("nameVal").textContent = name;

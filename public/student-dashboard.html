@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HALLAYM edu вЂ” Student Dashboard вЂ” HALLAYM edu</title>
+  <title>HALLAYM edu — Student Dashboard — HALLAYM edu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root{
@@ -303,7 +303,8 @@ a,button,input,select,textarea{touch-action:manipulation}
     })();
   </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body>
   <div class="bg"></div><div class="gridbg"></div>
@@ -346,7 +347,7 @@ a,button,input,select,textarea{touch-action:manipulation}
         </div>
       </div>
       <div class="row desktopOnly">
-        <button class="btn ghost small" id="themeBtn">рџЊ“ Tema</button>
+        <button class="btn ghost small" id="themeBtn">🌓 Tema</button>
         <a class="btn ghost small" href="/courses.html">Kurslar</a>
         <a class="btn ghost small" href="/tests.html">Testlar</a>
         <a class="btn ghost small" href="/slides.html">AI Slides</a>
@@ -356,26 +357,26 @@ a,button,input,select,textarea{touch-action:manipulation}
         <a class="btn ghost small" href="/profile.html">Profil</a>
         <button class="btn danger small" id="logoutBtn">Chiqish</button>
       </div>
-      <button class="iconBtn mobileOnly" id="menuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false">в°</button>
+      <button class="iconBtn mobileOnly" id="menuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false">☰</button>
     </div>
   </header>
 
   <div id="drawerBack" class="drawerBack" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="drawer" role="document">
-      <div class="drawerHead"><div><div class="drawerTitle">Menyu</div><div class="tiny" id="drawerMe">вЂ”</div></div><button class="iconBtn" id="drawerClose" aria-label="Close">вњ•</button></div><div class="drawerHr"></div>
+      <div class="drawerHead"><div><div class="drawerTitle">Menyu</div><div class="tiny" id="drawerMe">—</div></div><button class="iconBtn" id="drawerClose" aria-label="Close">✕</button></div><div class="drawerHr"></div>
       <div class="drawerLinks">
         <a class="btn ghost" href="/slides.html">AI Slides</a>
         <a class="btn ghost" href="/website-studio.html">Website AI</a>
-        <button class="btn ghost" id="themeBtn2">рџЊ“ Tema</button>
-        <a class="btn ghost" href="/courses.html">рџ“љ Kurslar</a>
-        <a class="btn ghost" href="/tests.html">рџ§Є Testlar</a>
-        <a class="btn ghost" href="/certificate.html">рџЏ… Sertifikat</a>
-        <a class="btn ghost" href="/mini-games.html">рџЋ® Mini o'yinlar</a>
-        <a class="btn ghost" href="/messages.html">рџ’Њ Xabarlar</a>
-        <a class="btn ghost" href="/channels.html">рџ“Ј Kanallar</a>
-        <a class="btn ghost" href="/groups.html">рџ‘Ґ Guruhlar</a>
-        <a class="btn ghost" href="/profile.html">рџ‘¤ Profil</a>
-        <button class="btn danger" id="logoutBtn2">рџљЄ Chiqish</button>
+        <button class="btn ghost" id="themeBtn2">🌓 Tema</button>
+        <a class="btn ghost" href="/courses.html">📚 Kurslar</a>
+        <a class="btn ghost" href="/tests.html">🧪 Testlar</a>
+        <a class="btn ghost" href="/certificate.html">🏅 Sertifikat</a>
+        <a class="btn ghost" href="/mini-games.html">🎮 Mini o'yinlar</a>
+        <a class="btn ghost" href="/messages.html">💌 Xabarlar</a>
+        <a class="btn ghost" href="/channels.html">📣 Kanallar</a>
+        <a class="btn ghost" href="/groups.html">👥 Guruhlar</a>
+        <a class="btn ghost" href="/profile.html">👤 Profil</a>
+        <button class="btn danger" id="logoutBtn2">🚪 Chiqish</button>
       </div>
       <div class="drawerHr"></div>
       <div class="tiny">Tip: menyu tashqarisini bosib yopasiz.</div>
@@ -389,7 +390,7 @@ a,button,input,select,textarea{touch-action:manipulation}
       <div class="card col-12">
         <h2 style="margin:0 0 6px 0;font-size:20px">Student boshqaruv paneli</h2>
         <div class="muted">
-          Bu panel вЂњNext actionвЂќ falsafasi bilan ishlaydi: kurslar в†’ darslar в†’ test в†’ sertifikat.
+          Bu panel “Next action” falsafasi bilan ishlaydi: kurslar → darslar → test → sertifikat.
         </div>
       </div>
 
@@ -398,22 +399,22 @@ a,button,input,select,textarea{touch-action:manipulation}
         <div class="kpi">
           <div class="box">
             <div class="label">Ism</div>
-            <div class="val" id="nameVal">вЂ”</div>
+            <div class="val" id="nameVal">—</div>
           </div>
           <div class="box">
             <div class="label">Fakultet</div>
-            <div class="val" style="font-size:14px" id="facultyVal">вЂ”</div>
+            <div class="val" style="font-size:14px" id="facultyVal">—</div>
           </div>
           <div class="box">
             <div class="label">Guruh</div>
-            <div class="val" style="font-size:14px" id="groupVal">вЂ”</div>
+            <div class="val" style="font-size:14px" id="groupVal">—</div>
           </div>
           <div class="box">
             <div class="label">Balans (so'm)</div>
-            <div class="val" id="coinsVal">вЂ”</div>
+            <div class="val" id="coinsVal">—</div>
           </div>
           <div class="box">
-            <div class="label">QoвЂshilgan kurslar</div>
+            <div class="label">Qo‘shilgan kurslar</div>
             <div class="val" id="joinedCount">0</div>
           </div>
           <div class="box">
@@ -440,14 +441,14 @@ a,button,input,select,textarea{touch-action:manipulation}
 
       <div class="card col-4">
         <h3 style="margin:0 0 10px 0">Next action</h3>
-        <div class="muted" id="nextActionTxt">вЂ”</div>
+        <div class="muted" id="nextActionTxt">—</div>
         <div class="divider"></div>
         <div class="row">
           <a class="btn primary" id="continueBtn" href="/courses.html">Davom ettirish</a>
           <a class="btn" id="openCourseBtn" href="/courses.html">Kurs ochish</a>
         </div>
         <div class="tiny" style="margin-top:10px">
-          Davom ettirish: oxirgi ochilgan dars (lastLessonId) boвЂyicha avtomatik.
+          Davom ettirish: oxirgi ochilgan dars (lastLessonId) bo‘yicha avtomatik.
         </div>
       </div>
 
@@ -455,10 +456,10 @@ a,button,input,select,textarea{touch-action:manipulation}
         <div class="row" style="justify-content:space-between;align-items:flex-end">
           <div>
             <h3 style="margin:0">Mening kurslarim</h3>
-            <div class="muted">QoвЂshilgan kurslar, progress, вЂњDavom ettirishвЂќ.</div>
+            <div class="muted">Qo‘shilgan kurslar, progress, “Davom ettirish”.</div>
           </div>
           <div class="row">
-            <span class="tiny" id="modeTxt">вЂ”</span>
+            <span class="tiny" id="modeTxt">—</span>
           </div>
         </div>
 
@@ -469,7 +470,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     </div>
   </div>
 
-  <footer><span class="u-anim">HALLAYM</span> edu вЂ” Student Dashboard</footer>
+  <footer><span class="u-anim">HALLAYM</span> edu — Student Dashboard</footer>
 
 <script>
   const API_BASE = "";
@@ -578,12 +579,12 @@ a,button,input,select,textarea{touch-action:manipulation}
 
   function setNextAction(next){
     if(!next){
-      $("nextActionTxt").textContent = "Hozircha kurs yoвЂq. Kurslar sahifasidan kurs tanlang va qoвЂshiling.";
+      $("nextActionTxt").textContent = "Hozircha kurs yo‘q. Kurslar sahifasidan kurs tanlang va qo‘shiling.";
       $("continueBtn").href = "/courses.html";
       $("openCourseBtn").href = "/courses.html";
       return;
     }
-    $("nextActionTxt").innerHTML = `Davom ettirish: <b>${next.title}</b> вЂў progress: <b>${next.pct}%</b>`;
+    $("nextActionTxt").innerHTML = `Davom ettirish: <b>${next.title}</b> • progress: <b>${next.pct}%</b>`;
     $("continueBtn").href = "/joinedcourse.html?id=" + encodeURIComponent(next.courseId);
     $("openCourseBtn").href = "/course.html?id=" + encodeURIComponent(next.courseId);
   }
@@ -646,13 +647,13 @@ a,button,input,select,textarea{touch-action:manipulation}
     }
 
     const uid = me._id || me.id || me.username;
-    const name = me.fullname || me.name || me.username || "вЂ”";
-    $("mePill").textContent = `${name} вЂў ${me.faculty || "вЂ”"} вЂў ${me.group || "вЂ”"}`;
+    const name = me.fullname || me.name || me.username || "—";
+    $("mePill").textContent = `${name} • ${me.faculty || "—"} • ${me.group || "—"}`;
     $("mePill").style.display = "inline-flex";
 
     $("nameVal").textContent = name;
-    $("facultyVal").textContent = me.faculty || "вЂ”";
-    $("groupVal").textContent = me.group || "вЂ”";
+    $("facultyVal").textContent = me.faculty || "—";
+    $("groupVal").textContent = me.group || "—";
     $("coinsVal").textContent = String(Number(me.coins ?? me.coin ?? 0));
     await refreshDailyMissionButton();
 
@@ -667,7 +668,7 @@ a,button,input,select,textarea{touch-action:manipulation}
     const wrap = $("myCourses");
     wrap.innerHTML = "";
     if(!my.length){
-      wrap.innerHTML = `<div class="muted">Siz hali kursga qoвЂshilmagansiz. <a href="/courses.html"><b>Kurslar</b></a> sahifasiga oвЂting.</div>`;
+      wrap.innerHTML = `<div class="muted">Siz hali kursga qo‘shilmagansiz. <a href="/courses.html"><b>Kurslar</b></a> sahifasiga o‘ting.</div>`;
       setNextAction(null);
       $("doneCount").textContent = "0";
       return;
@@ -703,9 +704,9 @@ a,button,input,select,textarea{touch-action:manipulation}
       item.innerHTML = `
         <div style="flex:1; min-width:240px">
           <div class="title">${c.title}</div>
-          <div class="tiny meta">${c.faculty || "вЂ”"} вЂў Teacher: ${c.teacherName || "вЂ”"}</div>
+          <div class="tiny meta">${c.faculty || "—"} • Teacher: ${c.teacherName || "—"}</div>
           <div class="row" style="margin-top:8px">
-            ${c.type==="paid" ? `<span class="tag paid">Pullik вЂў ${Number(c.price||0)} so'm</span>` : `<span class="tag free">Bepul</span>`}
+            ${c.type==="paid" ? `<span class="tag paid">Pullik • ${Number(c.price||0)} so'm</span>` : `<span class="tag free">Bepul</span>`}
             <span class="tag">Progress: ${pct}%</span>
           </div>
           <div class="progressRow">${makeBar(pct)}</div>

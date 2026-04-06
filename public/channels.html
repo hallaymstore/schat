@@ -382,7 +382,8 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
 </style>
 
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body class="min-h-screen">
 <!-- Mobile Drawer -->
@@ -471,7 +472,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                     <i class="fas fa-search absolute left-3 top-3 text-white/50"></i>
                     <input type="text" id="channelSearch" 
                            class="w-full pl-10 pr-4 py-2 border border-white/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                           placeholder="Kanal nomi, tavsifi yoki universitet boвЂyicha qidiring..."
+                           placeholder="Kanal nomi, tavsifi yoki universitet bo‘yicha qidiring..."
                            onkeyup="searchChannels(this.value)">
                 </div>
                 
@@ -481,8 +482,8 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                             class="border border-white/15 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             onchange="filterChannels()">
                         <option value="">Barcha toifalar</option>
-                        <option value="announcements">EвЂ™lonlar</option>
-                        <option value="academic">TaвЂ™lim</option>
+                        <option value="announcements">E’lonlar</option>
+                        <option value="academic">Ta’lim</option>
                         <option value="events">Tadbirlar</option>
                         <option value="sports">Sport</option>
                         <option value="cultural">Madaniyat</option>
@@ -494,7 +495,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                             onchange="sortChannels()">
                         <option value="popular">Eng mashhur</option>
                         <option value="newest">Yangi (avval)</option>
-                        <option value="subscribers">KoвЂp obunachi</option>
+                        <option value="subscribers">Ko‘p obunachi</option>
                     </select>
                 </div>
             </div>
@@ -507,11 +508,11 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                 </button>
                 <button onclick="filterByToifa('announcements')" 
                         class="category-tag px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm font-medium hover:bg-blue-200">
-                    <i class="fas fa-bullhorn mr-1"></i> EвЂ™lonlar
+                    <i class="fas fa-bullhorn mr-1"></i> E’lonlar
                 </button>
                 <button onclick="filterByToifa('academic')" 
                         class="category-tag px-3 py-1 bg-green-100 text-green-600 rounded-full text-sm font-medium hover:bg-green-200">
-                    <i class="fas fa-graduation-cap mr-1"></i> TaвЂ™lim
+                    <i class="fas fa-graduation-cap mr-1"></i> Ta’lim
                 </button>
                 <button onclick="filterByToifa('events')" 
                         class="category-tag px-3 py-1 bg-yellow-100 text-yellow-600 rounded-full text-sm font-medium hover:bg-yellow-200">
@@ -564,7 +565,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                 </div>
                 <div class="text-center p-4 bg-yellow-50 rounded-lg">
                     <div class="text-2xl font-bold text-yellow-600" id="subscribedChannels">0</div>
-                    <div class="text-sm text-white/70">Obuna boвЂlganlar</div>
+                    <div class="text-sm text-white/70">Obuna bo‘lganlar</div>
                 </div>
             </div>
         </div>
@@ -594,7 +595,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                         <label class="block text-sm font-medium text-white/80 mb-2">Kanal nomi *</label>
                         <input type="text" name="name" required 
                                class="w-full px-4 py-3 border border-white/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                               placeholder="e.g., Campus News & EвЂ™lonlar">
+                               placeholder="e.g., Campus News & E’lonlar">
                     </div>
                     
                     <div>
@@ -618,8 +619,8 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                         <label class="block text-sm font-medium text-white/80 mb-2">Toifa</label>
                         <select name="category" 
                                 class="w-full px-4 py-3 border border-white/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                            <option value="announcements">EвЂ™lonlar</option>
-                            <option value="academic">TaвЂ™lim</option>
+                            <option value="announcements">E’lonlar</option>
+                            <option value="academic">Ta’lim</option>
                             <option value="events">Tadbirlar</option>
                             <option value="sports">Sport</option>
                             <option value="cultural">Madaniyat</option>
@@ -638,7 +639,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                     <div>
                         <label class="flex items-center">
                             <input type="checkbox" name="isPublic" class="rounded border-white/15 text-purple-600 focus:ring-purple-500" checked>
-                            <span class="ml-2 text-sm text-white/70">Ochiq kanal (hamma obuna boвЂla oladi)</span>
+                            <span class="ml-2 text-sm text-white/70">Ochiq kanal (hamma obuna bo‘la oladi)</span>
                         </label>
                     </div>
                     
@@ -737,7 +738,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
         }
         
         
-        // Universitetlar roвЂyxatini admin kiritgan katalogdan yuklash
+        // Universitetlar ro‘yxatini admin kiritgan katalogdan yuklash
         async function loadUniversitiesCatalog() {
             try {
                 const select = document.querySelector('#createChannelForm select[name="university"]');
@@ -818,8 +819,8 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                     }
                 }
             } catch (error) {
-                console.error('Kanallarni yuklab boвЂlmadi:', error);
-                showError('Kanallarni yuklab boвЂlmadi');
+                console.error('Kanallarni yuklab bo‘lmadi:', error);
+                showError('Kanallarni yuklab bo‘lmadi');
             }
         }
         
@@ -832,7 +833,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                     <div class="text-center py-12 col-span-full">
                         <i class="fas fa-broadcast-tower text-4xl text-white/40 mb-4"></i>
                         <h3 class="text-xl font-semibold text-white/60">Kanallar topilmadi</h3>
-                        <p class="text-white/50">${searchQuery ? 'Boshqa soвЂz bilan qidirib koвЂring' : 'Birinchi kanalni yarating!'}</p>
+                        <p class="text-white/50">${searchQuery ? 'Boshqa so‘z bilan qidirib ko‘ring' : 'Birinchi kanalni yarating!'}</p>
                     </div>
                 `;
                 return;
@@ -863,7 +864,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                         <h3 class="font-bold text-white text-lg mb-1">${channel.name}</h3>
                         <p class="text-white/70 text-sm mb-3">@${channel.username}</p>
                         
-                        <p class="text-white/80 text-sm mb-4 line-clamp-2">${channel.description || 'Tavsif yoвЂq.'}</p>
+                        <p class="text-white/80 text-sm mb-4 line-clamp-2">${channel.description || 'Tavsif yo‘q.'}</p>
                         
                         <div class="flex items-center justify-between text-sm text-white/60 mb-4">
                             <div class="flex items-center">
@@ -892,7 +893,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                             ` : `
                                 <button onclick="subscribeToChannel('${channel._id}', event)" 
                                         class="flex-1 gradient-bg text-white py-2 rounded-lg font-medium hover:opacity-90 transition">
-                                    <i class="fas fa-bell mr-2"></i> Obuna boвЂlish
+                                    <i class="fas fa-bell mr-2"></i> Obuna bo‘lish
                                 </button>
                             `}
                             
@@ -903,10 +904,10 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                         </div>
                     </div>
                     
-                    <!-- SoвЂnggi postlar Preview -->
+                    <!-- So‘nggi postlar Preview -->
                     <div class="bg-white/5 px-6 py-4 border-t border-white/10">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-medium text-white/70">SoвЂnggi postlar</span>
+                            <span class="text-sm font-medium text-white/70">So‘nggi postlar</span>
                             <span class="text-xs text-white/60">${channel.postCount || 0} posts</span>
                         </div>
                         <div class="space-y-2">
@@ -917,7 +918,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                                 </div>
                             `).join('')}
                             ${(!channel.recentPosts || channel.recentPosts.length === 0) ? `
-                                <p class="text-xs text-white/60 italic">Hali post yoвЂq</p>
+                                <p class="text-xs text-white/60 italic">Hali post yo‘q</p>
                             ` : ''}
                         </div>
                     </div>
@@ -956,7 +957,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                         <h3 class="font-bold text-white text-lg mb-1">${channel.name}</h3>
                         <p class="text-white/70 text-sm mb-3">@${channel.username}</p>
                         
-                        <p class="text-white/80 text-sm mb-4 line-clamp-2">${channel.description || 'Tavsif yoвЂq.'}</p>
+                        <p class="text-white/80 text-sm mb-4 line-clamp-2">${channel.description || 'Tavsif yo‘q.'}</p>
                         
                         <div class="flex items-center justify-between text-sm text-white/60 mb-4">
                             <div class="flex items-center">
@@ -984,7 +985,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                             ` : `
                                 <button onclick="subscribeToChannel('${channel._id}', event)" 
                                         class="flex-1 gradient-bg text-white py-2 rounded-lg font-medium hover:opacity-90 transition">
-                                    <i class="fas fa-bell mr-2"></i> Obuna boвЂlish
+                                    <i class="fas fa-bell mr-2"></i> Obuna bo‘lish
                                 </button>
                             `}
                             
@@ -997,7 +998,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                     
                     <div class="bg-white/5 px-6 py-4 border-t border-white/10">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-medium text-white/70">SoвЂnggi postlar</span>
+                            <span class="text-sm font-medium text-white/70">So‘nggi postlar</span>
                             <span class="text-xs text-white/60">${channel.postCount || 0} posts</span>
                         </div>
                         <div class="space-y-2">
@@ -1008,7 +1009,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                                 </div>
                             `).join('')}
                             ${(!channel.recentPosts || channel.recentPosts.length === 0) ? `
-                                <p class="text-xs text-white/60 italic">Hali post yoвЂq</p>
+                                <p class="text-xs text-white/60 italic">Hali post yo‘q</p>
                             ` : ''}
                         </div>
                     </div>
@@ -1061,7 +1062,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                 container.innerHTML = `
                     <div class="col-span-full text-center py-8 text-white/60">
                         <i class="fas fa-star text-2xl mb-2"></i>
-                        <p>Hozircha tavsiya etilgan kanal yoвЂq</p>
+                        <p>Hozircha tavsiya etilgan kanal yo‘q</p>
                     </div>
                 `;
                 return;
@@ -1085,7 +1086,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                         </span>
                         <button onclick="openChannel('${channel._id}')" 
                                 class="bg-white text-purple-600 px-4 py-1 rounded-lg text-sm font-medium hover:bg-white/10">
-                            KoвЂrish
+                            Ko‘rish
                         </button>
                     </div>
                 </div>
@@ -1149,7 +1150,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
             window.location.href = `/channel.html?id=${channelId}`;
         }
         
-        // Obuna boвЂlish to channel
+        // Obuna bo‘lish to channel
         async function subscribeToChannel(channelId, event) {
             if (event) event.stopPropagation();
             
@@ -1176,11 +1177,11 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                     // Update stats
                     loadStats();
                 } else {
-                    alert(data.error || 'Obuna boвЂlib boвЂlmadi');
+                    alert(data.error || 'Obuna bo‘lib bo‘lmadi');
                 }
             } catch (error) {
-                console.error('Obuna boвЂlish error:', error);
-                alert('Obuna boвЂlib boвЂlmadi');
+                console.error('Obuna bo‘lish error:', error);
+                alert('Obuna bo‘lib bo‘lmadi');
             }
         }
         
@@ -1207,7 +1208,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                         button.outerHTML = `
                             <button onclick="subscribeToChannel('${channelId}', event)" 
                                     class="flex-1 gradient-bg text-white py-2 rounded-lg font-medium hover:opacity-90 transition">
-                                <i class="fas fa-bell mr-2"></i> Obuna boвЂlish
+                                <i class="fas fa-bell mr-2"></i> Obuna bo‘lish
                             </button>
                         `;
                     }
@@ -1215,11 +1216,11 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                     // Update stats
                     loadStats();
                 } else {
-                    alert(data.error || 'Obunani bekor qilib boвЂlmadi');
+                    alert(data.error || 'Obunani bekor qilib bo‘lmadi');
                 }
             } catch (error) {
                 console.error('Obunani bekor qilish error:', error);
-                alert('Obunani bekor qilib boвЂlmadi');
+                alert('Obunani bekor qilib bo‘lmadi');
             }
         }
         
@@ -1267,11 +1268,11 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
                     loadChannels(); // Reload channels
                     loadStats(); // Update stats
                 } else {
-                    alert(result.error || 'Kanal yaratib boвЂlmadi');
+                    alert(result.error || 'Kanal yaratib bo‘lmadi');
                 }
             } catch (error) {
                 console.error('Create channel error:', error);
-                alert('Kanal yaratib boвЂlmadi');
+                alert('Kanal yaratib bo‘lmadi');
             }
         });
         
@@ -1342,7 +1343,7 @@ input::placeholder,textarea::placeholder{color: rgba(255,255,255,.55) !important
 <div id="themeFab" title="Kunduzgi / Tungi rejim">
   <i id="themeFabIcon" class="fa-solid fa-moon"></i>
   <span id="themeFabLabel">Tungi</span>
-  <span class="kicker">вЂў Kanallar</span>
+  <span class="kicker">• Kanallar</span>
 </div>
 <script>
   (function(){

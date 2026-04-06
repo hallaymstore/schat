@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Pet Market вЂ” SChat</title>
-  <meta name="description" content="Robotcha uchun ovqatlar, boвЂyoqlar va kiyimlar вЂ” coin evaziga xarid qiling."/>
+  <title>Pet Market — SChat</title>
+  <meta name="description" content="Robotcha uchun ovqatlar, bo‘yoqlar va kiyimlar — coin evaziga xarid qiling."/>
   <script>
     tailwind = { config: { darkMode:'class', theme:{ extend:{
       fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
@@ -104,7 +104,8 @@
     })();
   </script>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 
 <body class="min-h-screen text-slate-900 dark:text-slate-100">
@@ -120,7 +121,7 @@
           </div>
           <div class="leading-tight">
             <div class="font-extrabold tracking-tight">Pet Market</div>
-            <div class="text-xs muted">Ovqat вЂў BoвЂyoq вЂў Kiyim</div>
+            <div class="text-xs muted">Ovqat • Bo‘yoq • Kiyim</div>
           </div>
         </a>
 
@@ -129,7 +130,7 @@
             <i class="fa-solid fa-coins mr-2"></i><span id="coins">0</span> coin
           </div>
           <a href="/add-funds.html" class="btn-primary rounded-xl px-3 py-2 text-sm font-extrabold text-white glow-ring">
-            <i class="fa-solid fa-plus mr-2"></i>Coin toвЂldirish
+            <i class="fa-solid fa-plus mr-2"></i>Coin to‘ldirish
           </a>
           <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring" title="Tungi/Kunduzgi">
             <i id="themeIcon" class="fa-solid fa-moon"></i><span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
@@ -165,7 +166,7 @@
             <i class="fa-solid fa-burger mr-2"></i>Ovqat
           </button>
           <button data-tab="paints" class="tab chip rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring">
-            <i class="fa-solid fa-palette mr-2"></i>BoвЂyoq
+            <i class="fa-solid fa-palette mr-2"></i>Bo‘yoq
           </button>
           <button data-tab="outfits" class="tab chip rounded-2xl px-4 py-2 text-sm font-extrabold glow-ring">
             <i class="fa-solid fa-shirt mr-2"></i>Kiyim
@@ -185,7 +186,7 @@
         <div class="flex items-center justify-between gap-3">
           <div>
             <div id="tabTitle" class="text-lg font-black">Ovqatlar</div>
-            <div id="tabSub" class="text-xs muted2 mt-1">Ochlikni tez toвЂldirish uchun</div>
+            <div id="tabSub" class="text-xs muted2 mt-1">Ochlikni tez to‘ldirish uchun</div>
           </div>
           <a href="/profile.html" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring">
             <i class="fa-solid fa-user-astronaut mr-2"></i>Profil
@@ -195,16 +196,16 @@
       </div>
 
       <aside class="glass rounded-3xl p-6 g-border animate-pop">
-        <div class="text-sm font-extrabold">Tezkor maвЂ™lumot</div>
+        <div class="text-sm font-extrabold">Tezkor ma’lumot</div>
         <div class="mt-3 space-y-3">
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Live sinov maydoni</div>
             <div id="trialPreviewStage" class="mt-2 rounded-2xl border border-white/20 p-4 min-h-[120px] flex items-center justify-center gap-4"
                  style="background:radial-gradient(90% 80% at 30% 0%, rgba(34,211,238,.22), transparent 60%), radial-gradient(80% 80% at 85% 100%, rgba(245,158,11,.18), transparent 62%), rgba(2,6,23,.35);">
-              <div id="trialPreviewRobot" class="text-4xl">рџ¤–</div>
-              <div id="trialPreviewCompanion" class="text-3xl">рџђѕ</div>
+              <div id="trialPreviewRobot" class="text-4xl">🤖</div>
+              <div id="trialPreviewCompanion" class="text-3xl">🐾</div>
             </div>
-            <div id="trialPreviewText" class="mt-2 text-xs muted2">Mahsulot kartasidan <b>Sinab koвЂrish</b> tugmasini bosing.</div>
+            <div id="trialPreviewText" class="mt-2 text-xs muted2">Mahsulot kartasidan <b>Sinab ko‘rish</b> tugmasini bosing.</div>
             <div class="mt-3 flex gap-2">
               <button id="trialSaveBtn" class="glass rounded-xl px-3 py-2 text-xs font-extrabold btn-primary text-white glow-ring">
                 <i class="fa-solid fa-eye mr-1"></i>Profilda sinash
@@ -217,19 +218,19 @@
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Qanday ishlaydi?</div>
             <div class="mt-1 text-sm muted2">
-              Xarid в†’ inventar. Profil в†’ ishlatish. Ovqat ochlikni oshiradi, boвЂyoq robot rangini oвЂzgartiradi, kiyim esa outfit rangini beradi.
+              Xarid → inventar. Profil → ishlatish. Ovqat ochlikni oshiradi, bo‘yoq robot rangini o‘zgartiradi, kiyim esa outfit rangini beradi.
             </div>
           </div>
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Coin kursi</div>
             <div class="mt-1 text-sm muted2">
-              <span class="font-extrabold">10 coin = 1000 soвЂm</span> (1 coin = 100 soвЂm).
+              <span class="font-extrabold">10 coin = 1000 so‘m</span> (1 coin = 100 so‘m).
             </div>
           </div>
           <div class="glass rounded-2xl p-4">
             <div class="text-xs font-extrabold muted">Maslahat</div>
             <div class="mt-1 text-sm muted2">
-              Avval ovqat, keyin boвЂyoq. Level oshishi uchun robotni tez-tez oziqlantiring.
+              Avval ovqat, keyin bo‘yoq. Level oshishi uchun robotni tez-tez oziqlantiring.
             </div>
           </div>
         </div>
@@ -278,8 +279,8 @@
     let tab = 'foods';
 
     const tabMeta = {
-      foods: { title:'Ovqatlar', sub:'Ochlikni tez toвЂldirish uchun', icon:'fa-burger' },
-      paints: { title:'BoвЂyoqlar', sub:'Robot va kiyim rangini oвЂzgartiring', icon:'fa-palette' },
+      foods: { title:'Ovqatlar', sub:'Ochlikni tez to‘ldirish uchun', icon:'fa-burger' },
+      paints: { title:'Bo‘yoqlar', sub:'Robot va kiyim rangini o‘zgartiring', icon:'fa-palette' },
       outfits: { title:'Kiyimlar', sub:'Kiyim rangini yangilang', icon:'fa-shirt' },
       robots: { title: 'Robotlar', sub: 'Animatsiyali robotlar kolleksiyasi', icon:'fa-robot' },
       companions: { title: 'Hayvonchalar', sub: 'Profil uchun yoqimtoy hamrohlar', icon:'fa-paw' }
@@ -327,7 +328,7 @@
 
     function cardTemplate(item, type){
       const robotIcon = {
-        starter:'рџ¤–', laser:'рџ”ґ', shade:'рџ•¶пёЏ', pixel:'рџ§©', neo:'вњЁ', astro:'рџљЂ', mochi:'рџЌЎ', lux:'рџ’Ћ'
+        starter:'🤖', laser:'🔴', shade:'🕶️', pixel:'🧩', neo:'✨', astro:'🚀', mochi:'🍡', lux:'💎'
       };
       const owned = (type === 'robots')
         ? ownedRobotTypeIds.has(String(item.id || ''))
@@ -339,9 +340,9 @@
       const extra = type==='foods'
         ? `<div class="mt-3 text-xs muted2">Ochlik +<span class="font-extrabold">${item.hungerPlus||10}</span></div>`
         : (type === 'robots'
-          ? `<div class="mt-3 text-xs muted2">Rarity: <span class="font-extrabold">${item.rarity||'common'}</span> вЂў Cuteness: <span class="font-extrabold">${item.baseCuteness || 50}</span></div>`
+          ? `<div class="mt-3 text-xs muted2">Rarity: <span class="font-extrabold">${item.rarity||'common'}</span> • Cuteness: <span class="font-extrabold">${item.baseCuteness || 50}</span></div>`
           : (type === 'companions'
-            ? `<div class="mt-3 text-xs muted2">Rarity: <span class="font-extrabold">${item.rarity||'common'}</span> вЂў Mood +${item.moodBoost||0}</div>`
+            ? `<div class="mt-3 text-xs muted2">Rarity: <span class="font-extrabold">${item.rarity||'common'}</span> • Mood +${item.moodBoost||0}</div>`
             : (item.color ? `<div class="mt-3 flex items-center gap-2 text-xs muted2">
                   <span class="w-4 h-4 rounded-full border border-white/30" style="background:${item.color}"></span>
                   <span class="font-extrabold">${item.color}</span>
@@ -356,8 +357,8 @@
           : (type==='outfits'
             ? `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold"><i class="fa-solid fa-shirt mr-1"></i>Outfit</span>`
             : (type==='robots'
-              ? `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold">${robotIcon[item.id] || 'рџ¤–'} Robot</span>`
-              : `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold">${item.emoji || 'рџђѕ'} Pet</span>`
+              ? `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold">${robotIcon[item.id] || '🤖'} Robot</span>`
+              : `<span class="glass rounded-full px-3 py-1 text-[11px] font-extrabold">${item.emoji || '🐾'} Pet</span>`
             )
           ));
 
@@ -380,7 +381,7 @@
             <div class="flex items-center gap-2">
               ${(type === 'robots' || type === 'companions')
                 ? `<button class="try btn-ghost glass rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-kind="${type==='robots'?'robot':'companion'}" data-id="${item.id}" data-name="${item.name}" data-price="${item.price || 0}" data-emoji="${item.emoji || ''}" data-rarity="${item.rarity || ''}" data-mood="${item.moodBoost || 0}">
-                    Sinab koвЂrish
+                    Sinab ko‘rish
                   </button>`
                 : ''
               }
@@ -408,7 +409,7 @@
         ? (robotCatalog || [])
         : ((market && market[tab]) ? market[tab] : []);
       const box = document.getElementById('items');
-      box.innerHTML = list.length ? list.map(it=>cardTemplate(it, tab)).join('') : `<div class="text-sm muted2">BoвЂsh.</div>`;
+      box.innerHTML = list.length ? list.map(it=>cardTemplate(it, tab)).join('') : `<div class="text-sm muted2">Bo‘sh.</div>`;
 
       box.querySelectorAll('.buy').forEach(btn=>{
         btn.addEventListener('click', ()=> buy(btn.dataset.id, btn.dataset.type || tab));
@@ -439,27 +440,27 @@
       if(!robotEl || !petEl || !txt) return;
 
       if(!currentTrial){
-        robotEl.textContent = 'рџ¤–';
-        petEl.textContent = 'рџђѕ';
+        robotEl.textContent = '🤖';
+        petEl.textContent = '🐾';
         robotEl.style.animation = '';
         petEl.style.animation = '';
-        txt.innerHTML = 'Mahsulot kartasidan <b>Sinab koвЂrish</b> tugmasini bosing.';
+        txt.innerHTML = 'Mahsulot kartasidan <b>Sinab ko‘rish</b> tugmasini bosing.';
         return;
       }
 
       if(currentTrial.kind === 'robot'){
-        const icon = ({ starter:'рџ¤–', laser:'рџ”ґ', shade:'рџ•¶пёЏ', pixel:'рџ§©', neo:'вњЁ', astro:'рџљЂ', mochi:'рџЌЎ', lux:'рџ’Ћ' })[currentTrial.id] || 'рџ¤–';
+        const icon = ({ starter:'🤖', laser:'🔴', shade:'🕶️', pixel:'🧩', neo:'✨', astro:'🚀', mochi:'🍡', lux:'💎' })[currentTrial.id] || '🤖';
         robotEl.textContent = icon;
-        petEl.textContent = 'рџђѕ';
+        petEl.textContent = '🐾';
         robotEl.style.animation = 'hop 1.4s ease-in-out infinite';
         petEl.style.animation = '';
-        txt.innerHTML = `<b>${currentTrial.name}</b> sinovda. Profilda stage koвЂrinishida koвЂrasiz.`;
+        txt.innerHTML = `<b>${currentTrial.name}</b> sinovda. Profilda stage ko‘rinishida ko‘rasiz.`;
       } else if (currentTrial.kind === 'companion'){
-        robotEl.textContent = 'рџ¤–';
-        petEl.textContent = currentTrial.emoji || 'рџђѕ';
+        robotEl.textContent = '🤖';
+        petEl.textContent = currentTrial.emoji || '🐾';
         robotEl.style.animation = '';
         petEl.style.animation = 'hop 1.2s ease-in-out infinite';
-        txt.innerHTML = `<b>${currentTrial.name}</b> hamroh sinovda. Profilda jonli koвЂrinish beriladi.`;
+        txt.innerHTML = `<b>${currentTrial.name}</b> hamroh sinovda. Profilda jonli ko‘rinish beriladi.`;
       }
     }
 

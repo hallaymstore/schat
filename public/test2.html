@@ -45,7 +45,8 @@
     code{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px}
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body>
   <header>
@@ -113,14 +114,14 @@
 
         <div class="card" style="margin-top:14px;background:#f9fafb">
           <h3 style="margin:0 0 8px 0">Natija</h3>
-          <div class="muted" id="resultBox">Test tugagach natija koвЂrinadi.</div>
+          <div class="muted" id="resultBox">Test tugagach natija ko‘rinadi.</div>
           <div class="row" style="margin-top:12px">
             <a class="btn primary" id="certBtn" href="/certificate.html" style="display:none">Sertifikat</a>
           </div>
         </div>
 
         <div class="tiny" style="margin-top:10px">
-          API boвЂlsa natija saqlash:
+          API bo‘lsa natija saqlash:
           <ul style="margin:6px 0 0 18px">
             <li><code>POST /api/tests/:id/submit</code></li>
             <li>yoki <code>POST /api/submit-test</code></li>
@@ -130,7 +131,7 @@
     </div>
   </div>
 
-  <footer>Qarshi Davlat Texnika Universiteti вЂ” LMS (Test)</footer>
+  <footer>Qarshi Davlat Texnika Universiteti — LMS (Test)</footer>
 
 <script>
   const API_BASE = "";
@@ -326,7 +327,7 @@
     badge.style.background = role==="teacher" ? "#2563eb" : (role==="admin" ? "#f59e0b" : "#10b981");
 
     const mePill = document.getElementById("mePill");
-    mePill.textContent = (me.fullname||me.name||me.username||"") + " вЂў " + (me.group || "Guruh yoвЂq");
+    mePill.textContent = (me.fullname||me.name||me.username||"") + " • " + (me.group || "Guruh yo‘q");
     mePill.style.display = "inline-block";
 
     document.getElementById("dashLink").href = role==="teacher" ? "/teacher-dashboard.html" : role==="admin" ? "/admin-dashboard.html" : "/student-dashboard.html";
@@ -420,7 +421,7 @@
     const score = computeScore();
 
     // UI
-    const resTxt = `Natija: ${score.correct}/${score.total} вЂў ${score.pct}%`;
+    const resTxt = `Natija: ${score.correct}/${score.total} • ${score.pct}%`;
     document.getElementById("resultBox").textContent = resTxt;
 
     // Save (API or demo)
@@ -520,7 +521,7 @@
     finishTest();
   });
 
-  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib koвЂring."));
+  init().catch(()=> setErr("Server bilan ulanishda xatolik. Keyinroq urinib ko‘ring."));
 </script>
   <script src="/ui-actions-menu.js" defer></script>
   <script src="/global-assistant.js" defer></script>

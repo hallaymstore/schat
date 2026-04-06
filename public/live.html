@@ -69,7 +69,8 @@
     }
   </style>
   <link rel="stylesheet" href="/ui-glass-theme.css" />
-  <script src='/global-loader.js'></script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
 </head>
 <body>
   <div class="wrap">
@@ -80,7 +81,7 @@
       </div>
       <div class="row">
         <div class="pill" id="viewerPill">viewers: 0</div>
-        <button class="btn" id="backBtn">в¬… Lives</button>
+        <button class="btn" id="backBtn">⬅ Lives</button>
         <button class="btn danger" id="leaveBtn">Leave</button>
       </div>
     </div>
@@ -98,7 +99,7 @@
         <div class="row" style="justify-content:space-between">
           <div>
             <div style="font-weight:900">Waiting room / Chat (MVP)</div>
-            <div class="muted" style="font-size:12px">Host kelmaguncha chat + tayyorgarlik. (Keyin moderatsiya qoвЂshiladi.)</div>
+            <div class="muted" style="font-size:12px">Host kelmaguncha chat + tayyorgarlik. (Keyin moderatsiya qo‘shiladi.)</div>
           </div>
         </div>
         <div class="chat" id="chat"></div>
@@ -244,7 +245,7 @@
     async function boot(){
       const liveId = qs("id");
       const hostMode = qs("host")==="1";
-      if(!liveId) return setErr("liveId yoвЂq");
+      if(!liveId) return setErr("liveId yo‘q");
 
       const me = await apiMe();
       if(!me) return;
@@ -256,7 +257,7 @@
       const host = detail.host;
 
       document.getElementById("hdrTitle").textContent = live.title || "Live";
-      document.getElementById("hdrSub").textContent = (host?.fullName || host?.username || "Host") + " вЂў " + (live.status||"scheduled");
+      document.getElementById("hdrSub").textContent = (host?.fullName || host?.username || "Host") + " • " + (live.status||"scheduled");
 
       socket.on("live:viewers", ({ liveId: lid, viewers })=>{
         if(String(lid)!==String(liveId)) return;
@@ -292,7 +293,7 @@
       };
     }
 
-    // Chat relay on server (no DB) вЂ“ use existing io broadcast by emitting to room on server via generic handler
+    // Chat relay on server (no DB) – use existing io broadcast by emitting to room on server via generic handler
     // We'll do a simple client-side relay: server must listen for 'chat:live' and broadcast. If it doesn't exist,
     // this will be a no-op. (You can add it later easily.)
 
