@@ -224,10 +224,14 @@
     #attendancePanel{ z-index: 2147483635 !important; }
     #drawerOverlay.show{ z-index: 2147483590 !important; }
 
-    #studentsGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 6px !important; }
+    #studentsGrid{ grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 6px !important; }
+    #studentsGrid .video-tile{ max-height: 120px !important; }
+    #teacherStageWrap{ max-height: 48% !important; min-height: 160px; }
+    #teacherStage{ min-height: 160px !important; }
     @media (orientation: landscape){
       #studentsGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
       #teacherStage{ max-height: 52vh; }
+      #teacherStageWrap{ max-height: 60% !important; }
     }
     #groupCallOverlay .p-4{ padding: 12px !important; }
     #callMoreMenu{ width: min(86vw, 320px) !important; position: fixed !important; right: 12px !important; top: 84px !important; z-index: 2147483640 !important; }
@@ -476,13 +480,14 @@
   }
   #teacherStageWrap{
     position: relative;
-    flex: 0 0 40%;
-    max-height: 40%;
-    min-height: 150px;
+    flex: 0 0 auto;
+    max-height: 52%;
+    min-height: 180px;
     z-index: 30;
     padding-bottom: 8px;
     background: rgba(0,0,0,.24);
     backdrop-filter: blur(6px);
+    contain: layout style;
   }
   #teacherStageWrap > .w-full{
     height: 100%;
@@ -497,13 +502,15 @@
     flex: 1 1 auto;
     height: 100% !important;
     aspect-ratio: 16 / 9 !important;
-    min-height: 170px;
+    min-height: 200px;
     max-height: none;
     position: relative;
     display: grid;
     grid-template-columns: minmax(0,1fr);
     gap: 0;
     align-items: stretch;
+    contain: layout style;
+    will-change: contents;
   }
   #teacherStage > .video-tile,
   #teacherStage .stage-slot > .video-tile{
@@ -579,8 +586,11 @@
     width: 100%;
     height: 100%;
     display:block;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
     background: #000;
+    image-rendering: auto;
+    transform: translateZ(0);
   }
   #teacherStage.stage-dual .stage-slot > .video-tile{
     display: flex;
@@ -733,28 +743,34 @@
   #studentsGrid{
     align-content: start;
     padding-bottom: 12px;
+    contain: layout style;
   }
   #studentsGrid .video-tile{
     width: 100%;
-    min-height: 88px;
-    height: 96px !important;
-    max-height: 110px !important;
+    min-height: 96px;
+    height: auto !important;
+    max-height: 140px !important;
     aspect-ratio: 16 / 9;
     overflow: hidden;
+    contain: layout style;
+    border-radius: 14px;
   }
   #studentsGrid > [id^="tile_"]{
     min-height: 96px !important;
-    height: 96px !important;
-    max-height: 110px !important;
+    height: auto !important;
+    max-height: 140px !important;
     overflow: hidden;
+    aspect-ratio: 16 / 9;
   }
   #studentsGrid .video-tile.is-portrait{
-    aspect-ratio: auto;
+    aspect-ratio: 3 / 4;
+    max-height: 160px !important;
   }
   #studentsGrid .video-tile > video{
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transform: translateZ(0);
   }
   #groupCallVideoLayout > #teacherStageWrap,
   #groupCallVideoLayout > #studentsScrollArea{
@@ -763,9 +779,9 @@
   @media (min-width: 1024px){
     #groupCallVideoLayout{
       display: grid;
-      grid-template-columns: minmax(320px, 40vw) minmax(0, 1fr);
+      grid-template-columns: minmax(380px, 48vw) minmax(0, 1fr);
       grid-template-rows: minmax(0, 1fr);
-      gap: 12px;
+      gap: 14px;
       align-items: stretch;
       min-height: 0;
     }
@@ -794,8 +810,16 @@
       grid-template-columns: minmax(0,1fr) minmax(0,1fr);
       gap: 12px;
     }
-    #studentsGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px !important; }
+    #studentsGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 10px !important; }
+    #studentsGrid .video-tile{ max-height: 160px !important; }
     #teacherStageZoomHint{ font-size: 12px; }
+  }
+  @media (min-width: 1440px){
+    #groupCallVideoLayout{
+      grid-template-columns: minmax(420px, 52vw) minmax(0, 1fr);
+    }
+    #studentsGrid{ grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 10px !important; }
+    #studentsGrid .video-tile{ max-height: 150px !important; }
   }
   #attendancePanel{
     z-index: 95 !important;
@@ -3193,12 +3217,12 @@ function setupSocket() {
         const AUDIO_CONSTRAINTS = buildGroupAudioConstraints();
         // Back-compat alias (some older code referenced audioConstraints)
         const audioConstraints = AUDIO_CONSTRAINTS;
-        const GROUP_REMOTE_AUDIO_BASE_VOLUME = 0.96;
-        const GROUP_REMOTE_AUDIO_NON_STAGE_VOLUME = 0.44;
-        const GROUP_REMOTE_AUDIO_MIC_ON_STAGE_VOLUME = 0.68;
-        const GROUP_REMOTE_AUDIO_MIC_ON_NON_STAGE_VOLUME = 0.18;
-        const GROUP_REMOTE_AUDIO_DUCK_VOLUME = 0.36;
-        const GROUP_REMOTE_AUDIO_HARD_DUCK_VOLUME = 0.14;
+        const GROUP_REMOTE_AUDIO_BASE_VOLUME = 0.94;
+        const GROUP_REMOTE_AUDIO_NON_STAGE_VOLUME = 0.38;
+        const GROUP_REMOTE_AUDIO_MIC_ON_STAGE_VOLUME = 0.62;
+        const GROUP_REMOTE_AUDIO_MIC_ON_NON_STAGE_VOLUME = 0.12;
+        const GROUP_REMOTE_AUDIO_DUCK_VOLUME = 0.28;
+        const GROUP_REMOTE_AUDIO_HARD_DUCK_VOLUME = 0.08;
         const GROUP_FEEDBACK_GUARD = {
             activeTrackId: '',
             sourceTrack: null,
@@ -3213,9 +3237,105 @@ function setupSocket() {
             hardMuteUntil: 0,
             hitCount: 0,
             lastHitAt: 0,
-            threshold: 0.018,
-            holdMs: 320
+            threshold: 0.012,
+            holdMs: 500,
+            // Noise gate state
+            noiseGateNode: null,
+            noiseGateGain: null,
+            noiseFloor: 0.008,
+            gateOpen: false,
+            gateCloseTimer: null
         };
+
+        // ===== Advanced Noise Gate for local mic =====
+        let _localAudioPipeline = null;
+        function createLocalAudioPipeline(audioTrack) {
+            try {
+                if (_localAudioPipeline) { try { _localAudioPipeline.ctx.close(); } catch(_){} }
+                _localAudioPipeline = null;
+                if (!audioTrack || audioTrack.readyState !== 'live') return null;
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return null;
+                const ctx = new AudioCtx({ sampleRate: 48000, latencyHint: 'interactive' });
+                const src = ctx.createMediaStreamSource(new MediaStream([audioTrack]));
+                // High-pass filter to remove low-frequency rumble (below 85Hz)
+                const hpf = ctx.createBiquadFilter();
+                hpf.type = 'highpass';
+                hpf.frequency.value = 85;
+                hpf.Q.value = 0.7;
+                // Low-pass to cut high-frequency hiss (above 14kHz)
+                const lpf = ctx.createBiquadFilter();
+                lpf.type = 'lowpass';
+                lpf.frequency.value = 14000;
+                lpf.Q.value = 0.7;
+                // Compressor to even out volume
+                const comp = ctx.createDynamicsCompressor();
+                comp.threshold.value = -24;
+                comp.knee.value = 12;
+                comp.ratio.value = 4;
+                comp.attack.value = 0.003;
+                comp.release.value = 0.15;
+                // Noise gate via gain node
+                const gate = ctx.createGain();
+                gate.gain.value = 1.0;
+                // Analyser for gate control
+                const analyser = ctx.createAnalyser();
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.3;
+                const samples = new Float32Array(analyser.fftSize);
+                src.connect(hpf);
+                hpf.connect(lpf);
+                lpf.connect(comp);
+                comp.connect(gate);
+                gate.connect(analyser);
+                // Get processed output as a stream
+                const dest = ctx.createMediaStreamDestination();
+                gate.connect(dest);
+                _localAudioPipeline = { ctx, src, hpf, lpf, comp, gate, analyser, samples, dest, srcTrack: audioTrack };
+                // Start noise gate monitoring
+                _startNoiseGateMonitor();
+                return dest.stream.getAudioTracks()[0] || null;
+            } catch (e) {
+                console.warn('Audio pipeline creation failed:', e);
+                return null;
+            }
+        }
+        function _startNoiseGateMonitor() {
+            if (GROUP_FEEDBACK_GUARD.gateCloseTimer) clearInterval(GROUP_FEEDBACK_GUARD.gateCloseTimer);
+            GROUP_FEEDBACK_GUARD.gateCloseTimer = setInterval(() => {
+                if (!_localAudioPipeline || !_localAudioPipeline.analyser) return;
+                const a = _localAudioPipeline.analyser;
+                const s = _localAudioPipeline.samples;
+                a.getFloatTimeDomainData(s);
+                let sum = 0;
+                for (let i = 0; i < s.length; i++) sum += s[i] * s[i];
+                const rms = Math.sqrt(sum / s.length);
+                const gateNode = _localAudioPipeline.gate;
+                const threshold = GROUP_FEEDBACK_GUARD.noiseFloor;
+                if (rms > threshold) {
+                    // Voice detected - open gate smoothly
+                    if (!GROUP_FEEDBACK_GUARD.gateOpen) {
+                        GROUP_FEEDBACK_GUARD.gateOpen = true;
+                        gateNode.gain.cancelScheduledValues(gateNode.context.currentTime);
+                        gateNode.gain.linearRampToValueAtTime(1.0, gateNode.context.currentTime + 0.015);
+                    }
+                } else {
+                    // Below threshold - close gate smoothly
+                    if (GROUP_FEEDBACK_GUARD.gateOpen) {
+                        GROUP_FEEDBACK_GUARD.gateOpen = false;
+                        gateNode.gain.cancelScheduledValues(gateNode.context.currentTime);
+                        gateNode.gain.linearRampToValueAtTime(0.02, gateNode.context.currentTime + 0.12);
+                    }
+                }
+            }, 30);
+        }
+        function destroyLocalAudioPipeline() {
+            if (GROUP_FEEDBACK_GUARD.gateCloseTimer) { clearInterval(GROUP_FEEDBACK_GUARD.gateCloseTimer); GROUP_FEEDBACK_GUARD.gateCloseTimer = null; }
+            if (_localAudioPipeline) {
+                try { _localAudioPipeline.ctx.close(); } catch(_){}
+                _localAudioPipeline = null;
+            }
+        }
 // ==================== GROUP CALL (WebRTC Mesh) ====================
         let groupCall = {
             active: false,
@@ -4851,11 +4971,14 @@ async function applySenderNetworkProfile(pc) {
         const n = getNetworkHints();
         const isDetailStage = !!groupCall?.isScreenSharing || !!stageWhiteboard?.active;
         const detailProfile = isDetailStage ? (_activeScreenShareProfile || getScreenShareProfile()) : null;
+        // Determine if this peer is teacher (stage) - give teacher higher bitrate priority
+        const isTeacherSender = !!(typeof isMeStageOwnerTeacher === 'function' && isMeStageOwnerTeacher());
+        const teacherBoost = isTeacherSender ? 1.6 : 1.0;
             const maxVideoBitrate = isDetailStage
             ? Number(detailProfile?.maxBitrate || 3_000_000)
-            : (n.veryLow ? 70_000 : (n.low ? 140_000 : (n.isMobile ? 240_000 : 420_000)));
-        const maxVideoFps = isDetailStage ? Number(detailProfile?.fps || 10) : (n.veryLow ? 8 : (n.low ? 10 : 15));
-        const maxAudioBitrate = n.veryLow ? 20_000 : (n.low ? 26_000 : 32_000);
+            : Math.round((n.veryLow ? 90_000 : (n.low ? 180_000 : (n.isMobile ? 300_000 : 520_000))) * teacherBoost);
+        const maxVideoFps = isDetailStage ? Number(detailProfile?.fps || 10) : (n.veryLow ? 10 : (n.low ? 12 : 18));
+        const maxAudioBitrate = n.veryLow ? 24_000 : (n.low ? 32_000 : 48_000);
 
         for (const s of (pc.getSenders() || [])) {
             if (!s || !s.track || typeof s.getParameters !== 'function' || typeof s.setParameters !== 'function') continue;
@@ -4871,13 +4994,24 @@ async function applySenderNetworkProfile(pc) {
                 if (isDetailStage) {
                     e.scaleResolutionDownBy = 1;
                     p.degradationPreference = (detailProfile?.oldAndroid || n.veryLow) ? 'balanced' : 'maintain-resolution';
+                } else if (isTeacherSender) {
+                    // Teacher: prioritize resolution clarity over framerate
+                    e.scaleResolutionDownBy = n.veryLow ? 1.4 : 1;
+                    p.degradationPreference = 'maintain-resolution';
                 } else {
                     if (n.veryLow) e.scaleResolutionDownBy = Math.max(1.8, Number(e.scaleResolutionDownBy || 1));
                     else if (n.low) e.scaleResolutionDownBy = Math.max(1.35, Number(e.scaleResolutionDownBy || 1));
                     p.degradationPreference = n.veryLow ? 'maintain-framerate' : 'balanced';
                 }
+                // Enable network adaptivity
+                if (typeof e.networkPriority !== 'undefined' || true) {
+                    try { e.networkPriority = isTeacherSender ? 'high' : 'low'; } catch(_) {}
+                    try { e.priority = isTeacherSender ? 'high' : 'low'; } catch(_) {}
+                }
             } else if (kind === 'audio') {
                 e.maxBitrate = maxAudioBitrate;
+                try { e.networkPriority = 'high'; } catch(_) {}
+                try { e.priority = 'high'; } catch(_) {}
             }
 
             p.encodings[0] = e;
@@ -4886,12 +5020,54 @@ async function applySenderNetworkProfile(pc) {
     } catch(_) {}
 }
 
+// Adaptive bitrate monitor: periodically checks connection stats and adjusts
+let _abrMonitorTimer = null;
+function startAdaptiveBitrateMonitor() {
+    if (_abrMonitorTimer) clearInterval(_abrMonitorTimer);
+    _abrMonitorTimer = setInterval(async () => {
+        try {
+            if (!groupCall.active) { stopAdaptiveBitrateMonitor(); return; }
+            for (const [uid, pc] of groupCall.peers.entries()) {
+                if (!pc || typeof pc.getStats !== 'function') continue;
+                const stats = await pc.getStats();
+                let packetsLost = 0, packetsSent = 0, roundTripTime = 0, jitter = 0;
+                stats.forEach((r) => {
+                    if (!r) return;
+                    const t = String(r.type || '');
+                    if (t === 'outbound-rtp' && String(r.kind || r.mediaType || '') === 'video') {
+                        packetsSent += Number(r.packetsSent || 0);
+                    }
+                    if (t === 'remote-inbound-rtp' && String(r.kind || r.mediaType || '') === 'video') {
+                        packetsLost += Number(r.packetsLost || 0);
+                        if (typeof r.roundTripTime === 'number') roundTripTime = Math.max(roundTripTime, r.roundTripTime);
+                        if (typeof r.jitter === 'number') jitter = Math.max(jitter, r.jitter);
+                    }
+                });
+                const lossRate = packetsSent > 0 ? (packetsLost / packetsSent) : 0;
+                // If high loss or high RTT, re-apply tighter network profile
+                if (lossRate > 0.08 || roundTripTime > 0.4 || jitter > 0.1) {
+                    await applySenderNetworkProfile(pc);
+                }
+            }
+        } catch(_) {}
+    }, 8000);
+}
+function stopAdaptiveBitrateMonitor() {
+    if (_abrMonitorTimer) { clearInterval(_abrMonitorTimer); _abrMonitorTimer = null; }
+}
+
 function safePlayVideo(videoEl, { forceMuteFallback = true } = {}) {
     if (!videoEl) return;
     try {
         videoEl.autoplay = true;
         videoEl.playsInline = true;
         videoEl.setAttribute('playsinline', 'true');
+        // Reduce buffering for lower latency
+        videoEl.setAttribute('disableRemotePlayback', 'true');
+        if (typeof videoEl.requestVideoFrameCallback === 'function') {
+            // Hint browser for low-latency playback
+            try { videoEl.style.willChange = 'transform'; } catch(_) {}
+        }
     } catch(_) {}
 
     const p = (typeof videoEl.play === 'function') ? videoEl.play() : null;
@@ -5182,7 +5358,7 @@ function clearReconnectTimer(remoteUserId) {
     groupCall.reconnectTimers.delete(key);
 }
 
-function schedulePeerRecovery(remoteUserId, delayMs = 1400, opts = {}) {
+function schedulePeerRecovery(remoteUserId, delayMs = 800, opts = {}) {
     try {
         const uid = String(remoteUserId || '');
         if (!uid || !groupCall.active) return;
@@ -5196,17 +5372,23 @@ function schedulePeerRecovery(remoteUserId, delayMs = 1400, opts = {}) {
             clearReconnectTimer(uid);
             if (!groupCall.active) return;
             const pc = groupCall.peers.get(uid);
-            if (!pc) return;
-            if (pc.signalingState !== 'stable') return;
-            if (forceOffer || shouldInitiateOffer(myUserId(), uid)) {
-                try { await sendOffer(uid); } catch(_) {}
+            if (!pc) {
+                // Peer was never created or was removed - try creating fresh
+                if (shouldConnectToPeer(uid)) {
+                    try { await sendOffer(uid); } catch(_) {}
+                }
+                return;
             }
-        }, Math.max(600, Number(delayMs || 1400)));
+            if (pc.signalingState !== 'stable') return;
+            // Always try to send offer for recovery (don't wait for tie-breaker)
+            try { await sendOffer(uid); } catch(_) {}
+        }, Math.max(150, Number(delayMs || 800)));
 
         groupCall.reconnectTimers.set(uid, t);
     } catch(_) {}
 }
 
+let _watchdogGlobalTimer = null;
 function runNegotiationWatchdog(delayMs = 2600) {
     setTimeout(() => {
         try {
@@ -5217,11 +5399,53 @@ function runNegotiationWatchdog(delayMs = 2600) {
                 const hasLiveTrack = !!(rs && (rs.getTracks?.() || []).some((t) => t && t.readyState === 'live'));
                 const cs = String(pc.connectionState || '').toLowerCase();
                 if (!hasLiveTrack || cs === 'new' || cs === 'connecting' || cs === 'disconnected' || cs === 'failed') {
-                    schedulePeerRecovery(uid, 120, { forceOffer: true });
+                    schedulePeerRecovery(uid, 100, { forceOffer: true });
+                }
+            }
+            // Also check for participants we should be connected to but aren't
+            const meId = String(myUserId() || '');
+            const allParticipants = Array.from(groupCall.participantInfos.keys()).filter(uid => uid && uid !== meId);
+            for (const uid of allParticipants) {
+                if (!groupCall.peers.has(uid) && shouldConnectToPeer(uid)) {
+                    sendOffer(uid).catch(() => {});
                 }
             }
         } catch(_) {}
-    }, Math.max(900, Number(delayMs || 2600)));
+    }, Math.max(300, Number(delayMs || 2600)));
+}
+
+// Persistent watchdog that runs every 4 seconds while call is active
+function startPersistentWatchdog() {
+    stopPersistentWatchdog();
+    _watchdogGlobalTimer = setInterval(() => {
+        try {
+            if (!groupCall.active) { stopPersistentWatchdog(); return; }
+            const meId = String(myUserId() || '');
+            // Check existing peers for health
+            for (const [uid, pc] of groupCall.peers.entries()) {
+                if (!uid || !pc) continue;
+                const rs = groupCall.remoteStreams.get(String(uid));
+                const hasLiveTrack = !!(rs && (rs.getTracks?.() || []).some((t) => t && t.readyState === 'live'));
+                const cs = String(pc.connectionState || '').toLowerCase();
+                if (!hasLiveTrack && (cs === 'connected' || cs === 'completed')) {
+                    // Connected but no tracks - re-offer
+                    schedulePeerRecovery(uid, 200, { forceOffer: true });
+                } else if (cs === 'failed' || cs === 'disconnected') {
+                    schedulePeerRecovery(uid, 150, { forceOffer: true });
+                }
+            }
+            // Check for missing peers
+            const allParticipants = Array.from(groupCall.participantInfos.keys()).filter(uid => uid && uid !== meId);
+            for (const uid of allParticipants) {
+                if (!groupCall.peers.has(uid) && shouldConnectToPeer(uid)) {
+                    sendOffer(uid).catch(() => {});
+                }
+            }
+        } catch(_) {}
+    }, 4000);
+}
+function stopPersistentWatchdog() {
+    if (_watchdogGlobalTimer) { clearInterval(_watchdogGlobalTimer); _watchdogGlobalTimer = null; }
 }
 
 async function publishLocalVideoTrack(constraints = null) {
@@ -5279,9 +5503,18 @@ async function publishLocalAudioTrack() {
     }
 
     const micStream = await safeGetUserMedia({ audio: AUDIO_CONSTRAINTS, video: false });
-    const newTrack = micStream?.getAudioTracks?.()[0];
-    if (!newTrack) throw new Error('Audio track olinmadi');
-    tuneLocalTrack(newTrack);
+    const rawTrack = micStream?.getAudioTracks?.()[0];
+    if (!rawTrack) throw new Error('Audio track olinmadi');
+    tuneLocalTrack(rawTrack);
+
+    // Apply noise gate pipeline for cleaner audio
+    let newTrack = rawTrack;
+    try {
+        const processedTrack = createLocalAudioPipeline(rawTrack);
+        if (processedTrack && processedTrack.readyState === 'live') {
+            newTrack = processedTrack;
+        }
+    } catch(_) {}
 
     if (!groupCall.localStream) groupCall.localStream = new MediaStream();
 
@@ -5699,13 +5932,11 @@ async function rebalancePeerTopology() {
     }
     const meId = String(myUserId() || '');
     const ids = Array.from(groupCall.participantInfos.keys()).filter((uid) => uid && uid !== meId);
-    for (const uid of ids) {
-        if (!isEssentialPeer(uid)) continue;
-        if (groupCall.peers.has(uid)) continue;
-        if (!shouldInitiateOffer(meId, uid)) continue;
-        if (!shouldConnectToPeer(uid)) continue;
-        try { await sendOffer(uid); } catch(_) {}
-    }
+    // Send offers to essential missing peers in parallel
+    const essentialOffers = ids
+        .filter(uid => isEssentialPeer(uid) && !groupCall.peers.has(uid) && shouldConnectToPeer(uid))
+        .map(uid => sendOffer(uid).catch(() => {}));
+    if (essentialOffers.length) await Promise.all(essentialOffers);
     const p = getPeerPolicy();
     if (p.classroomMode && !p.meIsTeacher) {
         setGroupCallStatus(`Connected • Classroom mode (${p.total}): O'qituvchi prioritet`);
@@ -5955,7 +6186,7 @@ try {
                 tile.id = tileId;
                 tile.className = "video-tile relative rounded-2xl overflow-hidden bg-black shadow border border-white/10";
                 tile.innerHTML = `
-                    <video id="vid_${userId}" autoplay playsinline ${isLocal ? 'muted' : ''} class="w-full h-full object-cover bg-black"></video>
+                    <video id="vid_${userId}" autoplay playsinline ${isLocal ? 'muted' : ''} class="w-full h-full object-cover bg-black" disableRemotePlayback></video>
                     <div class="video-name absolute left-2 bottom-2 px-2 py-1 rounded-lg bg-black/60 text-white text-xs font-semibold">
                       ${isLocal ? 'Siz' : getUserLabel(userId)}
                     </div>
@@ -6255,7 +6486,18 @@ function removeVideoTile(userId) {
             const uid = String(remoteUserId || '');
             if (!uid) return null;
             if (!shouldConnectToPeer(uid)) return null;
-            if (groupCall.peers.has(uid)) return groupCall.peers.get(uid);
+            // If existing peer is closed/failed, remove and recreate
+            if (groupCall.peers.has(uid)) {
+                const existingPc = groupCall.peers.get(uid);
+                const cs = String(existingPc?.connectionState || '').toLowerCase();
+                if (cs === 'closed' || cs === 'failed') {
+                    try { existingPc.close(); } catch(_) {}
+                    groupCall.peers.delete(uid);
+                    clearReconnectTimer(uid);
+                } else {
+                    return existingPc;
+                }
+            }
             if (!supportsRealtimeCall()) return null;
 
             const baseCfg = await getRtcConfig();
@@ -6323,6 +6565,15 @@ function removeVideoTile(userId) {
                 groupCall.remoteStreams.set(uid, stream);
                 addVideoTile(uid, stream, false);
                 setTimeout(() => { try { attemptResumeRemoteAudio(); } catch(_) {} }, 180);
+                // Reduce jitter buffer target on receivers for lower latency
+                try {
+                    const recv = event?.receiver;
+                    if (recv && typeof recv.getParameters === 'function') {
+                        // Set playoutDelayHint for minimum buffering on video
+                        try { if (recv.playoutDelayHint !== undefined) recv.playoutDelayHint = 0; } catch(_) {}
+                        try { if (recv.jitterBufferTarget !== undefined) recv.jitterBufferTarget = 0; } catch(_) {}
+                    }
+                } catch(_) {}
                 try {
                     const tr = event?.track;
                     if (tr) {
@@ -6343,13 +6594,15 @@ function removeVideoTile(userId) {
                 const st = String(pc.iceConnectionState || '').toLowerCase();
                 if (st === 'connected' || st === 'completed') {
                     clearReconnectTimer(uid);
+                    // Re-apply network profile on successful connection for optimal bitrate
+                    setTimeout(() => { applySenderNetworkProfile(pc).catch(() => {}); }, 500);
                     return;
                 }
                 if (st === 'failed') {
                     try { if (typeof pc.restartIce === 'function') pc.restartIce(); } catch(_) {}
-                    schedulePeerRecovery(uid, 700);
+                    schedulePeerRecovery(uid, 500);
                 } else if (st === 'disconnected') {
-                    schedulePeerRecovery(uid, 1500);
+                    schedulePeerRecovery(uid, 1000);
                 }
             };
 
@@ -6377,10 +6630,20 @@ function removeVideoTile(userId) {
             if (!shouldConnectToPeer(remoteUserId)) return;
             const pc = await createPeer(remoteUserId);
             if (!pc) return;
+            // If already connected and has live remote tracks, skip re-offer
+            const existingStream = groupCall.remoteStreams.get(String(remoteUserId));
+            const hasLiveTracks = !!(existingStream && (existingStream.getTracks?.() || []).some(t => t && t.readyState === 'live'));
+            const connState = String(pc.connectionState || '').toLowerCase();
+            if (hasLiveTracks && (connState === 'connected')) return;
+            // If signaling in progress, skip (handleOffer has rollback for glare)
+            if (pc.signalingState === 'have-local-offer') {
+                // Already sent an offer, wait for answer
+                return;
+            }
             let offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: (groupCall.callType !== 'audio') });
             offer = patchSdpForCompatibility(offer);
             await pc.setLocalDescription(offer);
-            await applySenderNetworkProfile(pc);
+            applySenderNetworkProfile(pc).catch(() => {});
 
             socket.emit('groupCallSignal', {
                 groupId: groupCall.groupId,
@@ -6397,16 +6660,36 @@ function removeVideoTile(userId) {
             if (!pc) return;
             const meId = String(myUserId() || '');
             const polite = !meId || shouldInitiateOffer(meId, from);
-            const hasCollision = pc.signalingState !== 'stable';
+            const sigState = String(pc.signalingState || '').toLowerCase();
+            const hasCollision = sigState !== 'stable';
             if (hasCollision) {
                 if (!polite) return; // ignore glare on impolite side
                 try { await pc.setLocalDescription({ type: 'rollback' }); } catch(_) {}
             }
-            await pc.setRemoteDescription(toRtcSessionDescription(offer));
+            try {
+                await pc.setRemoteDescription(toRtcSessionDescription(offer));
+            } catch(e) {
+                // If set remote desc fails, try recreating peer
+                console.warn('setRemoteDescription failed, recreating peer for', from, e);
+                try { pc.close(); } catch(_) {}
+                groupCall.peers.delete(from);
+                const newPc = await createPeer(from);
+                if (!newPc) return;
+                await newPc.setRemoteDescription(toRtcSessionDescription(offer));
+                let answer = await newPc.createAnswer();
+                answer = patchSdpForCompatibility(answer);
+                await newPc.setLocalDescription(answer);
+                applySenderNetworkProfile(newPc).catch(() => {});
+                socket.emit('groupCallSignal', {
+                    groupId: groupCall.groupId, callId: groupCall.callId,
+                    to: from, type: 'answer', data: answer
+                });
+                return;
+            }
             let answer = await pc.createAnswer();
             answer = patchSdpForCompatibility(answer);
             await pc.setLocalDescription(answer);
-            await applySenderNetworkProfile(pc);
+            applySenderNetworkProfile(pc).catch(() => {});
 
             socket.emit('groupCallSignal', {
                 groupId: groupCall.groupId,
@@ -6420,7 +6703,16 @@ function removeVideoTile(userId) {
         async function handleAnswer(from, answer) {
             const pc = groupCall.peers.get(from);
             if (!pc) return;
-            await pc.setRemoteDescription(toRtcSessionDescription(answer));
+            // Only accept answer if we're in the right state
+            if (pc.signalingState !== 'have-local-offer') return;
+            try {
+                await pc.setRemoteDescription(toRtcSessionDescription(answer));
+            } catch(e) {
+                console.warn('setRemoteDescription (answer) failed for', from, e);
+                // Schedule recovery if answer fails
+                schedulePeerRecovery(from, 300, { forceOffer: true });
+                return;
+            }
             clearReconnectTimer(from);
         }
 
@@ -9760,6 +10052,9 @@ async function toggleMute() {
             try { stopStageWhiteboardMode({ silent: true, keepCamera: true }); } catch(_) {}
             stopTeacherMiniHealthMonitor();
             stopGroupFeedbackGuard({ keepRemoteLevel: true });
+            stopAdaptiveBitrateMonitor();
+            stopPersistentWatchdog();
+            destroyLocalAudioPipeline();
             groupCall.active = false;
             groupCall.joining = false;
             groupCall.callId = null;
@@ -9886,6 +10181,7 @@ async function toggleMute() {
                 const meId = String(myUserId() || data?.selfUserId || '');
                 groupCall.active = true;
                 groupCall.callId = data.callId;
+                try { drainEarlySignalQueue(); } catch(_) {}
                 groupCall.lessonId = data.lessonId || null;
                 groupCall.lessonSubject = String(data?.teacherSubject || groupCall.lessonSubject || '').trim();
                 if (data?.labState && typeof data.labState === 'object') groupCall.labState = data.labState;
@@ -9910,15 +10206,20 @@ async function toggleMute() {
                 try{ await autoStartRecordingIfNeeded(); }catch(_){ }
                 try{ if(data.title) document.getElementById('groupCallTitle').textContent = data.title; }catch(_){}
 
-                // Create offers to existing participants
+                // Create offers to existing participants - PARALLEL for speed
                 const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
-                for (const uid of participants) {
+                const offerPromises = participants.map(uid => {
                     if ((!meId || shouldInitiateOffer(meId, uid)) && shouldConnectToPeer(uid)) {
-                        await sendOffer(uid);
+                        return sendOffer(uid).catch(() => {});
                     }
-                }
+                    return Promise.resolve();
+                });
+                await Promise.all(offerPromises);
                 await rebalancePeerTopology();
-                runNegotiationWatchdog(1800);
+                runNegotiationWatchdog(800);
+                runNegotiationWatchdog(2500);
+                startAdaptiveBitrateMonitor();
+                startPersistentWatchdog();
             });
 
             socket.on('groupCallJoined', async (data) => {
@@ -9927,6 +10228,7 @@ async function toggleMute() {
                 const meId = String(myUserId() || data?.selfUserId || '');
                 groupCall.active = true;
                 groupCall.callId = data.callId;
+                try { drainEarlySignalQueue(); } catch(_) {}
                 groupCall.lessonId = data.lessonId || null;
                 groupCall.lessonSubject = String(data?.teacherSubject || groupCall.lessonSubject || '').trim();
                 if (data?.labState && typeof data.labState === 'object') groupCall.labState = data.labState;
@@ -9952,14 +10254,20 @@ async function toggleMute() {
 
                 try{ if(data.title) document.getElementById('groupCallTitle').textContent = data.title; }catch(_){}
 
+                // Send offers to ALL existing participants - PARALLEL for instant connect
                 const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
-                for (const uid of participants) {
-                    if ((!meId || shouldInitiateOffer(meId, uid)) && shouldConnectToPeer(uid)) {
-                        await sendOffer(uid);
+                const offerPromises = participants.map(uid => {
+                    if (shouldConnectToPeer(uid)) {
+                        return sendOffer(uid).catch(() => {});
                     }
-                }
+                    return Promise.resolve();
+                });
+                await Promise.all(offerPromises);
                 await rebalancePeerTopology();
-                runNegotiationWatchdog(1800);
+                runNegotiationWatchdog(800);
+                runNegotiationWatchdog(2500);
+                startAdaptiveBitrateMonitor();
+                startPersistentWatchdog();
             });
 
             socket.on('groupCallUserJoined', async (data) => {
@@ -9979,12 +10287,13 @@ async function toggleMute() {
                 const meId = String(myUserId() || '');
                 if (!uid || uid === meId) return;
 
-                // Initiate offer only if tie-breaker says so
-                if (shouldInitiateOffer(meId, uid) && shouldConnectToPeer(uid)) {
-                    await sendOffer(uid);
+                // Always send offer to new joiner immediately (don't wait for tie-breaker)
+                // The handleOffer on the other side has glare/collision handling
+                if (shouldConnectToPeer(uid)) {
+                    try { await sendOffer(uid); } catch(_) {}
                 }
-                await rebalancePeerTopology();
-                runNegotiationWatchdog(1500);
+                rebalancePeerTopology().catch(() => {});
+                runNegotiationWatchdog(600);
             });
 
             socket.on('groupCallUserLeft', (data) => {
@@ -10102,9 +10411,20 @@ async function toggleMute() {
                 notify('Group call ended: ' + (data.reason || 'ended'), 'info');
             });
 
+            // Queue incoming signals that arrive before groupCall.active is set
+            let _earlySignalQueue = [];
+            let _earlySignalQueueActive = true;
+
             socket.on('groupCallSignal', async (payload) => {
-                if (!groupCall.active) return;
-                if (String(payload.groupId) !== String(groupCall.groupId)) return;
+                if (String(payload.groupId) !== String(groupCall.groupId || groupId)) return;
+
+                // If call is not yet active, queue signals for processing after join completes
+                if (!groupCall.active) {
+                    if (_earlySignalQueueActive && _earlySignalQueue.length < 200) {
+                        _earlySignalQueue.push(payload);
+                    }
+                    return;
+                }
                 if (String(payload.callId) !== String(groupCall.callId)) return;
 
                 const from = String(payload.from);
@@ -10115,6 +10435,23 @@ async function toggleMute() {
                 if (type === 'answer') return handleAnswer(from, data);
                 if (type === 'ice') return handleIce(from, data);
             });
+
+            // Process queued signals after call becomes active
+            function drainEarlySignalQueue() {
+                _earlySignalQueueActive = false;
+                const queue = _earlySignalQueue.splice(0);
+                for (const payload of queue) {
+                    try {
+                        if (String(payload.callId) !== String(groupCall.callId)) continue;
+                        const from = String(payload.from);
+                        const type = String(payload.type);
+                        const data = payload.data;
+                        if (type === 'offer') handleOffer(from, data).catch(() => {});
+                        else if (type === 'answer') handleAnswer(from, data).catch(() => {});
+                        else if (type === 'ice') handleIce(from, data).catch(() => {});
+                    } catch(_) {}
+                }
+            }
 
             socket.on('groupCallError', (d) => {
                 console.error('groupCallError', d);
