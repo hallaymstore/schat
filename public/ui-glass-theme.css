@@ -758,6 +758,200 @@ footer {
     line-height: 1.14 !important;
   }
 
+
+html {
+  accent-color: var(--h-accent);
+}
+
+body {
+  color: var(--h-text) !important;
+}
+
+.site-header,
+.site-shell,
+.site-sidebar,
+.sidebar,
+#sidebar,
+#leftSidebar,
+#rightSidebar,
+#infoPanel,
+#userInfoSidebar,
+#attendancePanel,
+#callMoreMenu,
+#groupActionsMenu,
+#userMenu,
+#groupInfoMenu,
+.toolbar,
+.topbar,
+.navbar,
+.nav-shell,
+.drawer,
+.modal,
+.modal-content,
+.dialog,
+.dialog-card,
+.popup,
+.popover,
+.sheet {
+  background:
+    radial-gradient(280px 180px at 10% 0%, rgba(20, 184, 166, 0.08), transparent 70%),
+    radial-gradient(260px 180px at 100% 0%, rgba(255, 209, 90, 0.08), transparent 72%),
+    var(--h-menu-panel-bg) !important;
+  border: 1px solid var(--h-border) !important;
+  box-shadow: 0 22px 60px var(--h-shadow) !important;
+}
+
+.nav a,
+nav a,
+.sidebar a,
+.menu a,
+.tabs a,
+.tabs button,
+.tab,
+.nav-link,
+.menu-link {
+  color: var(--h-text) !important;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.nav a:hover,
+nav a:hover,
+.sidebar a:hover,
+.menu a:hover,
+.tabs a:hover,
+.tabs button:hover,
+.tab:hover,
+.nav-link:hover,
+.menu-link:hover,
+.nav a.active,
+nav a.active,
+.sidebar a.active,
+.menu a.active,
+.tabs a.active,
+.tabs button.active,
+.tab.active,
+.nav-link.active,
+.menu-link.active,
+[aria-current="page"],
+[aria-selected="true"] {
+  background: rgba(15, 143, 131, 0.12) !important;
+  color: var(--h-accent-strong) !important;
+  border-color: rgba(15, 143, 131, 0.18) !important;
+}
+
+.bg-teal-50,
+.bg-emerald-50,
+.bg-cyan-50,
+.bg-slate-50,
+.bg-gray-50,
+.bg-white\/70,
+.bg-white\/80,
+.bg-white\/90 {
+  background: var(--h-panel-bg-2) !important;
+}
+
+.text-teal-500,
+.text-teal-600,
+.text-teal-700,
+.text-emerald-500,
+.text-emerald-600,
+.text-cyan-600,
+.text-cyan-700,
+.brand-accent,
+.accent,
+.highlight {
+  color: var(--h-accent-strong) !important;
+}
+
+.border-teal-100,
+.border-teal-200,
+.border-teal-300,
+.border-emerald-100,
+.border-emerald-200,
+.border-cyan-100,
+.border-cyan-200 {
+  border-color: var(--h-border) !important;
+}
+
+.bg-gradient-to-r,
+.bg-gradient-to-br,
+.bg-gradient-to-b,
+.bg-gradient-to-tr,
+.hero-accent,
+.cta-accent,
+.accent-surface {
+  background-image: linear-gradient(135deg, #0f8f83 0%, #27b8aa 55%, #9ee8dc 100%) !important;
+}
+
+.alert,
+.notice,
+.toast,
+.banner,
+.callout,
+.status-pill,
+.chip.success,
+.badge.success {
+  background: rgba(15, 143, 131, 0.1) !important;
+  border: 1px solid rgba(15, 143, 131, 0.18) !important;
+  color: var(--h-text-strong) !important;
+}
+
+.alert.warn,
+.notice.warn,
+.toast.warn,
+.badge.warn,
+.chip.warn {
+  background: rgba(255, 209, 90, 0.14) !important;
+  border-color: rgba(255, 209, 90, 0.26) !important;
+}
+
+.alert.error,
+.notice.error,
+.toast.error,
+.badge.error,
+.chip.error {
+  background: rgba(220, 38, 38, 0.1) !important;
+  border-color: rgba(220, 38, 38, 0.18) !important;
+}
+
+table tr:hover,
+.table tr:hover,
+.list-row:hover,
+.row-hover:hover {
+  background: rgba(15, 143, 131, 0.06) !important;
+}
+
+.video-frame,
+.video-shell,
+.video-card,
+.media-card,
+.teacher-stage,
+.student-tile,
+.call-controls,
+.call-toolbar {
+  border: 1px solid var(--h-border) !important;
+  box-shadow: 0 18px 42px rgba(8, 53, 48, 0.12) !important;
+}
+
+.fab,
+.floating-action,
+.quick-action,
+.shortcut-btn,
+.ctrl-active {
+  background: linear-gradient(135deg, #0f8f83, #2ac2b3) !important;
+  color: var(--h-btn-text) !important;
+  border-color: transparent !important;
+}
+
+.ctrl-off {
+  background: rgba(220, 38, 38, 0.12) !important;
+  color: #9f1239 !important;
+  border: 1px solid rgba(220, 38, 38, 0.18) !important;
+}
+
+html.dark .ctrl-off {
+  color: #fecdd3 !important;
+}
   h2,
   .text-3xl {
     font-size: 1.34rem !important;

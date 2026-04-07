@@ -2196,6 +2196,8 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             await loadCurrentUser();
             await loadGroupInfo();
             setupSocket();
+            // Pre-warm RTC config so it's cached before any call starts
+            getRtcConfig().catch(() => {});
             loadGroupMessages();
             ensureGroupMessageActionSheet();
             ensureCallMiniGameUi();
@@ -3336,6 +3338,35 @@ function setupSocket() {
                 _localAudioPipeline = null;
             }
         }
+        const CALL_TRANSPORT_PREF_KEY = 'call_transport';
+        const CALL_TRANSPORT_RUNTIME_KEY = 'schat:call_transport_runtime';
+        let _livekitClientLoadPromise = null;
+
+        function normalizeCallTransport(value) {
+            return String(value || '').toLowerCase() === 'mesh' ? 'mesh' : 'livekit';
+        }
+
+        function getPreferredCallTransport() {
+            try {
+                return normalizeCallTransport(
+                    sessionStorage.getItem(CALL_TRANSPORT_RUNTIME_KEY) ||
+                    localStorage.getItem(CALL_TRANSPORT_PREF_KEY) ||
+                    'livekit'
+                );
+            } catch(_) {
+                return 'livekit';
+            }
+        }
+
+        function setRuntimeCallTransport(value) {
+            const next = normalizeCallTransport(value);
+            try {
+                if (next === 'mesh') sessionStorage.setItem(CALL_TRANSPORT_RUNTIME_KEY, 'mesh');
+                else sessionStorage.removeItem(CALL_TRANSPORT_RUNTIME_KEY);
+            } catch(_) {}
+            if (typeof groupCall === 'object' && groupCall) groupCall.transport = next;
+            return next;
+        }
 // ==================== GROUP CALL (WebRTC Mesh) ====================
         let groupCall = {
             active: false,
@@ -3345,6 +3376,8 @@ function setupSocket() {
             overlayMinimized: false,
             stage: { ownerTeacherId: null, pinnedUserId: null },
             callType: 'video',
+            transport: getPreferredCallTransport(),
+            lk: { room: null, connected: false },
             lessonSubject: '',
             labState: { enabled: false, labType: '', state: {}, sharedStudentId: '', controllerId: '' },
             localStream: null,
@@ -3362,6 +3395,270 @@ function setupSocket() {
             participantCount: 0,
             maxParticipants: 50
         };
+
+        function getLiveKitClient() {
+            return window.LivekitClient || window.livekit || null;
+        }
+
+        async function ensureLiveKitClientLoaded() {
+            const existing = getLiveKitClient();
+            if (existing?.Room) return existing;
+            if (!_livekitClientLoadPromise) {
+                _livekitClientLoadPromise = new Promise((resolve, reject) => {
+                    let script = document.getElementById('livekit-client-bundle');
+                    if (!script) {
+                        script = document.createElement('script');
+                        script.id = 'livekit-client-bundle';
+                        script.src = '/vendor/livekit-client.umd.min.js';
+                        script.async = true;
+                        document.head.appendChild(script);
+                    }
+
+                    const handleLoad = () => {
+                        const client = getLiveKitClient();
+                        if (client?.Room) resolve(client);
+                        else reject(new Error('LiveKit client topilmadi'));
+                    };
+                    const handleError = () => reject(new Error('LiveKit client yuklanmadi'));
+
+                    script.addEventListener('load', handleLoad, { once: true });
+                    script.addEventListener('error', handleError, { once: true });
+
+                    if (getLiveKitClient()?.Room) {
+                        resolve(getLiveKitClient());
+                    }
+                }).catch((error) => {
+                    _livekitClientLoadPromise = null;
+                    throw error;
+                });
+            }
+            return _livekitClientLoadPromise;
+        }
+
+        function getLiveKitTrackSource(kind) {
+            const source = getLiveKitClient()?.Track?.Source;
+            if (!source) return null;
+            return kind === 'video' ? source.Camera : source.Microphone;
+        }
+
+        function getLiveKitParticipantId(participant) {
+            return String(participant?.identity || participant?.sid || '');
+        }
+
+        function getLocalStreamTrack(kind) {
+            try {
+                if (kind === 'video') {
+                    return (groupCall.localStream?.getVideoTracks?.() || []).find((track) => track && track.readyState === 'live') || null;
+                }
+                return (groupCall.localStream?.getAudioTracks?.() || []).find((track) => track && track.readyState === 'live') || null;
+            } catch(_) {
+                return null;
+            }
+        }
+
+        async function syncLiveKitPublishedTrack(kind, mediaTrack) {
+            const room = groupCall.lk?.room;
+            if (!groupCall.lk?.connected || !room || !mediaTrack) return null;
+            const source = getLiveKitTrackSource(kind);
+            if (!source || !room.localParticipant) return null;
+
+            let publication = typeof room.localParticipant.getTrackPublication === 'function'
+                ? room.localParticipant.getTrackPublication(source)
+                : null;
+
+            if (publication?.track?.replaceTrack) {
+                await publication.track.replaceTrack(mediaTrack, true);
+            } else {
+                if (publication?.track && typeof room.localParticipant.unpublishTrack === 'function') {
+                    try { await room.localParticipant.unpublishTrack(publication.track, false); } catch(_) {}
+                }
+                publication = await room.localParticipant.publishTrack(mediaTrack, {
+                    source,
+                    stopMicTrackOnMute: kind === 'audio'
+                });
+            }
+
+            const shouldMute = kind === 'audio' ? !!groupCall.muted : !!groupCall.cameraOff;
+            if (publication) {
+                try {
+                    if (shouldMute) await publication.mute();
+                    else await publication.unmute();
+                } catch(_) {}
+            }
+            return publication;
+        }
+
+        async function syncLiveKitMutedState(kind, muted) {
+            const room = groupCall.lk?.room;
+            if (!groupCall.lk?.connected || !room?.localParticipant) return null;
+            const source = getLiveKitTrackSource(kind);
+            if (!source) return null;
+
+            let publication = typeof room.localParticipant.getTrackPublication === 'function'
+                ? room.localParticipant.getTrackPublication(source)
+                : null;
+
+            if (!publication && !muted) {
+                const mediaTrack = getLocalStreamTrack(kind);
+                if (mediaTrack) return syncLiveKitPublishedTrack(kind, mediaTrack);
+                return null;
+            }
+
+            if (publication) {
+                try {
+                    if (muted) await publication.mute();
+                    else await publication.unmute();
+                } catch(_) {}
+            }
+            return publication;
+        }
+
+        async function publishExistingLiveKitTracks() {
+            const publishTasks = [];
+            const audioTrack = getLocalStreamTrack('audio');
+            const videoTrack = groupCall.callType === 'audio' ? null : getLocalStreamTrack('video');
+            if (audioTrack) publishTasks.push(syncLiveKitPublishedTrack('audio', audioTrack));
+            if (videoTrack) publishTasks.push(syncLiveKitPublishedTrack('video', videoTrack));
+            if (publishTasks.length) await Promise.allSettled(publishTasks);
+
+            const meId = String(myUserId() || currentUser?._id || 'local');
+            if (groupCall.localStream) addVideoTile(meId, groupCall.localStream, true);
+        }
+
+        async function livekitFetchToken(roomName, { canPublish = false, canSubscribe = true } = {}) {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/livekit/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ room: roomName, canPublish, canSubscribe })
+            });
+            if (!response.ok) {
+                const message = await response.text().catch(() => '');
+                throw new Error('LiveKit token error: ' + response.status + ' ' + message);
+            }
+            return response.json();
+        }
+
+        function shouldUseLiveKit() {
+            return normalizeCallTransport(groupCall.transport) === 'livekit';
+        }
+
+        function buildLiveKitRoomName(groupIdValue, callIdValue) {
+            return `group_${String(groupIdValue || '').trim()}_${String(callIdValue || '').trim()}`;
+        }
+
+        function attachLiveKitTrack(userId, track) {
+            const uid = String(userId || '');
+            const mediaTrack = track?.mediaStreamTrack;
+            if (!uid || !mediaTrack) return;
+
+            let stream = groupCall.remoteStreams.get(uid);
+            if (!stream) stream = new MediaStream();
+            (stream.getTracks() || [])
+                .filter((existingTrack) => existingTrack && existingTrack.kind === mediaTrack.kind)
+                .forEach((existingTrack) => {
+                    try { stream.removeTrack(existingTrack); } catch(_) {}
+                });
+            try { stream.addTrack(mediaTrack); } catch(_) {}
+            groupCall.remoteStreams.set(uid, stream);
+            addVideoTile(uid, stream, false);
+            if (mediaTrack.kind === 'audio') {
+                try { applyGroupRemoteAudioLevel(); } catch(_) {}
+            }
+        }
+
+        function detachLiveKitTrack(userId, track) {
+            const uid = String(userId || '');
+            const mediaTrack = track?.mediaStreamTrack;
+            if (!uid || !mediaTrack) return;
+
+            const stream = groupCall.remoteStreams.get(uid);
+            if (!stream) return;
+            (stream.getTracks() || [])
+                .filter((existingTrack) => existingTrack && existingTrack.kind === mediaTrack.kind)
+                .forEach((existingTrack) => {
+                    try { stream.removeTrack(existingTrack); } catch(_) {}
+                });
+
+            if ((stream.getTracks?.() || []).length) {
+                addVideoTile(uid, stream, false);
+            } else {
+                removeVideoTile(uid);
+            }
+        }
+
+        async function livekitDisconnect() {
+            const room = groupCall.lk?.room;
+            groupCall.lk = { room: null, connected: false };
+            if (!room) return;
+            try {
+                await room.disconnect();
+            } catch(_) {}
+        }
+
+        async function livekitConnect(roomName, { allowPublish = false, publishExistingTracks = false } = {}) {
+            const client = await ensureLiveKitClientLoaded();
+            await livekitDisconnect();
+
+            const tokenPayload = await livekitFetchToken(roomName, {
+                canPublish: allowPublish,
+                canSubscribe: true
+            });
+
+            const room = new client.Room({
+                adaptiveStream: true,
+                dynacast: true,
+                stopLocalTrackOnUnpublish: false
+            });
+
+            room.on(client.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                try { attachLiveKitTrack(getLiveKitParticipantId(participant), track); } catch (error) { console.warn('LiveKit track attach failed', error); }
+            });
+            room.on(client.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+                try { detachLiveKitTrack(getLiveKitParticipantId(participant), track); } catch(_) {}
+            });
+            room.on(client.RoomEvent.ParticipantDisconnected, (participant) => {
+                try { removeVideoTile(getLiveKitParticipantId(participant)); } catch(_) {}
+            });
+            room.on(client.RoomEvent.Disconnected, () => {
+                if (groupCall.lk?.room === room) {
+                    groupCall.lk.connected = false;
+                }
+            });
+
+            try {
+                if (typeof room.prepareConnection === 'function') {
+                    room.prepareConnection(tokenPayload.url, tokenPayload.token);
+                }
+            } catch(_) {}
+
+            await room.connect(tokenPayload.url, tokenPayload.token);
+            groupCall.lk = { room, connected: true };
+            setRuntimeCallTransport('livekit');
+            setGroupCallStatus('Connected (LiveKit SFU)');
+
+            try {
+                room.remoteParticipants.forEach((participant) => {
+                    participant.trackPublications?.forEach((publication) => {
+                        if (publication?.track) attachLiveKitTrack(getLiveKitParticipantId(participant), publication.track);
+                    });
+                });
+            } catch(_) {}
+
+            if (allowPublish && publishExistingTracks) {
+                if (!groupCall.localStream && !OBSERVER_MODE) {
+                    try { await ensureLocalStream(groupCall.callType); } catch(_) {}
+                }
+                await publishExistingLiveKitTracks();
+            }
+
+            updateCallControlUI();
+            renderGroupCallLayout();
+            return room;
+        }
         const stageWhiteboard = {
             active: false,
             busy: false,
@@ -4678,21 +4975,38 @@ const DEFAULT_RTC_CONFIG = {
 };
 
 let _rtcConfigCache = null;
+let _rtcConfigCacheTime = 0;
+const _RTC_CONFIG_TTL = 3600000; // Refresh TURN credentials every 1 hour
+let _rtcConfigFetching = null;
 async function getRtcConfig() {
-    if (_rtcConfigCache) return _rtcConfigCache;
-    try {
-        const res = await fetch('/api/rtc-config', { cache: 'no-store' });
-        if (!res.ok) throw new Error('rtc-config http ' + res.status);
-        const cfg = await res.json();
-        if (cfg && Array.isArray(cfg.iceServers)) {
-            _rtcConfigCache = Object.assign({}, DEFAULT_RTC_CONFIG, cfg);
-            return _rtcConfigCache;
-        }
-    } catch (e) {
-        console.warn('RTC config load failed, falling back to STUN-only:', e);
+    const now = Date.now();
+    // Return cached if still fresh
+    if (_rtcConfigCache && (now - _rtcConfigCacheTime) < _RTC_CONFIG_TTL) return _rtcConfigCache;
+    // If already fetching, return cached or wait
+    if (_rtcConfigFetching) {
+        if (_rtcConfigCache) return _rtcConfigCache;
+        return _rtcConfigFetching;
     }
-    _rtcConfigCache = Object.assign({}, DEFAULT_RTC_CONFIG);
-    return _rtcConfigCache;
+    _rtcConfigFetching = (async () => {
+        try {
+            const res = await fetch('/api/rtc-config', { cache: 'no-store' });
+            if (!res.ok) throw new Error('rtc-config http ' + res.status);
+            const cfg = await res.json();
+            if (cfg && Array.isArray(cfg.iceServers)) {
+                _rtcConfigCache = Object.assign({}, DEFAULT_RTC_CONFIG, cfg);
+                _rtcConfigCacheTime = Date.now();
+                return _rtcConfigCache;
+            }
+        } catch (e) {
+            console.warn('RTC config load failed, falling back to STUN-only:', e);
+        }
+        if (!_rtcConfigCache) {
+            _rtcConfigCache = Object.assign({}, DEFAULT_RTC_CONFIG);
+            _rtcConfigCacheTime = Date.now();
+        }
+        return _rtcConfigCache;
+    })();
+    try { return await _rtcConfigFetching; } finally { _rtcConfigFetching = null; }
 }
 
 function getNetworkHints() {
@@ -5475,19 +5789,30 @@ async function publishLocalVideoTrack(constraints = null) {
     // Update local tile
     addVideoTile(String(myUserId() || 'local'), groupCall.localStream, true);
 
-    // Publish / replace to all peers
+    if (groupCall.lk?.connected) {
+        await syncLiveKitPublishedTrack('video', newTrack);
+        return newTrack;
+    }
+
+    // Publish / replace to all peers - PARALLEL for speed
+    const peerOps = [];
     for (const [uid, pc] of groupCall.peers.entries()) {
-        try {
-            let sender = (pc.getSenders() || []).find((s) => s.track && s.track.kind === 'video');
-            if (sender) {
-                await sender.replaceTrack(newTrack);
-            } else {
-                // If sender doesn't exist (audio-only join), add new video sender and renegotiate.
-                try { pc.addTrack(newTrack, groupCall.localStream); } catch(_) {}
-                schedulePeerRecovery(uid, 250, { forceOffer: true });
-            }
-            await applySenderNetworkProfile(pc);
-        } catch(_) {}
+        peerOps.push((async () => {
+            try {
+                let sender = (pc.getSenders() || []).find((s) => s.track && s.track.kind === 'video');
+                if (sender) {
+                    await sender.replaceTrack(newTrack);
+                } else {
+                    try { pc.addTrack(newTrack, groupCall.localStream); } catch(_) {}
+                    schedulePeerRecovery(uid, 250, { forceOffer: true });
+                }
+            } catch(_) {}
+        })());
+    }
+    await Promise.all(peerOps);
+    // Apply network profiles in background (non-blocking)
+    for (const [uid, pc] of groupCall.peers.entries()) {
+        applySenderNetworkProfile(pc).catch(() => {});
     }
 
     return newTrack;
@@ -5529,19 +5854,30 @@ async function publishLocalAudioTrack() {
     // Keep local tile synced.
     addVideoTile(String(myUserId() || 'local'), groupCall.localStream, true);
 
-    // Publish / replace to all peers.
+    if (groupCall.lk?.connected) {
+        await syncLiveKitPublishedTrack('audio', newTrack);
+        return newTrack;
+    }
+
+    // Publish / replace to all peers - PARALLEL for speed
+    const audioOps = [];
     for (const [uid, pc] of groupCall.peers.entries()) {
-        try {
-            let sender = (pc.getSenders() || []).find((s) => s.track && s.track.kind === 'audio');
-            if (sender) {
-                await sender.replaceTrack(newTrack);
-            } else {
-                // If sender doesn't exist, add and renegotiate.
-                try { pc.addTrack(newTrack, groupCall.localStream); } catch(_) {}
-                schedulePeerRecovery(uid, 250, { forceOffer: true });
-            }
-            await applySenderNetworkProfile(pc);
-        } catch(_) {}
+        audioOps.push((async () => {
+            try {
+                let sender = (pc.getSenders() || []).find((s) => s.track && s.track.kind === 'audio');
+                if (sender) {
+                    await sender.replaceTrack(newTrack);
+                } else {
+                    try { pc.addTrack(newTrack, groupCall.localStream); } catch(_) {}
+                    schedulePeerRecovery(uid, 250, { forceOffer: true });
+                }
+            } catch(_) {}
+        })());
+    }
+    await Promise.all(audioOps);
+    // Apply network profiles in background (non-blocking)
+    for (const [uid, pc] of groupCall.peers.entries()) {
+        applySenderNetworkProfile(pc).catch(() => {});
     }
 
     refreshGroupFeedbackGuard();
@@ -6595,7 +6931,7 @@ function removeVideoTile(userId) {
                 if (st === 'connected' || st === 'completed') {
                     clearReconnectTimer(uid);
                     // Re-apply network profile on successful connection for optimal bitrate
-                    setTimeout(() => { applySenderNetworkProfile(pc).catch(() => {}); }, 500);
+                    setTimeout(() => { applySenderNetworkProfile(pc).catch(() => {}); }, 50);
                     return;
                 }
                 if (st === 'failed') {
@@ -6745,6 +7081,7 @@ function removeVideoTile(userId) {
             __allowCallPageUnload = false;
             groupCall.callType = callType;
             groupCall.groupId = groupId;
+            groupCall.transport = getPreferredCallTransport();
 
             showGroupOverlay();
             // Teacher can enter lesson topic/title
@@ -6791,6 +7128,7 @@ function removeVideoTile(userId) {
             groupCall.callType = callType || 'video';
             groupCall.groupId = gid;
             groupCall.callId = callId;
+            groupCall.transport = getPreferredCallTransport();
 
             showGroupOverlay();
             document.getElementById('groupCallTitle').textContent = groupCall.callType === 'audio' ? 'Group Voice Call' : 'Group Video Call';
@@ -9015,8 +9353,15 @@ document.addEventListener('visibilitychange', () => {
     } catch(_) {}
 });
 
-
+let _updateCallControlTimer = null;
 function updateCallControlUI(){
+            if (_updateCallControlTimer) return;
+            _updateCallControlTimer = requestAnimationFrame(() => {
+                _updateCallControlTimer = null;
+                _updateCallControlUIImpl();
+            });
+}
+function _updateCallControlUIImpl(){
             const hideMediaToggles = !!OBSERVER_MODE;
             const micOn = !groupCall.muted;
             const camOn = !groupCall.cameraOff;
@@ -9849,7 +10194,7 @@ function initCallMiniGameDrag(){
 async function toggleMute() {
             if (OBSERVER_MODE) return notify('Observer mode: boshqaruv yo\'q', 'info');
 
-            if (!groupCall.localStream) return;
+            if (!groupCall.localStream) groupCall.localStream = new MediaStream();
             groupCall.muted = !groupCall.muted;
 
             if (!groupCall.muted) {
@@ -9860,24 +10205,38 @@ async function toggleMute() {
                     refreshGroupFeedbackGuard();
                     return;
                 }
+
+                // UI-first: update button instantly
+                const btn = document.getElementById('btnMute');
+                if (btn) btn.innerHTML = '<i class="fas fa-microphone"></i>';
+                updateCallControlUI();
+
                 let tracks = (groupCall.localStream.getAudioTracks?.() || []).filter(t => t && t.readyState === 'live');
-                if (!tracks.length) {
-                    try {
-                        const t = await publishLocalAudioTrack();
-                        tracks = t ? [t] : [];
-                    } catch (e) {
+                if (tracks.length) {
+                    // Already have live tracks, just enable them instantly
+                    tracks.forEach(t => { try { t.enabled = true; } catch(_) {} });
+                    syncLiveKitMutedState('audio', false).catch(() => {});
+                } else {
+                    // Need to publish - fire-and-forget for instant response
+                    publishLocalAudioTrack().then(t => {
+                        if (t) { try { t.enabled = true; } catch(_) {} }
+                        refreshGroupFeedbackGuard();
+                    }).catch(e => {
                         groupCall.muted = true;
+                        const btn2 = document.getElementById('btnMute');
+                        if (btn2) btn2.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                        updateCallControlUI();
                         notify('Mikrofon yoqilmadi: ' + (e?.message || 'ruxsat/device'), 'err');
-                    }
+                    });
                 }
-                tracks.forEach(t => { try { t.enabled = true; } catch(_) {} });
             } else {
                 (groupCall.localStream.getAudioTracks?.() || []).forEach(t => { try { t.enabled = false; } catch(_) {} });
+                syncLiveKitMutedState('audio', true).catch(() => {});
+                const btn = document.getElementById('btnMute');
+                if (btn) btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                updateCallControlUI();
             }
 
-            const btn = document.getElementById('btnMute');
-            if (btn) btn.innerHTML = groupCall.muted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
-            updateCallControlUI();
             refreshGroupFeedbackGuard();
             try { syncLiveCaptionTranscriber(); } catch(_) {}
         }
@@ -9889,26 +10248,39 @@ async function toggleMute() {
             const hasLocalVideo = !!(groupCall.localStream?.getVideoTracks?.().some(t => t && t.readyState === 'live'));
             const wantEnable = !!groupCall.cameraOff || !hasLocalVideo;
 
-            if (wantEnable) {
-                try {
-                    const track = await publishLocalVideoTrack();
-                    if (track) track.enabled = true;
-                    groupCall.cameraOff = false;
-                    notify('Kamera yoqildi', 'ok');
-                } catch (e) {
-                    groupCall.cameraOff = true;
-                    notify('Kamera yoqilmadi: ' + (e?.message || 'ruxsat/device'), 'err');
-                }
-            } else {
-                groupCall.cameraOff = true;
-                (groupCall.localStream?.getVideoTracks?.() || []).forEach((t) => {
-                    try { t.enabled = false; } catch(_) {}
-                });
-            }
-
+            // UI-first: update state and button instantly before async work
+            groupCall.cameraOff = !wantEnable;
             const btn = document.getElementById('btnCam');
             if (btn) btn.innerHTML = groupCall.cameraOff ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
             updateCallControlUI();
+
+            if (wantEnable) {
+                // Fire-and-forget: publish camera in background for instant response
+                const liveVideoTrack = (groupCall.localStream?.getVideoTracks?.() || []).find((track) => track && track.readyState === 'live');
+                if (liveVideoTrack) {
+                    try { liveVideoTrack.enabled = true; } catch(_) {}
+                    syncLiveKitMutedState('video', false).catch(() => {});
+                    groupCall.cameraOff = false;
+                    updateCallControlUI();
+                } else {
+                    publishLocalVideoTrack().then(track => {
+                        if (track) track.enabled = true;
+                        groupCall.cameraOff = false;
+                        updateCallControlUI();
+                    }).catch(e => {
+                        groupCall.cameraOff = true;
+                        const btn2 = document.getElementById('btnCam');
+                        if (btn2) btn2.innerHTML = '<i class="fas fa-video-slash"></i>';
+                        updateCallControlUI();
+                        notify('Kamera yoqilmadi: ' + (e?.message || 'ruxsat/device'), 'err');
+                    });
+                }
+            } else {
+                (groupCall.localStream?.getVideoTracks?.() || []).forEach((t) => {
+                    try { t.enabled = false; } catch(_) {}
+                });
+                syncLiveKitMutedState('video', true).catch(() => {});
+            }
         }
 
         async function switchCamera(){
@@ -9982,17 +10354,21 @@ async function toggleMute() {
                 const lv = document.getElementById('localVideo') || document.getElementById(`vid_${String(myUserId() || 'local')}`);
                 if (lv) { lv.srcObject = groupCall.localStream; try{ await lv.play(); }catch(_){} }
 
-                // Replace in all peer connections
-                for (const [uid, pc] of groupCall.peers.entries()){
-                    try{
-                        const sender = pc.getSenders().find(s=>s.track && s.track.kind==='video');
-                        if (sender) await sender.replaceTrack(newTrack);
-                        else {
-                            try { pc.addTrack(newTrack, groupCall.localStream); } catch(_) {}
-                            schedulePeerRecovery(uid, 250, { forceOffer: true });
-                        }
-                        await applySenderNetworkProfile(pc);
-                    }catch(e){ console.warn('replaceTrack failed', e); }
+                if (groupCall.lk?.connected) {
+                    await syncLiveKitPublishedTrack('video', newTrack);
+                } else {
+                    // Replace in all peer connections
+                    for (const [uid, pc] of groupCall.peers.entries()){
+                        try{
+                            const sender = pc.getSenders().find(s=>s.track && s.track.kind==='video');
+                            if (sender) await sender.replaceTrack(newTrack);
+                            else {
+                                try { pc.addTrack(newTrack, groupCall.localStream); } catch(_) {}
+                                schedulePeerRecovery(uid, 250, { forceOffer: true });
+                            }
+                            await applySenderNetworkProfile(pc);
+                        }catch(e){ console.warn('replaceTrack failed', e); }
+                    }
                 }
 
                 // composite recorder camera source refresh (if canvas fallback used)
@@ -10045,6 +10421,7 @@ async function toggleMute() {
                     _recorder.stop();
                 }
             } catch(_) {}
+            try { livekitDisconnect().catch(() => {}); } catch(_) {}
             try { stopLiveCaptionTranscriber(); } catch(_) {}
             _captionRenderSeq++;
             try { clearStageCaption(true); } catch(_) {}
@@ -10063,6 +10440,8 @@ async function toggleMute() {
             groupCall.muted = false;
             groupCall.lessonSubject = '';
             groupCall.labState = { enabled: false, labType: '', state: {}, sharedStudentId: '', controllerId: '' };
+            groupCall.transport = getPreferredCallTransport();
+            groupCall.lk = { room: null, connected: false };
             try { document.documentElement.classList.remove('schat-screen-share'); } catch(_) {}
             clearActiveGroupCallSession();
             stopStageHealthMonitor();
@@ -10181,7 +10560,6 @@ async function toggleMute() {
                 const meId = String(myUserId() || data?.selfUserId || '');
                 groupCall.active = true;
                 groupCall.callId = data.callId;
-                try { drainEarlySignalQueue(); } catch(_) {}
                 groupCall.lessonId = data.lessonId || null;
                 groupCall.lessonSubject = String(data?.teacherSubject || groupCall.lessonSubject || '').trim();
                 if (data?.labState && typeof data.labState === 'object') groupCall.labState = data.labState;
@@ -10206,6 +10584,22 @@ async function toggleMute() {
                 try{ await autoStartRecordingIfNeeded(); }catch(_){ }
                 try{ if(data.title) document.getElementById('groupCallTitle').textContent = data.title; }catch(_){}
 
+                if (shouldUseLiveKit()) {
+                    try {
+                        await livekitConnect(buildLiveKitRoomName(data.groupId, data.callId), {
+                            allowPublish: !OBSERVER_MODE,
+                            publishExistingTracks: !OBSERVER_MODE
+                        });
+                        return;
+                    } catch (error) {
+                        console.warn('LiveKit connect failed, falling back to mesh', error);
+                        setRuntimeCallTransport('mesh');
+                        setGroupCallStatus('LiveKit ulanmayapti, mesh fallback...');
+                    }
+                }
+
+                try { drainEarlySignalQueue(); } catch(_) {}
+
                 // Create offers to existing participants - PARALLEL for speed
                 const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
                 const offerPromises = participants.map(uid => {
@@ -10228,7 +10622,6 @@ async function toggleMute() {
                 const meId = String(myUserId() || data?.selfUserId || '');
                 groupCall.active = true;
                 groupCall.callId = data.callId;
-                try { drainEarlySignalQueue(); } catch(_) {}
                 groupCall.lessonId = data.lessonId || null;
                 groupCall.lessonSubject = String(data?.teacherSubject || groupCall.lessonSubject || '').trim();
                 if (data?.labState && typeof data.labState === 'object') groupCall.labState = data.labState;
@@ -10253,6 +10646,22 @@ async function toggleMute() {
                 try{ await autoStartRecordingIfNeeded(); }catch(_){ }
 
                 try{ if(data.title) document.getElementById('groupCallTitle').textContent = data.title; }catch(_){}
+
+                if (shouldUseLiveKit()) {
+                    try {
+                        await livekitConnect(buildLiveKitRoomName(data.groupId, data.callId), {
+                            allowPublish: !OBSERVER_MODE,
+                            publishExistingTracks: !OBSERVER_MODE
+                        });
+                        return;
+                    } catch (error) {
+                        console.warn('LiveKit connect failed, falling back to mesh', error);
+                        setRuntimeCallTransport('mesh');
+                        setGroupCallStatus('LiveKit ulanmayapti, mesh fallback...');
+                    }
+                }
+
+                try { drainEarlySignalQueue(); } catch(_) {}
 
                 // Send offers to ALL existing participants - PARALLEL for instant connect
                 const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
@@ -10282,6 +10691,8 @@ async function toggleMute() {
                 renderGroupCallLayout();
                 syncLiveLabUi();
                 try { syncLiveCaptionTranscriber(); } catch(_) {}
+
+                if (groupCall.lk?.connected || shouldUseLiveKit()) return;
 
                 const uid = String(data.userId);
                 const meId = String(myUserId() || '');
@@ -10425,6 +10836,7 @@ async function toggleMute() {
                     }
                     return;
                 }
+                if (groupCall.lk?.connected || shouldUseLiveKit()) return;
                 if (String(payload.callId) !== String(groupCall.callId)) return;
 
                 const from = String(payload.from);
@@ -10439,6 +10851,10 @@ async function toggleMute() {
             // Process queued signals after call becomes active
             function drainEarlySignalQueue() {
                 _earlySignalQueueActive = false;
+                if (groupCall.lk?.connected || shouldUseLiveKit()) {
+                    _earlySignalQueue.length = 0;
+                    return;
+                }
                 const queue = _earlySignalQueue.splice(0);
                 for (const payload of queue) {
                     try {

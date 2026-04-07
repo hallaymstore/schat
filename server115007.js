@@ -1,10 +1,12 @@
 const express = require('express');
+const fs = require('fs');
 const mongoose = require('mongoose');
 const socketIO = require('socket.io');
 const http = require('http');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const compression = require('compression');
 const PDFDocument = require('pdfkit');
 const multer = require('multer');
 const PptxGenJS = require('pptxgenjs');
@@ -20,7 +22,7 @@ const {
   normalizeWebsiteRenderPageSlug,
   renderWebsiteProjectHtml
 } = require('./website-builder-renderer');
-// const { AccessToken } = require('livekit-server-sdk'); // (disabled) using pure WebRTC signaling now
+const { AccessToken } = require('livekit-server-sdk');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
@@ -48,6 +50,7 @@ const LEGACY_ADMIN_USERNAMES = ['admin'];
 
 // Initialize Express
 const app = express();
+app.disable('x-powered-by');
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
@@ -62,7 +65,59 @@ app.use(cors({
   origin: ['http://localhost:3000', 'https://schat-q1nj.onrender.com', 'https://students.hallaym.site', 'https://hallaym.site'],
   credentials: true
 }));
+app.use(compression({ threshold: 1024 }));
 app.use(express.json());
+
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const GLOBAL_THEME_STYLESHEET = '/ui-glass-theme.css';
+
+function injectGlobalHtmlTheme(html) {
+  let output = String(html || '');
+  const themeMeta = '<meta name="theme-color" content="#0f8f83">';
+  const themeLink = `  <link rel="stylesheet" href="${GLOBAL_THEME_STYLESHEET}" />`;
+
+  if (!/name=["']theme-color["']/i.test(output)) {
+    if (/<\/head>/i.test(output)) output = output.replace(/<\/head>/i, `${themeMeta}\n</head>`);
+    else output = `${themeMeta}\n${output}`;
+  }
+
+  if (!new RegExp(`href=["']${GLOBAL_THEME_STYLESHEET.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`, 'i').test(output)) {
+    if (/<\/head>/i.test(output)) output = output.replace(/<\/head>/i, `${themeLink}\n</head>`);
+    else output = `${themeLink}\n${output}`;
+  }
+
+  return output;
+}
+
+function setStaticCacheHeaders(res, filePath) {
+  const ext = String(path.extname(filePath || '') || '').toLowerCase();
+  if (ext === '.html' || ext === '.htm') {
+    res.setHeader('Cache-Control', 'no-cache');
+    return;
+  }
+
+  const longCacheExts = new Set([
+    '.css', '.js', '.mjs', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.mp4', '.webm', '.avif'
+  ]);
+  if (longCacheExts.has(ext)) {
+    res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+  }
+}
+
+async function sendThemedHtml(res, filePath) {
+  const html = await fs.promises.readFile(filePath, 'utf8');
+  setStaticCacheHeaders(res, filePath);
+  res.type('html');
+  return res.send(injectGlobalHtmlTheme(html));
+}
+
+function resolveSafePublicPath(requestPath) {
+  const relativePath = String(requestPath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!relativePath || relativePath.includes('\0')) return '';
+  const resolvedPath = path.normalize(path.join(PUBLIC_DIR, relativePath));
+  if (!resolvedPath.startsWith(PUBLIC_DIR)) return '';
+  return resolvedPath;
+}
 
 // ==================== WebRTC ICE (STUN/TURN) config ====================
 // Frontend should call GET /api/rtc-config and use returned iceServers.
@@ -168,14 +223,33 @@ app.get('/api/rtc-config', (req, res) => {
     const forceRelayEnv = String(process.env.TURN_FORCE_RELAY || process.env.FORCE_RELAY || '').trim().toLowerCase();
     const forceRelayDefault = forceRelayEnv === '1' || forceRelayEnv === 'true' || forceRelayEnv === 'yes';
 
-    if (customUrls.length) {
+    // ExpressTURN HMAC-based dynamic credentials (time-limited, auto-rotating)
+    const expressTurnSecret = String(
+      process.env.EXPRESSTURN_SECRET_KEY ||
+      process.env.EXPRESS_TURN_SECRET_KEY ||
+      process.env.TURN_SECRET ||
+      process.env.TURN_SECRET_KEY ||
+      ''
+    ).trim();
+
+    if (expressTurnSecret && customUrls.length) {
+      // Generate time-limited TURN credentials using HMAC-SHA1
+      const ttl = 86400; // 24 hours
+      const unixExpiry = Math.floor(Date.now() / 1000) + ttl;
+      const hmacUsername = unixExpiry + ':expressturn';
+      const hmac = crypto.createHmac('sha1', expressTurnSecret);
+      hmac.update(hmacUsername);
+      const hmacCredential = hmac.digest('base64');
+      iceServers.push({ urls: customUrls, username: hmacUsername, credential: hmacCredential });
+    } else if (customUrls.length) {
       if (customUser && customPass) {
         iceServers.push({ urls: customUrls, username: customUser, credential: customPass });
       } else {
-        // Some TURN deployments allow auth-less relay or short-lived token in URL.
         iceServers.push({ urls: customUrls });
       }
     }
+
+    const hasTurn = !!(expressTurnSecret && customUrls.length) || hasCustomTurn;
 
     if (!disablePublicTurn) {
       iceServers.push({
@@ -188,7 +262,7 @@ app.get('/api/rtc-config', (req, res) => {
     res.json({
       success: true,
       iceServers,
-      hasTurn: hasCustomTurn,
+      hasTurn,
       forceRelayDefault
     });
   } catch (e) {
@@ -198,12 +272,6 @@ app.get('/api/rtc-config', (req, res) => {
 });
 
 
-
-/* LiveKit token endpoint disabled.
-   To enable: uncomment the AccessToken import at the top:
-     const { AccessToken } = require('livekit-server-sdk');
-   and restore the endpoint body (ensure LIVEKIT_* env vars are set).
-*/
 
 app.use(express.urlencoded({ extended: true }));
 app.use(async (req, res, next) => {
@@ -229,7 +297,27 @@ app.use(async (req, res, next) => {
   }
   return next();
 });
-app.use(express.static('public'));
+app.use(async (req, res, next) => {
+  try {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    const pathName = String(req.path || '').trim();
+    if (!/\.html?$/i.test(pathName)) return next();
+    if (!pathName || pathName.startsWith('/api/') || pathName.startsWith('/socket.io/') || pathName.startsWith('/uploads/')) {
+      return next();
+    }
+    const filePath = resolveSafePublicPath(pathName);
+    if (!filePath) return next();
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return next();
+    return sendThemedHtml(res, filePath);
+  } catch (e) {
+    console.error('public html theme middleware error:', e);
+    return next();
+  }
+});
+app.use(express.static('public', {
+  maxAge: '7d',
+  setHeaders: (res, filePath) => setStaticCacheHeaders(res, filePath)
+}));
 
 
 // Static fallbacks (avoid noisy 404s)
@@ -241,14 +329,23 @@ app.get('/default-channel.png', (req, res) => res.redirect('https://res.cloudina
 
 
 // Ensure uploads directory exists (Windows/Render safe)
-try { require('fs').mkdirSync(path.join(__dirname, 'uploads'), { recursive: true }); } catch(e) { console.warn('uploads dir create failed', e); }
+try { fs.mkdirSync(path.join(__dirname, 'uploads'), { recursive: true }); } catch(e) { console.warn('uploads dir create failed', e); }
 
 // Serve the first existing file from a list (so your local filenames work)
 function sendFirstExisting(res, candidates) {
-  const fs = require('fs');
   for (const f of candidates) {
     const fp = path.join(__dirname, f);
-    if (fs.existsSync(fp)) return res.sendFile(fp);
+    if (!fs.existsSync(fp)) continue;
+    const ext = String(path.extname(fp || '') || '').toLowerCase();
+    if (ext === '.html' || ext === '.htm') {
+      sendThemedHtml(res, fp).catch((e) => {
+        console.error('send themed html error:', e);
+        if (!res.headersSent) res.status(500).send('Failed to render html');
+      });
+      return;
+    }
+    setStaticCacheHeaders(res, fp);
+    return res.sendFile(fp);
   }
   return res.status(404).send('File not found: ' + candidates.join(', '));
 }
@@ -286,7 +383,7 @@ app.get('/group-lessons.html', (req, res) => {
 
 // Minimal topup placeholder (replace with your real payments/topup page)
 app.get('/topup.html', (req, res) => {
-  res.send(`<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  res.send(injectGlobalHtmlTheme(`<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Balansni to'ldirish</title>
   <style>body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1020;color:#eaf0ff}
   .card{max-width:560px;padding:18px;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05)}
@@ -294,10 +391,13 @@ app.get('/topup.html', (req, res) => {
   <h2 style="margin:0 0 8px 0">Balansingiz yetarli emas</h2>
   <div>Coin balansingizni to'ldiring, keyin qayta urining.</div>
   <div style="margin-top:12px"><a href="/lives.html">← Lives ro'yxatiga qaytish</a></div>
-  </div></body></html>`);
+  </div></body></html>`));
 });
 // Serve uploaded files (screenshots, media)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '1h',
+  setHeaders: (res, filePath) => setStaticCacheHeaders(res, filePath)
+}));
 
 
 // Storage configuration (Cloudinary default, optional Cloudflare R2 via S3 API)
@@ -2839,6 +2939,67 @@ async function attachUserRole(req, res, next) {
   }
   next();
 }
+
+app.post('/api/livekit/token', authenticateToken, attachUserRole, async (req, res) => {
+  try {
+    const livekitUrl = String(process.env.LIVEKIT_URL || '').trim();
+    const livekitApiKey = String(process.env.LIVEKIT_API_KEY || '').trim();
+    const livekitApiSecret = String(process.env.LIVEKIT_API_SECRET || '').trim();
+    if (!livekitUrl || !livekitApiKey || !livekitApiSecret) {
+      return res.status(503).json({ error: 'LiveKit is not configured' });
+    }
+
+    const room = String(req.body?.room || '')
+      .trim()
+      .replace(/[^a-zA-Z0-9:_-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 96);
+    if (!room) {
+      return res.status(400).json({ error: 'Room is required' });
+    }
+
+    const canSubscribe = req.body?.canSubscribe !== false;
+    const canPublishRequested = req.body?.canPublish === true;
+    const canPublish = !!canPublishRequested;
+
+    const user = await User.findById(req.userId).select('fullName username role isAdmin').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const displayName = String(user.fullName || user.username || req.userId || 'participant').trim().slice(0, 120);
+    const identity = String(req.userId || '').trim().slice(0, 120);
+    const accessToken = new AccessToken(livekitApiKey, livekitApiSecret, {
+      identity,
+      name: displayName,
+      ttl: '2h',
+      metadata: JSON.stringify({
+        userId: String(req.userId || ''),
+        role: String(req.userRole || user.role || (user.isAdmin ? 'admin' : 'student') || 'student')
+      })
+    });
+    accessToken.addGrant({
+      room,
+      roomJoin: true,
+      canPublish,
+      canPublishData: true,
+      canSubscribe
+    });
+
+    const token = await accessToken.toJwt();
+    return res.json({
+      success: true,
+      url: livekitUrl,
+      token,
+      room,
+      identity,
+      canPublish,
+      canSubscribe
+    });
+  } catch (e) {
+    console.error('POST /api/livekit/token error:', e);
+    return res.status(500).json({ error: 'Failed to create LiveKit token' });
+  }
+});
 
 // requireRole: checks req.userRole (must be set by attachUserRole)
 function requireRole(roles = []) {
@@ -22256,7 +22417,6 @@ app.get('/api/admin/wallet', authenticateToken, attachUserRole, requireRole(['ad
 // ==================== START SERVER ====================
 const PORT = process.env.PORT || 3000;
 
-const fs = require('fs');
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads', { recursive: true });
 }
