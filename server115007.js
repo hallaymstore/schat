@@ -104,6 +104,92 @@ function setStaticCacheHeaders(res, filePath) {
   }
 }
 
+function parseTurnUrlMeta(url, index = 0) {
+  const src = String(url || '').trim();
+  if (!src) return null;
+  const lower = src.toLowerCase();
+  const withoutProto = lower.replace(/^turns?:/i, '').replace(/^\/\//, '');
+  const endpoint = withoutProto.split('?')[0].split('/')[0];
+  const host = endpoint.split(':')[0] || '';
+  const portMatch = endpoint.match(/:(\d+)$/);
+  const port = Number(portMatch?.[1] || 0);
+  const transportMatch = lower.match(/[?&]transport=([a-z0-9]+)/i);
+  const transport = String(
+    transportMatch?.[1]
+    || (lower.startsWith('turns:') ? 'tcp' : '')
+    || (port === 443 || port === 80 ? 'tcp' : 'udp')
+  ).toLowerCase();
+  const isTls = lower.startsWith('turns:');
+
+  let bucket = 'other';
+  let rank = 90;
+  if (isTls && port === 443) {
+    bucket = 'tls443';
+    rank = 0;
+  } else if (!isTls && transport === 'udp' && port === 3478) {
+    bucket = 'udp3478';
+    rank = 1;
+  } else if (!isTls && transport === 'tcp' && port === 443) {
+    bucket = 'tcp443';
+    rank = 2;
+  } else if (!isTls && transport === 'tcp' && port === 80) {
+    bucket = 'tcp80';
+    rank = 3;
+  } else if (!isTls && transport === 'udp') {
+    bucket = 'udp';
+    rank = 4;
+  } else if (!isTls && transport === 'tcp') {
+    bucket = 'tcp';
+    rank = 5;
+  }
+
+  return {
+    url: src,
+    host,
+    bucket,
+    rank,
+    index
+  };
+}
+
+function prioritizeTurnUrls(urls, opts = {}) {
+  const unique = Array.from(new Set((Array.isArray(urls) ? urls : []).map((u) => String(u || '').trim()).filter(Boolean)));
+  if (!unique.length) return [];
+
+  const maxTotalRaw = Number(opts.maxTotal);
+  const maxPerHostRaw = Number(opts.maxPerHost);
+  const maxTotal = Number.isFinite(maxTotalRaw) && maxTotalRaw > 0 ? Math.max(1, Math.floor(maxTotalRaw)) : 6;
+  const maxPerHost = Number.isFinite(maxPerHostRaw) && maxPerHostRaw > 0 ? Math.max(1, Math.floor(maxPerHostRaw)) : 2;
+
+  const candidates = unique
+    .map((url, index) => parseTurnUrlMeta(url, index))
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      return a.index - b.index;
+    });
+
+  const perHostBuckets = new Map();
+  const perHostCount = new Map();
+  const selected = [];
+
+  for (const candidate of candidates) {
+    if (selected.length >= maxTotal) break;
+    const hostKey = String(candidate.host || '_');
+    const usedBuckets = perHostBuckets.get(hostKey) || new Set();
+    const usedCount = Number(perHostCount.get(hostKey) || 0);
+    if (usedBuckets.has(candidate.bucket)) continue;
+    if (usedCount >= maxPerHost) continue;
+    usedBuckets.add(candidate.bucket);
+    perHostBuckets.set(hostKey, usedBuckets);
+    perHostCount.set(hostKey, usedCount + 1);
+    selected.push(candidate.url);
+  }
+
+  if (selected.length) return selected;
+  return unique.slice(0, maxTotal);
+}
+
 async function sendThemedHtml(res, filePath) {
   const html = await fs.promises.readFile(filePath, 'utf8');
   setStaticCacheHeaders(res, filePath);
@@ -216,10 +302,14 @@ app.get('/api/rtc-config', (req, res) => {
 
     // Keep stable order + remove duplicates.
     customUrls = Array.from(new Set(customUrls));
+    const prioritizedCustomUrls = prioritizeTurnUrls(customUrls, {
+      maxTotal: Number(process.env.TURN_MAX_URLS || process.env.EXPRESSTURN_MAX_URLS || 6),
+      maxPerHost: Number(process.env.TURN_MAX_URLS_PER_HOST || process.env.EXPRESSTURN_MAX_URLS_PER_HOST || 2)
+    });
 
     const customUser = turnUsername || embeddedUsername;
     const customPass = turnCredential || embeddedCredential;
-    const hasCustomTurn = customUrls.length > 0 && !!(customUser && customPass);
+    const hasCustomTurn = prioritizedCustomUrls.length > 0 && !!(customUser && customPass);
     const forceRelayEnv = String(process.env.TURN_FORCE_RELAY || process.env.FORCE_RELAY || '').trim().toLowerCase();
     const forceRelayDefault = forceRelayEnv === '1' || forceRelayEnv === 'true' || forceRelayEnv === 'yes';
 
@@ -232,7 +322,7 @@ app.get('/api/rtc-config', (req, res) => {
       ''
     ).trim();
 
-    if (expressTurnSecret && customUrls.length) {
+    if (expressTurnSecret && prioritizedCustomUrls.length) {
       // Generate time-limited TURN credentials using HMAC-SHA1
       const ttl = 86400; // 24 hours
       const unixExpiry = Math.floor(Date.now() / 1000) + ttl;
@@ -240,18 +330,18 @@ app.get('/api/rtc-config', (req, res) => {
       const hmac = crypto.createHmac('sha1', expressTurnSecret);
       hmac.update(hmacUsername);
       const hmacCredential = hmac.digest('base64');
-      iceServers.push({ urls: customUrls, username: hmacUsername, credential: hmacCredential });
-    } else if (customUrls.length) {
+      iceServers.push({ urls: prioritizedCustomUrls, username: hmacUsername, credential: hmacCredential });
+    } else if (prioritizedCustomUrls.length) {
       if (customUser && customPass) {
-        iceServers.push({ urls: customUrls, username: customUser, credential: customPass });
+        iceServers.push({ urls: prioritizedCustomUrls, username: customUser, credential: customPass });
       } else {
-        iceServers.push({ urls: customUrls });
+        iceServers.push({ urls: prioritizedCustomUrls });
       }
     }
 
-    const hasTurn = !!(expressTurnSecret && customUrls.length) || hasCustomTurn;
+    const hasTurn = !!(expressTurnSecret && prioritizedCustomUrls.length) || hasCustomTurn;
 
-    if (!disablePublicTurn) {
+    if (!disablePublicTurn && !hasTurn) {
       iceServers.push({
         urls: fallbackTurnUrls,
         username: 'openrelayproject',
@@ -259,6 +349,7 @@ app.get('/api/rtc-config', (req, res) => {
       });
     }
 
+    res.setHeader('Cache-Control', 'private, max-age=300, stale-while-revalidate=300');
     res.json({
       success: true,
       iceServers,
@@ -2163,6 +2254,7 @@ const GroupMessageSchema = new mongoose.Schema({
   deletedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
 });
+GroupMessageSchema.index({ groupId: 1, createdAt: -1, _id: -1 });
 const GroupMessage = mongoose.model('GroupMessage', GroupMessageSchema);
 
 // Coin mission claim log (daily unique claim per mission)
@@ -8170,6 +8262,35 @@ function stagePayload(call){
   };
 }
 
+function getCallParticipantState(call) {
+  if (!call) return new Map();
+  if (!(call.participantStates instanceof Map)) {
+    const seed = (call.participantStates && typeof call.participantStates === 'object')
+      ? Object.entries(call.participantStates)
+      : [];
+    call.participantStates = new Map(
+      seed.map(([userId, state]) => [
+        String(userId || ''),
+        {
+          micOn: !!state?.micOn,
+          camOn: !!state?.camOn,
+          updatedAt: Number(state?.updatedAt || Date.now())
+        }
+      ]).filter(([userId]) => !!userId)
+    );
+  }
+  return call.participantStates;
+}
+
+function participantStatesPayload(call) {
+  return Array.from(getCallParticipantState(call).entries()).map(([userId, state]) => ({
+    userId: String(userId || ''),
+    micOn: !!state?.micOn,
+    camOn: !!state?.camOn,
+    updatedAt: Number(state?.updatedAt || Date.now())
+  }));
+}
+
 function emitGroupStageState(groupId, call){
   try{
     io.to(getGroupRoomName(String(groupId))).emit('groupStageState', {
@@ -9426,6 +9547,7 @@ socket.on('lessonTransferControl', async (data) => {
           title: (data?.title || '').toString().trim() || 'Live dars',
           lessonSubject,
           participants: new Set([socket.userId]),
+          participantStates: new Map(),
           stage: { ownerTeacherId: null, pinnedUserId: null, teacherJoinOrder: [] },
           labState: {
             enabled: false,
@@ -9518,6 +9640,7 @@ socket.on('lessonTransferControl', async (data) => {
         call.lessonSubject = cleanText(u?.teachingSubject || (u?.teachingSubjects?.[0] || ''), 80);
       }
       getCallLabState(call);
+      getCallParticipantState(call);
       activeGroupCalls.set(groupId, call);
 
       // Build participant infos (roles/names) for UI layout/attendance
@@ -9563,12 +9686,13 @@ socket.on('lessonTransferControl', async (data) => {
         selfUserId: String(socket.userId),
         participants: Array.from(call.participants),
         participantInfos,
+        participantStates: participantStatesPayload(call),
         lessonId,
         stage: stagePayload(call)
       });
 
 // Notify others that this user joined
-      io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
+      socket.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
         groupId,
         callId: call.callId,
         callType: call.callType,
@@ -9580,6 +9704,7 @@ socket.on('lessonTransferControl', async (data) => {
         userId: socket.userId,
         participants: Array.from(call.participants),
         participantInfos,
+        participantStates: participantStatesPayload(call),
         stage: stagePayload(call)
       });
 adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId), callId: String(call.callId), userId: String(socket.userId), participants: Array.from(call.participants).map(String), timestamp: Date.now() });
@@ -9624,6 +9749,7 @@ adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId),
       call.participants.add(socket.userId);
       activeGroupCalls.set(groupId, call);
       getCallLabState(call);
+      getCallParticipantState(call);
 
       // If a teacher joins and owner is not set, lock the FIRST teacher as owner.
       try {
@@ -9652,6 +9778,7 @@ adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId),
         groupId,
         callId,
         callType: call.callType,
+        title: call.title,
         teacherSubject: cleanText(call.lessonSubject, 80) || '',
         labState: getCallLabState(call),
         maxParticipants: MAX_GROUP_CALL_PARTICIPANTS,
@@ -9659,14 +9786,16 @@ adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId),
         selfUserId: String(socket.userId),
         participants: Array.from(call.participants),
         participantInfos,
+        participantStates: participantStatesPayload(call),
         lessonId,
         stage: stagePayload(call)
       });
 
-io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
+socket.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
         groupId,
         callId,
         callType: call.callType,
+        title: call.title,
         teacherSubject: cleanText(call.lessonSubject, 80) || '',
         labState: getCallLabState(call),
         maxParticipants: MAX_GROUP_CALL_PARTICIPANTS,
@@ -9674,6 +9803,7 @@ io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
         userId: socket.userId,
         participants: Array.from(call.participants),
         participantInfos,
+        participantStates: participantStatesPayload(call),
         stage: stagePayload(call)
       });
 } catch (e) {
@@ -9709,6 +9839,39 @@ io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
 
     } catch (e) {
       console.error('groupCallSignal error:', e);
+    }
+  });
+
+  socket.on('groupCallParticipantState', (payload) => {
+    try {
+      if (!socket.userId) return;
+      const groupId = String(payload?.groupId || '');
+      const callId = String(payload?.callId || '');
+      if (!groupId || !callId) return;
+
+      const call = activeGroupCalls.get(groupId);
+      if (!call || String(call.callId || '') !== callId) return;
+      if (!(call.participants && call.participants.has(String(socket.userId)))) return;
+
+      const participantStates = getCallParticipantState(call);
+      const nextState = {
+        micOn: !!payload?.micOn,
+        camOn: String(call.callType || 'video') === 'audio' ? false : !!payload?.camOn,
+        updatedAt: Date.now()
+      };
+      participantStates.set(String(socket.userId), nextState);
+      activeGroupCalls.set(groupId, call);
+
+      socket.to(getGroupRoomName(groupId)).emit('groupCallParticipantState', {
+        groupId,
+        callId,
+        userId: String(socket.userId),
+        micOn: nextState.micOn,
+        camOn: nextState.camOn,
+        ts: nextState.updatedAt
+      });
+    } catch (e) {
+      console.error('groupCallParticipantState error:', e);
     }
   });
 
@@ -9912,7 +10075,7 @@ io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
 
       if (!call) return;
       if (call.participants) call.participants.delete(userId);
-      const isLessonHostLeaving = !!(lesson && String(lesson.hostId || '') === String(userId));
+      try { getCallParticipantState(call).delete(String(userId)); } catch(_) {}
 
       // Stage cleanup: if pinned user/owner left, update stage and broadcast
       try {
@@ -9943,31 +10106,6 @@ io.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
 
 
       const participantsArr = Array.from(call.participants || []);
-      if (isLessonHostLeaving) {
-        activeGroupCalls.delete(groupId);
-        const endedAt = new Date();
-        await endGroupLessonLifecycle(groupId, call.callId, {
-          endedAt,
-          userIds: [String(userId), ...participantsArr.map(String)]
-        });
-        io.to(getGroupRoomName(groupId)).emit('groupCallEnded', {
-          groupId,
-          callId: call.callId,
-          reason: 'teacher_left',
-          timestamp: endedAt.getTime()
-        });
-        adminEmit('admin:groupCallUpdate', {
-          action: 'ended',
-          groupId: String(groupId),
-          callId: String(call.callId),
-          reason: 'teacher_left',
-          endedBy: String(userId),
-          participants: participantsArr.map(String),
-          timestamp: endedAt.getTime()
-        });
-        return;
-      }
-
       io.to(getGroupRoomName(groupId)).emit('groupCallUserLeft', {
         groupId,
         callId: call.callId,
@@ -10077,35 +10215,12 @@ socket.on('groupCallLeave', async (data) => {
 
       const call = activeGroupCalls.get(groupId);
       if (!call || String(call.callId) !== callId) return;
-
-      // Only starter can end (simple rule)
-      if (String(call.startedBy) !== String(socket.userId)) {
-        return socket.emit('groupCallError', { error: 'Only starter can end the call' });
-      }
-
-      activeGroupCalls.delete(groupId);
+      await leaveGroupCallInternal(groupId, socket.userId, 'left');
       socket._activeGroupCall = null;
-      const participantIds = Array.from(call.participants || []).map(String);
-      const endedAt = new Date();
-      await endGroupLessonLifecycle(groupId, callId, { endedAt, userIds: participantIds });
-      io.to(getGroupRoomName(groupId)).emit('groupCallEnded', {
-        groupId,
-        callId,
-        reason: 'ended_by_starter',
-        timestamp: endedAt.getTime()
-      });
-      adminEmit('admin:groupCallUpdate', {
-        action: 'ended',
-        groupId: String(groupId),
-        callId: String(callId),
-        reason: 'ended_by_starter',
-        endedBy: String(socket.userId),
-        timestamp: endedAt.getTime()
-      });
 
     } catch (e) {
       console.error('groupCallEnd error:', e);
-      socket.emit('groupCallError', { error: 'Failed to end call' });
+      socket.emit('groupCallError', { error: 'Failed to leave call' });
     }
     })();
   });
@@ -13681,8 +13796,10 @@ app.get('/api/groups', authenticateToken, async (req, res) => {
 app.get('/api/groups/:groupId/messages', authenticateToken, async (req, res) => {
   try {
     const { groupId } = req.params;
-    const me = await User.findById(req.userId).select('university faculty role isAdmin').lean();
-    const group = await Group.findById(groupId).select('members isPublic creatorId university faculty').lean();
+    const [me, group] = await Promise.all([
+      User.findById(req.userId).select('university faculty role isAdmin').lean(),
+      Group.findById(groupId).select('members isPublic creatorId university faculty').lean()
+    ]);
     if (!group) return res.status(404).json({ error: 'Group not found' });
     const isMember = (group.members || []).some(m => String(m) === String(req.userId));
     const canScopedModerate = canUserModerateGroupByScope(me, group);
@@ -13696,11 +13813,34 @@ app.get('/api/groups/:groupId/messages', authenticateToken, async (req, res) => 
       }
     }
 
-    const messages = await GroupMessage.find({ groupId })
-      .sort({ createdAt: 1 })
-      .populate('senderId', 'username nickname avatar');
-    
-    res.json({ success: true, messages });
+    const rawLimit = Number(req.query.limit || 0);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.max(Math.floor(rawLimit), 1), 200) : 0;
+    const beforeRaw = String(req.query.before || '').trim();
+    const beforeDate = beforeRaw ? new Date(beforeRaw) : null;
+
+    const query = { groupId };
+    if (beforeDate && !Number.isNaN(beforeDate.getTime())) {
+      query.createdAt = { $lt: beforeDate };
+    }
+
+    let cursor = GroupMessage.find(query)
+      .sort({ createdAt: -1, _id: -1 })
+      .populate('senderId', 'username nickname avatar')
+      .lean();
+
+    if (limit > 0) {
+      cursor = cursor.limit(limit + 1);
+    }
+
+    const rows = await cursor;
+    const hasMore = limit > 0 && rows.length > limit;
+    const trimmed = hasMore ? rows.slice(0, limit) : rows;
+    const messages = trimmed.reverse();
+    const nextBefore = hasMore && messages[0]?.createdAt
+      ? new Date(messages[0].createdAt).toISOString()
+      : null;
+
+    res.json({ success: true, messages, hasMore, nextBefore });
   } catch (error) {
     console.error('Get group messages error:', error);
     res.status(500).json({ error: 'Failed to get group messages' });
@@ -14550,16 +14690,20 @@ app.get('/api/groups/all', authenticateToken, async (req, res) => {
 // Get group information
 app.get('/api/groups/:groupId', authenticateToken, async (req, res) => {
   try {
-    const me = await User.findById(req.userId).select('university faculty role isAdmin').lean();
-    const group = await Group.findById(req.params.groupId)
-      .populate('creatorId', 'username nickname avatar')
-      .populate('members', 'username nickname avatar isOnline');
+    const [me, group] = await Promise.all([
+      User.findById(req.userId).select('university faculty role isAdmin').lean(),
+      Group.findById(req.params.groupId)
+        .select('name description university faculty studyType studyGroup creatorId members createdAt isPublic username avatar')
+        .populate('creatorId', 'username nickname avatar')
+        .populate('members', 'username nickname avatar isOnline')
+        .lean()
+    ]);
     
     if (!group) {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    const isMember = group.members.some(member => member._id.equals(req.userId));
+    const isMember = (group.members || []).some(member => String(member?._id || '') === String(req.userId));
     const canScopedModerate = canUserModerateGroupByScope(me, group);
     if (!canScopedModerate) {
       if (group.university && me?.university && String(group.university) !== String(me.university)) {
@@ -14569,7 +14713,8 @@ app.get('/api/groups/:groupId', authenticateToken, async (req, res) => {
         return res.status(403).json({ error: 'Access denied' });
       }
     }
-    
+
+    group.memberCount = Array.isArray(group.members) ? group.members.length : 0;
     res.json({ success: true, group });
   } catch (error) {
     console.error('Get group error:', error);

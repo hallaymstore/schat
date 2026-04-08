@@ -647,6 +647,64 @@
   .speaker-spotlight .speaker-badge{
     display: inline-flex;
   }
+  .video-status{
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .video-status .media-chip{
+    position: relative;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(15,23,42,.74);
+    border: 1px solid rgba(255,255,255,.16);
+    color: #f8fafc;
+    box-shadow: 0 10px 24px rgba(0,0,0,.26);
+    backdrop-filter: blur(10px);
+  }
+  .video-status .media-chip i{
+    position: relative;
+    z-index: 2;
+    font-size: 12px;
+  }
+  .video-status .media-chip.is-off{
+    background: rgba(127,29,29,.82);
+    border-color: rgba(248,113,113,.42);
+    color: #fee2e2;
+  }
+  .video-status .media-chip.is-speaking{
+    background: rgba(5,150,105,.88);
+    border-color: rgba(110,231,183,.54);
+    color: #ecfdf5;
+  }
+  .video-status .media-chip-ring{
+    position: absolute;
+    inset: -4px;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    opacity: 0;
+    transform: scale(.78);
+    pointer-events: none;
+  }
+  .video-status .media-chip.is-speaking .media-chip-ring{
+    border-color: rgba(110,231,183,.72);
+    animation: tileMicPulse 1s ease-out infinite;
+    opacity: 1;
+  }
+  @keyframes tileMicPulse{
+    0%{ transform: scale(.78); opacity: .92; }
+    70%{ transform: scale(1.34); opacity: 0; }
+    100%{ transform: scale(1.34); opacity: 0; }
+  }
   #teacherStageViewport{
     position: relative;
     width: 100%;
@@ -2162,12 +2220,14 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         let currentGroup = null;
         let groupId = null;
         let groupMessages = [];
+        const INITIAL_GROUP_MESSAGES_LIMIT = 80;
         let activeGroupMessageActionId = '';
         const GROUP_REACTION_EMOJIS = ['👍','❤️','🔥','😂','👏','😮'];
         const __urlParams = new URLSearchParams(window.location.search);
         const OBSERVER_MODE = (__urlParams.get('observer') === '1' || __urlParams.get('asObserver') === '1');
         let AUTO_JOIN_CALL = (__urlParams.get('autoJoin') === '1');
         const AUTO_ACCEPT_INCOMING_GROUP_CALL = true;
+        const LIVEKIT_TRANSPORT_ALLOWED = (__urlParams.get('transport') === 'livekit');
         let __PENDING_GROUP_CALL = null;
         try {
             const raw = localStorage.getItem('schat:pendingGroupCall');
@@ -2191,14 +2251,17 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             ensureLowEndRuntimeClass();
             window.addEventListener('schat:device-profile', ensureLowEndRuntimeClass);
             bindResumeAudioOnGesture();
-            await checkAuth();
             await getGroupIdFromURL();
-            await loadCurrentUser();
-            await loadGroupInfo();
+            const authUser = await checkAuth();
+            if (!authUser) return;
             setupSocket();
             // Pre-warm RTC config so it's cached before any call starts
             getRtcConfig().catch(() => {});
-            loadGroupMessages();
+            const initialTasks = [
+                loadGroupInfo(),
+                loadGroupMessages({ limit: INITIAL_GROUP_MESSAGES_LIMIT })
+            ];
+            await Promise.allSettled(initialTasks);
             ensureGroupMessageActionSheet();
             ensureCallMiniGameUi();
             initCallMiniGameDrag();
@@ -2235,7 +2298,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             const token = localStorage.getItem('token');
             if (!token) {
                 window.location.href = '/login.html';
-                return;
+                return null;
             }
             
             try {
@@ -2250,7 +2313,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                     if (response.status === 401 || response.status === 403) {
                         localStorage.removeItem('token');
                         window.location.href = '/login.html';
-                        return;
+                        return null;
                     }
                     console.warn('Auth check returned non-ok status:', response.status);
                 } else {
@@ -2258,8 +2321,11 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                     if (!data.success) {
                         localStorage.removeItem('token');
                         window.location.href = '/login.html';
-                        return;
+                        return null;
                     }
+                    currentUser = data.user || currentUser;
+                    try { __MY_ID_FROM_TOKEN = String(currentUser?._id || currentUser?.id || __MY_ID_FROM_TOKEN || ''); } catch(_) {}
+                    return currentUser;
                 }
             } catch (error) {
                 console.error('Auth check error:', error);
@@ -2270,10 +2336,12 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                     window.location.href = '/login.html';
                 }
             }
+            return currentUser || null;
         }
         
         // Load current user
-        async function loadCurrentUser() {
+        async function loadCurrentUser(opts = {}) {
+            if (currentUser && !opts.force) return currentUser;
             try {
                 const response = await fetch('/api/me', {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` }
@@ -2281,13 +2349,15 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 const data = await response.json();
                 if (data.success) {
                     currentUser = data.user;
+                    try { __MY_ID_FROM_TOKEN = String(currentUser?._id || currentUser?.id || __MY_ID_FROM_TOKEN || ''); } catch(_) {}
                 }
                 // If group already loaded, rebuild actions (important on mobile)
                 try { if (currentGroup) setupGroupActions(currentGroup); } catch(e){}
-
+                return currentUser;
             } catch (error) {
                 console.error('Failed to load user:', error);
             }
+            return currentUser || null;
         }
         
         // Load group information
@@ -2304,8 +2374,6 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                     currentGroup = data.group;
                     renderGroupInfo(data.group);
                     renderMembers(data.group.members);
-                    // Ensure currentUser is loaded before building action menu (mobile needs it)
-                    if (!currentUser) { try { await loadCurrentUser(); } catch(e){} }
                     setupGroupActions(data.group);
                 } else {
                     alert('Group not found or access denied');
@@ -2318,8 +2386,9 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         
         // Render group information
         function renderGroupInfo(group) {
+            const memberCount = Number(group?.memberCount || group?.members?.length || 0);
             document.getElementById('groupName').textContent = group.name;
-            document.getElementById('groupMembers').textContent = `${group.members?.length || 0} members`;
+            document.getElementById('groupMembers').textContent = `${memberCount} members`;
             document.getElementById('groupDescription').textContent = group.description || 'No description';
             document.getElementById('fullDescription').textContent = group.description || 'No description provided';
             document.getElementById('groupUniversity').textContent = group.university || 'All Universities';
@@ -2335,7 +2404,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             document.getElementById('createdDate').textContent = createdDate.toLocaleDateString();
             
             // Members count
-            document.getElementById('membersCount').textContent = `${group.members?.length || 0} members`;
+            document.getElementById('membersCount').textContent = `${memberCount} members`;
         }
         
         // Render members list
@@ -2546,7 +2615,7 @@ function setupSocket() {
             const token = localStorage.getItem('token');
             const low = isLowEndRuntime() || getNetworkHints().low;
             socket = io(low ? {
-                transports: ['polling', 'websocket'],
+                transports: ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionAttempts: 25,
                 reconnectionDelay: 1200,
@@ -2598,10 +2667,12 @@ function setupSocket() {
         }
         
         // Load group messages
-        async function loadGroupMessages() {
+        async function loadGroupMessages(opts = {}) {
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch(`/api/groups/${groupId}/messages`, {
+                const rawLimit = Number(opts?.limit || INITIAL_GROUP_MESSAGES_LIMIT);
+                const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.max(Math.floor(rawLimit), 20), 200) : INITIAL_GROUP_MESSAGES_LIMIT;
+                const response = await fetch(`/api/groups/${groupId}/messages?limit=${limit}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -2610,6 +2681,10 @@ function setupSocket() {
                 if (data.success) {
                     groupMessages = Array.isArray(data.messages) ? data.messages : [];
                     renderGroupMessages(groupMessages);
+                    requestAnimationFrame(() => {
+                        const container = document.getElementById('messagesContainer');
+                        if (container) container.scrollTop = container.scrollHeight;
+                    });
                 }
             } catch (error) {
                 console.error('Failed to load messages:', error);
@@ -3343,7 +3418,9 @@ function setupSocket() {
         let _livekitClientLoadPromise = null;
 
         function normalizeCallTransport(value) {
-            return String(value || '').toLowerCase() === 'mesh' ? 'mesh' : 'livekit';
+            const next = String(value || '').toLowerCase().trim();
+            if (LIVEKIT_TRANSPORT_ALLOWED && next === 'livekit') return 'livekit';
+            return 'mesh';
         }
 
         function getPreferredCallTransport() {
@@ -3351,10 +3428,10 @@ function setupSocket() {
                 return normalizeCallTransport(
                     sessionStorage.getItem(CALL_TRANSPORT_RUNTIME_KEY) ||
                     localStorage.getItem(CALL_TRANSPORT_PREF_KEY) ||
-                    'livekit'
+                    'mesh'
                 );
             } catch(_) {
-                return 'livekit';
+                return 'mesh';
             }
         }
 
@@ -3392,6 +3469,7 @@ function setupSocket() {
             incoming: null,
             lessonId: null,
             participantInfos: new Map(), // userId -> {fullName, role, username}
+            participantMediaState: new Map(), // userId -> { micOn, camOn, speaking }
             participantCount: 0,
             maxParticipants: 50
         };
@@ -5694,6 +5772,13 @@ function schedulePeerRecovery(remoteUserId, delayMs = 800, opts = {}) {
                 return;
             }
             if (pc.signalingState !== 'stable') return;
+            const cs = String(pc.connectionState || '').toLowerCase();
+            const ice = String(pc.iceConnectionState || '').toLowerCase();
+            const rs = groupCall.remoteStreams.get(uid) || groupCall.remoteTrackStreams.get(uid);
+            const hasLiveTracks = !!((rs?.getTracks?.() || []).some((t) => t && t.readyState === 'live'));
+            if (cs === 'failed' || cs === 'closed' || ice === 'failed' || ((cs === 'disconnected' || ice === 'disconnected') && !hasLiveTracks)) {
+                resetPeerConnection(uid, { removeTile: !hasLiveTracks });
+            }
             // Always try to send offer for recovery (don't wait for tie-breaker)
             try { await sendOffer(uid); } catch(_) {}
         }, Math.max(150, Number(delayMs || 800)));
@@ -5815,6 +5900,7 @@ async function publishLocalVideoTrack(constraints = null) {
         applySenderNetworkProfile(pc).catch(() => {});
     }
 
+    try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
     return newTrack;
 }
 
@@ -5881,6 +5967,8 @@ async function publishLocalAudioTrack() {
     }
 
     refreshGroupFeedbackGuard();
+    try { startLocalSpeakingMonitor(); } catch(_) {}
+    try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
     return newTrack;
 }
 
@@ -5892,10 +5980,7 @@ function isStudentUser() {
 function canLocalUserUseLiveMic() {
     if (!groupCall.active || OBSERVER_MODE) return false;
     const me = String(myUserId() || '');
-    if (!me) return false;
-    if (isTeacherLikeUser(me)) return true;
-    if (!isStudentUser()) return false;
-    return String(getPinnedStageUserId() || '') === me;
+    return !!me;
 }
 
 async function ensureStudentMicAutoOn(opts = {}) {
@@ -5910,6 +5995,7 @@ async function ensureStudentMicAutoOn(opts = {}) {
         tracks.forEach((t) => { try { t.enabled = false; } catch(_) {} });
         try { updateCallControlUI(); } catch(_) {}
         refreshGroupFeedbackGuard();
+        try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
         return false;
     }
 
@@ -5930,6 +6016,7 @@ async function ensureStudentMicAutoOn(opts = {}) {
 
     try { updateCallControlUI(); } catch(_) {}
     refreshGroupFeedbackGuard();
+    try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
     return tracks.length > 0;
 }
 
@@ -5941,6 +6028,214 @@ let _autoStagePinnedUserId = '';
 let _studentSpeakerSpotlightTimer = null;
 let _studentSpeakerSpotlightUserId = '';
 let _studentSpeakerSpotlightUntil = 0;
+let _localSpeakingTimer = null;
+let _localSpeakingHoldUntil = 0;
+
+function readAnalyserRms(analyser, samples) {
+    try {
+        if (!analyser || !samples || typeof analyser.getFloatTimeDomainData !== 'function') return 0;
+        analyser.getFloatTimeDomainData(samples);
+        let sum = 0;
+        for (let i = 0; i < samples.length; i++) {
+            const v = Number(samples[i] || 0);
+            sum += v * v;
+        }
+        return Math.sqrt(sum / Math.max(1, samples.length));
+    } catch(_) {
+        return 0;
+    }
+}
+
+function getLocalParticipantMediaSnapshot() {
+    const audioTracks = (groupCall.localStream?.getAudioTracks?.() || []).filter((t) => t && t.readyState === 'live');
+    const videoTracks = (groupCall.localStream?.getVideoTracks?.() || []).filter((t) => t && t.readyState === 'live');
+    const micOn = !OBSERVER_MODE && !groupCall.muted && audioTracks.some((t) => t.enabled !== false);
+    const camOn = !OBSERVER_MODE && String(groupCall.callType || 'video') !== 'audio' && !groupCall.cameraOff && videoTracks.some((t) => t.enabled !== false);
+    return { micOn: !!micOn, camOn: !!camOn };
+}
+
+function getFallbackRemoteMediaSnapshot(userId) {
+    const uid = String(userId || '');
+    const stream = groupCall.remoteStreams.get(uid) || groupCall.remoteTrackStreams.get(uid) || null;
+    const micOn = !!((stream?.getAudioTracks?.() || []).some((t) => t && t.readyState === 'live' && t.muted !== true));
+    const camOn = String(groupCall.callType || 'video') !== 'audio'
+        && !!((stream?.getVideoTracks?.() || []).some((t) => t && t.readyState === 'live' && t.muted !== true));
+    return { micOn, camOn };
+}
+
+function findParticipantTile(userId) {
+    const uid = String(userId || '');
+    if (!uid) return null;
+    let tile = document.getElementById(`tile_${uid}`);
+    if (tile) return tile;
+    return Array.from(document.querySelectorAll('.video-tile[data-uid]')).find((node) => String(node?.dataset?.uid || '') === uid) || null;
+}
+
+function ensureTileMediaStatusUi(tile) {
+    if (!tile) return null;
+    let wrap = tile.querySelector('.video-status');
+    if (wrap) return wrap;
+    wrap = document.createElement('div');
+    wrap.className = 'video-status';
+    wrap.innerHTML = `
+        <span class="media-chip media-chip-mic" data-kind="mic">
+            <span class="media-chip-ring"></span>
+            <i class="fas fa-microphone"></i>
+        </span>
+        <span class="media-chip media-chip-cam" data-kind="cam">
+            <i class="fas fa-video"></i>
+        </span>
+    `;
+    tile.appendChild(wrap);
+    return wrap;
+}
+
+function getParticipantMediaState(userId, opts = {}) {
+    const uid = String(userId || '');
+    const existing = { ...(groupCall.participantMediaState.get(uid) || {}) };
+    const isLocal = !!opts.isLocal || (!!uid && uid === String(myUserId() || ''));
+    if (isLocal) {
+        const localState = getLocalParticipantMediaSnapshot();
+        existing.micOn = localState.micOn;
+        existing.camOn = localState.camOn;
+    } else {
+        const fallback = getFallbackRemoteMediaSnapshot(uid);
+        if (typeof existing.micOn !== 'boolean') existing.micOn = fallback.micOn;
+        if (typeof existing.camOn !== 'boolean') existing.camOn = fallback.camOn;
+    }
+    existing.speaking = !!existing.speaking;
+    return existing;
+}
+
+function syncTileMediaIndicators(userId, tile = null, isLocal = false) {
+    const uid = String(userId || '');
+    if (!uid) return;
+    const targetTile = tile || findParticipantTile(uid);
+    if (!targetTile) return;
+    const wrap = ensureTileMediaStatusUi(targetTile);
+    if (!wrap) return;
+    const state = getParticipantMediaState(uid, { isLocal });
+    const micChip = wrap.querySelector('.media-chip-mic');
+    const camChip = wrap.querySelector('.media-chip-cam');
+    if (micChip) {
+        micChip.classList.toggle('is-off', !state.micOn);
+        micChip.classList.toggle('is-speaking', !!state.micOn && !!state.speaking);
+        const icon = micChip.querySelector('i');
+        if (icon) icon.className = state.micOn ? 'fas fa-microphone' : 'fas fa-microphone-slash';
+    }
+    if (camChip) {
+        camChip.classList.toggle('is-off', !state.camOn);
+        const icon = camChip.querySelector('i');
+        if (icon) icon.className = state.camOn ? 'fas fa-video' : 'fas fa-video-slash';
+    }
+    targetTile.classList.toggle('participant-speaking', !!state.micOn && !!state.speaking);
+}
+
+function syncAllTileMediaIndicators() {
+    Array.from(document.querySelectorAll('.video-tile[data-uid]')).forEach((tile) => {
+        const uid = String(tile?.dataset?.uid || '');
+        if (!uid) return;
+        syncTileMediaIndicators(uid, tile, uid === String(myUserId() || ''));
+    });
+}
+
+function setParticipantMediaState(userId, patch, opts = {}) {
+    const uid = String(userId || '');
+    if (!uid || !patch || typeof patch !== 'object') return null;
+    const prev = groupCall.participantMediaState.get(uid) || {};
+    const next = {
+        ...prev,
+        ...patch
+    };
+    if (Object.prototype.hasOwnProperty.call(next, 'micOn')) next.micOn = !!next.micOn;
+    if (Object.prototype.hasOwnProperty.call(next, 'camOn')) next.camOn = !!next.camOn;
+    if (Object.prototype.hasOwnProperty.call(next, 'speaking')) next.speaking = !!next.speaking;
+    groupCall.participantMediaState.set(uid, next);
+    if (!opts.silent) syncTileMediaIndicators(uid, null, uid === String(myUserId() || ''));
+    return next;
+}
+
+function applyParticipantMediaStates(states) {
+    if (!Array.isArray(states)) return;
+    states.forEach((entry) => {
+        const uid = String(entry?.userId || entry?._id || '');
+        if (!uid) return;
+        setParticipantMediaState(uid, {
+            micOn: !!entry?.micOn,
+            camOn: !!entry?.camOn
+        }, { silent: true });
+    });
+    syncAllTileMediaIndicators();
+}
+
+function pruneParticipantMediaState() {
+    const keep = new Set(Array.from(groupCall.participantInfos.keys()).map((uid) => String(uid || '')).filter(Boolean));
+    const meId = String(myUserId() || '');
+    if (meId) keep.add(meId);
+    Array.from(groupCall.participantMediaState.keys()).forEach((uid) => {
+        if (!keep.has(String(uid || ''))) groupCall.participantMediaState.delete(uid);
+    });
+}
+
+function refreshLocalParticipantMediaState(opts = {}) {
+    const meId = String(myUserId() || '');
+    if (!meId) return null;
+    const prev = groupCall.participantMediaState.get(meId) || {};
+    const snapshot = getLocalParticipantMediaSnapshot();
+    setParticipantMediaState(meId, snapshot, { silent: !!opts.silent });
+    const changed = prev.micOn !== snapshot.micOn || prev.camOn !== snapshot.camOn;
+    if ((changed || opts.forceEmit) && groupCall.active && socket && groupCall.groupId && groupCall.callId) {
+        socket.emit('groupCallParticipantState', {
+            groupId: String(groupCall.groupId || groupId || ''),
+            callId: String(groupCall.callId || ''),
+            micOn: !!snapshot.micOn,
+            camOn: !!snapshot.camOn,
+            ts: Date.now()
+        });
+    }
+    return snapshot;
+}
+
+function setParticipantSpeakingState(userId, speaking) {
+    const uid = String(userId || '');
+    if (!uid) return;
+    const prev = groupCall.participantMediaState.get(uid) || {};
+    const nextSpeaking = !!speaking;
+    if (!!prev.speaking === nextSpeaking) return;
+    setParticipantMediaState(uid, { speaking: nextSpeaking });
+}
+
+function stopLocalSpeakingMonitor() {
+    if (_localSpeakingTimer) clearInterval(_localSpeakingTimer);
+    _localSpeakingTimer = null;
+    _localSpeakingHoldUntil = 0;
+    const meId = String(myUserId() || '');
+    if (meId) setParticipantSpeakingState(meId, false);
+}
+
+function startLocalSpeakingMonitor() {
+    stopLocalSpeakingMonitor();
+    _localSpeakingTimer = setInterval(() => {
+        try {
+            if (!groupCall.active) return;
+            const meId = String(myUserId() || '');
+            if (!meId) return;
+            const localState = getLocalParticipantMediaSnapshot();
+            if (!localState.micOn) {
+                _localSpeakingHoldUntil = 0;
+                setParticipantSpeakingState(meId, false);
+                return;
+            }
+            const rms = readAnalyserRms(_localAudioPipeline?.analyser, _localAudioPipeline?.samples)
+                || readAnalyserRms(GROUP_FEEDBACK_GUARD?.analyser, GROUP_FEEDBACK_GUARD?.samples);
+            const now = Date.now();
+            if (Number(rms || 0) >= 0.02) {
+                _localSpeakingHoldUntil = now + 320;
+            }
+            setParticipantSpeakingState(meId, now < Number(_localSpeakingHoldUntil || 0));
+        } catch(_) {}
+    }, 160);
+}
 
 async function readPeerAudioLevel(pc) {
     try {
@@ -6076,11 +6371,13 @@ async function runStudentSpeakerSpotlightTick() {
         const stageVisible = new Set((typeof getVisibleStageUserIds === 'function' ? getVisibleStageUserIds() : []).map((x) => String(x || '')));
         const peers = Array.from(groupCall.peers.entries());
         const levels = await Promise.all(peers.map(async ([uid, pc]) => ({ uid: String(uid || ''), lvl: await readPeerAudioLevel(pc) })));
+        const speakingThreshold = 0.024;
         levels.forEach(({ uid, lvl }) => {
             if (!uid) return;
+            const nLvl = Number(lvl || 0);
+            setParticipantSpeakingState(uid, nLvl >= speakingThreshold);
             if (stageVisible.has(uid)) return;
             if (isTeacherLikeUser(uid)) return;
-            const nLvl = Number(lvl || 0);
             if (nLvl > bestLvl) {
                 bestLvl = nLvl;
                 bestUid = uid;
@@ -6088,8 +6385,7 @@ async function runStudentSpeakerSpotlightTick() {
         });
 
         const now = Date.now();
-        const threshold = 0.026;
-        if (bestUid && bestLvl >= threshold) {
+        if (bestUid && bestLvl >= speakingThreshold) {
             _studentSpeakerSpotlightUserId = bestUid;
             _studentSpeakerSpotlightUntil = now + 2600;
         } else if (_studentSpeakerSpotlightUserId && now > Number(_studentSpeakerSpotlightUntil || 0)) {
@@ -6104,7 +6400,7 @@ function startStudentSpeakerSpotlightMonitor() {
     stopStudentSpeakerSpotlightMonitor();
     _studentSpeakerSpotlightTimer = setInterval(() => {
         runStudentSpeakerSpotlightTick().catch(() => {});
-    }, 1100);
+    }, 480);
 }
 
 function stopStudentSpeakerSpotlightMonitor() {
@@ -6112,6 +6408,10 @@ function stopStudentSpeakerSpotlightMonitor() {
     _studentSpeakerSpotlightTimer = null;
     _studentSpeakerSpotlightUserId = '';
     _studentSpeakerSpotlightUntil = 0;
+    Array.from(groupCall.participantMediaState.keys()).forEach((uid) => {
+        if (String(uid || '') === String(myUserId() || '')) return;
+        setParticipantSpeakingState(uid, false);
+    });
     try { syncStudentSpeakerSpotlight(); } catch(_) {}
 }
 
@@ -6162,6 +6462,9 @@ function setParticipantInfos(arr) {
         if (sm) sm.textContent = sCount ? (sCount + ' ta') : '';
         const tm = document.getElementById('teacherStageMeta');
         if (tm) tm.textContent = tCount ? ('teacher: ' + tCount) : '';
+        pruneParticipantMediaState();
+        try { refreshLocalParticipantMediaState({ silent: true }); } catch(_) {}
+        try { syncAllTileMediaIndicators(); } catch(_) {}
         try { refreshLabShareCandidates(); } catch(_) {}
         try { syncLiveLabUi(); } catch(_) {}
     } catch(e) {}
@@ -6200,46 +6503,37 @@ function isEssentialPeer(userId) {
     return uid === pinned || uid === owner || isTeacherLikeUser(uid);
 }
 function getPeerPolicy() {
-    const net = getNetworkHints();
-    const dev = getDeviceRuntimeProfile();
     const total = getKnownParticipantCount();
-    const meId = String(myUserId() || '');
-    const meIsTeacher = isTeacherLikeUser(meId);
-    const classroomMode = total >= 18 || !!net.veryLow || !!dev.lowEnd;
     return {
         total,
-        meIsTeacher,
-        classroomMode,
-        maxTeacherPeers: net.veryLow ? 18 : (net.low ? 28 : 44),
-        // Student side: keep wider audio mesh in classroom mode so classmates can hear each other too.
-        maxStudentPeers: classroomMode
-            ? (net.veryLow
-                ? Math.min(Math.max(6, total - 1), 10)
-                : (net.low
-                    ? Math.min(Math.max(10, total - 1), 20)
-                    : Math.min(Math.max(14, total - 1), 40)))
-            : (net.veryLow ? 2 : (net.low ? 4 : 8))
+        meIsTeacher: isTeacherLikeUser(String(myUserId() || '')),
+        classroomMode: false,
+        maxTeacherPeers: Math.max(8, total + 2),
+        maxStudentPeers: Math.max(8, total + 2)
     };
 }
 function shouldConnectToPeer(remoteUserId) {
     const uid = String(remoteUserId || '');
     const meId = String(myUserId() || '');
     if (!uid || !meId || uid === meId) return false;
-    const policy = getPeerPolicy();
-    if (policy.meIsTeacher) {
-        if (groupCall.peers.has(uid)) return true;
-        return groupCall.peers.size < policy.maxTeacherPeers;
-    }
-    if (isEssentialPeer(uid)) return true;
-    if (groupCall.peers.has(uid)) return true;
-    let nonEssentialConnected = 0;
-    for (const pid of groupCall.peers.keys()) {
-        if (!isEssentialPeer(pid)) nonEssentialConnected++;
-    }
-    return nonEssentialConnected < policy.maxStudentPeers;
+    return true;
 }
 async function rebalancePeerTopology() {
     if (!groupCall.active) return;
+    const myPeerId = String(myUserId() || '');
+    const participantIds = Array.from(groupCall.participantInfos.keys()).filter((uid) => uid && uid !== myPeerId);
+    const activeIds = new Set(participantIds);
+    for (const uid of Array.from(groupCall.peers.keys())) {
+        if (activeIds.has(String(uid || ''))) continue;
+        resetPeerConnection(uid, { removeTile: true });
+    }
+    const peerOffers = participantIds
+        .filter((uid) => !groupCall.peers.has(uid) && shouldConnectToPeer(uid))
+        .map((uid) => sendOffer(uid).catch(() => {}));
+    if (peerOffers.length) await Promise.all(peerOffers);
+    const peerPolicy = getPeerPolicy();
+    setGroupCallStatus(`Connected • ${peerPolicy.total} participant`);
+    return;
     const p0 = getPeerPolicy();
     if (!p0.meIsTeacher && p0.classroomMode && groupCall.localStream) {
         const vids = groupCall.localStream.getVideoTracks ? groupCall.localStream.getVideoTracks() : [];
@@ -6526,6 +6820,15 @@ try {
                     <div class="video-name absolute left-2 bottom-2 px-2 py-1 rounded-lg bg-black/60 text-white text-xs font-semibold">
                       ${isLocal ? 'Siz' : getUserLabel(userId)}
                     </div>
+                    <div class="video-status">
+                      <span class="media-chip media-chip-mic" data-kind="mic">
+                        <span class="media-chip-ring"></span>
+                        <i class="fas fa-microphone"></i>
+                      </span>
+                      <span class="media-chip media-chip-cam" data-kind="cam">
+                        <i class="fas fa-video"></i>
+                      </span>
+                    </div>
                 `;
             }
 
@@ -6593,6 +6896,7 @@ const video = tile.querySelector('video');
                 tile.style.height = inStageHost ? '100%' : 'auto';
             }
 
+            try { syncTileMediaIndicators(String(userId || ''), tile, !!isLocal); } catch(_) {}
             ensureStagePlaceholder();
         }
 
@@ -6754,7 +7058,7 @@ const video = tile.querySelector('video');
             if (String(groupCall.callType || 'video') === 'audio') return false;
             const me = String(myUserId() || '');
             if (!me) return false;
-            return isStageVisibleUserId(me);
+            return isStageVisibleUserId(me) && isTeacherLikeUser(me);
         }
         async function ensureStageAutoCamera(reason = '') {
             try {
@@ -6818,6 +7122,30 @@ function removeVideoTile(userId) {
             ensureStagePlaceholder();
         }
 
+function resetPeerConnection(remoteUserId, opts = {}) {
+            const uid = String(remoteUserId || '');
+            if (!uid) return;
+            const pc = groupCall.peers.get(uid);
+            if (pc) {
+                try { pc.onicecandidate = null; } catch(_) {}
+                try { pc.ontrack = null; } catch(_) {}
+                try { pc.oniceconnectionstatechange = null; } catch(_) {}
+                try { pc.onconnectionstatechange = null; } catch(_) {}
+                try { pc.close(); } catch(_) {}
+            }
+            groupCall.peers.delete(uid);
+            clearReconnectTimer(uid);
+            if (opts.removeTile) {
+                removeVideoTile(uid);
+                return;
+            }
+            if (opts.clearStreams !== false) {
+                groupCall.remoteStreams.delete(uid);
+                groupCall.remoteTrackStreams.delete(uid);
+            }
+            try { syncTileMediaIndicators(uid); } catch(_) {}
+        }
+
         async function createPeer(remoteUserId) {
             const uid = String(remoteUserId || '');
             if (!uid) return null;
@@ -6826,10 +7154,11 @@ function removeVideoTile(userId) {
             if (groupCall.peers.has(uid)) {
                 const existingPc = groupCall.peers.get(uid);
                 const cs = String(existingPc?.connectionState || '').toLowerCase();
-                if (cs === 'closed' || cs === 'failed') {
-                    try { existingPc.close(); } catch(_) {}
-                    groupCall.peers.delete(uid);
-                    clearReconnectTimer(uid);
+                const ice = String(existingPc?.iceConnectionState || '').toLowerCase();
+                const stream = groupCall.remoteStreams.get(uid) || groupCall.remoteTrackStreams.get(uid);
+                const hasLiveTracks = !!((stream?.getTracks?.() || []).some((t) => t && t.readyState === 'live'));
+                if (cs === 'closed' || cs === 'failed' || ice === 'failed' || ((cs === 'disconnected' || ice === 'disconnected') && !hasLiveTracks)) {
+                    resetPeerConnection(uid, { removeTile: !hasLiveTracks });
                 } else {
                     return existingPc;
                 }
@@ -6900,6 +7229,7 @@ function removeVideoTile(userId) {
                 const stream = buildRemoteStream(uid, event);
                 groupCall.remoteStreams.set(uid, stream);
                 addVideoTile(uid, stream, false);
+                try { syncTileMediaIndicators(uid); } catch(_) {}
                 setTimeout(() => { try { attemptResumeRemoteAudio(); } catch(_) {} }, 180);
                 // Reduce jitter buffer target on receivers for lower latency
                 try {
@@ -6917,9 +7247,11 @@ function removeVideoTile(userId) {
                             const s = buildRemoteStream(uid, event);
                             groupCall.remoteStreams.set(uid, s);
                             addVideoTile(uid, s, false);
+                            try { syncTileMediaIndicators(uid); } catch(_) {}
                             setTimeout(() => { try { attemptResumeRemoteAudio(); } catch(_) {} }, 120);
                         };
                         tr.onended = () => {
+                            try { setParticipantSpeakingState(uid, false); } catch(_) {}
                             if (groupCall.active) schedulePeerRecovery(uid, 1200);
                         };
                     }
@@ -6949,9 +7281,11 @@ function removeVideoTile(userId) {
                     return;
                 }
                 if (st === 'failed' || st === 'disconnected') {
+                    try { setParticipantSpeakingState(uid, false); } catch(_) {}
                     schedulePeerRecovery(uid, 1200);
                 }
                 if (st === 'closed') {
+                    try { setParticipantSpeakingState(uid, false); } catch(_) {}
                     clearReconnectTimer(uid);
                 }
             };
@@ -10198,14 +10532,6 @@ async function toggleMute() {
             groupCall.muted = !groupCall.muted;
 
             if (!groupCall.muted) {
-                if (isStudentUser() && !canLocalUserUseLiveMic()) {
-                    groupCall.muted = true;
-                    notify("Mikrofonni o'qituvchi pin qilgan talabaga ochish mumkin", 'warn');
-                    updateCallControlUI();
-                    refreshGroupFeedbackGuard();
-                    return;
-                }
-
                 // UI-first: update button instantly
                 const btn = document.getElementById('btnMute');
                 if (btn) btn.innerHTML = '<i class="fas fa-microphone"></i>';
@@ -10221,11 +10547,14 @@ async function toggleMute() {
                     publishLocalAudioTrack().then(t => {
                         if (t) { try { t.enabled = true; } catch(_) {} }
                         refreshGroupFeedbackGuard();
+                        try { startLocalSpeakingMonitor(); } catch(_) {}
+                        try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
                     }).catch(e => {
                         groupCall.muted = true;
                         const btn2 = document.getElementById('btnMute');
                         if (btn2) btn2.innerHTML = '<i class="fas fa-microphone-slash"></i>';
                         updateCallControlUI();
+                        try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
                         notify('Mikrofon yoqilmadi: ' + (e?.message || 'ruxsat/device'), 'err');
                     });
                 }
@@ -10235,9 +10564,11 @@ async function toggleMute() {
                 const btn = document.getElementById('btnMute');
                 if (btn) btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
                 updateCallControlUI();
+                try { setParticipantSpeakingState(String(myUserId() || ''), false); } catch(_) {}
             }
 
             refreshGroupFeedbackGuard();
+            try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
             try { syncLiveCaptionTranscriber(); } catch(_) {}
         }
 
@@ -10262,16 +10593,19 @@ async function toggleMute() {
                     syncLiveKitMutedState('video', false).catch(() => {});
                     groupCall.cameraOff = false;
                     updateCallControlUI();
+                    try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
                 } else {
                     publishLocalVideoTrack().then(track => {
                         if (track) track.enabled = true;
                         groupCall.cameraOff = false;
                         updateCallControlUI();
+                        try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
                     }).catch(e => {
                         groupCall.cameraOff = true;
                         const btn2 = document.getElementById('btnCam');
                         if (btn2) btn2.innerHTML = '<i class="fas fa-video-slash"></i>';
                         updateCallControlUI();
+                        try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
                         notify('Kamera yoqilmadi: ' + (e?.message || 'ruxsat/device'), 'err');
                     });
                 }
@@ -10281,6 +10615,7 @@ async function toggleMute() {
                 });
                 syncLiveKitMutedState('video', true).catch(() => {});
             }
+            try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
         }
 
         async function switchCamera(){
@@ -10383,6 +10718,7 @@ async function toggleMute() {
                 notify(groupCall.facingMode === 'environment' ? 'Orqa kamera yoqildi' : 'Old kamera yoqildi', 'ok');
                 groupCall.cameraOff = false;
                 updateCallControlUI();
+                try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
             }catch(e){
                 console.error('switchCamera', e);
                 notify('Camera switch xatolik: ' + (e?.message || e), 'err');
@@ -10397,18 +10733,8 @@ async function toggleMute() {
                 return;
             }
             __allowCallPageUnload = true;
-            // If starter -> end call for everyone; else leave
-            if (groupCall.starterId && String(groupCall.starterId) === String(myUserId() || '')) {
-                socket.emit('groupCallEnd', { groupId: groupCall.groupId, callId: groupCall.callId });
-                setTimeout(() => {
-                    try {
-                        if (groupCall.active) cleanupGroupCallUI();
-                    } catch(_) {}
-                }, 1200);
-            } else {
-                socket.emit('groupCallLeave', { groupId: groupCall.groupId, callId: groupCall.callId });
-                cleanupGroupCallUI();
-            }
+            socket.emit('groupCallLeave', { groupId: groupCall.groupId, callId: groupCall.callId });
+            cleanupGroupCallUI();
         }
 
         function cleanupGroupCallUI() {
@@ -10431,6 +10757,7 @@ async function toggleMute() {
             stopGroupFeedbackGuard({ keepRemoteLevel: true });
             stopAdaptiveBitrateMonitor();
             stopPersistentWatchdog();
+            stopLocalSpeakingMonitor();
             destroyLocalAudioPipeline();
             groupCall.active = false;
             groupCall.joining = false;
@@ -10440,6 +10767,7 @@ async function toggleMute() {
             groupCall.muted = false;
             groupCall.lessonSubject = '';
             groupCall.labState = { enabled: false, labType: '', state: {}, sharedStudentId: '', controllerId: '' };
+            groupCall.stage = { ownerTeacherId: null, pinnedUserId: null };
             groupCall.transport = getPreferredCallTransport();
             groupCall.lk = { room: null, connected: false };
             try { document.documentElement.classList.remove('schat-screen-share'); } catch(_) {}
@@ -10457,6 +10785,9 @@ async function toggleMute() {
             groupCall.peers.clear();
             groupCall.remoteStreams.clear();
             groupCall.remoteTrackStreams.clear();
+            groupCall.participantInfos = new Map();
+            groupCall.participantMediaState = new Map();
+            groupCall.participantCount = 0;
 
             // stop local
             if (groupCall.localStream) {
@@ -10566,6 +10897,7 @@ async function toggleMute() {
                 groupCall.participantCount = Number((data?.participants || []).length || 0);
                 groupCall.maxParticipants = Number(data?.maxParticipants || groupCall.maxParticipants || 40);
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
+                if (Array.isArray(data.participantStates)) applyParticipantMediaStates(data.participantStates);
                 if (data.stage) { groupCall.stage = { ownerTeacherId: data.stage.ownerTeacherId || null, pinnedUserId: data.stage.pinnedUserId || null }; }
                 updateTeacherControls();
                 renderGroupCallLayout();
@@ -10580,6 +10912,8 @@ async function toggleMute() {
                 try { await ensureStudentMicAutoOn({ tryPublish: true }); } catch(_) {}
                 refreshGroupFeedbackGuard();
                 applyGroupRemoteAudioLevel();
+                try { startLocalSpeakingMonitor(); } catch(_) {}
+                try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
                 // Auto recording for teacher (starts with lesson)
                 try{ await autoStartRecordingIfNeeded(); }catch(_){ }
                 try{ if(data.title) document.getElementById('groupCallTitle').textContent = data.title; }catch(_){}
@@ -10628,6 +10962,7 @@ async function toggleMute() {
                 groupCall.participantCount = Number((data?.participants || []).length || 0);
                 groupCall.maxParticipants = Number(data?.maxParticipants || groupCall.maxParticipants || 40);
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
+                if (Array.isArray(data.participantStates)) applyParticipantMediaStates(data.participantStates);
                 if (data.stage) { groupCall.stage = { ownerTeacherId: data.stage.ownerTeacherId || null, pinnedUserId: data.stage.pinnedUserId || null }; }
                 updateTeacherControls();
                 renderGroupCallLayout();
@@ -10642,6 +10977,8 @@ async function toggleMute() {
                 try { await ensureStudentMicAutoOn({ tryPublish: true }); } catch(_) {}
                 refreshGroupFeedbackGuard();
                 applyGroupRemoteAudioLevel();
+                try { startLocalSpeakingMonitor(); } catch(_) {}
+                try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {}
                 // Auto recording for teacher when joining an ongoing lesson
                 try{ await autoStartRecordingIfNeeded(); }catch(_){ }
 
@@ -10663,10 +11000,10 @@ async function toggleMute() {
 
                 try { drainEarlySignalQueue(); } catch(_) {}
 
-                // Send offers to ALL existing participants - PARALLEL for instant connect
+                // Use deterministic offer ownership to avoid glare storms on join.
                 const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
                 const offerPromises = participants.map(uid => {
-                    if (shouldConnectToPeer(uid)) {
+                    if ((!meId || shouldInitiateOffer(meId, uid)) && shouldConnectToPeer(uid)) {
                         return sendOffer(uid).catch(() => {});
                     }
                     return Promise.resolve();
@@ -10684,6 +11021,7 @@ async function toggleMute() {
                 if (String(data.groupId) !== String(groupCall.groupId)) return;
                 if (String(data.callId) !== String(groupCall.callId)) return;
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
+                if (Array.isArray(data.participantStates)) applyParticipantMediaStates(data.participantStates);
                 groupCall.lessonSubject = String(data?.teacherSubject || groupCall.lessonSubject || '').trim();
                 if (data?.labState && typeof data.labState === 'object') groupCall.labState = data.labState;
                 groupCall.participantCount = Number((data?.participants || []).length || groupCall.participantCount || 0);
@@ -10698,11 +11036,13 @@ async function toggleMute() {
                 const meId = String(myUserId() || '');
                 if (!uid || uid === meId) return;
 
-                // Always send offer to new joiner immediately (don't wait for tie-breaker)
-                // The handleOffer on the other side has glare/collision handling
-                if (shouldConnectToPeer(uid)) {
+                resetPeerConnection(uid, { removeTile: true });
+                if ((!meId || shouldInitiateOffer(meId, uid)) && shouldConnectToPeer(uid)) {
                     try { await sendOffer(uid); } catch(_) {}
                 }
+                setTimeout(() => { try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {} }, 120);
+                setTimeout(() => { try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {} }, 900);
+                schedulePeerRecovery(uid, 1400, { forceOffer: true });
                 rebalancePeerTopology().catch(() => {});
                 runNegotiationWatchdog(600);
             });
@@ -10713,13 +11053,10 @@ async function toggleMute() {
                 if (String(data.callId) !== String(groupCall.callId)) return;
 
                 const uid = String(data.userId);
-                const pc = groupCall.peers.get(uid);
-                if (pc) { try { pc.close(); } catch(e){} }
-                groupCall.peers.delete(uid);
-                clearReconnectTimer(uid);
-                groupCall.remoteStreams.delete(uid);
-                groupCall.remoteTrackStreams.delete(uid);
-                removeVideoTile(uid);
+                resetPeerConnection(uid, { removeTile: true });
+                groupCall.participantInfos.delete(uid);
+                groupCall.participantMediaState.delete(uid);
+                pruneParticipantMediaState();
                 groupCall.participantCount = Number((data?.participants || []).length || groupCall.participantCount || 0);
 
                 // 🔁 Auto-revert stage:
@@ -10732,6 +11069,21 @@ async function toggleMute() {
                 try { renderGroupCallLayout(); } catch(_) {}
                 syncLiveLabUi();
                 try { syncLiveCaptionTranscriber(); } catch(_) {}
+                rebalancePeerTopology().catch(() => {});
+            });
+
+            socket.on('groupCallParticipantState', (payload) => {
+                try {
+                    if (!groupCall.active) return;
+                    if (String(payload?.groupId || '') !== String(groupCall.groupId || '')) return;
+                    if (String(payload?.callId || '') !== String(groupCall.callId || '')) return;
+                    const uid = String(payload?.userId || '');
+                    if (!uid) return;
+                    setParticipantMediaState(uid, {
+                        micOn: !!payload?.micOn,
+                        camOn: !!payload?.camOn
+                    });
+                } catch(_) {}
             });
 
             socket.on('groupLabState', (payload) => {
