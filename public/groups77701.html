@@ -580,7 +580,7 @@
                     <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-sm font-medium muted2">Members</span>
-                            <span class="text-xs text-gray-500">${group.members?.length || 0} members</span>
+                            <span class="text-xs text-gray-500">${group.memberCount || group.members?.length || 0} members</span>
                         </div>
                         <div class="flex -space-x-2">
                             ${(group.members || []).slice(0, 5).map(member => `
@@ -588,9 +588,9 @@
                                      class="w-8 h-8 rounded-full border-2 border-white" 
                                      title="${member.nickname}">
                             `).join('')}
-                            ${(group.members || []).length > 5 ? `
+                            ${(group.memberCount || (group.members || []).length) > 5 ? `
                                 <div class="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs">
-                                    +${(group.members || []).length - 5}
+                                    +${Math.max(0, (group.memberCount || (group.members || []).length) - 5)}
                                 </div>
                             ` : ''}
                         </div>

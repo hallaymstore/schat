@@ -3,14 +3,27 @@
   window.__schatGlobalLoaderReady = true;
 
   var doc = document;
+  var CACHE_PREFIX = 'schat:get-cache:v2:';
+  var CACHE_RULES = [
+    { re: /^\/api\/me(?:[/?]|$)/, ttl: 30000 },
+    { re: /^\/api\/groups(?:\/all|\/my|\/joined)?(?:[/?]|$)/, ttl: 25000 },
+    { re: /^\/api\/channels(?:\/featured|\/stats)?(?:[/?]|$)/, ttl: 25000 },
+    { re: /^\/api\/channels\/by-username\/[^/?]+(?:[/?]|$)/, ttl: 20000 },
+    { re: /^\/api\/channels\/[0-9a-fA-F]{24}(?:\/posts)?(?:[/?]|$)/, ttl: 20000 },
+    { re: /^\/api\/catalog(?:[/?]|$)/, ttl: 300000 }
+  ];
   var state = {
     pending: 0,
     booting: true,
     manualBlocks: 0,
     overlay: null,
     settleTimer: null,
+    showTimer: null,
+    hideTimer: null,
     maxBootTimer: null,
-    minVisibleUntil: Date.now() + 700
+    visible: false,
+    minVisibleUntil: 0,
+    requestCache: new Map()
   };
 
   function injectStyle() {
@@ -18,92 +31,77 @@
     var style = doc.createElement('style');
     style.id = 'schat-global-loader-style';
     style.textContent = [
-      '#schatGlobalLoader{visibility:visible!important;opacity:1!important;position:fixed;right:18px;bottom:18px;z-index:2147483646;display:none;align-items:center;justify-content:center;width:min(250px,calc(100vw - 36px));pointer-events:none;}',
-      '#schatGlobalLoader.visible{display:flex}',
-      '.schat-loader-card{width:100%;padding:10px 12px;border-radius:18px;border:1px solid rgba(13,38,35,.10);background:rgba(255,255,255,.92);box-shadow:0 18px 40px rgba(8,31,29,.12);color:#10332f;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;backdrop-filter:blur(14px)}',
-      'html.dark .schat-loader-card{background:rgba(8,28,30,.94);border-color:rgba(255,255,255,.10);color:#e7fbf7}',
-      '.schat-loader-line{display:flex;align-items:center;gap:10px}',
-      '.schat-loader-badge{min-width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-weight:900;font-size:11px;color:#fff;background:linear-gradient(135deg,#14b8a6,#f59e0b);box-shadow:0 12px 28px rgba(20,184,166,.18)}',
-      '.schat-loader-copy strong{display:block;font-size:13px;line-height:1.2;margin:0 0 2px}',
-      '.schat-loader-copy p{margin:0;font-size:11px;line-height:1.45;color:rgba(16,51,47,.72)}',
-      'html.dark .schat-loader-copy p{color:rgba(231,251,247,.72)}',
-      '.schat-loader-dots{display:inline-flex;gap:5px;margin-top:10px}',
-      '.schat-loader-dots span{width:7px;height:7px;border-radius:999px;background:rgba(15,143,131,.28);animation:schatLoaderBounce 1.1s infinite ease-in-out}',
-      '.schat-loader-dots span:nth-child(2){animation-delay:.14s}',
-      '.schat-loader-dots span:nth-child(3){animation-delay:.28s}',
-      '@media (max-width:640px){#schatGlobalLoader{right:12px;left:12px;bottom:12px;width:auto}}',
-      '@keyframes schatLoaderBounce{0%,80%,100%{transform:translateY(0);opacity:.42}40%{transform:translateY(-5px);opacity:1}}',
+      '#schatGlobalLoader{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .16s ease;}',
+      '#schatGlobalLoader.visible{display:flex;opacity:1;}',
+      '.schat-loader-spinner{width:44px;height:44px;border-radius:999px;border:3px solid rgba(18,95,87,.18);border-top-color:#0f766e;border-right-color:#14b8a6;animation:schatLoaderSpin .72s linear infinite;box-shadow:0 10px 28px rgba(15,118,110,.16);background:transparent;}',
+      'html.dark .schat-loader-spinner{border-color:rgba(255,255,255,.16);border-top-color:#5eead4;border-right-color:#99f6e4;}',
+      '@keyframes schatLoaderSpin{to{transform:rotate(360deg)}}'
     ].join('');
     doc.head.appendChild(style);
   }
 
   function ensureUi() {
-    if (!doc.body) return;
+    if (!doc.body) return false;
     if (!state.overlay) {
       state.overlay = doc.createElement('div');
       state.overlay.id = 'schatGlobalLoader';
-      state.overlay.innerHTML = [
-        '<div class="schat-loader-card">',
-        '  <div class="schat-loader-line">',
-        '    <div class="schat-loader-badge">AI</div>',
-        '    <div class="schat-loader-copy">',
-        '      <strong id="schatGlobalLoaderTitle">Sahifa yuklanmoqda</strong>',
-        '      <p id="schatGlobalLoaderText">Ma\'lumotlar tayyorlanmoqda. Iltimos, bir necha soniya kuting.</p>',
-        '    </div>',
-        '  </div>',
-        '  <div class="schat-loader-dots"><span></span><span></span><span></span></div>',
-        '</div>'
-      ].join('');
+      state.overlay.setAttribute('aria-hidden', 'true');
+      state.overlay.innerHTML = '<div class="schat-loader-spinner"></div>';
       doc.body.appendChild(state.overlay);
+    }
+    return true;
+  }
+
+  function showOverlay() {
+    clearTimeout(state.hideTimer);
+    clearTimeout(state.showTimer);
+    if (!ensureUi() || !state.overlay) return;
+    if (!state.visible) {
+      state.visible = true;
+      state.minVisibleUntil = Date.now() + 220;
+      state.overlay.classList.add('visible');
     }
   }
 
-  function setMessage(title, text) {
-    ensureUi();
-    var titleEl = doc.getElementById('schatGlobalLoaderTitle');
-    var textEl = doc.getElementById('schatGlobalLoaderText');
-    if (titleEl && title) titleEl.textContent = String(title);
-    if (textEl && text) textEl.textContent = String(text);
-  }
-
-  function showOverlay(title, text) {
-    ensureUi();
-    setMessage(title || 'Sahifa yuklanmoqda', text || 'Ma\'lumotlar tayyorlanmoqda. Iltimos, bir necha soniya kuting.');
-    if (state.overlay) state.overlay.classList.add('visible');
+  function scheduleOverlayReveal(delay) {
+    if (state.visible || state.showTimer) return;
+    state.showTimer = window.setTimeout(function () {
+      state.showTimer = null;
+      if (state.manualBlocks > 0 || state.pending > 0 || (state.booting && doc.readyState !== 'complete')) {
+        showOverlay();
+      }
+    }, Math.max(0, Number(delay || 0)));
   }
 
   function hideOverlayIfAllowed() {
-    if (state.booting || state.manualBlocks > 0) return;
-    if (state.overlay) state.overlay.classList.remove('visible');
-  }
-
-  function scheduleProgressBar(label) {
-    window.setTimeout(function () {
-      if (!state.booting && state.pending > 0) {
-        showOverlay(label || 'Yuklanmoqda...', 'Sahifadagi ma’lumotlar yangilanmoqda.');
-      }
-    }, 180);
+    clearTimeout(state.showTimer);
+    state.showTimer = null;
+    if (state.booting || state.manualBlocks > 0 || state.pending > 0) return;
+    if (!state.overlay || !state.visible) return;
+    var wait = Math.max(0, Number(state.minVisibleUntil || 0) - Date.now());
+    clearTimeout(state.hideTimer);
+    if (wait > 0) {
+      state.hideTimer = window.setTimeout(hideOverlayIfAllowed, wait + 10);
+      return;
+    }
+    state.visible = false;
+    state.overlay.classList.remove('visible');
   }
 
   function settleBoot() {
     clearTimeout(state.settleTimer);
-    state.settleTimer = setTimeout(function () {
+    state.settleTimer = window.setTimeout(function () {
       if (state.pending > 0) return;
       if (doc.readyState !== 'complete') return;
-      if (Date.now() < state.minVisibleUntil) {
-        settleBoot();
-        return;
-      }
       state.booting = false;
       hideOverlayIfAllowed();
-    }, 220);
+    }, 120);
   }
 
   function finishTrackedRequest() {
     state.pending = Math.max(0, Number(state.pending || 0) - 1);
-    if (state.pending === 0) {
-      settleBoot();
-    }
+    if (state.pending === 0) settleBoot();
+    hideOverlayIfAllowed();
   }
 
   function shouldTrack(url) {
@@ -115,20 +113,205 @@
   function beginTrackedRequest(url) {
     if (!shouldTrack(url)) return function () {};
     state.pending += 1;
-    if (state.booting) showOverlay('Sahifa yuklanmoqda', 'Kontentlar, guruhlar va profilingiz ma\'lumotlari tayyorlanmoqda.');
-    else scheduleProgressBar('Yuklanmoqda...');
+    scheduleOverlayReveal(state.booting ? 150 : 180);
     return finishTrackedRequest;
+  }
+
+  function safeSessionGet(key) {
+    try {
+      var raw = window.sessionStorage.getItem(CACHE_PREFIX + key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function safeSessionSet(key, value) {
+    try {
+      window.sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(value));
+    } catch (_) {}
+  }
+
+  function safeSessionRemove(key) {
+    try {
+      window.sessionStorage.removeItem(CACHE_PREFIX + key);
+    } catch (_) {}
+  }
+
+  function pruneExpiredCache() {
+    try {
+      for (var i = window.sessionStorage.length - 1; i >= 0; i -= 1) {
+        var key = window.sessionStorage.key(i);
+        if (!key || key.indexOf(CACHE_PREFIX) !== 0) continue;
+        var cached = safeSessionGet(key.slice(CACHE_PREFIX.length));
+        if (!cached || Number(cached.expiresAt || 0) <= Date.now()) {
+          window.sessionStorage.removeItem(key);
+        }
+      }
+    } catch (_) {}
+  }
+
+  function readHeaderValue(headers, name) {
+    if (!headers || !name) return '';
+    var target = String(name).toLowerCase();
+    if (typeof headers.get === 'function') {
+      return String(headers.get(target) || headers.get(name) || '');
+    }
+    if (Array.isArray(headers)) {
+      for (var i = 0; i < headers.length; i += 1) {
+        var pair = headers[i];
+        if (Array.isArray(pair) && String(pair[0] || '').toLowerCase() === target) {
+          return String(pair[1] || '');
+        }
+      }
+      return '';
+    }
+    var keys = Object.keys(headers);
+    for (var j = 0; j < keys.length; j += 1) {
+      if (String(keys[j] || '').toLowerCase() === target) {
+        return String(headers[keys[j]] || '');
+      }
+    }
+    return '';
+  }
+
+  function getRequestMethod(input, init) {
+    return String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+  }
+
+  function getNormalizedUrl(input) {
+    try {
+      var raw = typeof input === 'string' ? input : (input && input.url) || '';
+      if (!raw) return null;
+      var url = new URL(raw, window.location.href);
+      if (url.origin !== window.location.origin) return null;
+      return url;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function getAuthSignature(input, init) {
+    var auth = readHeaderValue(init && init.headers, 'authorization') || readHeaderValue(input && input.headers, 'authorization');
+    if (!auth) {
+      try {
+        var token = window.localStorage.getItem('token') || '';
+        auth = token ? 'Bearer ' + token : '';
+      } catch (_) {
+        auth = '';
+      }
+    }
+    return auth ? String(auth).slice(-24) : 'anon';
+  }
+
+  function getCacheRule(pathname) {
+    var target = String(pathname || '');
+    for (var i = 0; i < CACHE_RULES.length; i += 1) {
+      if (CACHE_RULES[i].re.test(target)) return CACHE_RULES[i];
+    }
+    return null;
+  }
+
+  function resolveResponseTtl(response, fallbackTtl) {
+    var ttl = Math.max(0, Number(fallbackTtl || 0));
+    var cacheControl = String(response && response.headers ? response.headers.get('cache-control') || '' : '');
+    if (/no-store/i.test(cacheControl)) return 0;
+    var maxAgeMatch = cacheControl.match(/max-age=(\d+)/i);
+    if (maxAgeMatch) {
+      var serverTtl = Math.max(0, Number(maxAgeMatch[1] || 0) * 1000);
+      if (serverTtl > 0) ttl = ttl > 0 ? Math.min(ttl, serverTtl) : serverTtl;
+    }
+    return ttl;
+  }
+
+  function getRequestCacheMeta(input, init) {
+    if (getRequestMethod(input, init) !== 'GET') return null;
+    if (init && init.body != null) return null;
+    if (init && init.signal) return null;
+    if (String((init && init.cache) || '').toLowerCase() === 'no-store') return null;
+    var url = getNormalizedUrl(input);
+    if (!url) return null;
+    var rule = getCacheRule(url.pathname);
+    if (!rule) return null;
+    return {
+      key: url.pathname + url.search + '|' + getAuthSignature(input, init),
+      ttl: Number(rule.ttl || 0),
+      url: url.href
+    };
+  }
+
+  function readFreshCacheEntry(key) {
+    var cached = safeSessionGet(key);
+    if (!cached) return null;
+    if (Number(cached.expiresAt || 0) <= Date.now()) {
+      safeSessionRemove(key);
+      return null;
+    }
+    return cached;
+  }
+
+  function createResponseFromEntry(entry) {
+    return new Response(entry && entry.bodyText != null ? entry.bodyText : '', {
+      status: entry && entry.status ? entry.status : 200,
+      statusText: entry && entry.statusText ? entry.statusText : '',
+      headers: entry && Array.isArray(entry.headers) ? entry.headers : []
+    });
+  }
+
+  function captureResponseEntry(response, fallbackTtl) {
+    var ttl = resolveResponseTtl(response, fallbackTtl);
+    return response.text().then(function (bodyText) {
+      return {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Array.from(response.headers.entries()),
+        bodyText: bodyText,
+        expiresAt: Date.now() + ttl,
+        cacheable: response.ok && ttl > 0
+      };
+    });
   }
 
   function patchFetch() {
     if (typeof window.fetch !== 'function' || window.__schatLoaderFetchPatched) return;
     window.__schatLoaderFetchPatched = true;
     var originalFetch = window.fetch.bind(window);
+
     window.fetch = function (input, init) {
       var url = '';
       try {
         url = typeof input === 'string' ? input : (input && input.url) || '';
       } catch (_) {}
+
+      var cacheMeta = getRequestCacheMeta(input, init);
+      if (cacheMeta) {
+        var cached = readFreshCacheEntry(cacheMeta.key);
+        if (cached) {
+          return Promise.resolve(createResponseFromEntry(cached));
+        }
+
+        var inflight = state.requestCache.get(cacheMeta.key);
+        if (inflight) {
+          return inflight.then(createResponseFromEntry);
+        }
+
+        var doneCached = beginTrackedRequest(cacheMeta.url || url);
+        var requestPromise = originalFetch(input, init).then(function (response) {
+          return captureResponseEntry(response, cacheMeta.ttl).then(function (entry) {
+            if (entry.cacheable) safeSessionSet(cacheMeta.key, entry);
+            return entry;
+          });
+        }, function (error) {
+          throw error;
+        }).finally(function () {
+          state.requestCache.delete(cacheMeta.key);
+          doneCached();
+        });
+
+        state.requestCache.set(cacheMeta.key, requestPromise);
+        return requestPromise.then(createResponseFromEntry);
+      }
+
       var done = beginTrackedRequest(url);
       return originalFetch(input, init).then(function (response) {
         done();
@@ -159,23 +342,20 @@
 
   function exposeApi() {
     window.SchatLoading = {
-      show: function (title, text) {
+      show: function () {
         state.manualBlocks += 1;
-        showOverlay(title || 'Yuklanmoqda', text || 'Jarayon davom etmoqda...');
+        showOverlay();
       },
       hide: function () {
         state.manualBlocks = Math.max(0, Number(state.manualBlocks || 0) - 1);
-        if (state.manualBlocks === 0 && !state.booting && state.pending === 0) {
-          hideOverlayIfAllowed();
-        }
+        hideOverlayIfAllowed();
       },
-      setText: function (title, text) {
-        setMessage(title, text);
-      }
+      setText: function () {}
     };
   }
 
   injectStyle();
+  pruneExpiredCache();
   patchFetch();
   patchXhr();
   exposeApi();
@@ -184,12 +364,12 @@
     if (!doc.body) return;
     clearInterval(bodyTimer);
     ensureUi();
-    showOverlay('Sahifa yuklanmoqda', 'Ma\'lumotlar tayyorlanmoqda. Iltimos, bir necha soniya kuting.');
+    scheduleOverlayReveal(180);
   }, 20);
 
   window.addEventListener('load', settleBoot, { passive: true });
   state.maxBootTimer = setTimeout(function () {
     state.booting = false;
     hideOverlayIfAllowed();
-  }, 12000);
+  }, 8000);
 })();

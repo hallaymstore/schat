@@ -1591,6 +1591,46 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 #chatComposer .composer-row > *{ flex:0 0 auto; }
 #chatComposer input{ flex:1 1 auto; min-width: 0; }
 
+#groupCallInviteBanner{
+  position: relative;
+  z-index: 12;
+}
+#groupCallInviteBanner .call-participant-stack{
+  display:flex;
+  align-items:center;
+  flex-wrap:nowrap;
+}
+#groupCallInviteBanner .call-participant-avatar{
+  width:32px;
+  height:32px;
+  border-radius:999px;
+  overflow:hidden;
+  border:2px solid rgba(15,23,42,.55);
+  margin-left:-8px;
+  background:rgba(255,255,255,.12);
+  color:#fff;
+  display:grid;
+  place-items:center;
+  font-size:11px;
+  font-weight:800;
+  flex:0 0 auto;
+}
+#groupCallInviteBanner .call-participant-avatar:first-child{
+  margin-left:0;
+}
+#groupCallInviteBanner .call-participant-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+#groupCallInviteBanner .call-live-dot{
+  width:9px;
+  height:9px;
+  border-radius:999px;
+  background:#22c55e;
+  box-shadow:0 0 0 6px rgba(34,197,94,.15);
+}
+
 /* Reduce big bubbles on mobile */
 @media (max-width: 640px){
   .message-bubble{ max-width: 92% !important; }
@@ -2076,6 +2116,32 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                 </div>
                 <p id="groupDescription" class="text-gray-600 mt-2"></p>
             </div>
+
+            <div id="groupCallInviteBanner" class="hidden border-b border-white/15 px-4 py-3 hallaym-surface">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-3">
+                            <span class="call-live-dot"></span>
+                            <div class="min-w-0">
+                                <div id="groupCallInviteTitle" class="text-sm font-extrabold text-white truncate">Videodars bo'lyapti. Qo'shilasizmi?</div>
+                                <div id="groupCallInviteMeta" class="text-xs text-white/70 truncate">Live dars faol</div>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex items-center gap-3">
+                            <div id="groupCallInviteParticipants" class="call-participant-stack"></div>
+                            <div id="groupCallInviteCount" class="text-xs text-white/70"></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="groupCallInviteJoinBtn" onclick="acceptIncomingGroupCall()" class="btn-primary text-white px-4 py-2 rounded-full font-extrabold hover:opacity-90 transition whitespace-nowrap">
+                            <i class="fas fa-video mr-2"></i>Qo'shilish
+                        </button>
+                        <button onclick="dismissIncomingGroupCall()" class="px-4 py-2 rounded-full bg-white/10 text-white border border-white/15 hover:bg-white/15 transition whitespace-nowrap">
+                            Keyinroq
+                        </button>
+                    </div>
+                </div>
+            </div>
             
             <!-- Messages Container -->
             <div class="flex-1 overflow-y-auto p-4 space-y-4" id="messagesContainer">
@@ -2226,7 +2292,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
         const __urlParams = new URLSearchParams(window.location.search);
         const OBSERVER_MODE = (__urlParams.get('observer') === '1' || __urlParams.get('asObserver') === '1');
         let AUTO_JOIN_CALL = (__urlParams.get('autoJoin') === '1');
-        const AUTO_ACCEPT_INCOMING_GROUP_CALL = true;
+        const AUTO_ACCEPT_INCOMING_GROUP_CALL = (__urlParams.get('autoAccept') === '1');
         const LIVEKIT_TRANSPORT_ALLOWED = (__urlParams.get('transport') === 'livekit');
         let __PENDING_GROUP_CALL = null;
         try {
@@ -2375,6 +2441,9 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                     renderGroupInfo(data.group);
                     renderMembers(data.group.members);
                     setupGroupActions(data.group);
+                    if (groupCall.incoming && !groupCall.active) {
+                        renderIncomingGroupCallBanner(groupCall.incoming.metaText || '');
+                    }
                 } else {
                     alert('Group not found or access denied');
                     window.location.href = '/groups.html';
@@ -5755,6 +5824,7 @@ function schedulePeerRecovery(remoteUserId, delayMs = 800, opts = {}) {
         const uid = String(remoteUserId || '');
         if (!uid || !groupCall.active) return;
         const forceOffer = !!opts.forceOffer;
+        const priority = !!opts.priority || isPriorityPeerConnection(uid);
         if (groupCall.reconnectTimers.has(uid)) {
             if (!forceOffer) return;
             clearReconnectTimer(uid);
@@ -5781,7 +5851,7 @@ function schedulePeerRecovery(remoteUserId, delayMs = 800, opts = {}) {
             }
             // Always try to send offer for recovery (don't wait for tie-breaker)
             try { await sendOffer(uid); } catch(_) {}
-        }, Math.max(150, Number(delayMs || 800)));
+        }, Math.max(priority ? 90 : 150, Number(delayMs || 800)));
 
         groupCall.reconnectTimers.set(uid, t);
     } catch(_) {}
@@ -5841,7 +5911,7 @@ function startPersistentWatchdog() {
                 }
             }
         } catch(_) {}
-    }, 4000);
+    }, 2200);
 }
 function stopPersistentWatchdog() {
     if (_watchdogGlobalTimer) { clearInterval(_watchdogGlobalTimer); _watchdogGlobalTimer = null; }
@@ -6429,10 +6499,10 @@ function startStageHealthMonitor() {
                 const slotSel = (idx === 0) ? '.stage-slot-primary video' : '.stage-slot-secondary video';
                 const v = document.querySelector(`#teacherStage ${slotSel}`) || document.querySelector('#teacherStage video');
                 const hasRenderableVideo = !!(v && v.srcObject && v.readyState >= 2 && (v.videoWidth || 0) > 0);
-                if (!hasRenderableVideo) schedulePeerRecovery(stageUserId, 300);
+                if (!hasRenderableVideo) schedulePeerRecovery(stageUserId, 120, { forceOffer: true, priority: true });
             });
         } catch(_) {}
-    }, 3000);
+    }, 1400);
 }
 
 function stopStageHealthMonitor() {
@@ -6518,6 +6588,72 @@ function shouldConnectToPeer(remoteUserId) {
     if (!uid || !meId || uid === meId) return false;
     return true;
 }
+function isPriorityPeerConnection(userId) {
+    const uid = String(userId || '');
+    if (!uid) return false;
+    return isEssentialPeer(uid) || isStageVisibleUserId(uid);
+}
+function getPrioritizedPeerIds(userIds) {
+    const seen = new Set();
+    const priority = [];
+    const normal = [];
+    (userIds || []).forEach((rawId) => {
+        const uid = String(rawId || '');
+        if (!uid || seen.has(uid) || !shouldConnectToPeer(uid)) return;
+        seen.add(uid);
+        if (isPriorityPeerConnection(uid)) priority.push(uid);
+        else normal.push(uid);
+    });
+    return priority.concat(normal);
+}
+async function connectToParticipantsPrioritized(userIds, opts = {}) {
+    const ordered = getPrioritizedPeerIds(userIds);
+    if (!ordered.length) return;
+    const meId = String(myUserId() || '');
+    const net = getNetworkHints();
+    const priorityIds = ordered.filter((uid) => isPriorityPeerConnection(uid));
+    const paced = !!opts.paced || net.isMobile || net.low || getKnownParticipantCount() >= 8;
+    const shouldOfferToPeer = (uid) => !!opts.forceOffers || isPriorityPeerConnection(uid) || !meId || shouldInitiateOffer(meId, uid);
+    const offerToPeer = async (uid) => {
+        if (!shouldOfferToPeer(uid)) return;
+        try { await sendOffer(uid); } catch(_) {}
+    };
+    const eagerIds = priorityIds.length
+        ? priorityIds
+        : (paced ? ordered.slice(0, Math.min(2, ordered.length)) : ordered);
+
+    await Promise.all(eagerIds.map((uid) => offerToPeer(uid)));
+
+    const remaining = ordered.filter((uid) => !eagerIds.includes(uid));
+    if (!remaining.length) return;
+
+    if (!paced) {
+        await Promise.all(remaining.map((uid) => offerToPeer(uid)));
+        return;
+    }
+
+    remaining.forEach((uid, idx) => {
+        setTimeout(() => {
+            if (!groupCall.active) return;
+            offerToPeer(uid);
+        }, 140 + (idx * 140));
+    });
+}
+function primeEssentialPeerConnections(opts = {}) {
+    if (!groupCall.active) return;
+    const meId = String(myUserId() || '');
+    const ids = Array.from(groupCall.participantInfos.keys())
+        .map((uid) => String(uid || ''))
+        .filter((uid) => uid && uid !== meId && isPriorityPeerConnection(uid));
+    ids.forEach((uid, idx) => {
+        const startDelay = Math.max(0, Number(opts.startDelay || 0)) + (idx * 90);
+        setTimeout(() => {
+            if (!groupCall.active || !shouldConnectToPeer(uid)) return;
+            sendOffer(uid).catch(() => {});
+            schedulePeerRecovery(uid, Number(opts.delayMs || 220), { forceOffer: true, priority: true });
+        }, startDelay);
+    });
+}
 async function rebalancePeerTopology() {
     if (!groupCall.active) return;
     const myPeerId = String(myUserId() || '');
@@ -6527,10 +6663,10 @@ async function rebalancePeerTopology() {
         if (activeIds.has(String(uid || ''))) continue;
         resetPeerConnection(uid, { removeTile: true });
     }
-    const peerOffers = participantIds
-        .filter((uid) => !groupCall.peers.has(uid) && shouldConnectToPeer(uid))
-        .map((uid) => sendOffer(uid).catch(() => {}));
-    if (peerOffers.length) await Promise.all(peerOffers);
+    await connectToParticipantsPrioritized(
+        participantIds.filter((uid) => !groupCall.peers.has(uid)),
+        { paced: true }
+    );
     const peerPolicy = getPeerPolicy();
     setGroupCallStatus(`Connected • ${peerPolicy.total} participant`);
     return;
@@ -6641,24 +6777,148 @@ async function rebalancePeerTopology() {
             closeCallMoreMenu();
         });
 
+        let _dismissedIncomingCallKey = '';
+
+        function getIncomingGroupCallKey(data = null) {
+            const src = data || groupCall.incoming;
+            const gid = String(src?.groupId || groupId || '').trim();
+            const cid = String(src?.callId || '').trim();
+            if (!gid || !cid) return '';
+            return `${gid}:${cid}`;
+        }
+
+        function hideIncomingGroupCallBanner(opts = {}) {
+            const banner = document.getElementById('groupCallInviteBanner');
+            if (banner) banner.classList.add('hidden');
+            const box = document.getElementById('groupIncomingBox');
+            if (box) box.classList.add('hidden');
+            if (opts.resetDismissed) _dismissedIncomingCallKey = '';
+        }
+
+        function getIncomingParticipantPreviewData(data = null) {
+            const src = data || groupCall.incoming || {};
+            const ids = Array.isArray(src?.participants)
+                ? src.participants.map((uid) => String(uid || '')).filter(Boolean)
+                : [];
+            if (!ids.length && src?.from) ids.push(String(src.from || ''));
+
+            const infoMap = new Map(
+                (Array.isArray(src?.participantInfos) ? src.participantInfos : [])
+                    .map((item) => [String(item?.userId || item?._id || ''), item || {}])
+                    .filter(([uid]) => !!uid)
+            );
+            const memberMap = new Map(
+                (Array.isArray(currentGroup?.members) ? currentGroup.members : [])
+                    .map((member) => [String(member?._id || member?.id || ''), member || {}])
+                    .filter(([uid]) => !!uid)
+            );
+
+            return ids.slice(0, 4).map((uid) => {
+                const info = infoMap.get(uid) || memberMap.get(uid) || {};
+                const name = String(
+                    info.fullName ||
+                    info.nickname ||
+                    info.username ||
+                    (uid === String(src?.from || '') ? (src?.fromName || '') : '') ||
+                    'User'
+                ).trim();
+                const avatar = String(info.avatar || (uid === String(src?.from || '') ? (src?.fromAvatar || '') : '') || '').trim();
+                return {
+                    userId: uid,
+                    name: name || 'User',
+                    avatar,
+                    initial: String(name || 'U').trim().charAt(0).toUpperCase() || 'U'
+                };
+            });
+        }
+
+        function renderIncomingGroupCallBanner(metaText = '') {
+            const banner = document.getElementById('groupCallInviteBanner');
+            if (!banner) return;
+            if (groupCall.active || !groupCall.incoming) {
+                banner.classList.add('hidden');
+                return;
+            }
+            const incomingKey = getIncomingGroupCallKey(groupCall.incoming);
+            if (_dismissedIncomingCallKey && incomingKey && _dismissedIncomingCallKey === incomingKey) {
+                banner.classList.add('hidden');
+                return;
+            }
+
+            const data = groupCall.incoming || {};
+            const preview = getIncomingParticipantPreviewData(data);
+            const participantCount = Math.max(
+                preview.length,
+                Number(Array.isArray(data?.participants) ? data.participants.length : 0),
+                data?.from ? 1 : 0
+            );
+            const subject = String(data?.teacherSubject || '').trim();
+            const title = String(data?.title || '').trim();
+            const starter = String(data?.fromName || preview[0]?.name || data?.from || 'Teacher').trim();
+            const isAudio = String(data?.callType || 'video').toLowerCase() === 'audio';
+
+            const titleEl = document.getElementById('groupCallInviteTitle');
+            const metaEl = document.getElementById('groupCallInviteMeta');
+            const participantsEl = document.getElementById('groupCallInviteParticipants');
+            const countEl = document.getElementById('groupCallInviteCount');
+            const joinBtn = document.getElementById('groupCallInviteJoinBtn');
+
+            if (titleEl) titleEl.textContent = isAudio ? "Ovozli dars faol. Qo'shilasizmi?" : "Videodars bo'lyapti. Qo'shilasizmi?";
+            if (metaEl) {
+                const parts = [
+                    title || 'Live dars',
+                    subject || '',
+                    starter ? `Boshlovchi: ${starter}` : '',
+                    metaText || ''
+                ].filter(Boolean);
+                metaEl.textContent = parts.join(' • ');
+            }
+            if (participantsEl) {
+                participantsEl.innerHTML = preview.map((item) => {
+                    if (item.avatar) {
+                        return `<span class="call-participant-avatar" title="${escapeAttr(item.name)}"><img src="${escapeAttr(item.avatar)}" alt="${escapeAttr(item.name)}"></span>`;
+                    }
+                    return `<span class="call-participant-avatar" title="${escapeAttr(item.name)}">${escapeHtml(item.initial)}</span>`;
+                }).join('');
+            }
+            if (countEl) {
+                countEl.textContent = participantCount > 0 ? `${participantCount} ishtirokchi call ichida` : 'Live dars faol';
+            }
+            if (joinBtn) {
+                joinBtn.innerHTML = isAudio
+                    ? '<i class="fas fa-phone mr-2"></i>Qo\'shilish'
+                    : '<i class="fas fa-video mr-2"></i>Qo\'shilish';
+            }
+            banner.classList.remove('hidden');
+        }
+
         function showIncomingGroupBox(metaText) {
-            document.getElementById('groupIncomingMeta').textContent = metaText;
-            document.getElementById('groupIncomingBox').classList.remove('hidden');
-            showGroupOverlay();
+            if (groupCall.incoming) groupCall.incoming.metaText = String(metaText || '');
+            const metaEl = document.getElementById('groupIncomingMeta');
+            if (metaEl) metaEl.textContent = metaText;
+            hideGroupOverlay();
+            renderIncomingGroupCallBanner(metaText);
             try{ if(document.getElementById('lessonTitleWrap')){ const isT = (String(currentUser?.role||'').toLowerCase()==='teacher'); document.getElementById('lessonTitleWrap').classList.toggle('hidden', !isT); } }catch(e){}
         }
 
         function dismissIncomingGroupCall() {
-            groupCall.incoming = null;
-            document.getElementById('groupIncomingBox').classList.add('hidden');
-            if (!groupCall.active) hideGroupOverlay();
+            _dismissedIncomingCallKey = getIncomingGroupCallKey(groupCall.incoming);
+            hideIncomingGroupCallBanner();
         }
 
         async function acceptIncomingGroupCall() {
             if (!groupCall.incoming) return;
-            await joinGroupCall(groupCall.incoming.groupId, groupCall.incoming.callId, groupCall.incoming.callType);
-            groupCall.incoming = null;
-            document.getElementById('groupIncomingBox').classList.add('hidden');
+            const incoming = { ...groupCall.incoming };
+            _dismissedIncomingCallKey = '';
+            hideIncomingGroupCallBanner({ resetDismissed: true });
+            await joinGroupCall(incoming.groupId, incoming.callId, incoming.callType);
+            if (groupCall.active) {
+                groupCall.incoming = null;
+                hideIncomingGroupCallBanner({ resetDismissed: true });
+            } else {
+                groupCall.incoming = incoming;
+                renderIncomingGroupCallBanner(incoming.metaText || '');
+            }
         }
 
         function shouldInitiateOffer(localId, remoteId) {
@@ -7178,15 +7438,24 @@ function resetPeerConnection(remoteUserId, opts = {}) {
                     else {
                         const net = getNetworkHints();
                         const dev = getDeviceRuntimeProfile();
-                        const manyParticipants = getKnownParticipantCount() >= 22;
-                        forceRelay = !!(net.veryLow || (net.low && dev.lowEnd) || (manyParticipants && baseCfg?.hasTurn));
+                        const priorityPeer = isPriorityPeerConnection(uid);
+                        const manyParticipants = getKnownParticipantCount() >= 14;
+                        forceRelay = !!(baseCfg?.hasTurn && (
+                            net.isMobile ||
+                            net.veryLow ||
+                            (net.low && dev.lowEnd) ||
+                            (priorityPeer && (net.low || getKnownParticipantCount() >= 5)) ||
+                            manyParticipants
+                        ));
                     }
                 }
             } catch(_) {}
 
             const pc = new RTC_PEER_CTOR({
                 ...baseCfg,
-                iceCandidatePoolSize: Math.max(6, Number(baseCfg?.iceCandidatePoolSize || 0)),
+                iceCandidatePoolSize: forceRelay
+                    ? Math.max(2, Math.min(4, Number(baseCfg?.iceCandidatePoolSize || 2)))
+                    : Math.max(6, Number(baseCfg?.iceCandidatePoolSize || 0)),
                 bundlePolicy: 'max-bundle',
                 rtcpMuxPolicy: 'require',
                 iceTransportPolicy: forceRelay ? 'relay' : 'all'
@@ -7252,7 +7521,7 @@ function resetPeerConnection(remoteUserId, opts = {}) {
                         };
                         tr.onended = () => {
                             try { setParticipantSpeakingState(uid, false); } catch(_) {}
-                            if (groupCall.active) schedulePeerRecovery(uid, 1200);
+                            if (groupCall.active) schedulePeerRecovery(uid, isPriorityPeerConnection(uid) ? 260 : 900, { forceOffer: true });
                         };
                     }
                 } catch(_) {}
@@ -7268,9 +7537,9 @@ function resetPeerConnection(remoteUserId, opts = {}) {
                 }
                 if (st === 'failed') {
                     try { if (typeof pc.restartIce === 'function') pc.restartIce(); } catch(_) {}
-                    schedulePeerRecovery(uid, 500);
+                    schedulePeerRecovery(uid, isPriorityPeerConnection(uid) ? 180 : 420, { forceOffer: true });
                 } else if (st === 'disconnected') {
-                    schedulePeerRecovery(uid, 1000);
+                    schedulePeerRecovery(uid, isPriorityPeerConnection(uid) ? 260 : 700, { forceOffer: true });
                 }
             };
 
@@ -7282,7 +7551,7 @@ function resetPeerConnection(remoteUserId, opts = {}) {
                 }
                 if (st === 'failed' || st === 'disconnected') {
                     try { setParticipantSpeakingState(uid, false); } catch(_) {}
-                    schedulePeerRecovery(uid, 1200);
+                    schedulePeerRecovery(uid, isPriorityPeerConnection(uid) ? 260 : 800, { forceOffer: true });
                 }
                 if (st === 'closed') {
                     try { setParticipantSpeakingState(uid, false); } catch(_) {}
@@ -7417,6 +7686,7 @@ function resetPeerConnection(remoteUserId, opts = {}) {
             groupCall.groupId = groupId;
             groupCall.transport = getPreferredCallTransport();
 
+            hideIncomingGroupCallBanner();
             showGroupOverlay();
             // Teacher can enter lesson topic/title
             try{
@@ -7464,6 +7734,7 @@ function resetPeerConnection(remoteUserId, opts = {}) {
             groupCall.callId = callId;
             groupCall.transport = getPreferredCallTransport();
 
+            hideIncomingGroupCallBanner();
             showGroupOverlay();
             document.getElementById('groupCallTitle').textContent = groupCall.callType === 'audio' ? 'Group Voice Call' : 'Group Video Call';
             try{
@@ -10727,6 +10998,7 @@ async function toggleMute() {
 
 
         function leaveOrEndGroupCall() {
+            try { closeCallMoreMenu(); } catch(_) {}
             if (!groupCall.active) {
                 __allowCallPageUnload = true;
                 cleanupGroupCallUI();
@@ -10738,6 +11010,13 @@ async function toggleMute() {
         }
 
         function cleanupGroupCallUI() {
+            groupCall.active = false;
+            groupCall.joining = false;
+            groupCall.incoming = null;
+            groupCall.overlayMinimized = false;
+            try { closeCallMoreMenu(); } catch(_) {}
+            try { hideGroupOverlay(); } catch(_) {}
+            clearActiveGroupCallSession();
             // Stop recording (will auto-upload onstop)
             try {
                 if (_isRecording && _recorder) {
@@ -10761,7 +11040,10 @@ async function toggleMute() {
             destroyLocalAudioPipeline();
             groupCall.active = false;
             groupCall.joining = false;
+            groupCall.incoming = null;
+            groupCall.groupId = null;
             groupCall.callId = null;
+            groupCall.callType = 'video';
             groupCall.starterId = null;
             groupCall.overlayMinimized = false;
             groupCall.muted = false;
@@ -10772,6 +11054,7 @@ async function toggleMute() {
             groupCall.lk = { room: null, connected: false };
             try { document.documentElement.classList.remove('schat-screen-share'); } catch(_) {}
             clearActiveGroupCallSession();
+            hideIncomingGroupCallBanner({ resetDismissed: true });
             stopStageHealthMonitor();
             try {
                 for (const t of groupCall.reconnectTimers.values()) clearTimeout(t);
@@ -10846,6 +11129,7 @@ async function toggleMute() {
                 const ov = document.getElementById('groupCallOverlay');
                 if (ov) ov.classList.add('hidden');
             } catch(_) {}
+            try { closeCallMoreMenu(); } catch(_) {}
             updateTeacherFullscreenButtonState();
             syncGlobalAssistantContext();
         }
@@ -10858,13 +11142,17 @@ async function toggleMute() {
                 if (String(data.groupId) !== String(groupId)) return;
                 if (groupCall.active) return;
 
-                groupCall.incoming = data;
+                groupCall.incoming = {
+                    ...data,
+                    participants: Array.isArray(data?.participants) ? data.participants.map((uid) => String(uid || '')).filter(Boolean) : [],
+                    participantInfos: Array.isArray(data?.participantInfos) ? data.participantInfos : []
+                };
                 groupCall.lessonSubject = String(data?.teacherSubject || groupCall.lessonSubject || '').trim();
                 if (AUTO_JOIN_CALL || AUTO_ACCEPT_INCOMING_GROUP_CALL) {
                     return joinGroupCall(data.groupId, data.callId, data.callType);
                 }
                 const subj = String(data?.teacherSubject || '').trim();
-                const meta = `${(data.title||'Live dars')} • ${data.callType.toUpperCase()} • started by ${data.from}${subj ? ` • ${subj}` : ''}`;
+                const meta = `${(data.title||'Live dars')} | ${data.callType.toUpperCase()}${subj ? ` | ${subj}` : ''}`;
                 showIncomingGroupBox(meta);
                 syncGlobalAssistantContext();
             });
@@ -10874,14 +11162,24 @@ async function toggleMute() {
                 if (String(data.groupId) !== String(groupId)) return;
                 if (groupCall.active) return;
 
-                groupCall.incoming = { groupId: data.groupId, callId: data.callId, callType: data.callType || 'video', from: data.startedBy, title: data.title, teacherSubject: data.teacherSubject || '' };
+                groupCall.incoming = {
+                    groupId: data.groupId,
+                    callId: data.callId,
+                    callType: data.callType || 'video',
+                    from: data.startedBy,
+                    fromName: data.startedByName || '',
+                    title: data.title,
+                    teacherSubject: data.teacherSubject || '',
+                    participants: Array.isArray(data?.participants) ? data.participants.map((uid) => String(uid || '')).filter(Boolean) : [],
+                    participantInfos: Array.isArray(data?.participantInfos) ? data.participantInfos : []
+                };
                 groupCall.lessonSubject = String(data?.teacherSubject || groupCall.lessonSubject || '').trim();
                 if (data?.labState && typeof data.labState === 'object') groupCall.labState = data.labState;
                 if (data.stage) { groupCall.stage = { ownerTeacherId: data.stage.ownerTeacherId || null, pinnedUserId: data.stage.pinnedUserId || null }; }
                 if (AUTO_JOIN_CALL || AUTO_ACCEPT_INCOMING_GROUP_CALL) {
                     return joinGroupCall(data.groupId, data.callId, data.callType || 'video');
                 }
-                showIncomingGroupBox(`ACTIVE: ${(data.title||'Live dars')} • ${String(groupCall.incoming.callType).toUpperCase()} • started by ${data.startedBy}${groupCall.lessonSubject ? ` • ${groupCall.lessonSubject}` : ''}`);
+                showIncomingGroupBox(`ACTIVE: ${(data.title||'Live dars')} | ${String(groupCall.incoming.callType).toUpperCase()}${groupCall.lessonSubject ? ` | ${groupCall.lessonSubject}` : ''}`);
                 syncGlobalAssistantContext();
             });
 
@@ -10889,6 +11187,8 @@ async function toggleMute() {
                 if (String(data.groupId) !== String(groupId)) return;
                 try { localStorage.removeItem('schat:pendingGroupCall'); } catch(_) {}
                 const meId = String(myUserId() || data?.selfUserId || '');
+                groupCall.incoming = null;
+                hideIncomingGroupCallBanner({ resetDismissed: true });
                 groupCall.active = true;
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
@@ -10934,18 +11234,13 @@ async function toggleMute() {
 
                 try { drainEarlySignalQueue(); } catch(_) {}
 
-                // Create offers to existing participants - PARALLEL for speed
                 const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
-                const offerPromises = participants.map(uid => {
-                    if ((!meId || shouldInitiateOffer(meId, uid)) && shouldConnectToPeer(uid)) {
-                        return sendOffer(uid).catch(() => {});
-                    }
-                    return Promise.resolve();
-                });
-                await Promise.all(offerPromises);
+                await connectToParticipantsPrioritized(participants, { paced: true });
+                primeEssentialPeerConnections({ startDelay: 60, delayMs: 180 });
                 await rebalancePeerTopology();
-                runNegotiationWatchdog(800);
-                runNegotiationWatchdog(2500);
+                runNegotiationWatchdog(320);
+                runNegotiationWatchdog(1100);
+                runNegotiationWatchdog(2200);
                 startAdaptiveBitrateMonitor();
                 startPersistentWatchdog();
             });
@@ -10954,6 +11249,8 @@ async function toggleMute() {
                 if (String(data.groupId) !== String(groupId)) return;
                 try { localStorage.removeItem('schat:pendingGroupCall'); } catch(_) {}
                 const meId = String(myUserId() || data?.selfUserId || '');
+                groupCall.incoming = null;
+                hideIncomingGroupCallBanner({ resetDismissed: true });
                 groupCall.active = true;
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
@@ -11000,24 +11297,28 @@ async function toggleMute() {
 
                 try { drainEarlySignalQueue(); } catch(_) {}
 
-                // Use deterministic offer ownership to avoid glare storms on join.
                 const participants = (data.participants || []).map((u) => String(u || '')).filter((u) => u && u !== meId);
-                const offerPromises = participants.map(uid => {
-                    if ((!meId || shouldInitiateOffer(meId, uid)) && shouldConnectToPeer(uid)) {
-                        return sendOffer(uid).catch(() => {});
-                    }
-                    return Promise.resolve();
-                });
-                await Promise.all(offerPromises);
+                await connectToParticipantsPrioritized(participants, { paced: true });
+                primeEssentialPeerConnections({ startDelay: 40, delayMs: 180 });
                 await rebalancePeerTopology();
-                runNegotiationWatchdog(800);
-                runNegotiationWatchdog(2500);
+                runNegotiationWatchdog(320);
+                runNegotiationWatchdog(1100);
+                runNegotiationWatchdog(2200);
                 startAdaptiveBitrateMonitor();
                 startPersistentWatchdog();
             });
 
             socket.on('groupCallUserJoined', async (data) => {
-                if (!groupCall.active) return;
+                if (!groupCall.active) {
+                    const sameIncomingGroup = String(data?.groupId || '') === String(groupCall.incoming?.groupId || groupId || '');
+                    const sameIncomingCall = String(data?.callId || '') === String(groupCall.incoming?.callId || '');
+                    if (groupCall.incoming && sameIncomingGroup && sameIncomingCall) {
+                        groupCall.incoming.participants = Array.isArray(data?.participants) ? data.participants.map((uid) => String(uid || '')).filter(Boolean) : (groupCall.incoming.participants || []);
+                        groupCall.incoming.participantInfos = Array.isArray(data?.participantInfos) ? data.participantInfos : (groupCall.incoming.participantInfos || []);
+                        renderIncomingGroupCallBanner(groupCall.incoming.metaText || '');
+                    }
+                    return;
+                }
                 if (String(data.groupId) !== String(groupCall.groupId)) return;
                 if (String(data.callId) !== String(groupCall.callId)) return;
                 if (Array.isArray(data.participantInfos)) setParticipantInfos(data.participantInfos);
@@ -11035,20 +11336,32 @@ async function toggleMute() {
                 const uid = String(data.userId);
                 const meId = String(myUserId() || '');
                 if (!uid || uid === meId) return;
+                const priorityPeer = isPriorityPeerConnection(uid);
 
                 resetPeerConnection(uid, { removeTile: true });
-                if ((!meId || shouldInitiateOffer(meId, uid)) && shouldConnectToPeer(uid)) {
+                if ((priorityPeer || !meId || shouldInitiateOffer(meId, uid)) && shouldConnectToPeer(uid)) {
                     try { await sendOffer(uid); } catch(_) {}
                 }
                 setTimeout(() => { try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {} }, 120);
                 setTimeout(() => { try { refreshLocalParticipantMediaState({ forceEmit: true }); } catch(_) {} }, 900);
-                schedulePeerRecovery(uid, 1400, { forceOffer: true });
+                if (priorityPeer) {
+                    setTimeout(() => { if (groupCall.active) sendOffer(uid).catch(() => {}); }, 140);
+                }
+                schedulePeerRecovery(uid, priorityPeer ? 220 : 800, { forceOffer: true, priority: priorityPeer });
                 rebalancePeerTopology().catch(() => {});
-                runNegotiationWatchdog(600);
+                runNegotiationWatchdog(priorityPeer ? 260 : 600);
             });
 
             socket.on('groupCallUserLeft', (data) => {
-                if (!groupCall.active) return;
+                if (!groupCall.active) {
+                    const sameIncomingGroup = String(data?.groupId || '') === String(groupCall.incoming?.groupId || groupId || '');
+                    const sameIncomingCall = String(data?.callId || '') === String(groupCall.incoming?.callId || '');
+                    if (groupCall.incoming && sameIncomingGroup && sameIncomingCall) {
+                        groupCall.incoming.participants = Array.isArray(data?.participants) ? data.participants.map((uid) => String(uid || '')).filter(Boolean) : (groupCall.incoming.participants || []).filter((uid) => String(uid || '') !== String(data?.userId || ''));
+                        renderIncomingGroupCallBanner(groupCall.incoming.metaText || '');
+                    }
+                    return;
+                }
                 if (String(data.groupId) !== String(groupCall.groupId)) return;
                 if (String(data.callId) !== String(groupCall.callId)) return;
 
@@ -11170,6 +11483,8 @@ async function toggleMute() {
                 const sameGroup = String(data?.groupId || '') === String(groupCall.groupId || groupId || '');
                 const sameCall = !groupCall.callId || String(data?.callId || '') === String(groupCall.callId || '');
                 if (!sameGroup || !sameCall) return;
+                groupCall.incoming = null;
+                hideIncomingGroupCallBanner({ resetDismissed: true });
                 cleanupGroupCallUI();
                 notify('Group call ended: ' + (data.reason || 'ended'), 'info');
             });

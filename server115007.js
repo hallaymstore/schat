@@ -70,6 +70,7 @@ app.use(express.json());
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const GLOBAL_THEME_STYLESHEET = '/ui-glass-theme.css';
+const THEMED_HTML_CACHE = new Map();
 
 function injectGlobalHtmlTheme(html) {
   let output = String(html || '');
@@ -92,7 +93,7 @@ function injectGlobalHtmlTheme(html) {
 function setStaticCacheHeaders(res, filePath) {
   const ext = String(path.extname(filePath || '') || '').toLowerCase();
   if (ext === '.html' || ext === '.htm') {
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
     return;
   }
 
@@ -102,6 +103,12 @@ function setStaticCacheHeaders(res, filePath) {
   if (longCacheExts.has(ext)) {
     res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
   }
+}
+
+function setPrivateApiCache(res, maxAgeSec = 20, staleWhileRevalidateSec = 40) {
+  const maxAge = Math.max(0, Number(maxAgeSec || 0));
+  const stale = Math.max(maxAge, Number(staleWhileRevalidateSec || 0));
+  res.setHeader('Cache-Control', `private, max-age=${maxAge}, stale-while-revalidate=${stale}`);
 }
 
 function parseTurnUrlMeta(url, index = 0) {
@@ -190,11 +197,30 @@ function prioritizeTurnUrls(urls, opts = {}) {
   return unique.slice(0, maxTotal);
 }
 
-async function sendThemedHtml(res, filePath) {
-  const html = await fs.promises.readFile(filePath, 'utf8');
+async function sendThemedHtml(res, filePath, opts = {}) {
+  const stat = opts.stat || await fs.promises.stat(filePath);
+  const cacheKey = String(filePath || '');
+  const cached = THEMED_HTML_CACHE.get(cacheKey);
+  let html = cached?.html || '';
+  if (!cached || Number(cached.mtimeMs || 0) !== Number(stat.mtimeMs || 0)) {
+    const rawHtml = await fs.promises.readFile(filePath, 'utf8');
+    html = injectGlobalHtmlTheme(rawHtml);
+    THEMED_HTML_CACHE.set(cacheKey, {
+      mtimeMs: Number(stat.mtimeMs || 0),
+      html
+    });
+  }
   setStaticCacheHeaders(res, filePath);
+  if (stat?.mtime) {
+    const lastModified = stat.mtime.toUTCString();
+    res.setHeader('Last-Modified', lastModified);
+    const ifModifiedSince = String(res.req?.headers?.['if-modified-since'] || '').trim();
+    if (ifModifiedSince && ifModifiedSince === lastModified) {
+      return res.status(304).end();
+    }
+  }
   res.type('html');
-  return res.send(injectGlobalHtmlTheme(html));
+  return res.send(html);
 }
 
 function resolveSafePublicPath(requestPath) {
@@ -398,8 +424,9 @@ app.use(async (req, res, next) => {
     }
     const filePath = resolveSafePublicPath(pathName);
     if (!filePath) return next();
-    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return next();
-    return sendThemedHtml(res, filePath);
+    const stat = await fs.promises.stat(filePath).catch(() => null);
+    if (!stat || !stat.isFile()) return next();
+    return sendThemedHtml(res, filePath, { stat });
   } catch (e) {
     console.error('public html theme middleware error:', e);
     return next();
@@ -2204,6 +2231,9 @@ const MessageSchema = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now }
 });
+MessageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
+MessageSchema.index({ receiverId: 1, senderId: 1, isRead: 1, createdAt: -1 });
+MessageSchema.index({ senderId: 1, receiverId: 1, mediaUrl: 1, createdAt: -1 });
 const Message = mongoose.model('Message', MessageSchema);
 
 // Call History Model
@@ -2234,6 +2264,8 @@ const GroupSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   isPublic: { type: Boolean, default: true }
 });
+GroupSchema.index({ members: 1, university: 1, createdAt: -1 });
+GroupSchema.index({ creatorId: 1, university: 1, createdAt: -1 });
 const Group = mongoose.model('Group', GroupSchema);
 
 // Group Message Model
@@ -2542,6 +2574,141 @@ async function getUsersBrief(userIds) {
   });
 }
 
+async function buildGroupListPayload(groups, opts = {}) {
+  const previewLimit = Math.max(1, Number(opts.previewLimit || 6));
+  const list = Array.isArray(groups)
+    ? groups.map((group) => {
+        const safe = group?.toObject ? group.toObject() : Object.assign({}, group || {});
+        const members = Array.isArray(safe.members) ? safe.members.map((member) => String(member || '')).filter(Boolean) : [];
+        return {
+          ...safe,
+          creatorId: safe.creatorId ? String(safe.creatorId?._id || safe.creatorId) : '',
+          members,
+          memberCount: Number(members.length || safe.memberCount || 0)
+        };
+      })
+    : [];
+
+  const previewUserIds = new Set();
+  list.forEach((group) => {
+    if (group.creatorId) previewUserIds.add(String(group.creatorId));
+    (group.members || []).slice(0, previewLimit).forEach((memberId) => previewUserIds.add(String(memberId)));
+  });
+
+  const users = await User.find({ _id: { $in: Array.from(previewUserIds) } })
+    .select('username nickname avatar')
+    .lean()
+    .catch(() => []);
+  const userMap = new Map((users || []).map((user) => [String(user._id || ''), user]));
+
+  return list.map((group) => {
+    const creator = userMap.get(String(group.creatorId || ''));
+    const previewMembers = (group.members || []).slice(0, previewLimit).map((memberId) => {
+      const user = userMap.get(String(memberId || '')) || {};
+      return {
+        _id: String(memberId || ''),
+        username: String(user.username || ''),
+        nickname: String(user.nickname || user.username || 'Member'),
+        avatar: String(user.avatar || 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png')
+      };
+    });
+    return {
+      ...group,
+      creatorId: creator ? {
+        _id: String(creator._id || group.creatorId || ''),
+        username: String(creator.username || ''),
+        nickname: String(creator.nickname || creator.username || 'Creator'),
+        avatar: String(creator.avatar || 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png')
+      } : null,
+      members: previewMembers
+    };
+  });
+}
+
+async function enrichChannelCardList(channels, viewerId) {
+  const list = Array.isArray(channels)
+    ? channels.map((channel) => {
+        const safe = channel?.toObject ? channel.toObject() : Object.assign({}, channel || {});
+        const subscribers = Array.isArray(safe.subscribers) ? safe.subscribers.map((subId) => String(subId || '')).filter(Boolean) : [];
+        return {
+          ...safe,
+          creatorId: safe.creatorId ? String(safe.creatorId?._id || safe.creatorId) : '',
+          subscribers,
+          subscriberCount: Number(safe.subscriberCount || subscribers.length || 0)
+        };
+      })
+    : [];
+
+  const channelIds = list.map((channel) => channel?._id).filter(Boolean);
+  const creatorIds = Array.from(new Set(list.map((channel) => String(channel.creatorId || '')).filter(Boolean)));
+
+  const [creators, postMeta] = await Promise.all([
+    creatorIds.length
+      ? User.find({ _id: { $in: creatorIds } }).select('username nickname avatar').lean().catch(() => [])
+      : Promise.resolve([]),
+    channelIds.length
+      ? ChannelPost.aggregate([
+          { $match: { channelId: { $in: channelIds } } },
+          { $sort: { createdAt: -1 } },
+          {
+            $group: {
+              _id: '$channelId',
+              postCount: { $sum: 1 },
+              recentPosts: { $push: { content: '$content', createdAt: '$createdAt' } }
+            }
+          },
+          { $project: { postCount: 1, recentPosts: { $slice: ['$recentPosts', 2] } } }
+        ]).catch(() => [])
+      : Promise.resolve([])
+  ]);
+
+  const creatorMap = new Map((creators || []).map((user) => [String(user._id || ''), user]));
+  const postMetaMap = new Map((postMeta || []).map((item) => [String(item._id || ''), item]));
+
+  return list.map((channel) => {
+    const creator = creatorMap.get(String(channel.creatorId || ''));
+    const meta = postMetaMap.get(String(channel._id || '')) || {};
+    return {
+      ...channel,
+      creatorId: creator ? {
+        _id: String(creator._id || channel.creatorId || ''),
+        username: String(creator.username || ''),
+        nickname: String(creator.nickname || creator.username || 'Creator'),
+        avatar: String(creator.avatar || 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png')
+      } : null,
+      isSubscribed: (channel.subscribers || []).includes(String(viewerId || '')),
+      subscriberCount: Number(channel.subscriberCount || 0),
+      postCount: Number(meta.postCount || 0),
+      recentPosts: Array.isArray(meta.recentPosts) ? meta.recentPosts : []
+    };
+  });
+}
+
+async function buildChannelDetailPayload(channel, viewerId) {
+  if (!channel) return null;
+  const safe = channel?.toObject ? channel.toObject() : Object.assign({}, channel || {});
+  const subscribers = Array.isArray(safe.subscribers) ? safe.subscribers.map((subId) => String(subId || '')).filter(Boolean) : [];
+  const [stats] = await ChannelPost.aggregate([
+    { $match: { channelId: safe._id } },
+    {
+      $group: {
+        _id: '$channelId',
+        postCount: { $sum: 1 },
+        totalViews: { $sum: '$viewsCount' }
+      }
+    }
+  ]).catch(() => []);
+
+  return {
+    ...safe,
+    subscribers: undefined,
+    isSubscribed: subscribers.includes(String(viewerId || '')),
+    subscriberCount: Number(subscribers.length || 0),
+    postCount: Number(stats?.postCount || 0),
+    totalViews: Number(stats?.totalViews || 0)
+  };
+}
+
 async function isGroupMember(groupId, userId) {
   const g = await Group.findById(groupId).select('isPublic members').lean();
   if (!g) return false;
@@ -2564,6 +2731,9 @@ const ChannelSchema = new mongoose.Schema({
   inviteLink: { type: String },
   createdAt: { type: Date, default: Date.now }
 });
+ChannelSchema.index({ university: 1, category: 1, createdAt: -1 });
+ChannelSchema.index({ university: 1, createdAt: -1 });
+ChannelSchema.index({ subscribers: 1, createdAt: -1 });
 const Channel = mongoose.model('Channel', ChannelSchema);
 
 // Channel Post Model
@@ -2578,6 +2748,8 @@ const ChannelPostSchema = new mongoose.Schema({
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdAt: { type: Date, default: Date.now }
 });
+ChannelPostSchema.index({ channelId: 1, createdAt: -1 });
+ChannelPostSchema.index({ channelId: 1, viewsCount: -1, createdAt: -1 });
 const ChannelPost = mongoose.model('ChannelPost', ChannelPostSchema);
 
 // Channel Post Comment Model
@@ -9355,6 +9527,8 @@ io.on('connection', (socket) => {
       const call = activeGroupCalls.get(String(groupId));
       if (call) {
         getCallLabState(call);
+        const participantInfos = await getUsersBrief(Array.from(call.participants || []));
+        const starterInfo = (participantInfos || []).find((item) => String(item?.userId || item?._id || '') === String(call.startedBy || '')) || null;
         socket.emit('groupCallActive', {
           groupId: String(groupId),
           callId: call.callId,
@@ -9363,9 +9537,10 @@ io.on('connection', (socket) => {
           teacherSubject: cleanText(call.lessonSubject, 80) || '',
           labState: getCallLabState(call),
           startedBy: call.startedBy,
+          startedByName: String(starterInfo?.fullName || starterInfo?.nickname || starterInfo?.username || ''),
           startedAt: call.startedAt,
-          participants: Array.from(call.participants || [])
-              ,
+          participants: Array.from(call.participants || []),
+          participantInfos,
           stage: stagePayload(call)
         });
       }
@@ -9580,7 +9755,9 @@ socket.on('lessonTransferControl', async (data) => {
           title: call.title,
           teacherSubject: call.lessonSubject || '',
           from: socket.userId,
-          startedAt: call.startedAt
+          startedAt: call.startedAt,
+          participants: Array.from(call.participants || []),
+          stage: stagePayload(call)
         });
 
         // Global site popup support:
@@ -12329,29 +12506,20 @@ app.post('/api/security/change-password', authenticateToken, async (req, res) =>
 // Get Current User
 app.get('/api/me', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select('-password');
-    if (!user) {
+    const safeUser = await User.findById(req.userId).select('-password').lean();
+    if (!safeUser) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
-    // Ensure robot + inventory + companions are ready for profile UI
-    try {
-      ensureInventoryArrays(user);
-      ensureCompanions(user);
-      ensureRobots(user);
-      ensureUserSettingsState(user);
-      syncPremiumDerivedState(user);
-      // Save without full validation (legacy users may miss required fields like university)
-      await user.save({ validateBeforeSave: false });
-    } catch (e) {
-      console.warn('ensureRobots/companions warning:', e?.message || e);
-    }
 
-    const activeRobot = (user.robots || []).find(r => r._id && String(r._id) === String(user.activeRobotId)) || (user.robots || [])[0] || null;
-    const activeCompanion = (user.companions || []).find(c => c._id && String(c._id) === String(user.activeCompanionId)) || (user.companions || []).find(c => c.equipped) || (user.companions || [])[0] || null;
+    ensureInventoryArrays(safeUser);
+    ensureCompanions(safeUser);
+    ensureRobots(safeUser);
+    ensureUserSettingsState(safeUser);
+    syncPremiumDerivedState(safeUser);
 
-    const safeUser = user.toObject ? user.toObject() : user;
-    delete safeUser.password;
+    const activeRobot = (safeUser.robots || []).find(r => r._id && String(r._id) === String(safeUser.activeRobotId)) || (safeUser.robots || [])[0] || null;
+    const activeCompanion = (safeUser.companions || []).find(c => c._id && String(c._id) === String(safeUser.activeCompanionId)) || (safeUser.companions || []).find(c => c.equipped) || (safeUser.companions || [])[0] || null;
+
     // Backward compatibility: derive/override role
     safeUser.role = safeUser.isAdmin ? 'admin' : (safeUser.role || 'student');
     // UI compatibility fields
@@ -12371,6 +12539,7 @@ app.get('/api/me', authenticateToken, async (req, res) => {
     if (safeUser.coins === undefined || safeUser.coins === null) {
       safeUser.coins = (safeUser.coin !== undefined && safeUser.coin !== null) ? safeUser.coin : (safeUser.coinBalance ?? 0);
     }
+    setPrivateApiCache(res, 30, 90);
     res.json({ ...safeUser, success: true, user: safeUser });
   } catch (error) {
     console.error('Get user error:', error);
@@ -13187,49 +13356,52 @@ function decoratePrivateMessageUsers(message) {
 app.get('/api/messages/:userId', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.params;
-    const { page = 1, limit = 50 } = req.query;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
     const skip = (page - 1) * limit;
-    
-    const messages = await Message.find({
+    const dialogQuery = {
       $or: [
         { senderId: req.userId, receiverId: userId },
         { senderId: userId, receiverId: req.userId }
       ]
-    })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(parseInt(limit))
-    .populate('senderId', 'fullName username nickname avatar verified premium')
-    .populate('receiverId', 'fullName username nickname avatar verified premium');
-    
-    await Message.updateMany(
-      { 
-        senderId: userId, 
-        receiverId: req.userId, 
-        isRead: false 
-      },
-      { 
-        isRead: true,
-        isDelivered: true
-      }
-    );
-    
-    await Message.updateMany(
-      { 
-        senderId: req.userId, 
-        receiverId: userId, 
-        isDelivered: false 
-      },
-      { 
-        isDelivered: true 
-      }
-    );
+    };
+
+    const [messages] = await Promise.all([
+      Message.find(dialogQuery)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('senderId', 'fullName username nickname avatar verified premium')
+        .populate('receiverId', 'fullName username nickname avatar verified premium')
+        .lean(),
+      Message.updateMany(
+        { 
+          senderId: userId, 
+          receiverId: req.userId, 
+          isRead: false 
+        },
+        { 
+          isRead: true,
+          isDelivered: true
+        }
+      ),
+      Message.updateMany(
+        { 
+          senderId: req.userId, 
+          receiverId: userId, 
+          isDelivered: false 
+        },
+        { 
+          isDelivered: true 
+        }
+      )
+    ]);
     
     res.json({ 
       success: true, 
       messages: messages.reverse().map((item) => decoratePrivateMessageUsers(item)),
-      page: parseInt(page),
-      limit: parseInt(limit)
+      page,
+      limit
     });
   } catch (error) {
     console.error('Get messages error:', error);
@@ -13782,10 +13954,12 @@ app.get('/api/groups', authenticateToken, async (req, res) => {
     if (me?.university) query.university = me.university;
 
     const groups = await Group.find(query)
-      .populate('creatorId', 'username nickname')
-      .populate('members', 'username nickname avatar');
-    
-    res.json({ success: true, groups });
+      .select('name username description university faculty studyType studyGroup previewImage creatorId members avatar createdAt isPublic')
+      .sort({ createdAt: -1 })
+      .lean();
+    const payload = await buildGroupListPayload(groups, { previewLimit: 6 });
+    setPrivateApiCache(res, 20, 60);
+    res.json({ success: true, groups: payload });
   } catch (error) {
     console.error('Get groups error:', error);
     res.status(500).json({ error: 'Failed to get groups' });
@@ -14536,15 +14710,17 @@ app.get('/api/groups/my', authenticateToken, async (req, res) => {
     if (me?.university) query.university = me.university;
 
     const groups = await Group.find(query)
-      .populate('members', 'username nickname avatar')
-      .populate('creatorId', 'username nickname');
-    
+      .select('name username description university faculty studyType studyGroup previewImage creatorId members avatar createdAt isPublic')
+      .sort({ createdAt: -1 })
+      .lean();
+    const payload = await buildGroupListPayload(groups, { previewLimit: 6 });
+    setPrivateApiCache(res, 20, 60);
     res.json({ 
       success: true, 
-      groups,
+      groups: payload,
       stats: {
-        myGroups: groups.length,
-        totalMembers: groups.reduce((sum, group) => sum + group.members.length, 0)
+        myGroups: payload.length,
+        totalMembers: payload.reduce((sum, group) => sum + Number(group.memberCount || 0), 0)
       }
     });
   } catch (error) {
@@ -14566,16 +14742,18 @@ app.get('/api/groups/joined', authenticateToken, async (req, res) => {
     const groups = await Group.find({ 
       ...query
     })
-    .populate('members', 'username nickname avatar')
-    .populate('creatorId', 'username nickname');
+    .select('name username description university faculty studyType studyGroup previewImage creatorId members avatar createdAt isPublic')
+    .sort({ createdAt: -1 })
+    .lean();
+    const payload = await buildGroupListPayload(groups, { previewLimit: 6 });
 
     const totalGroups = await Group.countDocuments(me?.university ? { university: me.university } : {});
-    
+    setPrivateApiCache(res, 20, 60);
     res.json({ 
       success: true, 
-      groups,
+      groups: payload,
       stats: {
-        joinedGroups: groups.length,
+        joinedGroups: payload.length,
         totalGroups
       }
     });
@@ -14662,20 +14840,25 @@ app.get('/api/groups/all', authenticateToken, async (req, res) => {
     const query = me?.university ? { university: me.university } : {};
 
     const groups = await Group.find(query)
-      .populate('members', 'username nickname avatar')
-      .populate('creatorId', 'username nickname')
-      .limit(50);
+      .select('name username description university faculty studyType studyGroup previewImage creatorId members avatar createdAt isPublic')
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
 
-    const totalGroups = await Group.countDocuments(query);
-    const totalMembers = await Group.aggregate([
-      ...(me?.university ? [{ $match: { university: me.university } }] : []),
-      { $project: { memberCount: { $size: "$members" } } },
-      { $group: { _id: null, total: { $sum: "$memberCount" } } }
+    const [payload, totalGroups, totalMembers] = await Promise.all([
+      buildGroupListPayload(groups, { previewLimit: 6 }),
+      Group.countDocuments(query),
+      Group.aggregate([
+        ...(me?.university ? [{ $match: { university: me.university } }] : []),
+        { $project: { memberCount: { $size: "$members" } } },
+        { $group: { _id: null, total: { $sum: "$memberCount" } } }
+      ])
     ]);
     
+    setPrivateApiCache(res, 20, 60);
     res.json({ 
       success: true, 
-      groups,
+      groups: payload,
       stats: {
         totalGroups,
         totalMembers: totalMembers[0]?.total || 0
@@ -14892,36 +15075,25 @@ app.get('/api/channels/by-username/:username', authenticateToken, async (req, re
   try {
     const uname = String(req.params.username || '').trim();
     if (!uname) return res.status(400).json({ error: 'Username is required' });
-    const me = await User.findById(req.userId).select('university').lean();
-
-    const channel = await Channel.findOne({ username: new RegExp('^' + escapeRegex(uname) + '$', 'i') })
-      .populate('creatorId', 'username nickname avatar')
-      .populate('moderators', 'username nickname avatar')
-      .populate('subscribers', 'username nickname avatar');
+    const [me, channel] = await Promise.all([
+      User.findById(req.userId).select('university').lean(),
+      Channel.findOne({ username: new RegExp('^' + escapeRegex(uname) + '$', 'i') })
+        .select('name username description creatorId moderators subscribers avatar category university isPublic inviteLink createdAt coverBanner')
+        .populate('creatorId', 'username nickname avatar')
+        .populate('moderators', 'username nickname avatar')
+        .lean()
+    ]);
 
     if (!channel) return res.status(404).json({ error: 'Channel not found' });
     if (channel.university && me?.university && String(channel.university) !== String(me.university)) {
       return res.status(403).json({ error: 'This channel belongs to another university' });
     }
+    const payload = await buildChannelDetailPayload(channel, req.userId);
 
-    const isSubscribed = channel.subscribers.some(sub => sub._id.equals(req.userId));
-
-    const postCount = await ChannelPost.countDocuments({ channelId: channel._id });
-
-    const totalViews = await ChannelPost.aggregate([
-      { $match: { channelId: channel._id } },
-      { $group: { _id: null, total: { $sum: "$viewsCount" } } }
-    ]);
-
+    setPrivateApiCache(res, 20, 60);
     res.json({
       success: true,
-      channel: {
-        ...channel.toObject(),
-        isSubscribed,
-        postCount,
-        totalViews: totalViews[0]?.total || 0,
-        subscriberCount: channel.subscribers.length
-      }
+      channel: payload
     });
   } catch (error) {
     console.error('Get channel by username error:', error);
@@ -14931,11 +15103,14 @@ app.get('/api/channels/by-username/:username', authenticateToken, async (req, re
 // Get channel by ID
 app.get('/api/channels/:channelId([0-9a-fA-F]{24})', authenticateToken, async (req, res) => {
   try {
-    const me = await User.findById(req.userId).select('university').lean();
-    const channel = await Channel.findById(req.params.channelId)
-      .populate('creatorId', 'username nickname avatar')
-      .populate('moderators', 'username nickname avatar')
-      .populate('subscribers', 'username nickname avatar');
+    const [me, channel] = await Promise.all([
+      User.findById(req.userId).select('university').lean(),
+      Channel.findById(req.params.channelId)
+        .select('name username description creatorId moderators subscribers avatar category university isPublic inviteLink createdAt coverBanner')
+        .populate('creatorId', 'username nickname avatar')
+        .populate('moderators', 'username nickname avatar')
+        .lean()
+    ]);
     
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found' });
@@ -14943,27 +15118,12 @@ app.get('/api/channels/:channelId([0-9a-fA-F]{24})', authenticateToken, async (r
     if (channel.university && me?.university && String(channel.university) !== String(me.university)) {
       return res.status(403).json({ error: 'This channel belongs to another university' });
     }
+    const payload = await buildChannelDetailPayload(channel, req.userId);
     
-    const isSubscribed = channel.subscribers.some(sub => 
-      sub._id.equals(req.userId)
-    );
-    
-    const postCount = await ChannelPost.countDocuments({ channelId: channel._id });
-    
-    const totalViews = await ChannelPost.aggregate([
-      { $match: { channelId: channel._id } },
-      { $group: { _id: null, total: { $sum: "$viewsCount" } } }
-    ]);
-    
+    setPrivateApiCache(res, 20, 60);
     res.json({
       success: true,
-      channel: {
-        ...channel.toObject(),
-        isSubscribed,
-        postCount,
-        totalViews: totalViews[0]?.total || 0,
-        subscriberCount: channel.subscribers.length
-      }
+      channel: payload
     });
   } catch (error) {
     console.error('Get channel error:', error);
@@ -14975,8 +15135,10 @@ app.get('/api/channels/:channelId([0-9a-fA-F]{24})', authenticateToken, async (r
 app.get('/api/channels/:channelId([0-9a-fA-F]{24})/posts', authenticateToken, async (req, res) => {
   try {
     const { channelId } = req.params;
-    const me = await User.findById(req.userId).select('university').lean();
-    const channel = await Channel.findById(channelId).select('university').lean();
+    const [me, channel] = await Promise.all([
+      User.findById(req.userId).select('university').lean(),
+      Channel.findById(channelId).select('university').lean()
+    ]);
     if (!channel) return res.status(404).json({ error: 'Channel not found' });
     if (channel.university && me?.university && String(channel.university) !== String(me.university)) {
       return res.status(403).json({ error: 'This channel belongs to another university' });
@@ -14984,15 +15146,21 @@ app.get('/api/channels/:channelId([0-9a-fA-F]{24})/posts', authenticateToken, as
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-    
+    const sortKey = String(req.query.sort || 'new').trim().toLowerCase();
+    const sort = sortKey === 'popular'
+      ? { 'likes.0': -1, createdAt: -1 }
+      : (sortKey === 'views' ? { viewsCount: -1, createdAt: -1 } : { createdAt: -1 });
+
     const posts = await ChannelPost.find({ channelId })
-      .sort({ createdAt: -1 })
+      .select('title channelId content mediaUrl mediaType type viewsCount likes createdAt')
+      .sort(sort)
       .skip(skip)
       .limit(limit)
-      .populate('channelId', 'name username');
+      .populate('channelId', 'name username')
+      .lean();
     
     const totalPosts = await ChannelPost.countDocuments({ channelId });
-    
+    setPrivateApiCache(res, 15, 45);
     res.json({
       success: true,
       posts,
@@ -15142,40 +15310,38 @@ app.get('/api/channels', authenticateToken, async (req, res) => {
       ];
     }
     
-    let sort = { createdAt: -1 };
-    if (req.query.sort === 'popular') {
-      sort = { subscribers: -1 };
-    }
+    const sortKey = String(req.query.sort || '').trim().toLowerCase();
+    const sort = (sortKey === 'popular' || sortKey === 'subscribers')
+      ? { subscriberCount: -1, createdAt: -1 }
+      : { createdAt: -1 };
+
+    const channels = await Channel.aggregate([
+      { $match: query },
+      { $addFields: { subscriberCount: { $size: { $ifNull: ['$subscribers', []] } } } },
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $project: {
+          name: 1,
+          username: 1,
+          description: 1,
+          creatorId: 1,
+          subscribers: 1,
+          avatar: 1,
+          category: 1,
+          university: 1,
+          isPublic: 1,
+          createdAt: 1,
+          subscriberCount: 1
+        }
+      }
+    ]);
     
-    const channels = await Channel.find(query)
-      .populate('creatorId', 'username nickname avatar')
-      .sort(sort)
-      .skip(skip)
-      .limit(limit);
-    
-    const channelsWithSubscription = await Promise.all(
-      channels.map(async (channel) => {
-        const isSubscribed = channel.subscribers.some(subId => 
-          subId.equals(req.userId)
-        );
-        
-        const recentPosts = await ChannelPost.find({ channelId: channel._id })
-          .sort({ createdAt: -1 })
-          .limit(2)
-          .select('content');
-        
-        return {
-          ...channel.toObject(),
-          isSubscribed,
-          subscriberCount: channel.subscribers.length,
-          postCount: await ChannelPost.countDocuments({ channelId: channel._id }),
-          recentPosts
-        };
-      })
-    );
+    const channelsWithSubscription = await enrichChannelCardList(channels, req.userId);
     
     const totalChannels = await Channel.countDocuments(query);
-    
+    setPrivateApiCache(res, 20, 60);
     res.json({
       success: true,
       channels: channelsWithSubscription,
@@ -15194,26 +15360,23 @@ app.get('/api/channels/stats', authenticateToken, async (req, res) => {
     const me = await User.findById(req.userId).select('university').lean();
     const scope = me?.university ? { university: me.university } : {};
 
-    const totalChannels = await Channel.countDocuments(scope);
+    const [totalChannels, subscriberAgg, myChannels, subscribedChannels] = await Promise.all([
+      Channel.countDocuments(scope),
+      Channel.aggregate([
+        { $match: scope },
+        { $project: { subscriberCount: { $size: { $ifNull: ['$subscribers', []] } } } },
+        { $group: { _id: null, totalSubscribers: { $sum: '$subscriberCount' } } }
+      ]).catch(() => []),
+      Channel.countDocuments({ creatorId: req.userId, ...scope }),
+      Channel.countDocuments({ subscribers: req.userId, ...scope })
+    ]);
 
-    const channels = await Channel.find(scope);
-    let totalSubscribers = 0;
-    channels.forEach(channel => {
-      totalSubscribers += channel.subscribers.length;
-    });
-    
-    const myChannels = await Channel.countDocuments({ creatorId: req.userId, ...scope });
-    
-    const subscribedChannels = await Channel.countDocuments({ 
-      subscribers: req.userId,
-      ...scope
-    });
-    
+    setPrivateApiCache(res, 20, 60);
     res.json({
       success: true,
       stats: {
         totalChannels,
-        totalSubscribers,
+        totalSubscribers: Number(subscriberAgg?.[0]?.totalSubscribers || 0),
         myChannels,
         subscribedChannels
       }
@@ -15250,6 +15413,7 @@ app.get('/api/channels/featured', authenticateToken, async (req, res) => {
       { $unwind: '$creatorId' }
     ]);
     
+    setPrivateApiCache(res, 30, 90);
     res.json({
       success: true,
       channels
