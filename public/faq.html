@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FAQ - HALLAYM edu</title>
+  <meta name="description" content="HALLAYM edu bo'yicha ko'p so'raladigan savollar va tezkor javoblar." />
+
+  <script>
+    tailwind = {
+      config: {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: { inter: ['Inter', 'ui-sans-serif', 'system-ui'] },
+            boxShadow: { glass: '0 20px 60px rgba(0,0,0,.18)' }
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+
+<body id="top" class="min-h-screen text-slate-900 dark:text-slate-100">
+  <div class="bg-orbs"></div>
+  <div class="bg-grid"></div>
+
+  <header class="sticky top-0 z-50 official-topbar" data-official-topbar>
+    <div class="mx-auto max-w-6xl px-4 py-3">
+      <div class="glass site-header-shell rounded-3xl px-4 py-3 flex items-center justify-between gap-3" data-nav-shell>
+        <a href="/index.html" class="site-brand-block">
+          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shadow-glass overflow-hidden"
+            style="background: rgba(15,143,131,.12); border: 1px solid rgba(15,143,131,.16);">
+            <svg viewBox="0 0 120 120" class="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px]" aria-hidden="true">
+              <defs>
+                <linearGradient id="gGoldFaq" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="rgba(245,158,11,1)"/>
+                  <stop offset="0.5" stop-color="rgba(250,204,21,1)"/>
+                  <stop offset="1" stop-color="rgba(245,158,11,1)"/>
+                </linearGradient>
+                <linearGradient id="gIceFaq" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="rgba(125,211,252,1)"/>
+                  <stop offset="0.45" stop-color="rgba(34,211,238,1)"/>
+                  <stop offset="1" stop-color="rgba(167,243,208,1)"/>
+                </linearGradient>
+              </defs>
+              <circle cx="60" cy="60" r="54" fill="none" stroke="url(#gGoldFaq)" stroke-width="6" opacity="0.92"/>
+              <ellipse cx="60" cy="64" rx="42" ry="24" fill="rgba(2,6,23,.88)" stroke="url(#gGoldFaq)" stroke-width="4"/>
+              <path d="M20 44 L26 44 L28 38 L30 44 L36 44 L31 47 L33 53 L28 49 L23 53 L25 47 Z" fill="rgba(250,204,21,.95)"/>
+              <text x="60" y="70" text-anchor="middle" font-size="22" font-family="Inter, ui-sans-serif" font-weight="800" fill="url(#gIceFaq)" style="letter-spacing:.5px">hallaym</text>
+            </svg>
+          </div>
+          <div class="site-brand-meta">
+            <div class="site-brand-eyebrow">Savol va javoblar</div>
+            <div class="site-brand-name">HALLAYM edu FAQ</div>
+            <div class="site-brand-sub">Public va demo oqimi bo'yicha tezkor javoblar</div>
+          </div>
+        </a>
+
+        <div class="site-header-actions">
+          <button id="mobileMenuBtn" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring site-utility-btn site-menu-btn" aria-label="Menyu" aria-expanded="false" aria-controls="mobileMenu">
+            <i class="fa-solid fa-bars"></i>
+            <span class="hidden sm:inline">Menyu</span>
+          </button>
+          <button id="themeToggle" class="glass rounded-xl px-3 py-2 text-sm font-extrabold muted btn-ghost glow-ring site-utility-btn" title="Tungi/Kunduzgi">
+            <i id="themeIcon" class="fa-solid fa-moon"></i>
+            <span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
+          </button>
+          <a href="/contact.html" class="btn-primary rounded-xl px-4 py-2 text-sm font-extrabold text-white glow-ring site-primary-btn">Aloqa</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8 space-y-6">
+    <section class="glass official-page-hero g-border">
+      <div class="grid gap-6 lg:grid-cols-[1.15fr_.85fr] lg:items-center">
+        <div>
+          <div class="official-kicker"><i class="fa-solid fa-circle-question"></i> FAQ markazi</div>
+          <h1 class="mt-4 text-3xl sm:text-5xl font-black tracking-tight max-w-3xl">Platforma, navigatsiya va public oqim bo'yicha eng ko'p beriladigan savollar.</h1>
+          <p class="mt-4 muted text-base sm:text-lg max-w-2xl leading-relaxed">
+            Landing, login, register va yangi qo'shilgan rasmiy sahifalar haqidagi asosiy savollar shu yerda yig'ilgan.
+            Agar bu yerdan javob topilmasa, aloqa sahifasi orqali demo yoki support yo'nalishiga o'tishingiz mumkin.
+          </p>
+        </div>
+        <div class="grid gap-3">
+          <div class="official-metric-card">
+            <small class="text-xs font-extrabold uppercase tracking-[0.18em]">Yangi qo'shildi</small>
+            <strong class="mt-2">About, FAQ, Guide, Contact</strong>
+            <span class="mt-2 text-sm">Public qatlam uchun to'rtta alohida sahifa va hamburger menyu xaritasi.</span>
+          </div>
+          <div class="official-metric-card">
+            <small class="text-xs font-extrabold uppercase tracking-[0.18em]">Topbar</small>
+            <strong class="mt-2">Sticky va ixcham</strong>
+            <span class="mt-2 text-sm">Navbar scroll paytida zichlashadi va ko'zni chalg'itmaydi.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
+      <div class="grid gap-4">
+        <details class="glass rounded-3xl p-5 g-border" open>
+          <summary class="cursor-pointer font-extrabold text-lg">Nega endi hamburger menyu qo'shildi?</summary>
+          <div class="mt-3 muted">Navbar oldin juda enli edi. Hozir asosiy bo'limlar qisqartirildi, qolgan sahifalar esa yagona drawer ichiga jamlandi. Bu rasmiy saytga o'xshash tartibli navigatsiya beradi.</div>
+        </details>
+        <details class="glass rounded-3xl p-5 g-border">
+          <summary class="cursor-pointer font-extrabold text-lg">About va FAQ alohida sahifa bo'lib nima beradi?</summary>
+          <div class="mt-3 muted">Taqdimot paytida foydalanuvchini landing ichidagi anchorlar bilan chalg'itmasdan, alohida mazmunli sahifalarda rasmiy tushuntirish berish mumkin bo'ladi.</div>
+        </details>
+        <details class="glass rounded-3xl p-5 g-border">
+          <summary class="cursor-pointer font-extrabold text-lg">Landing bo'limlari ham saqlanib qoldimi?</summary>
+          <div class="mt-3 muted">Ha. `Imkoniyatlar`, `Jarayon`, `Galereya`, `Xizmatlar`, `Campus Signal` va landing ichidagi FAQ anchor bo'limlari drawer ichidan ham ochiladi.</div>
+        </details>
+        <details class="glass rounded-3xl p-5 g-border">
+          <summary class="cursor-pointer font-extrabold text-lg">Dark va light tema qanday ishlaydi?</summary>
+          <div class="mt-3 muted">Light rejimda oq fon va teal aksent, dark rejimda esa teal-first fon va och rang matnlar ishlatiladi. Drawer ichida ham tema tugmasi bor.</div>
+        </details>
+        <details class="glass rounded-3xl p-5 g-border">
+          <summary class="cursor-pointer font-extrabold text-lg">Bu o'zgarishlar backendga tegadimi?</summary>
+          <div class="mt-3 muted">Yo'q. O'zgarishlar asosan public frontend qatlamida: shared CSS, yangi nav script va HTML sahifalar bilan cheklangan.</div>
+        </details>
+        <details class="glass rounded-3xl p-5 g-border">
+          <summary class="cursor-pointer font-extrabold text-lg">Qaysi sahifalar yangi menyuga ulandi?</summary>
+          <div class="mt-3 muted">Landing, login, register, forgot-password, reset-password va yangi `about`, `faq`, `guide`, `contact` sahifalari shu tizimga ulandi.</div>
+        </details>
+      </div>
+
+      <aside class="grid gap-4">
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="official-kicker"><i class="fa-solid fa-sitemap"></i> Tez kirish</div>
+          <div class="mt-4 grid gap-3">
+            <a href="/about.html" class="official-link-tile">
+              <i class="fa-solid fa-building-columns"></i>
+              <span><strong>About</strong><small>Platforma va rasmiy positioning.</small></span>
+            </a>
+            <a href="/guide.html" class="official-link-tile">
+              <i class="fa-solid fa-map-signs"></i>
+              <span><strong>Qo'llanma</strong><small>Sahifa xaritasi va foydalanish ketma-ketligi.</small></span>
+            </a>
+            <a href="/contact.html" class="official-link-tile">
+              <i class="fa-solid fa-address-book"></i>
+              <span><strong>Aloqa</strong><small>Demo va support yo'nalishlari.</small></span>
+            </a>
+          </div>
+        </div>
+
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="official-kicker"><i class="fa-solid fa-life-ring"></i> Qo'shimcha yordam</div>
+          <ul class="mt-4 grid gap-3 text-sm muted leading-relaxed">
+            <li class="glass rounded-2xl px-4 py-3">Public CTA lar: landing, login, register va contact sahifalari orasida takroran ulanadi.</li>
+            <li class="glass rounded-2xl px-4 py-3">Footer linklari ham yangi sahifalar bilan kengaytirildi.</li>
+            <li class="glass rounded-2xl px-4 py-3">Drawer sahifa kontekstini ham ko'rsatadi, shu bois foydalanuvchi qayerdaligini tez anglaydi.</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="mx-auto max-w-6xl px-4 pb-8">
+    <div class="glass rounded-3xl p-6 g-border flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <div class="text-sm font-extrabold">FAQ markazi</div>
+        <div class="text-xs muted2 mt-1">&copy; <span id="year"></span> HALLAYM edu public va rasmiy sahifalari.</div>
+      </div>
+      <div class="flex flex-wrap gap-2 text-sm">
+        <a href="/about.html" class="glass rounded-xl px-3 py-2 btn-ghost">About</a>
+        <a href="/guide.html" class="glass rounded-xl px-3 py-2 btn-ghost">Qo'llanma</a>
+        <a href="/contact.html" class="glass rounded-xl px-3 py-2 btn-ghost">Aloqa</a>
+        <a href="/index.html#top" class="glass rounded-xl px-3 py-2 btn-ghost">Bosh sahifa</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var key = 'theme';
+      var html = document.documentElement;
+      var btn = document.getElementById('themeToggle');
+      var icon = document.getElementById('themeIcon');
+      var label = document.getElementById('themeLabel');
+
+      function apply(mode){
+        if(mode === 'dark') html.classList.add('dark');
+        else html.classList.remove('dark');
+        localStorage.setItem(key, mode);
+        if(icon) icon.className = mode === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        if(label) label.textContent = mode === 'dark' ? 'Kunduzgi' : 'Tungi';
+      }
+
+      var saved = localStorage.getItem(key);
+      if(saved) apply(saved);
+      else apply(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+      if(btn) btn.addEventListener('click', function(){
+        apply(html.classList.contains('dark') ? 'light' : 'dark');
+      });
+
+      document.getElementById('year').textContent = new Date().getFullYear();
+    })();
+  </script>
+  <script src="/official-nav.js" defer></script>
+</body>
+</html>
