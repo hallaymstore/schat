@@ -61,6 +61,16 @@ const io = socketIO(server, {
 });
 
 // Middleware
+app.use((req, res, next) => {
+  const pathName = String(req.path || '').trim();
+  if (pathName.startsWith('/api/external')) {
+    return applyExternalApiCors(req, res, next);
+  }
+  if (pathName.startsWith('/api/website-builder/public')) {
+    return applyPublicWebsiteBuilderCors(req, res, next);
+  }
+  return next();
+});
 app.use(cors({
   origin: ['http://localhost:3000', 'https://schat-q1nj.onrender.com', 'https://students.hallaym.site', 'https://hallaym.site'],
   credentials: true
@@ -238,8 +248,152 @@ function resolveSafePublicPath(requestPath) {
 //   TURN_USERNAME="user"
 //   TURN_CREDENTIAL="pass"
 // If TURN_URL is empty, only STUN servers will be returned.
+function buildRtcConfigPayload() {
+  const stunUrls = [
+    'stun:stun.l.google.com:19302',
+    'stun:stun1.l.google.com:19302',
+    'stun:stun2.l.google.com:19302',
+    'stun:stun3.l.google.com:19302',
+    'stun:stun4.l.google.com:19302'
+  ];
+
+  const iceServers = [
+    { urls: stunUrls }
+  ];
+
+  const turnUrlRaw = String(
+    process.env.TURN_URL ||
+    process.env.TURN_URLS ||
+    process.env.TURN_SERVER ||
+    process.env.EXPRESS_TURN_URL ||
+    process.env.EXPRESSTURN_URL ||
+    process.env.EXPRESS_TURN_URI ||
+    process.env.EXPRESSTURN_URI ||
+    process.env.TURN_URI ||
+    ''
+  ).trim();
+  const turnUsername = String(
+    process.env.TURN_USERNAME ||
+    process.env.TURN_USER ||
+    process.env.EXPRESS_TURN_USERNAME ||
+    process.env.EXPRESSTURN_USERNAME ||
+    process.env.EXPRESS_TURN_USER ||
+    process.env.EXPRESSTURN_USER ||
+    ''
+  ).trim();
+  const turnCredential = String(
+    process.env.TURN_CREDENTIAL ||
+    process.env.TURN_PASSWORD ||
+    process.env.EXPRESS_TURN_CREDENTIAL ||
+    process.env.EXPRESS_TURN_PASSWORD ||
+    process.env.EXPRESSTURN_CREDENTIAL ||
+    process.env.EXPRESSTURN_PASSWORD ||
+    process.env.EXPRESS_TURN_PASS ||
+    process.env.EXPRESSTURN_PASS ||
+    ''
+  ).trim();
+  const disablePublicTurn = String(process.env.DISABLE_PUBLIC_TURN || '').trim() === '1';
+  const fallbackTurnUrls = [
+    'turn:openrelay.metered.ca:80',
+    'turn:openrelay.metered.ca:80?transport=tcp',
+    'turn:openrelay.metered.ca:443',
+    'turns:openrelay.metered.ca:443?transport=tcp'
+  ];
+
+  const splitUrls = (raw) => String(raw || '')
+    .split(/[\s,;]+/g)
+    .map((s) => String(s || '').trim())
+    .filter(Boolean);
+
+  const normalizeTurnUrl = (u) => {
+    let v = String(u || '').trim();
+    if (!v) return '';
+    if (/^turns?:\/\//i.test(v)) {
+      const proto = v.startsWith('turns://') ? 'turns:' : 'turn:';
+      v = proto + v.replace(/^turns?:\/\//i, '');
+    }
+    return v;
+  };
+
+  const parseEmbeddedCred = (url) => {
+    const src = String(url || '').trim();
+    const m = src.match(/^(turns?:)(?:\/\/)?([^:@\/\s]+):([^@\/\s]+)@(.+)$/i);
+    if (!m) return { url: src.replace(/^turns?:\/\//i, (x) => x.replace('//', '')), username: '', credential: '' };
+    return {
+      url: `${m[1]}${m[4]}`.replace(/^turns?:\/\//i, (x) => x.replace('//', '')),
+      username: decodeURIComponent(String(m[2] || '')),
+      credential: decodeURIComponent(String(m[3] || ''))
+    };
+  };
+
+  let embeddedUsername = '';
+  let embeddedCredential = '';
+  let customUrls = splitUrls(turnUrlRaw).map((u) => {
+    const parsed = parseEmbeddedCred(u);
+    if (!embeddedUsername && parsed.username) embeddedUsername = parsed.username;
+    if (!embeddedCredential && parsed.credential) embeddedCredential = parsed.credential;
+    return normalizeTurnUrl(parsed.url);
+  }).filter(Boolean);
+
+  customUrls = Array.from(new Set(customUrls));
+  const prioritizedCustomUrls = prioritizeTurnUrls(customUrls, {
+    maxTotal: Number(process.env.TURN_MAX_URLS || process.env.EXPRESSTURN_MAX_URLS || 6),
+    maxPerHost: Number(process.env.TURN_MAX_URLS_PER_HOST || process.env.EXPRESSTURN_MAX_URLS_PER_HOST || 2)
+  });
+
+  const customUser = turnUsername || embeddedUsername;
+  const customPass = turnCredential || embeddedCredential;
+  const hasCustomTurn = prioritizedCustomUrls.length > 0 && !!(customUser && customPass);
+  const forceRelayEnv = String(process.env.TURN_FORCE_RELAY || process.env.FORCE_RELAY || '').trim().toLowerCase();
+  const forceRelayDefault = forceRelayEnv === '1' || forceRelayEnv === 'true' || forceRelayEnv === 'yes';
+
+  const expressTurnSecret = String(
+    process.env.EXPRESSTURN_SECRET_KEY ||
+    process.env.EXPRESS_TURN_SECRET_KEY ||
+    process.env.TURN_SECRET ||
+    process.env.TURN_SECRET_KEY ||
+    ''
+  ).trim();
+
+  if (expressTurnSecret && prioritizedCustomUrls.length) {
+    const ttl = 86400;
+    const unixExpiry = Math.floor(Date.now() / 1000) + ttl;
+    const hmacUsername = unixExpiry + ':expressturn';
+    const hmac = crypto.createHmac('sha1', expressTurnSecret);
+    hmac.update(hmacUsername);
+    const hmacCredential = hmac.digest('base64');
+    iceServers.push({ urls: prioritizedCustomUrls, username: hmacUsername, credential: hmacCredential });
+  } else if (prioritizedCustomUrls.length) {
+    if (customUser && customPass) {
+      iceServers.push({ urls: prioritizedCustomUrls, username: customUser, credential: customPass });
+    } else {
+      iceServers.push({ urls: prioritizedCustomUrls });
+    }
+  }
+
+  const hasTurn = !!(expressTurnSecret && prioritizedCustomUrls.length) || hasCustomTurn;
+
+  if (!disablePublicTurn && !hasTurn) {
+    iceServers.push({
+      urls: fallbackTurnUrls,
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    });
+  }
+
+  return {
+    success: true,
+    iceServers,
+    hasTurn,
+    forceRelayDefault
+  };
+}
+
 app.get('/api/rtc-config', (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'private, max-age=300, stale-while-revalidate=300');
+    return res.json(buildRtcConfigPayload());
+
     const stunUrls = [
       'stun:stun.l.google.com:19302',
       'stun:stun1.l.google.com:19302',
@@ -1513,6 +1667,258 @@ function getSocketClientIp(socket) {
     socket?.handshake?.address ||
     socket?.conn?.remoteAddress
   );
+}
+
+const EXTERNAL_API_SCOPE_DEFS = [
+  { id: 'assistant.chat', label: 'AI Chatbot', description: 'External chatbot and assistant replies.' },
+  { id: 'slides.generate', label: 'Presentation AI', description: 'Generate and store AI slide decks.' },
+  { id: 'slides.export', label: 'Presentation Export', description: 'Download PPTX/PDF exports for generated decks.' },
+  { id: 'websites.generate', label: 'Website AI', description: 'Generate and store AI micro websites.' },
+  { id: 'call.rtc', label: 'Call RTC', description: 'Read STUN/TURN config for external call clients.' },
+  { id: 'call.livekit', label: 'Call LiveKit', description: 'Mint LiveKit access tokens for external calls.' }
+];
+const EXTERNAL_API_SCOPE_IDS = new Set(EXTERNAL_API_SCOPE_DEFS.map((item) => item.id));
+const EXTERNAL_API_DEFAULT_SCOPES = ['assistant.chat'];
+const EXTERNAL_API_RATE_BUCKETS = new Map();
+const WEBSITE_PUBLIC_RATE_BUCKETS = new Map();
+
+function normalizeExternalApiScopes(raw) {
+  const values = Array.isArray(raw)
+    ? raw
+    : String(raw || '').split(/[\s,]+/g);
+  const scopes = Array.from(new Set(
+    values
+      .map((item) => cleanText(item, 40).toLowerCase())
+      .filter((item) => EXTERNAL_API_SCOPE_IDS.has(item))
+  ));
+  return scopes.length ? scopes : EXTERNAL_API_DEFAULT_SCOPES.slice();
+}
+
+function normalizeExternalOriginValue(raw) {
+  const src = String(raw || '').trim();
+  if (!src) return '';
+  if (src === '*') return '*';
+  try {
+    const input = /^https?:\/\//i.test(src) ? src : `https://${src}`;
+    const url = new URL(input);
+    return `${url.protocol}//${url.host}`.toLowerCase();
+  } catch (_) {
+    return '';
+  }
+}
+
+function normalizeExternalApiOrigins(raw) {
+  const values = Array.isArray(raw)
+    ? raw
+    : String(raw || '').split(/[\r\n,]+/g);
+  const normalized = [];
+  for (const item of values) {
+    const value = normalizeExternalOriginValue(item);
+    if (!value) continue;
+    if (value === '*') return ['*'];
+    normalized.push(value);
+  }
+  const out = Array.from(new Set(normalized)).slice(0, 30);
+  return out.length ? out : ['*'];
+}
+
+function createExternalApiSecret() {
+  return `hlym_${crypto.randomBytes(24).toString('hex')}`;
+}
+
+function maskExternalApiSecret(raw) {
+  const value = String(raw || '').trim();
+  if (!value) return '';
+  if (value.length <= 10) return `${value.slice(0, 4)}****`;
+  return `${value.slice(0, 8)}...${value.slice(-4)}`;
+}
+
+function serializeExternalApiKey(doc, options = {}) {
+  if (!doc) return null;
+  const src = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+  const plainKey = String(options.plainKey || '').trim();
+  return {
+    id: String(src._id || ''),
+    name: cleanText(src.name, 120),
+    keyPrefix: cleanText(src.keyPrefix, 24),
+    keyPreview: plainKey ? maskExternalApiSecret(plainKey) : `${cleanText(src.keyPrefix, 24)}...`,
+    scopes: normalizeExternalApiScopes(src.scopes),
+    allowedOrigins: normalizeExternalApiOrigins(src.allowedOrigins),
+    note: cleanText(src.note, 400),
+    active: src.active !== false,
+    rateLimitPerMinute: Math.max(1, Number(src.rateLimitPerMinute || 60)),
+    usageCount: Math.max(0, Number(src.usageCount || 0)),
+    lastUsedAt: src.lastUsedAt || null,
+    lastUsedIp: cleanText(src.lastUsedIp, 80),
+    lastUsedOrigin: cleanText(src.lastUsedOrigin, 200),
+    createdAt: src.createdAt || null,
+    updatedAt: src.updatedAt || null,
+    revokedAt: src.revokedAt || null,
+    ownerId: String(src.ownerId || src.createdBy || ''),
+    createdBy: String(src.createdBy || ''),
+    ...(plainKey ? { apiKey: plainKey } : {})
+  };
+}
+
+function externalApiScopeAllowed(grantedScopes = [], requiredScope = '') {
+  const scope = cleanText(requiredScope, 40).toLowerCase();
+  if (!scope) return true;
+  const granted = Array.isArray(grantedScopes) ? grantedScopes.map((item) => cleanText(item, 40).toLowerCase()) : [];
+  return granted.includes(scope);
+}
+
+function externalApiOriginAllowed(keyDoc, originRaw) {
+  const allowed = normalizeExternalApiOrigins(keyDoc?.allowedOrigins || []);
+  if (allowed.includes('*')) return true;
+  const origin = normalizeExternalOriginValue(originRaw);
+  if (!origin) return true;
+  return allowed.includes(origin);
+}
+
+function takeExternalApiRateSlot(bucketKey, limitPerMinute) {
+  const limit = Math.max(1, Number(limitPerMinute || 60));
+  const now = Date.now();
+  const from = now - 60 * 1000;
+  const key = String(bucketKey || '');
+  const list = (EXTERNAL_API_RATE_BUCKETS.get(key) || []).filter((ts) => Number(ts || 0) >= from);
+  if (list.length >= limit) {
+    EXTERNAL_API_RATE_BUCKETS.set(key, list);
+    const retryAfterMs = Math.max(1000, 60 * 1000 - (now - list[0]));
+    return { ok: false, retryAfterSec: Math.ceil(retryAfterMs / 1000) };
+  }
+  list.push(now);
+  EXTERNAL_API_RATE_BUCKETS.set(key, list);
+  return { ok: true, retryAfterSec: 0 };
+}
+
+function takeWebsitePublicRateSlot(bucketKey, limitPerWindow, windowMs) {
+  const limit = Math.max(1, Number(limitPerWindow || 10));
+  const span = Math.max(5000, Number(windowMs || 60 * 1000));
+  const now = Date.now();
+  const from = now - span;
+  const key = String(bucketKey || '');
+  const list = (WEBSITE_PUBLIC_RATE_BUCKETS.get(key) || []).filter((ts) => Number(ts || 0) >= from);
+  if (list.length >= limit) {
+    WEBSITE_PUBLIC_RATE_BUCKETS.set(key, list);
+    const retryAfterMs = Math.max(1000, span - (now - list[0]));
+    return { ok: false, retryAfterSec: Math.ceil(retryAfterMs / 1000) };
+  }
+  list.push(now);
+  WEBSITE_PUBLIC_RATE_BUCKETS.set(key, list);
+  return { ok: true, retryAfterSec: 0 };
+}
+
+function extractExternalApiSecret(req) {
+  const direct = String(req.headers['x-api-key'] || '').trim();
+  if (direct) return direct;
+  const auth = String(req.headers.authorization || '').trim();
+  if (/^bearer\s+/i.test(auth)) return auth.replace(/^bearer\s+/i, '').trim();
+  return '';
+}
+
+function applyExternalApiCors(req, res, next) {
+  const origin = String(req.headers.origin || '').trim();
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-API-Key, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  return next();
+}
+
+function applyPublicWebsiteBuilderCors(req, res, next) {
+  const origin = String(req.headers.origin || '').trim();
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  return next();
+}
+
+async function resolveExternalApiOwnerUser(keyDoc) {
+  const ownerId = String(keyDoc?.ownerId || keyDoc?.createdBy || '').trim();
+  if (!ownerId || !mongoose.Types.ObjectId.isValid(ownerId)) return null;
+  return User.findById(ownerId)
+    .select('fullName nickname username role university faculty studyType studyGroup')
+    .lean()
+    .catch(() => null);
+}
+
+async function touchExternalApiKeyUsage(keyDoc, req) {
+  try {
+    if (!keyDoc?._id) return;
+    await ExternalApiKey.updateOne(
+      { _id: keyDoc._id },
+      {
+        $inc: { usageCount: 1 },
+        $set: {
+          lastUsedAt: new Date(),
+          lastUsedIp: cleanText(getRequestClientIp(req), 80),
+          lastUsedOrigin: cleanText(req.headers.origin, 200)
+        }
+      }
+    ).catch(() => null);
+  } catch (_) {}
+}
+
+function authenticateExternalApi(requiredScope = '') {
+  return async function externalApiMiddleware(req, res, next) {
+    try {
+      const secret = extractExternalApiSecret(req);
+      if (!secret) return res.status(401).json({ error: 'API key required' });
+
+      const keyHash = sha256Hex(secret);
+      const keyDoc = await ExternalApiKey.findOne({ keyHash }).lean();
+      if (!keyDoc) return res.status(401).json({ error: 'Invalid API key' });
+      if (keyDoc.active === false || keyDoc.revokedAt) {
+        return res.status(403).json({ error: 'API key is inactive' });
+      }
+      if (!externalApiScopeAllowed(keyDoc.scopes, requiredScope)) {
+        return res.status(403).json({ error: 'Scope not allowed for this API key', scope: requiredScope });
+      }
+      if (!externalApiOriginAllowed(keyDoc, req.headers.origin)) {
+        return res.status(403).json({ error: 'Origin is not allowed for this API key' });
+      }
+
+      const rate = takeExternalApiRateSlot(`key:${String(keyDoc._id || '')}:${requiredScope}`, keyDoc.rateLimitPerMinute);
+      if (!rate.ok) {
+        return res.status(429).json({
+          error: 'External API rate limit exceeded',
+          retryAfterSec: rate.retryAfterSec
+        });
+      }
+
+      req.externalApiKey = keyDoc;
+      await touchExternalApiKeyUsage(keyDoc, req);
+      return next();
+    } catch (e) {
+      return res.status(500).json({ error: 'External API authentication failed' });
+    }
+  };
+}
+
+function buildExternalApiMetaPayload(req) {
+  const origin = getPublicAppOrigin(req);
+  return {
+    success: true,
+    baseUrl: `${origin}/api/external`,
+    authHeader: 'X-API-Key: YOUR_KEY',
+    scopes: EXTERNAL_API_SCOPE_DEFS,
+    endpoints: [
+      { method: 'POST', path: '/api/external/assistant/chat', scope: 'assistant.chat' },
+      { method: 'POST', path: '/api/external/slides/generate', scope: 'slides.generate' },
+      { method: 'GET', path: '/api/external/slides/:deckId', scope: 'slides.generate' },
+      { method: 'GET', path: '/api/external/slides/:deckId/export.pdf', scope: 'slides.export' },
+      { method: 'GET', path: '/api/external/slides/:deckId/export.pptx', scope: 'slides.export' },
+      { method: 'POST', path: '/api/external/websites/generate', scope: 'websites.generate' },
+      { method: 'GET', path: '/api/external/websites/:projectId', scope: 'websites.generate' },
+      { method: 'GET', path: '/api/external/call/rtc-config', scope: 'call.rtc' },
+      { method: 'POST', path: '/api/external/call/livekit-token', scope: 'call.livekit' }
+    ]
+  };
 }
 
 function parseClientEnvironment(userAgentRaw = '') {
@@ -3204,25 +3610,70 @@ async function attachUserRole(req, res, next) {
   next();
 }
 
+async function buildLivekitTokenResponse({
+  room,
+  identity,
+  displayName,
+  role = 'participant',
+  canPublish = false,
+  canSubscribe = true,
+  ttl = '2h',
+  extraMetadata = {}
+}) {
+  const livekitUrl = String(process.env.LIVEKIT_URL || '').trim();
+  const livekitApiKey = String(process.env.LIVEKIT_API_KEY || '').trim();
+  const livekitApiSecret = String(process.env.LIVEKIT_API_SECRET || '').trim();
+  if (!livekitUrl || !livekitApiKey || !livekitApiSecret) {
+    throw new Error('LiveKit is not configured');
+  }
+
+  const safeRoom = String(room || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9:_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 96);
+  if (!safeRoom) throw new Error('Room is required');
+
+  const safeIdentity = String(identity || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9:_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 120);
+  if (!safeIdentity) throw new Error('Identity is required');
+
+  const safeName = cleanText(displayName, 120) || safeIdentity;
+  const accessToken = new AccessToken(livekitApiKey, livekitApiSecret, {
+    identity: safeIdentity,
+    name: safeName,
+    ttl,
+    metadata: JSON.stringify(Object.assign({
+      role: cleanText(role, 40) || 'participant'
+    }, extraMetadata || {}))
+  });
+  accessToken.addGrant({
+    room: safeRoom,
+    roomJoin: true,
+    canPublish: !!canPublish,
+    canPublishData: true,
+    canSubscribe: canSubscribe !== false
+  });
+
+  const token = await accessToken.toJwt();
+  return {
+    success: true,
+    url: livekitUrl,
+    token,
+    room: safeRoom,
+    identity: safeIdentity,
+    canPublish: !!canPublish,
+    canSubscribe: canSubscribe !== false
+  };
+}
+
 app.post('/api/livekit/token', authenticateToken, attachUserRole, async (req, res) => {
   try {
-    const livekitUrl = String(process.env.LIVEKIT_URL || '').trim();
-    const livekitApiKey = String(process.env.LIVEKIT_API_KEY || '').trim();
-    const livekitApiSecret = String(process.env.LIVEKIT_API_SECRET || '').trim();
-    if (!livekitUrl || !livekitApiKey || !livekitApiSecret) {
-      return res.status(503).json({ error: 'LiveKit is not configured' });
-    }
-
-    const room = String(req.body?.room || '')
-      .trim()
-      .replace(/[^a-zA-Z0-9:_-]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 96);
-    if (!room) {
-      return res.status(400).json({ error: 'Room is required' });
-    }
-
     const canSubscribe = req.body?.canSubscribe !== false;
     const canPublishRequested = req.body?.canPublish === true;
     const canPublish = !!canPublishRequested;
@@ -3230,37 +3681,27 @@ app.post('/api/livekit/token', authenticateToken, attachUserRole, async (req, re
     const user = await User.findById(req.userId).select('fullName username role isAdmin').lean();
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const displayName = String(user.fullName || user.username || req.userId || 'participant').trim().slice(0, 120);
-    const identity = String(req.userId || '').trim().slice(0, 120);
-    const accessToken = new AccessToken(livekitApiKey, livekitApiSecret, {
-      identity,
-      name: displayName,
-      ttl: '2h',
-      metadata: JSON.stringify({
+    const payload = await buildLivekitTokenResponse({
+      room: req.body?.room,
+      identity: String(req.userId || '').trim().slice(0, 120),
+      displayName: String(user.fullName || user.username || req.userId || 'participant').trim().slice(0, 120),
+      role: String(req.userRole || user.role || (user.isAdmin ? 'admin' : 'student') || 'student'),
+      canPublish,
+      canSubscribe,
+      extraMetadata: {
         userId: String(req.userId || ''),
         role: String(req.userRole || user.role || (user.isAdmin ? 'admin' : 'student') || 'student')
-      })
+      }
     });
-    accessToken.addGrant({
-      room,
-      roomJoin: true,
-      canPublish,
-      canPublishData: true,
-      canSubscribe
-    });
-
-    const token = await accessToken.toJwt();
-    return res.json({
-      success: true,
-      url: livekitUrl,
-      token,
-      room,
-      identity,
-      canPublish,
-      canSubscribe
-    });
+    return res.json(payload);
   } catch (e) {
     console.error('POST /api/livekit/token error:', e);
+    if (/not configured/i.test(String(e?.message || ''))) {
+      return res.status(503).json({ error: 'LiveKit is not configured' });
+    }
+    if (/required/i.test(String(e?.message || ''))) {
+      return res.status(400).json({ error: String(e.message) });
+    }
     return res.status(500).json({ error: 'Failed to create LiveKit token' });
   }
 });
@@ -7058,6 +7499,21 @@ async function authenticateWebsiteMember(req, slug) {
   return { project, member };
 }
 
+function renderWebsiteProjectPages(project, options = {}) {
+  const origin = String(options.origin || '').trim() || getPublicAppOrigin(options.req);
+  const routeBase = String(options.routeBase || '').trim();
+  const apiBase = String(options.apiBase || `${origin}/api/website-builder/public/${cleanText(project?.slug, 40)}`)
+    .trim()
+    .replace(/\/+$/, '');
+  const preview = options.preview === true;
+  return {
+    index: renderWebsiteProjectHtml(project, { pageSlug: 'index', preview, origin, routeBase, apiBase }),
+    register: renderWebsiteProjectHtml(project, { pageSlug: 'register', preview, origin, routeBase, apiBase }),
+    login: renderWebsiteProjectHtml(project, { pageSlug: 'login', preview, origin, routeBase, apiBase }),
+    account: renderWebsiteProjectHtml(project, { pageSlug: 'account', preview, origin, routeBase, apiBase })
+  };
+}
+
 app.get('/api/websites/templates', authenticateToken, async (req, res) => {
   return res.json({ success: true, templates: WEBSITE_TEMPLATE_PRESETS });
 });
@@ -7257,9 +7713,16 @@ app.get(['/site/:slug', '/site/:slug/:pageSlug'], async (req, res) => {
   }
 });
 
+app.use('/api/website-builder/public', applyPublicWebsiteBuilderCors);
+
 app.post('/api/website-builder/public/:slug/register', async (req, res) => {
   try {
-    const project = await loadWebsiteProjectBySlug(normalizeWebsiteSlugInput(req.params.slug), { allowDraft: true });
+    const safeSlug = normalizeWebsiteSlugInput(req.params.slug);
+    const rate = takeWebsitePublicRateSlot(`site:register:${safeSlug}:${getRequestClientIp(req)}`, 8, 10 * 60 * 1000);
+    if (!rate.ok) {
+      return res.status(429).json({ error: 'Too many register attempts', retryAfterSec: rate.retryAfterSec });
+    }
+    const project = await loadWebsiteProjectBySlug(safeSlug, { allowDraft: true });
     if (!project) return res.status(404).json({ error: 'Website not found' });
     const fullName = cleanText(req.body?.fullName, 120);
     const email = cleanText(req.body?.email, 160).toLowerCase();
@@ -7286,7 +7749,12 @@ app.post('/api/website-builder/public/:slug/register', async (req, res) => {
 
 app.post('/api/website-builder/public/:slug/login', async (req, res) => {
   try {
-    const project = await loadWebsiteProjectBySlug(normalizeWebsiteSlugInput(req.params.slug), { allowDraft: true });
+    const safeSlug = normalizeWebsiteSlugInput(req.params.slug);
+    const rate = takeWebsitePublicRateSlot(`site:login:${safeSlug}:${getRequestClientIp(req)}`, 15, 10 * 60 * 1000);
+    if (!rate.ok) {
+      return res.status(429).json({ error: 'Too many login attempts', retryAfterSec: rate.retryAfterSec });
+    }
+    const project = await loadWebsiteProjectBySlug(safeSlug, { allowDraft: true });
     if (!project) return res.status(404).json({ error: 'Website not found' });
     const email = cleanText(req.body?.email, 160).toLowerCase();
     const password = String(req.body?.password || '');
@@ -7330,7 +7798,12 @@ app.get('/api/website-builder/public/:slug/me', async (req, res) => {
 
 async function storeWebsiteLeadByType(req, res, leadType) {
   try {
-    const project = await loadWebsiteProjectBySlug(normalizeWebsiteSlugInput(req.params.slug), { allowDraft: true });
+    const safeSlug = normalizeWebsiteSlugInput(req.params.slug);
+    const rate = takeWebsitePublicRateSlot(`site:${leadType}:${safeSlug}:${getRequestClientIp(req)}`, 12, 10 * 60 * 1000);
+    if (!rate.ok) {
+      return res.status(429).json({ error: 'Too many form submissions', retryAfterSec: rate.retryAfterSec });
+    }
+    const project = await loadWebsiteProjectBySlug(safeSlug, { allowDraft: true });
     if (!project) return res.status(404).json({ error: 'Website not found' });
     const name = cleanText(req.body?.name, 120);
     const email = cleanText(req.body?.email, 160).toLowerCase();
@@ -7350,6 +7823,356 @@ async function storeWebsiteLeadByType(req, res, leadType) {
 
 app.post('/api/website-builder/public/:slug/contact', async (req, res) => storeWebsiteLeadByType(req, res, 'contact'));
 app.post('/api/website-builder/public/:slug/waitlist', async (req, res) => storeWebsiteLeadByType(req, res, 'waitlist'));
+
+app.use('/api/external', applyExternalApiCors);
+
+app.get('/api/external/meta', (req, res) => {
+  return res.json(buildExternalApiMetaPayload(req));
+});
+
+app.post('/api/external/assistant/chat', authenticateExternalApi('assistant.chat'), async (req, res) => {
+  try {
+    const message = cleanText(req.body?.message, 1500);
+    if (!message) return res.status(400).json({ error: 'message required' });
+
+    const mode = normalizeAssistantMode(req.body?.mode);
+    const history = normalizeAssistantHistory(req.body?.history);
+    const context = normalizeAssistantContext(req.body?.context);
+    const rawProfile = req.body?.profile && typeof req.body.profile === 'object' ? req.body.profile : {};
+    const owner = await resolveExternalApiOwnerUser(req.externalApiKey);
+    const profile = Object.assign({}, owner || {}, {
+      fullName: cleanText(rawProfile.fullName || rawProfile.name || owner?.fullName, 80),
+      nickname: cleanText(rawProfile.nickname || owner?.nickname, 80),
+      username: cleanText(rawProfile.username || owner?.username, 80),
+      role: cleanText(rawProfile.role || owner?.role || 'student', 40),
+      university: cleanText(rawProfile.university || owner?.university, 120),
+      faculty: cleanText(rawProfile.faculty || owner?.faculty, 120),
+      studyType: cleanText(rawProfile.studyType || owner?.studyType, 80),
+      studyGroup: cleanText(rawProfile.studyGroup || owner?.studyGroup, 120)
+    });
+
+    const systemPrompt = buildAssistantSystemPrompt({
+      mode,
+      user: profile,
+      context
+    });
+
+    const out = await generateAssistantAiAnswer({
+      systemPrompt,
+      history,
+      userMessage: message,
+      req
+    });
+
+    return res.json({
+      success: true,
+      answer: cleanText(out?.answer, 4000),
+      provider: cleanText(out?.provider, 40),
+      model: cleanText(out?.model, 120),
+      keyName: cleanText(req.externalApiKey?.name, 120)
+    });
+  } catch (e) {
+    const msg = String(e?.message || e || 'AI service unavailable');
+    console.error('POST /api/external/assistant/chat error:', msg);
+    if (/missing|configured|provider/i.test(msg)) {
+      return res.status(503).json({ error: 'AI provider is not configured on the server' });
+    }
+    return res.status(500).json({ error: 'AI service unavailable' });
+  }
+});
+
+app.post('/api/external/slides/generate', authenticateExternalApi('slides.generate'), async (req, res) => {
+  try {
+    const ownerId = String(req.externalApiKey?.ownerId || req.externalApiKey?.createdBy || '').trim();
+    if (!ownerId || !mongoose.Types.ObjectId.isValid(ownerId)) {
+      return res.status(500).json({ error: 'API key owner is not configured' });
+    }
+
+    const prompt = cleanText(req.body?.prompt, 3000);
+    if (!prompt || prompt.length < 6) {
+      return res.status(400).json({ error: 'prompt required' });
+    }
+
+    const audience = cleanText(req.body?.audience, 160);
+    const language = normalizeSlideStudioLanguage(req.body?.language);
+    const styleRequestedRaw = cleanText(req.body?.styleRequested || req.body?.style || req.body?.themeId, 64);
+    const styleRequested = SLIDE_THEME_MAP.has(styleRequestedRaw) ? styleRequestedRaw : 'auto';
+    const colorMood = normalizeSlideColorMood(req.body?.colorMood || req.body?.color || req.body?.palette);
+    const slideCount = clampSlideCount(req.body?.slideCount);
+    const owner = await resolveExternalApiOwnerUser(req.externalApiKey);
+
+    const deck = await generateSlideDeckWithGroq({
+      user: owner || {
+        fullName: cleanText(req.externalApiKey?.name, 80) || 'External API',
+        username: cleanText(req.externalApiKey?.keyPrefix, 40) || 'external',
+        role: 'admin'
+      },
+      prompt,
+      audience,
+      language,
+      styleRequested,
+      colorMood,
+      slideCount
+    });
+
+    const created = await SlideDeck.create({
+      userId: ownerId,
+      externalApiKeyId: req.externalApiKey?._id || null,
+      title: cleanText(deck.title, 200) || cleanText(prompt, 80) || 'Yangi taqdimot',
+      subtitle: cleanText(deck.subtitle, 240),
+      summary: cleanText(deck.summary, 600),
+      prompt,
+      audience,
+      language,
+      styleRequested,
+      themeId: cleanText(deck.themeId, 64) || 'teal-minimal',
+      themeLabel: cleanText(deck.themeLabel, 120),
+      slideCount: Array.isArray(deck.slides) ? deck.slides.length : slideCount,
+      watermark: cleanText(deck.watermark, 200),
+      heroImageUrl: cleanText(deck.heroImageUrl, 500),
+      researchSummary: cleanText(deck.researchSummary, 1800),
+      sourceLinks: Array.isArray(deck.sourceLinks) ? deck.sourceLinks.map((item) => cleanText(item, 500)).filter(Boolean).slice(0, 10) : [],
+      aiProvider: cleanText(deck.aiProvider, 32) || 'hallaym-ai',
+      aiModel: cleanText(deck.aiModel, 120),
+      generationMode: cleanText(deck.generationMode, 32) || 'ai',
+      slides: Array.isArray(deck.slides) ? deck.slides : []
+    });
+
+    const serialized = serializeSlideDeck(created);
+    return res.json({
+      success: true,
+      deckId: serialized?._id || '',
+      deck: serialized,
+      themePresets: SLIDE_THEME_PRESETS,
+      exportUrls: {
+        pdf: `/api/external/slides/${encodeURIComponent(String(serialized?._id || ''))}/export.pdf`,
+        pptx: `/api/external/slides/${encodeURIComponent(String(serialized?._id || ''))}/export.pptx`
+      }
+    });
+  } catch (e) {
+    const msg = String(e?.message || e || 'Slide service unavailable');
+    console.error('POST /api/external/slides/generate error:', msg);
+    if (/missing|configured|provider/i.test(msg)) {
+      return res.status(503).json({ error: 'Slide AI provider is not configured on the server' });
+    }
+    return res.status(500).json({ error: 'Slide service unavailable' });
+  }
+});
+
+app.get('/api/external/slides/:deckId', authenticateExternalApi('slides.generate'), async (req, res) => {
+  try {
+    const deckId = String(req.params.deckId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(deckId)) {
+      return res.status(400).json({ error: 'Invalid deck id' });
+    }
+    const deck = await SlideDeck.findOne({
+      _id: deckId,
+      externalApiKeyId: req.externalApiKey?._id || null
+    }).lean();
+    if (!deck) return res.status(404).json({ error: 'Slide deck not found' });
+    return res.json({ success: true, deck: serializeSlideDeck(deck) });
+  } catch (e) {
+    console.error('GET /api/external/slides/:deckId error:', e);
+    return res.status(500).json({ error: 'Failed to load slide deck' });
+  }
+});
+
+app.get('/api/external/slides/:deckId/export.pdf', authenticateExternalApi('slides.export'), async (req, res) => {
+  try {
+    const deckId = String(req.params.deckId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(deckId)) {
+      return res.status(400).json({ error: 'Invalid deck id' });
+    }
+    const deck = await SlideDeck.findOne({
+      _id: deckId,
+      externalApiKeyId: req.externalApiKey?._id || null
+    }).lean();
+    if (!deck) return res.status(404).json({ error: 'Slide deck not found' });
+
+    const fileName = sanitizeDownloadName(deck.title || 'hallaym-slide-deck', 'pdf');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    await streamSlideDeckPdf(res, serializeSlideDeck(deck));
+  } catch (e) {
+    console.error('GET /api/external/slides/:deckId/export.pdf error:', e);
+    if (!res.headersSent) return res.status(500).json({ error: 'Failed to export PDF' });
+    res.end();
+  }
+});
+
+app.get('/api/external/slides/:deckId/export.pptx', authenticateExternalApi('slides.export'), async (req, res) => {
+  try {
+    const deckId = String(req.params.deckId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(deckId)) {
+      return res.status(400).json({ error: 'Invalid deck id' });
+    }
+    const deck = await SlideDeck.findOne({
+      _id: deckId,
+      externalApiKeyId: req.externalApiKey?._id || null
+    }).lean();
+    if (!deck) return res.status(404).json({ error: 'Slide deck not found' });
+
+    const serializedDeck = serializeSlideDeck(deck);
+    const buffer = await buildSlideDeckPptxBuffer(serializedDeck);
+    const fileName = sanitizeDownloadName(deck.title || 'hallaym-slide-deck', 'pptx');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.end(buffer);
+  } catch (e) {
+    console.error('GET /api/external/slides/:deckId/export.pptx error:', e);
+    return res.status(500).json({ error: 'Failed to export PPTX' });
+  }
+});
+
+app.post('/api/external/websites/generate', authenticateExternalApi('websites.generate'), async (req, res) => {
+  try {
+    const ownerId = String(req.externalApiKey?.ownerId || req.externalApiKey?.createdBy || '').trim();
+    if (!ownerId || !mongoose.Types.ObjectId.isValid(ownerId)) {
+      return res.status(500).json({ error: 'API key owner is not configured' });
+    }
+
+    const startupName = cleanText(req.body?.startupName, 90);
+    const prompt = cleanText(req.body?.prompt, 1800);
+    if (!startupName || !prompt) {
+      return res.status(400).json({ error: 'startupName and prompt required' });
+    }
+
+    const audience = cleanText(req.body?.audience, 140);
+    const category = cleanText(req.body?.category, 80);
+    const tone = cleanText(req.body?.tone, 80);
+    const templateId = cleanText(req.body?.templateId, 40) || 'startup-pitch';
+    const desiredSlug = normalizeWebsiteSlugInput(req.body?.slug || startupName, startupName);
+    const uniqueSlug = await ensureUniqueWebsiteSlug(desiredSlug);
+    const serverFeatures = normalizeWebsiteFeatureFlags(req.body?.serverFeatures || {});
+    const owner = await resolveExternalApiOwnerUser(req.externalApiKey);
+
+    const projectPayload = await generateStartupWebsiteProject({
+      user: owner || {
+        fullName: cleanText(req.externalApiKey?.name, 80) || 'External API',
+        username: cleanText(req.externalApiKey?.keyPrefix, 40) || 'external'
+      },
+      startupName,
+      slug: uniqueSlug,
+      prompt,
+      audience,
+      category,
+      tone,
+      templateId,
+      serverFeatures
+    });
+    projectPayload.slug = await ensureUniqueWebsiteSlug(projectPayload.slug || uniqueSlug);
+    projectPayload.status = String(req.body?.status || 'published').trim().toLowerCase() === 'draft' ? 'draft' : 'published';
+    projectPayload.publishedAt = projectPayload.status === 'published' ? new Date() : null;
+
+    const created = await WebsiteProject.create({
+      ownerId,
+      externalApiKeyId: req.externalApiKey?._id || null,
+      ...projectPayload
+    });
+
+    const origin = getPublicAppOrigin(req);
+    const routeBase = cleanText(req.body?.routeBase, 240);
+    const apiBase = cleanText(req.body?.apiBase, 500) || `${origin}/api/website-builder/public/${created.slug}`;
+    const pages = renderWebsiteProjectPages(created, {
+      req,
+      origin,
+      routeBase,
+      apiBase,
+      preview: created.status !== 'published'
+    });
+
+    return res.json({
+      success: true,
+      project: serializeWebsiteProject(created, {}, { origin }),
+      pages,
+      websiteApiBase: apiBase
+    });
+  } catch (e) {
+    console.error('POST /api/external/websites/generate error:', e);
+    return res.status(500).json({ error: 'Failed to generate website' });
+  }
+});
+
+app.get('/api/external/websites/:projectId', authenticateExternalApi('websites.generate'), async (req, res) => {
+  try {
+    const projectId = String(req.params.projectId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(projectId)) return res.status(400).json({ error: 'Invalid project id' });
+    const project = await WebsiteProject.findOne({
+      _id: projectId,
+      externalApiKeyId: req.externalApiKey?._id || null
+    }).lean();
+    if (!project) return res.status(404).json({ error: 'Website project not found' });
+
+    const [leadCount, memberCount] = await Promise.all([
+      WebsiteLead.countDocuments({ websiteId: project._id }),
+      WebsiteMember.countDocuments({ websiteId: project._id })
+    ]);
+    const origin = getPublicAppOrigin(req);
+    const routeBase = cleanText(req.query?.routeBase, 240);
+    const apiBase = cleanText(req.query?.apiBase, 500) || `${origin}/api/website-builder/public/${project.slug}`;
+    const pages = renderWebsiteProjectPages(project, {
+      req,
+      origin,
+      routeBase,
+      apiBase,
+      preview: project.status !== 'published'
+    });
+
+    return res.json({
+      success: true,
+      project: serializeWebsiteProject(project, { leadCount, memberCount }, { origin }),
+      pages,
+      websiteApiBase: apiBase
+    });
+  } catch (e) {
+    console.error('GET /api/external/websites/:projectId error:', e);
+    return res.status(500).json({ error: 'Failed to load website project' });
+  }
+});
+
+app.get('/api/external/call/rtc-config', authenticateExternalApi('call.rtc'), (req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'private, max-age=300, stale-while-revalidate=300');
+    return res.json(buildRtcConfigPayload());
+  } catch (e) {
+    console.error('GET /api/external/call/rtc-config error:', e);
+    return res.status(500).json({ error: 'Failed to build rtc config' });
+  }
+});
+
+app.post('/api/external/call/livekit-token', authenticateExternalApi('call.livekit'), async (req, res) => {
+  try {
+    const identity = cleanText(req.body?.identity, 120) || `ext-${Date.now()}`;
+    const displayName = cleanText(req.body?.name || req.body?.displayName || req.externalApiKey?.name, 120) || identity;
+    const role = cleanText(req.body?.role || 'external', 40) || 'external';
+    const canPublish = req.body?.canPublish !== false;
+    const canSubscribe = req.body?.canSubscribe !== false;
+    const payload = await buildLivekitTokenResponse({
+      room: req.body?.room,
+      identity,
+      displayName,
+      role,
+      canPublish,
+      canSubscribe,
+      extraMetadata: {
+        source: 'external-api',
+        apiKeyId: String(req.externalApiKey?._id || ''),
+        keyName: cleanText(req.externalApiKey?.name, 120),
+        role
+      }
+    });
+    return res.json(payload);
+  } catch (e) {
+    console.error('POST /api/external/call/livekit-token error:', e);
+    if (/not configured/i.test(String(e?.message || ''))) {
+      return res.status(503).json({ error: 'LiveKit is not configured' });
+    }
+    if (/required/i.test(String(e?.message || ''))) {
+      return res.status(400).json({ error: String(e.message) });
+    }
+    return res.status(500).json({ error: 'Failed to create LiveKit token' });
+  }
+});
 
 // ==================== GROUP LESSONS API ====================
 // List group lessons (recordings) - accessible to group members
@@ -12029,6 +12852,7 @@ const SignalModeration = mongoose.model('SignalModeration', SignalModerationSche
 
 const SlideDeckSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  externalApiKeyId: { type: mongoose.Schema.Types.ObjectId, ref: 'ExternalApiKey', default: null, index: true },
   title: { type: String, required: true, trim: true, maxlength: 200 },
   subtitle: { type: String, default: '', trim: true, maxlength: 240 },
   summary: { type: String, default: '', trim: true, maxlength: 600 },
@@ -20373,6 +21197,7 @@ const CertificateSchema = new mongoose.Schema({
 
 const WebsiteProjectSchema = new mongoose.Schema({
   ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  externalApiKeyId: { type: mongoose.Schema.Types.ObjectId, ref: 'ExternalApiKey', default: null, index: true },
   startupName: { type: String, required: true, trim: true },
   slug: { type: String, required: true, trim: true, unique: true, index: true },
   prompt: { type: String, default: '' },
@@ -20432,6 +21257,25 @@ const WebsiteLeadSchema = new mongoose.Schema({
   message: { type: String, default: '' }
 }, { timestamps: true });
 
+const ExternalApiKeySchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true, maxlength: 120 },
+  keyPrefix: { type: String, required: true, trim: true, maxlength: 24, index: true },
+  keyHash: { type: String, required: true, trim: true, unique: true, index: true },
+  scopes: { type: [String], default: () => EXTERNAL_API_DEFAULT_SCOPES.slice() },
+  allowedOrigins: { type: [String], default: () => ['*'] },
+  note: { type: String, default: '', trim: true, maxlength: 400 },
+  active: { type: Boolean, default: true, index: true },
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  revokedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  revokedAt: { type: Date, default: null },
+  rateLimitPerMinute: { type: Number, default: 60, min: 1, max: 5000 },
+  usageCount: { type: Number, default: 0, min: 0 },
+  lastUsedAt: { type: Date, default: null },
+  lastUsedIp: { type: String, default: '', trim: true, maxlength: 80 },
+  lastUsedOrigin: { type: String, default: '', trim: true, maxlength: 200 }
+}, { timestamps: true });
+
 const PlatformWalletSchema = new mongoose.Schema({
   key: { type: String, unique: true, default: 'platform_wallet' },
   adminBalance: { type: Number, default: 0 }
@@ -20451,6 +21295,7 @@ const Certificate = mongoose.models.Certificate || mongoose.model('Certificate',
 const WebsiteProject = mongoose.models.WebsiteProject || mongoose.model('WebsiteProject', WebsiteProjectSchema);
 const WebsiteMember = mongoose.models.WebsiteMember || mongoose.model('WebsiteMember', WebsiteMemberSchema);
 const WebsiteLead = mongoose.models.WebsiteLead || mongoose.model('WebsiteLead', WebsiteLeadSchema);
+const ExternalApiKey = mongoose.models.ExternalApiKey || mongoose.model('ExternalApiKey', ExternalApiKeySchema);
 const PlatformWallet = mongoose.models.PlatformWallet || mongoose.model('PlatformWallet', PlatformWalletSchema);
 
 // ---------- Ensure User schema has faculty field (non-breaking) ----------
@@ -22905,13 +23750,14 @@ function parsePaging(req){
 // Overview cards
 app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const [users, channels, groups, topupsPending, premiumPending, services] = await Promise.all([
+    const [users, channels, groups, topupsPending, premiumPending, services, externalApiKeys] = await Promise.all([
       User.countDocuments(),
       Channel.countDocuments(),
       Group.countDocuments(),
       TopUpRequest.countDocuments({ status: 'pending' }),
       PremiumPaymentRequest.countDocuments({ status: 'pending' }),
-      Service.countDocuments()
+      Service.countDocuments(),
+      ExternalApiKey.countDocuments({ active: true, revokedAt: null })
     ]);
 
     res.json({
@@ -22920,6 +23766,7 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
       channels,
       groups,
       services,
+      externalApiKeys,
       topupsPending,
       premiumPending,
       onlineUsers: onlineUsers.size,
@@ -22931,6 +23778,157 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
   } catch (e) {
     console.error('admin overview error', e);
     res.status(500).json({ error: 'Failed to load overview' });
+  }
+});
+
+app.get('/api/admin/external-api/keys', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePaging(req);
+    const q = cleanText(req.query.q, 120);
+    const query = {};
+    if (q) {
+      const re = new RegExp(escapeRegex(q), 'i');
+      query.$or = [
+        { name: re },
+        { keyPrefix: re },
+        { scopes: re },
+        { allowedOrigins: re }
+      ];
+    }
+
+    const [total, items] = await Promise.all([
+      ExternalApiKey.countDocuments(query),
+      ExternalApiKey.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean()
+    ]);
+    return res.json({
+      success: true,
+      page,
+      limit,
+      total,
+      keys: (items || []).map((item) => serializeExternalApiKey(item)),
+      availableScopes: EXTERNAL_API_SCOPE_DEFS,
+      externalBaseUrl: `${getPublicAppOrigin(req)}/api/external`
+    });
+  } catch (e) {
+    console.error('GET /api/admin/external-api/keys error:', e);
+    return res.status(500).json({ error: 'Failed to load API keys' });
+  }
+});
+
+app.post('/api/admin/external-api/keys', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const name = cleanText(req.body?.name, 120);
+    if (!name) return res.status(400).json({ error: 'name required' });
+
+    const note = cleanText(req.body?.note, 400);
+    const scopes = normalizeExternalApiScopes(req.body?.scopes);
+    const allowedOrigins = normalizeExternalApiOrigins(req.body?.allowedOrigins);
+    const rateLimitPerMinute = Math.max(1, Math.min(5000, Number(req.body?.rateLimitPerMinute || 60)));
+    const ownerIdRaw = String(req.body?.ownerId || req.userId || '').trim();
+    const ownerId = mongoose.Types.ObjectId.isValid(ownerIdRaw) ? ownerIdRaw : String(req.userId || '');
+    if (!mongoose.Types.ObjectId.isValid(ownerId)) {
+      return res.status(400).json({ error: 'ownerId invalid' });
+    }
+
+    const plainKey = createExternalApiSecret();
+    const created = await ExternalApiKey.create({
+      name,
+      keyPrefix: plainKey.slice(0, 12),
+      keyHash: sha256Hex(plainKey),
+      scopes,
+      allowedOrigins,
+      note,
+      active: req.body?.active !== false,
+      ownerId,
+      createdBy: req.userId,
+      rateLimitPerMinute
+    });
+
+    await audit(req, 'EXTERNAL_API_KEY_CREATE', 'external_api_key', String(created._id || ''), {
+      name,
+      scopes,
+      allowedOrigins,
+      rateLimitPerMinute
+    });
+
+    return res.status(201).json({
+      success: true,
+      key: serializeExternalApiKey(created, { plainKey }),
+      availableScopes: EXTERNAL_API_SCOPE_DEFS
+    });
+  } catch (e) {
+    console.error('POST /api/admin/external-api/keys error:', e);
+    return res.status(500).json({ error: 'Failed to create API key' });
+  }
+});
+
+app.patch('/api/admin/external-api/keys/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: 'Invalid API key id' });
+
+    const existing = await ExternalApiKey.findById(id);
+    if (!existing) return res.status(404).json({ error: 'API key not found' });
+
+    if (req.body?.name !== undefined) existing.name = cleanText(req.body.name, 120) || existing.name;
+    if (req.body?.note !== undefined) existing.note = cleanText(req.body.note, 400);
+    if (req.body?.scopes !== undefined) existing.scopes = normalizeExternalApiScopes(req.body.scopes);
+    if (req.body?.allowedOrigins !== undefined) existing.allowedOrigins = normalizeExternalApiOrigins(req.body.allowedOrigins);
+    if (req.body?.rateLimitPerMinute !== undefined) {
+      existing.rateLimitPerMinute = Math.max(1, Math.min(5000, Number(req.body.rateLimitPerMinute || 60)));
+    }
+    if (req.body?.ownerId !== undefined) {
+      const ownerId = String(req.body.ownerId || '').trim();
+      if (!mongoose.Types.ObjectId.isValid(ownerId)) return res.status(400).json({ error: 'ownerId invalid' });
+      existing.ownerId = ownerId;
+    }
+    if (req.body?.active !== undefined) {
+      existing.active = !!req.body.active;
+      if (existing.active) {
+        existing.revokedAt = null;
+        existing.revokedBy = null;
+      } else {
+        existing.revokedAt = existing.revokedAt || new Date();
+        existing.revokedBy = req.userId;
+      }
+    }
+
+    await existing.save();
+    await audit(req, 'EXTERNAL_API_KEY_UPDATE', 'external_api_key', id, {
+      active: existing.active,
+      scopes: existing.scopes,
+      allowedOrigins: existing.allowedOrigins
+    });
+
+    return res.json({ success: true, key: serializeExternalApiKey(existing) });
+  } catch (e) {
+    console.error('PATCH /api/admin/external-api/keys/:id error:', e);
+    return res.status(500).json({ error: 'Failed to update API key' });
+  }
+});
+
+app.delete('/api/admin/external-api/keys/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: 'Invalid API key id' });
+
+    const keyDoc = await ExternalApiKey.findById(id);
+    if (!keyDoc) return res.status(404).json({ error: 'API key not found' });
+
+    keyDoc.active = false;
+    keyDoc.revokedAt = new Date();
+    keyDoc.revokedBy = req.userId;
+    await keyDoc.save();
+
+    await audit(req, 'EXTERNAL_API_KEY_REVOKE', 'external_api_key', id, {
+      name: keyDoc.name,
+      keyPrefix: keyDoc.keyPrefix
+    });
+
+    return res.json({ success: true, key: serializeExternalApiKey(keyDoc) });
+  } catch (e) {
+    console.error('DELETE /api/admin/external-api/keys/:id error:', e);
+    return res.status(500).json({ error: 'Failed to revoke API key' });
   }
 });
 

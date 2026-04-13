@@ -243,6 +243,9 @@ function renderWebsiteProjectHtml(project, options = {}) {
   const routeBase = typeof options.routeBase === 'string'
     ? String(options.routeBase || '').trim().replace(/\/+$/, '')
     : (options.preview ? links.previewBase : '');
+  const apiBase = String(options.apiBase || `/api/website-builder/public/${slug}`)
+    .trim()
+    .replace(/\/+$/, '') || `/api/website-builder/public/${slug}`;
   const basePrefix = routeBase;
   const palette = Object.assign({
     accent: '#14968b',
@@ -254,7 +257,7 @@ function renderWebsiteProjectHtml(project, options = {}) {
   const feature = Object.assign({ authEnabled: true, waitlistEnabled: true, contactEnabled: true }, project?.serverFeatures || {});
   const projectConfig = {
     slug,
-    apiBase: `/api/website-builder/public/${slug}`,
+    apiBase,
     basePrefix,
     routeBase,
     publishedUrl: links.publishedUrl,
