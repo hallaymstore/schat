@@ -52,7 +52,29 @@
     return true;
   }
 
+  function shouldSuppressOverlay() {
+    try {
+      if (window.__schatDisableGlobalLoaderOverlay) return true;
+      if (doc.documentElement && doc.documentElement.classList.contains('schat-live-call-active')) return true;
+      if (doc.body && doc.body.classList.contains('schat-live-call-active')) return true;
+    } catch (_) {}
+    return false;
+  }
+
+  function hideOverlayNow() {
+    clearTimeout(state.showTimer);
+    clearTimeout(state.hideTimer);
+    state.showTimer = null;
+    state.hideTimer = null;
+    state.visible = false;
+    if (state.overlay) state.overlay.classList.remove('visible');
+  }
+
   function showOverlay() {
+    if (shouldSuppressOverlay()) {
+      hideOverlayNow();
+      return;
+    }
     clearTimeout(state.hideTimer);
     clearTimeout(state.showTimer);
     if (!ensureUi() || !state.overlay) return;
@@ -67,7 +89,7 @@
     if (state.visible || state.showTimer) return;
     state.showTimer = window.setTimeout(function () {
       state.showTimer = null;
-      if (state.manualBlocks > 0 || state.pending > 0 || (state.booting && doc.readyState !== 'complete')) {
+      if (!shouldSuppressOverlay() && (state.manualBlocks > 0 || state.pending > 0 || (state.booting && doc.readyState !== 'complete'))) {
         showOverlay();
       }
     }, Math.max(0, Number(delay || 0)));
@@ -76,6 +98,10 @@
   function hideOverlayIfAllowed() {
     clearTimeout(state.showTimer);
     state.showTimer = null;
+    if (shouldSuppressOverlay()) {
+      hideOverlayNow();
+      return;
+    }
     if (state.booting || state.manualBlocks > 0 || state.pending > 0) return;
     if (!state.overlay || !state.visible) return;
     var wait = Math.max(0, Number(state.minVisibleUntil || 0) - Date.now());
@@ -349,6 +375,11 @@
       hide: function () {
         state.manualBlocks = Math.max(0, Number(state.manualBlocks || 0) - 1);
         hideOverlayIfAllowed();
+      },
+      setSuppressed: function (value) {
+        window.__schatDisableGlobalLoaderOverlay = !!value;
+        if (value) hideOverlayNow();
+        else hideOverlayIfAllowed();
       },
       setText: function () {}
     };

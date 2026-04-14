@@ -571,6 +571,11 @@
     visibility:hidden;
     pointer-events:none;
   }
+  #teacherStage .stage-slot-primary video{
+    object-fit: contain !important;
+    object-position: center center;
+    background:#000;
+  }
   #teacherStage.stage-dual{
     grid-template-columns: minmax(0,1fr) minmax(0,1fr);
     gap: 10px;
@@ -604,6 +609,9 @@
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+  }
+  #teacherStageZoomHint{
+    display:none !important;
   }
   #teacherStage .stage-slot.speaker-spotlight{
     border-color: rgba(251,191,36,.88);
@@ -1466,6 +1474,38 @@
   #captionLangSelect option{
     color:#111827;
   }
+  #captionAudioHint{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 9px;
+    border-radius:999px;
+    border:1px solid rgba(45,212,191,.28);
+    background:rgba(13,148,136,.16);
+    color:#99f6e4;
+    font-size:11px;
+    font-weight:700;
+    line-height:1;
+    white-space:nowrap;
+  }
+  #captionAudioHint::before{
+    content:'';
+    width:7px;
+    height:7px;
+    border-radius:999px;
+    background:currentColor;
+    box-shadow:0 0 0 5px rgba(153,246,228,.12);
+  }
+  #captionAudioHint[data-state="low"]{
+    border-color:rgba(251,191,36,.34);
+    background:rgba(120,53,15,.22);
+    color:#fde68a;
+  }
+  #captionAudioHint[data-state="listening"]{
+    border-color:rgba(45,212,191,.28);
+    background:rgba(13,148,136,.16);
+    color:#99f6e4;
+  }
   @media(max-width:640px){
     #uploadOverlay{ left: 6px; top: max(62px, calc(10px + env(safe-area-inset-top, 0px))); width: 108px; }
     #uploadOverlayCard{ min-height: 210px; padding: 8px 6px !important; }
@@ -1473,15 +1513,14 @@
     #uploadHint{ font-size: 9px !important; line-height: 1.2; }
     #groupCallTopBar{ padding: 10px !important; }
     #groupCallVideoLayout{ padding: 8px !important; }
-    #teacherStageWrap{ flex-basis: 48%; max-height: 48%; min-height: 168px; padding-bottom: 6px; }
-    #teacherStage{ height: 100%; min-height: 168px; aspect-ratio:16 / 9 !important; }
+    #teacherStageWrap{ flex-basis: 44%; max-height: 44%; min-height: 160px; padding-bottom: 6px; }
+    #teacherStage{ height: 100%; min-height: 160px; aspect-ratio:16 / 9 !important; }
     #teacherStage.stage-dual{ grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:6px; }
     #teacherStage.stage-dual #teacherStageSurface{ grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:6px; }
     #teacherStage .stage-slot{ border-radius: 12px; }
     #teacherStageZoomHud{ right:8px; bottom:10px; gap:4px; padding:6px; background: rgba(0,0,0,.66); }
     #teacherStageZoomHud button{ min-width:34px; height:34px; font-size:13px; }
     #teacherStageZoomLabel{ min-width:48px; font-size:11px; }
-    #teacherStageZoomHint{ left:8px; bottom:10px; padding:6px 8px; font-size:10px; max-width:52vw; line-height:1.2; background: rgba(0,0,0,.58); }
     #studentsScrollArea{ margin-top: 6px; padding-right: 2px; }
     #studentsGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 6px !important; }
     #studentsGrid > [id^="tile_"]{ height: 88px !important; min-height: 88px !important; max-height: 96px !important; }
@@ -1518,13 +1557,14 @@
       font-size:12px;
       line-height:1.3;
     }
-    #stageCaptionLangRow{
-      font-size:11px;
-      gap:6px;
-    }
+    #stageCaptionLangRow{ font-size:11px; gap:6px; flex-wrap:wrap; }
     #captionLangSelect{
       font-size:11px;
       padding:4px 7px;
+    }
+    #captionAudioHint{
+      font-size:10px;
+      padding:4px 8px;
     }
   }
 </style>
@@ -1658,7 +1698,10 @@ button,a{ -webkit-tap-highlight-color: transparent; }
     flex: 0 0 40% !important;
     max-height: 40% !important;
   }
-  html.schat-low-end #teacherStage video,
+  html.schat-low-end #teacherStage video{
+    object-fit: contain !important;
+    background: #000 !important;
+  }
   html.schat-low-end #studentsGrid video{
     object-fit: cover !important;
     background: #000 !important;
@@ -3388,7 +3431,7 @@ function setupSocket() {
             // Noise gate state
             noiseGateNode: null,
             noiseGateGain: null,
-            noiseFloor: 0.008,
+            noiseFloor: 0.006,
             gateOpen: false,
             gateCloseTimer: null
         };
@@ -3416,11 +3459,13 @@ function setupSocket() {
                 lpf.Q.value = 0.7;
                 // Compressor to even out volume
                 const comp = ctx.createDynamicsCompressor();
-                comp.threshold.value = -24;
+                comp.threshold.value = -28;
                 comp.knee.value = 12;
-                comp.ratio.value = 4;
-                comp.attack.value = 0.003;
-                comp.release.value = 0.15;
+                comp.ratio.value = 3.2;
+                comp.attack.value = 0.002;
+                comp.release.value = 0.22;
+                const makeup = ctx.createGain();
+                makeup.gain.value = 1.5;
                 // Noise gate via gain node
                 const gate = ctx.createGain();
                 gate.gain.value = 1.0;
@@ -3432,12 +3477,13 @@ function setupSocket() {
                 src.connect(hpf);
                 hpf.connect(lpf);
                 lpf.connect(comp);
-                comp.connect(gate);
+                comp.connect(makeup);
+                makeup.connect(gate);
                 gate.connect(analyser);
                 // Get processed output as a stream
                 const dest = ctx.createMediaStreamDestination();
                 gate.connect(dest);
-                _localAudioPipeline = { ctx, src, hpf, lpf, comp, gate, analyser, samples, dest, srcTrack: audioTrack };
+                _localAudioPipeline = { ctx, src, hpf, lpf, comp, makeup, gate, analyser, samples, dest, srcTrack: audioTrack };
                 // Start noise gate monitoring
                 _startNoiseGateMonitor();
                 return dest.stream.getAudioTracks()[0] || null;
@@ -3457,8 +3503,9 @@ function setupSocket() {
                 for (let i = 0; i < s.length; i++) sum += s[i] * s[i];
                 const rms = Math.sqrt(sum / s.length);
                 const gateNode = _localAudioPipeline.gate;
-                const threshold = GROUP_FEEDBACK_GUARD.noiseFloor;
-                if (rms > threshold) {
+                const openThreshold = Math.max(0.0042, Number(GROUP_FEEDBACK_GUARD.noiseFloor || 0.006) * 0.78);
+                const closeThreshold = Math.max(0.0034, openThreshold * 0.72);
+                if (rms > openThreshold) {
                     // Voice detected - open gate smoothly
                     if (!GROUP_FEEDBACK_GUARD.gateOpen) {
                         GROUP_FEEDBACK_GUARD.gateOpen = true;
@@ -3467,10 +3514,10 @@ function setupSocket() {
                     }
                 } else {
                     // Below threshold - close gate smoothly
-                    if (GROUP_FEEDBACK_GUARD.gateOpen) {
+                    if (GROUP_FEEDBACK_GUARD.gateOpen && rms < closeThreshold) {
                         GROUP_FEEDBACK_GUARD.gateOpen = false;
                         gateNode.gain.cancelScheduledValues(gateNode.context.currentTime);
-                        gateNode.gain.linearRampToValueAtTime(0.02, gateNode.context.currentTime + 0.12);
+                        gateNode.gain.linearRampToValueAtTime(0.12, gateNode.context.currentTime + 0.14);
                     }
                 }
             }, 30);
@@ -3849,6 +3896,7 @@ function setupSocket() {
         const _captionTranslateCache = new Map();
         let _captionLangInitTries = 0;
         let _captionLangDelegateBound = false;
+        let _captionInterimTranslateAt = 0;
 
         function getTeacherFallbackStageId() {
             try {
@@ -4680,6 +4728,27 @@ function setupSocket() {
             return 'uz';
         }
 
+        function normalizeCaptionSourceLang(v, fallback = 'auto') {
+            const s = String(v || '').trim().toLowerCase();
+            if (!s || s === 'auto' || s === 'detect') return 'auto';
+            return normalizeCaptionLangClient(s || fallback || 'uz');
+        }
+
+        function detectCaptionSourceLang(text, fallback = 'auto') {
+            const raw = String(text || '').trim().toLowerCase();
+            if (!raw) return normalizeCaptionSourceLang(fallback, 'auto');
+            if (/[а-яё]/i.test(raw)) return 'ru';
+            let uzScore = 0;
+            let enScore = 0;
+            if (/(o['`ʻ]|g['`ʻ]|yo'q|bo'lsa|bo'lib|o'qituvchi|talaba|dars|rahmat|salom|qanday|kerak|emas|uchun|bilan)/i.test(raw)) uzScore += 3;
+            if (/\b(the|and|is|are|you|we|hello|thanks|please|lesson|teacher|student|join|speak)\b/i.test(raw)) enScore += 3;
+            if (/\b(qani|nega|ham|yana|shu|endi)\b/i.test(raw)) uzScore += 1;
+            if (/\b(this|that|with|from|can|could|would|today)\b/i.test(raw)) enScore += 1;
+            if (enScore > uzScore) return 'en';
+            if (uzScore > 0) return 'uz';
+            return normalizeCaptionSourceLang(fallback, 'auto');
+        }
+
         function captionSpeechLocale(langCode) {
             const code = normalizeCaptionLangClient(langCode);
             if (code === 'en') return 'en-US';
@@ -4815,6 +4884,45 @@ function setupSocket() {
             } catch(_) {}
         }
 
+        function setCaptionAudioHint(text, state = 'clear') {
+            try {
+                const chip = document.getElementById('captionAudioHint');
+                if (!chip) return;
+                const clean = String(text || '').trim();
+                const nextState = String(state || 'clear').trim().toLowerCase();
+                if (!clean || nextState === 'clear') {
+                    chip.textContent = '';
+                    chip.dataset.state = 'clear';
+                    chip.classList.add('hidden');
+                    return;
+                }
+                chip.textContent = clean;
+                chip.dataset.state = nextState;
+                chip.classList.remove('hidden');
+            } catch(_) {}
+        }
+
+        function syncCaptionAudioHint(rms, opts = {}) {
+            try {
+                const active = !!opts.active;
+                const stageVisible = !!opts.stageVisible;
+                if (!active || !stageVisible) {
+                    setCaptionAudioHint('', 'clear');
+                    return;
+                }
+                const level = Number(rms || 0);
+                if (level >= 0.018) {
+                    setCaptionAudioHint('Subtitr eshitmoqda', 'listening');
+                    return;
+                }
+                if (level >= 0.0055) {
+                    setCaptionAudioHint('Past ovoz aniqlandi', 'low');
+                    return;
+                }
+                setCaptionAudioHint('', 'clear');
+            } catch(_) {}
+        }
+
         function showStageCaption(text, opts) {
             try {
                 const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 240);
@@ -4841,15 +4949,28 @@ function setupSocket() {
                 return;
             }
             const seq = ++_captionRenderSeq;
-            const sourceLang = normalizeCaptionLangClient(meta?.sourceLang || _captionSourceLang || 'uz');
+            const sourceLang = detectCaptionSourceLang(
+                clean,
+                meta?.sourceLang || _captionSourceLang || _captionTargetLang || 'auto'
+            );
             const targetLang = normalizeCaptionLangClient(_captionTargetLang || 'uz');
-            let finalText = clean;
-            // Do not translate interim chunks (prevents UI freeze and API overload).
-            if (targetLang !== sourceLang && !!(opts && opts.final)) {
-                finalText = await translateCaptionText(clean, targetLang, sourceLang);
+            showStageCaption(clean, opts);
+            if (targetLang === sourceLang) return;
+            if (opts && opts.final) {
+                const finalText = await translateCaptionText(clean, targetLang, sourceLang);
+                if (seq !== _captionRenderSeq) return;
+                showStageCaption(finalText, opts);
+                return;
             }
-            if (seq !== _captionRenderSeq && !(opts && opts.final)) return;
-            showStageCaption(finalText, opts);
+            const now = Date.now();
+            if (clean.length < 14 || (now - _captionInterimTranslateAt) < 650) return;
+            _captionInterimTranslateAt = now;
+            translateCaptionText(clean, targetLang, sourceLang)
+                .then((translated) => {
+                    if (seq !== _captionRenderSeq) return;
+                    showStageCaption(translated, opts);
+                })
+                .catch(() => {});
         }
 
         function emitStageCaption(text, isFinal) {
@@ -4857,7 +4978,10 @@ function setupSocket() {
                 if (!socket || !groupCall.active || !groupCall.callId) return;
                 const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 240);
                 if (!clean) return;
-                const srcLang = normalizeCaptionLangClient(_captionSourceLang || _captionTargetLang || 'uz');
+                const srcLang = detectCaptionSourceLang(
+                    clean,
+                    _captionSourceLang || _captionTargetLang || 'auto'
+                );
                 socket.emit('groupCallCaption', {
                     groupId: String(groupCall.groupId || groupId || ''),
                     callId: String(groupCall.callId || ''),
@@ -4889,6 +5013,7 @@ function setupSocket() {
             try { if (_captionTranscriberRestart) clearTimeout(_captionTranscriberRestart); } catch(_) {}
             _captionTranscriberRestart = null;
             _captionTranscriberActive = false;
+            setCaptionAudioHint('', 'clear');
             try {
                 if (_captionTranscriber) {
                     _captionTranscriber.onresult = null;
@@ -6281,6 +6406,19 @@ function stopLocalSpeakingMonitor() {
     _localSpeakingHoldUntil = 0;
     const meId = String(myUserId() || '');
     if (meId) setParticipantSpeakingState(meId, false);
+    try { syncCaptionAudioHint(0, { active: false, stageVisible: false }); } catch(_) {}
+}
+
+function setLiveCallOverlaySuppressed(active) {
+    const next = !!active;
+    try { document.documentElement.classList.toggle('schat-live-call-active', next); } catch(_) {}
+    try { document.body?.classList?.toggle('schat-live-call-active', next); } catch(_) {}
+    try { window.__schatDisableGlobalLoaderOverlay = next; } catch(_) {}
+    try {
+        if (window.SchatLoading && typeof window.SchatLoading.setSuppressed === 'function') {
+            window.SchatLoading.setSuppressed(next);
+        }
+    } catch(_) {}
 }
 
 function startLocalSpeakingMonitor() {
@@ -6291,14 +6429,20 @@ function startLocalSpeakingMonitor() {
             const meId = String(myUserId() || '');
             if (!meId) return;
             const localState = getLocalParticipantMediaSnapshot();
+            const stageVisible = !!(meId && typeof isStageVisibleUserId === 'function' && isStageVisibleUserId(meId));
             if (!localState.micOn) {
                 _localSpeakingHoldUntil = 0;
                 setParticipantSpeakingState(meId, false);
+                syncCaptionAudioHint(0, { active: false, stageVisible });
                 return;
             }
             const rms = readAnalyserRms(_localAudioPipeline?.analyser, _localAudioPipeline?.samples)
                 || readAnalyserRms(GROUP_FEEDBACK_GUARD?.analyser, GROUP_FEEDBACK_GUARD?.samples);
             const now = Date.now();
+            syncCaptionAudioHint(rms, {
+                active: !!groupCall.active && !!_captionTranscriberEnabled,
+                stageVisible
+            });
             if (Number(rms || 0) >= 0.02) {
                 _localSpeakingHoldUntil = now + 320;
             }
@@ -11014,6 +11158,7 @@ async function toggleMute() {
             groupCall.joining = false;
             groupCall.incoming = null;
             groupCall.overlayMinimized = false;
+            try { setLiveCallOverlaySuppressed(false); } catch(_) {}
             try { closeCallMoreMenu(); } catch(_) {}
             try { hideGroupOverlay(); } catch(_) {}
             clearActiveGroupCallSession();
@@ -11190,6 +11335,7 @@ async function toggleMute() {
                 groupCall.incoming = null;
                 hideIncomingGroupCallBanner({ resetDismissed: true });
                 groupCall.active = true;
+                try { setLiveCallOverlaySuppressed(true); } catch(_) {}
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
                 groupCall.lessonSubject = String(data?.teacherSubject || groupCall.lessonSubject || '').trim();
@@ -11252,6 +11398,7 @@ async function toggleMute() {
                 groupCall.incoming = null;
                 hideIncomingGroupCallBanner({ resetDismissed: true });
                 groupCall.active = true;
+                try { setLiveCallOverlaySuppressed(true); } catch(_) {}
                 groupCall.callId = data.callId;
                 groupCall.lessonId = data.lessonId || null;
                 groupCall.lessonSubject = String(data?.teacherSubject || groupCall.lessonSubject || '').trim();
@@ -11472,7 +11619,7 @@ async function toggleMute() {
                     if (String(payload?.callId || '') !== String(groupCall.callId || '')) return;
                     const text = String(payload?.text || '').trim();
                     if (!text) return;
-                    const srcLang = normalizeCaptionLangClient(payload?.sourceLang || 'uz');
+                    const srcLang = normalizeCaptionSourceLang(payload?.sourceLang || 'auto');
                     showStageCaptionLocalized(text, { final: !!payload?.final }, { sourceLang: srcLang });
                 } catch(_) {}
             });
@@ -11684,13 +11831,14 @@ async function toggleMute() {
             <button type="button" onclick="zoomTeacherStageBy(0.25)" title="Kattalashtirish">+</button>
             <button type="button" onclick="resetTeacherStageZoom()" title="Reset">1:1</button>
           </div>
-          <div id="teacherStageZoomHint">Telefonda pinch yoki 2 marta bosib kattalashtiring, keyin suring</div>
+          <div id="teacherStageZoomHint" aria-hidden="true"></div>
           <div class="px-2 pb-2">
             <div id="stageCaptionInlineBar" class="hidden" aria-live="polite">
               <div id="stageCaptionInlineText"></div>
             </div>
             <div id="stageCaptionLangRow">
               <span>Transkripsiya tili</span>
+              <span id="captionAudioHint" class="hidden" aria-live="polite"></span>
               <select id="captionLangSelect" title="Transkripsiya tili">
                 <option value="uz">O'zbek</option>
                 <option value="en">English</option>

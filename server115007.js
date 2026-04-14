@@ -1,4 +1,5 @@
 const express = require('express');
+const dns = require('dns');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const socketIO = require('socket.io');
@@ -26,6 +27,32 @@ const { AccessToken } = require('livekit-server-sdk');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+
+function configurePreferredDnsServers() {
+  const raw = String(process.env.DNS_SERVERS || '8.8.8.8,1.1.1.1').trim();
+  const servers = raw
+    .split(/[\s,;]+/)
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+
+  try {
+    if (typeof dns.setDefaultResultOrder === 'function') {
+      dns.setDefaultResultOrder('ipv4first');
+    }
+  } catch (err) {
+    console.warn('DNS result order configuration failed:', err?.message || err);
+  }
+
+  if (!servers.length) return;
+  try {
+    dns.setServers(servers);
+    console.log(`🌐 Node DNS servers: ${servers.join(', ')}`);
+  } catch (err) {
+    console.warn('DNS server configuration failed:', err?.message || err);
+  }
+}
+
+configurePreferredDnsServers();
 
 // Keep process alive on unexpected async/stream errors.
 // We log the error and continue so live classes are not dropped by a single failed upload.
@@ -928,39 +955,71 @@ function getMediaType(mimeType) {
 }
 
 
-// Fail fast if MONGODB_URI is not set (prevents stats buffering timeouts)
-if (!process.env.MONGODB_URI) {
-  console.error('❌ MONGODB_URI is not set. Create a MongoDB Atlas URI and set it in your environment (.env or Render).');
-  process.exit(1);
+let mongoStartupError = null;
+let mongoBootstrapPromise = null;
+
+async function runMongoBootstrapStep(label, task) {
+  console.log(`🧩 ${label}...`);
+  await task();
+  console.log(`✅ ${label} ready`);
 }
 
-// MongoDB Connection (defer HTTP start until connected)
-const mongoConnectPromise = mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 15000,
-  socketTimeoutMS: 45000,
-  family: 4
-}).then(async () => {
-  console.log('✅ MongoDB Connected');
-  await ensureUserContactIndexes();
-  // Default bootstrap (safe because it runs after file load; models are defined synchronously)
-  await ensureDefaultAdmin();
-  await ensureDefaultCatalog();
-  await ensureDefaultPrograms();
-  await ensureDefaultStudyTypes();
-  await ensureDefaultStudyGroups();
-}).catch(err => {
-  console.error('❌ MongoDB Connection Error:', err);
-  process.exit(1);
-});
+function queueMongoBootstraps() {
+  if (mongoBootstrapPromise) return mongoBootstrapPromise;
 
-async function waitForMongoReady() {
+  mongoBootstrapPromise = (async () => {
+    try {
+      await runMongoBootstrapStep('User contact indexes', ensureUserContactIndexes);
+      await runMongoBootstrapStep('Default admin', ensureDefaultAdmin);
+      await runMongoBootstrapStep('University catalog', ensureDefaultCatalog);
+      await runMongoBootstrapStep('Programs catalog', ensureDefaultPrograms);
+      await runMongoBootstrapStep('Study types catalog', ensureDefaultStudyTypes);
+      await runMongoBootstrapStep('Study groups catalog', ensureDefaultStudyGroups);
+      console.log('✅ MongoDB bootstrap tasks complete');
+    } catch (err) {
+      console.error('❌ MongoDB bootstrap task failed:', err);
+    } finally {
+      mongoBootstrapPromise = null;
+    }
+  })();
+
+  return mongoBootstrapPromise;
+}
+
+// MongoDB Connection: if it fails, keep HTTP alive in degraded mode so public pages still render.
+const mongoConnectPromise = !process.env.MONGODB_URI
+  ? Promise.resolve(false).then(() => {
+      mongoStartupError = new Error('MONGODB_URI is not set');
+      console.warn('⚠️ MONGODB_URI is not set. Starting in degraded mode without MongoDB.');
+      return false;
+    })
+  : mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+      family: 4
+    }).then(async () => {
+      console.log('✅ MongoDB Connected');
+      mongoStartupError = null;
+      // Bootstrap defaults in the background so HTTP can start listening immediately.
+      void queueMongoBootstraps();
+      return true;
+    }).catch(err => {
+      mongoStartupError = err;
+      console.error('❌ MongoDB Connection Error:', err);
+      console.warn('⚠️ Starting in degraded mode without MongoDB. Public pages will render, but DB-backed API features may fail.');
+      return false;
+    });
+
+async function waitForMongoReady(opts = {}) {
+  const exitOnFailure = opts && opts.exitOnFailure !== undefined ? Boolean(opts.exitOnFailure) : true;
   try {
     // If already connected
     if (mongoose.connection.readyState === 1) return;
     // Wait for initial connect promise
-    await mongoConnectPromise;
+    const connected = await mongoConnectPromise;
+    if (!connected) throw mongoStartupError || new Error('MongoDB unavailable');
     if (mongoose.connection.readyState === 1) return;
     // Fallback: wait for open
     await new Promise((resolve, reject) => {
@@ -975,7 +1034,8 @@ async function waitForMongoReady() {
     });
   } catch (e) {
     console.error('❌ MongoDB not ready:', e);
-    process.exit(1);
+    if (exitOnFailure) process.exit(1);
+    throw e;
   }
 }
 
@@ -10888,7 +10948,10 @@ socket.to(getGroupRoomName(groupId)).emit('groupCallUserJoined', {
 
       const text = cleanText(payload?.text, 240);
       if (!text) return;
-      const sourceLang = normalizeCaptionLang(payload?.sourceLang || 'uz', 'uz');
+      const sourceLangRaw = String(payload?.sourceLang || 'auto').trim().toLowerCase();
+      const sourceLang = sourceLangRaw === 'auto'
+        ? 'auto'
+        : normalizeCaptionLang(sourceLangRaw, 'uz');
       const st = getCallStage(call);
       const ownerTeacherId = String(st?.ownerTeacherId || '').trim();
       const pinnedUserId = String(st?.pinnedUserId || '').trim();
@@ -25219,14 +25282,28 @@ function startLiveNotificationScheduler() {
   }, tickMs);
 }
 
-// Start HTTP only after Mongo is ready (bufferCommands=false => queries before connect will crash)
+// Start HTTP even if Mongo is down so public pages remain available.
 (async () => {
-  await waitForMongoReady();
-  await initializeStats();
+  let mongoReady = false;
+  try {
+    await waitForMongoReady({ exitOnFailure: false });
+    mongoReady = true;
+  } catch (_) {
+    mongoReady = false;
+  }
+
+  if (mongoReady) {
+    await initializeStats().catch((err) => {
+      console.error('initializeStats error:', err);
+    });
+  }
 
   server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 MongoDB: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
+    if (mongoose.connection.readyState !== 1) {
+      console.log('⚠️ Degraded mode active: static/public pages are available, DB-backed features may not work until MongoDB reconnects.');
+    }
     console.log(`🛡️ Default admin target: ${DEFAULT_ADMIN_USERNAME}`);
   });
 })();
