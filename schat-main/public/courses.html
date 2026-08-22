@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kurslar | HALLAYM edu</title>
+  <link rel="stylesheet" href="/ui-glass-theme.css">
+  <link rel="stylesheet" href="/course-suite.css">
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+<body class="course-body">
+  <header class="course-topbar">
+    <div class="course-shell">
+      <div class="course-nav">
+        <div class="course-brand">
+          <div class="course-brand-mark"><span class="course-icon" aria-hidden="true"></span></div>
+          <div class="course-brand-copy">
+            <h1>HALLAYM Courses</h1>
+            <p>Videodars, PDF va progress kuzatuvi</p>
+          </div>
+          <span id="roleBadge" class="course-pill course-role-pill">STUDENT</span>
+          <span id="mePill" class="course-pill"></span>
+        </div>
+        <div class="course-nav-actions">
+          <button class="course-button ghost" id="themeBtn">Tema</button>
+          <a class="course-link-button ghost" id="dashboardLink" href="/student-dashboard.html">Dashboard</a>
+          <button class="course-button primary" id="createCourseBtn" style="display:none">Yangi kurs</button>
+          <button class="course-button danger" id="logoutBtn">Chiqish</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="course-main">
+    <div class="course-shell">
+      <div id="pageAlert" class="course-alert"></div>
+
+      <section class="course-card">
+        <div class="course-split">
+          <div>
+            <div class="course-eyebrow">Kurslar katalogi</div>
+            <h2 class="course-big-title" style="font-size:clamp(2rem, 1.3rem + 2vw, 3.8rem)">Bir joyda kurslar, darslar va teacher studio</h2>
+            <p class="course-section-copy">Student kursga qo‘shiladi, videodarsni ko‘radi, PDF ochadi, comment va rating qoldiradi. Teacher esa course studio orqali mavzular, lesson quiz va requestlarni boshqaradi.</p>
+          </div>
+          <div class="course-kpi-grid">
+            <div class="course-kpi"><div class="course-muted">Kurslar</div><div class="course-kpi-value" id="catalogCount">0</div></div>
+            <div class="course-kpi"><div class="course-muted">Teacherlar</div><div class="course-kpi-value" id="teacherCount">0</div></div>
+            <div class="course-kpi"><div class="course-muted">Mavzular</div><div class="course-kpi-value" id="lessonCount">0</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="course-card section-gap">
+        <div class="course-grid">
+          <div class="course-col-4">
+            <div class="course-form-group">
+              <label for="searchInput">Qidirish</label>
+              <input class="course-input" id="searchInput" placeholder="Kurs nomi, ustoz, fakultet...">
+            </div>
+          </div>
+          <div class="course-col-3">
+            <div class="course-form-group">
+              <label for="facultyFilter">Fakultet</label>
+              <select class="course-select" id="facultyFilter">
+                <option value="">Fakultet: barchasi</option>
+              </select>
+            </div>
+          </div>
+          <div class="course-col-2">
+            <div class="course-form-group">
+              <label for="priceFilter">Narx</label>
+              <select class="course-select" id="priceFilter">
+                <option value="">Hammasi</option>
+                <option value="free">Bepul</option>
+                <option value="paid">Pullik</option>
+              </select>
+            </div>
+          </div>
+          <div class="course-col-3">
+            <div class="course-form-group">
+              <label for="joinModeFilter">Qo'shilish rejimi</label>
+              <select class="course-select" id="joinModeFilter">
+                <option value="">Hammasi</option>
+                <option value="open">Darhol kirish</option>
+                <option value="approval">So'rov bilan</option>
+              </select>
+            </div>
+          </div>
+          <div class="course-col-3">
+            <div class="course-form-group">
+              <label for="sortFilter">Saralash</label>
+              <select class="course-select" id="sortFilter">
+                <option value="new">Yangi</option>
+                <option value="title">Nom bo'yicha</option>
+                <option value="rating">Reyting bo'yicha</option>
+                <option value="lessons">Mavzular soni</option>
+                <option value="price">Narx bo'yicha</option>
+              </select>
+            </div>
+          </div>
+          <div class="course-col-3" style="display:flex;align-items:end">
+            <button class="course-button" id="refreshBtn" style="width:100%">Yangilash</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="course-card section-gap">
+        <div class="course-stack" id="courseList">
+          <div class="course-empty">Kurslar yuklanmoqda...</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="course-footer">HALLAYM edu course hub — premium course management</footer>
+
+  <script src="/course-suite.js"></script>
+  <script src="/courses-app.js"></script>
+  <script src="/global-assistant.js" defer></script>
+</body>
+</html>

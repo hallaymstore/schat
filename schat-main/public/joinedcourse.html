@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kurs ichida | HALLAYM edu</title>
+  <link rel="stylesheet" href="/ui-glass-theme.css">
+  <link rel="stylesheet" href="/course-suite.css">
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+<body class="course-body">
+  <header class="course-topbar">
+    <div class="course-shell">
+      <div class="course-nav">
+        <div class="course-brand">
+          <div class="course-brand-mark"></div>
+          <div class="course-brand-copy">
+            <h1>Joined Course</h1>
+            <p>Videodars, PDF preview va lesson quiz</p>
+          </div>
+          <span id="roleBadge" class="course-pill course-role-pill">STUDENT</span>
+          <span id="mePill" class="course-pill"></span>
+        </div>
+        <div class="course-nav-actions">
+          <button class="course-button ghost" id="themeBtn">Tema</button>
+          <a class="course-link-button ghost" href="/courses.html">Kurslar</a>
+          <a class="course-link-button ghost" id="dashboardLink" href="/student-dashboard.html">Dashboard</a>
+          <button class="course-button danger" id="logoutBtn">Chiqish</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="course-main">
+    <div class="course-shell">
+      <div id="pageAlert" class="course-alert"></div>
+      <div id="heroArea"></div>
+
+      <div class="course-grid section-gap">
+        <div class="course-col-8">
+          <div id="viewerArea"></div>
+          <div id="certificateWrap" style="margin-top:18px"></div>
+        </div>
+        <div class="course-col-4">
+          <section class="course-card">
+            <h2 class="course-section-title">Mavzular</h2>
+            <div id="lessonList" class="course-stack" style="margin-top:18px">
+              <div class="course-empty">Mavzular yuklanmoqda...</div>
+            </div>
+          </section>
+          <section class="course-card section-gap">
+            <h2 class="course-section-title">Kurs testlari</h2>
+            <div id="courseTests" class="course-stack" style="margin-top:18px">
+              <div class="course-empty">Testlar yuklanmoqda...</div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="course-footer">HALLAYM edu — joined course player</footer>
+
+  <script src="/course-suite.js"></script>
+  <script src="/joinedcourse-app.js"></script>
+  <script src="/global-assistant.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Course Analytics | HALLAYM edu</title>
+  <link rel="stylesheet" href="/ui-glass-theme.css">
+  <link rel="stylesheet" href="/course-suite.css">
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+<body class="course-body">
+  <header class="course-topbar">
+    <div class="course-shell">
+      <div class="course-nav">
+        <div class="course-brand">
+          <div class="course-brand-mark"></div>
+          <div class="course-brand-copy">
+            <h1>Course Analytics</h1>
+            <p>Requestlar, progress va feedback</p>
+          </div>
+          <span id="roleBadge" class="course-pill course-role-pill">TEACHER</span>
+          <span id="mePill" class="course-pill"></span>
+        </div>
+        <div class="course-nav-actions">
+          <button class="course-button ghost" id="themeBtn">Tema</button>
+          <a class="course-link-button ghost" href="/courses.html">Kurslar</a>
+          <a class="course-link-button ghost" id="dashboardLink" href="/teacher-dashboard.html">Dashboard</a>
+          <button class="course-button danger" id="logoutBtn">Chiqish</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="course-main">
+    <div class="course-shell">
+      <div id="pageAlert" class="course-alert"></div>
+      <div id="progressHero"></div>
+      <section class="course-card section-gap"><div id="summaryCards"></div></section>
+
+      <section class="course-card section-gap">
+        <h2 class="course-section-title">Join requestlar</h2>
+        <div id="requestsWrap" class="course-stack" style="margin-top:18px"></div>
+      </section>
+
+      <section class="course-card section-gap">
+        <h2 class="course-section-title">Talabalar progressi</h2>
+        <div id="studentsWrap" style="margin-top:18px"></div>
+      </section>
+
+      <section class="course-card section-gap">
+        <h2 class="course-section-title">Mavzu statistikasi</h2>
+        <div id="lessonStatsWrap" class="course-stack" style="margin-top:18px"></div>
+      </section>
+
+      <section id="feedbackWrap" class="section-gap"></section>
+    </div>
+  </main>
+
+  <footer class="course-footer">HALLAYM edu — teacher course analytics</footer>
+
+  <script src="/course-suite.js"></script>
+  <script src="/course-progress.js"></script>
+  <script src="/global-assistant.js" defer></script>
+</body>
+</html>

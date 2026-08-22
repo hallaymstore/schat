@@ -1,0 +1,4683 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HALLAYM edu - Jonli videodars va online ta'lim platformasi</title>
+  <meta name="description" content="HALLAYM edu - jonli videodars, screen share, guruhlar, xizmatlar va campus signalni bitta premium online ta'lim tajribasiga yig'adigan platforma." />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="HALLAYM edu - Jonli videodars va online ta'lim platformasi" />
+  <meta property="og:description" content="Jonli videodars, guruhlar, xizmatlar va Campus Signal - barchasi HALLAYM edu ichida." />
+  <meta property="og:image" content="/assets/og.png" />
+  <meta property="og:url" content="/" />
+
+  <script>
+    tailwind = {
+      config: {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: { inter: ['Inter', 'ui-sans-serif', 'system-ui'] },
+            boxShadow: { glass: '0 20px 60px rgba(0,0,0,.18)' },
+            keyframes: {
+              floaty: { '0%,100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-10px)' } },
+              shimmer: { '0%': { backgroundPosition: '0% 50%' }, '100%': { backgroundPosition: '100% 50%' } },
+              pop: { '0%': { transform: 'scale(.96)', opacity: .0 }, '100%': { transform: 'scale(1)', opacity: 1 } }
+            },
+            animation: {
+              floaty: 'floaty 6s ease-in-out infinite',
+              shimmer: 'shimmer 6s ease-in-out infinite',
+              pop: 'pop .45s ease-out both'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,.62);
+      --glass-brd: rgba(255,255,255,.34);
+      --muted: rgba(15,23,42,.74);
+      --muted2: rgba(15,23,42,.56);
+      --ring: rgba(20,184,166,.42); /* teal focus */
+      --grid: rgba(2,132,199,.08);
+      --gold: rgba(245,158,11,1);
+      --teal: rgba(20,184,166,1);
+      --deep: rgba(2,6,23,1);
+    }
+    .dark{
+      --glass-bg: rgba(2,6,23,.62);
+      --glass-brd: rgba(148,163,184,.14);
+      --muted: rgba(226,232,240,.82);
+      --muted2: rgba(226,232,240,.58);
+      --ring: rgba(245,158,11,.22); /* gold focus */
+      --grid: rgba(148,163,184,.08);
+      --gold: rgba(245,158,11,1);
+      --teal: rgba(20,184,166,1);
+      --deep: rgba(2,6,23,1);
+    }
+
+    body{ font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+
+    h1, h2, h3{
+      font-family: "Space Grotesk", "Manrope", ui-sans-serif, system-ui, sans-serif;
+    }
+
+    /* Background */
+    .bg-orbs{
+      position: fixed; inset: 0; z-index: -2; overflow: hidden;
+      background:
+        radial-gradient(1200px 700px at 12% 14%, rgba(20,184,166,.32), transparent 62%),
+        radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.20), transparent 60%),
+        radial-gradient(1000px 720px at 50% 92%, rgba(34,211,238,.18), transparent 62%),
+        linear-gradient(180deg, rgba(241,250,249,1), rgba(226,248,246,1));
+    }
+    .dark .bg-orbs{
+      background:
+        radial-gradient(1200px 700px at 12% 14%, rgba(20,184,166,.18), transparent 62%),
+        radial-gradient(900px 560px at 86% 18%, rgba(245,158,11,.12), transparent 60%),
+        radial-gradient(1000px 720px at 50% 92%, rgba(34,211,238,.10), transparent 62%),
+        linear-gradient(180deg, rgba(2,6,23,1), rgba(3,28,33,1));
+    }
+    .bg-grid{
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 70px 70px;
+      mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+      opacity: .8;
+    }
+
+    .glass{
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .muted{ color: var(--muted); }
+    .muted2{ color: var(--muted2); }
+
+    .btn-primary{
+      background: linear-gradient(135deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1));
+    }
+    .btn-primary:hover{ filter: brightness(1.05); }
+.btn-primary{
+      border: 1px solid rgba(245,158,11,.22);
+      box-shadow: 0 18px 46px rgba(2,6,23,.18);
+    }
+    .dark .btn-primary{ box-shadow: 0 18px 46px rgba(0,0,0,.35); }
+
+    /* Premium gold edge on glass cards */
+    .g-border:before{
+      background: linear-gradient(135deg, rgba(20,184,166,.42), rgba(250,204,21,.34), rgba(245,158,11,.28));
+      opacity: .95;
+    }
+
+    /* Better typography on small screens */
+    @media (max-width: 420px){
+      h1{ letter-spacing: -0.02em; }
+      .glass{ backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+    }
+
+    .btn-ghost:hover{ background: rgba(148,163,184,.12); }
+
+    .glow-ring:focus{ outline: none; box-shadow: 0 0 0 5px var(--ring); }
+
+    /* Fancy underline */
+    .u-anim{ background: linear-gradient(90deg, rgba(20,184,166,1), rgba(250,204,21,1), rgba(245,158,11,1)); background-size: 220% 220%; }
+    .u-anim{ -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 6s ease-in-out infinite; }
+
+    /* Scroll reveal */
+    .reveal{ opacity: 0; transform: translateY(16px); }
+    .reveal.show{ opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
+
+    /* Top progress bar */
+    #progress{
+      position: fixed; top:0; left:0; height:3px; width:0%;
+      background: linear-gradient(90deg, rgba(20,184,166,1), rgba(245,158,11,1));
+      z-index: 80;
+    }
+
+    /* Tiny gradient border */
+    .g-border{
+      position: relative;
+    }
+    .g-border:before{
+      content:"";
+      position:absolute; inset:-1px; border-radius: 1.5rem;
+      background: linear-gradient(135deg, rgba(20,184,166,.55), rgba(245,158,11,.45), rgba(56,189,248,.35));
+      filter: blur(0);
+      z-index:-1;
+    }
+
+    /* Magnetic-ish button */
+    .magnet{ transition: transform .15s ease; }
+
+    /* Mobile safety */
+    *,*::before,*::after{ box-sizing: border-box; }
+    html, body{ width:100%; max-width:100%; overflow-x:hidden; }
+    img, video, canvas, svg{ max-width:100%; height:auto; }
+    .safe-wrap{ overflow-wrap:anywhere; word-break:break-word; }
+    @media (prefers-reduced-motion: reduce){
+      *, *::before, *::after{
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
+      .magnet{ transform:none !important; }
+    }
+
+  
+    /* MOBILE_COMPACT_V1 */
+    /* Thin, pretty scrollbars (mobile/desktop) */
+    *{ scrollbar-width: thin; scrollbar-color: rgba(245,158,11,.45) rgba(148,163,184,.12); }
+    *::-webkit-scrollbar{ height: 8px; width: 8px; }
+    *::-webkit-scrollbar-track{ background: rgba(148,163,184,.12); border-radius: 999px; }
+    *::-webkit-scrollbar-thumb{
+      background: linear-gradient(180deg, rgba(20,184,166,.55), rgba(245,158,11,.55));
+      border-radius: 999px;
+      border: 2px solid rgba(148,163,184,.12);
+    }
+
+    /* Helpers */
+    .scroll-x{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .scroll-y{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
+    .no-tap-highlight{ -webkit-tap-highlight-color: transparent; }
+
+    /* Ultra-compact mobile layout */
+    @media (max-width: 520px){
+      body{ font-size: 13px; }
+      .muted{ letter-spacing: 0; }
+
+      header .mx-auto{ padding-left: 12px !important; padding-right: 12px !important; padding-top: 10px !important; padding-bottom: 10px !important; }
+      header .glass{
+        border-radius: 18px !important;
+        padding: 10px 10px !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+      }
+
+      /* Logo block */
+      header a.flex.items-center.gap-3{ gap: 10px !important; }
+      header a .leading-tight .text-xs{ font-size: 10px !important; line-height: 1.2 !important; }
+      header a .leading-tight .font-extrabold{ font-size: 14px !important; line-height: 1.15 !important; }
+      header a .w-10.h-10{ width: 38px !important; height: 38px !important; border-radius: 16px !important; }
+      header a svg{ width: 32px !important; height: 32px !important; }
+
+      /* Header actions */
+      #mobileMenuBtn,
+      #themeToggle,
+      a[href="/login.html"],
+      a[href="/register.html"]{
+        padding: 8px 10px !important;
+        font-size: 12px !important;
+        border-radius: 14px !important;
+      }
+      #themeLabel{ display:none !important; }
+      a[href="/login.html"] span{ display:none !important; } /* icon only on tight screens */
+      a[href="/register.html"]{ padding: 8px 12px !important; }
+      .magnet{ transform:none !important; }
+
+      /* Headings/panels tighter */
+      h1{ font-size: 28px !important; line-height: 1.1 !important; }
+      h2{ font-size: 22px !important; line-height: 1.15 !important; }
+      p{ font-size: 13px !important; }
+
+      .glass.rounded-3xl{ border-radius: 18px !important; }
+      .rounded-2xl{ border-radius: 16px !important; }
+      .rounded-xl{ border-radius: 14px !important; }
+
+      /* Sections padding */
+      section.mx-auto, main.mx-auto{ padding-left: 12px !important; padding-right: 12px !important; }
+      .p-8{ padding: 18px !important; }
+      .p-7{ padding: 18px !important; }
+      .p-6{ padding: 16px !important; }
+      .p-5{ padding: 14px !important; }
+      .p-4{ padding: 12px !important; }
+
+      /* Prevent text/buttons from forcing overflow */
+      button, a, input, select, textarea{ max-width: 100%; }
+      .safe-wrap{ overflow-wrap:anywhere; word-break:break-word; }
+
+      /* Mobile drawer: make it scrollable */
+      #mobileMenu .glass{ height: 100%; overflow-y: auto; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+    }
+
+    @media (max-width: 380px){
+      h1{ font-size: 26px !important; }
+      #mobileMenuBtn,
+      #themeToggle,
+      a[href="/login.html"],
+      a[href="/register.html"]{ padding: 7px 9px !important; font-size: 11px !important; }
+    }
+    
+  </style>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <style>
+    #progress{
+      background: var(--h-accent) !important;
+    }
+
+    .site-header-shell{
+      padding: 14px 16px !important;
+      border-radius: 28px !important;
+      box-shadow: 0 20px 46px rgba(15,87,79,.12) !important;
+    }
+
+    .site-drawer-shell{
+      padding: 16px !important;
+      background: rgba(255,255,255,.96) !important;
+    }
+
+    html.dark .site-drawer-shell{
+      background: rgba(8,26,28,.96) !important;
+    }
+
+    .landing-hero{
+      position: relative;
+      overflow: hidden;
+      border-radius: 32px;
+      padding: 28px;
+      background: rgba(255,255,255,.78);
+      border: 1px solid rgba(15,143,131,.14);
+      box-shadow: 0 28px 68px rgba(15,87,79,.12);
+    }
+
+    html.dark .landing-hero{
+      background: rgba(7,22,24,.92);
+      box-shadow: 0 30px 80px rgba(0,0,0,.40);
+    }
+
+    .landing-hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: url('/assets/landing-hero-illustration.svg') right -120px bottom -14px / 640px auto no-repeat;
+      opacity:.08;
+      pointer-events:none;
+    }
+
+    html.dark .landing-hero::before{
+      opacity:.12;
+      filter: saturate(.7);
+    }
+
+    .landing-hero__grid{
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.04fr) minmax(320px, .96fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .landing-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding: 11px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(15,143,131,.12);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--h-muted);
+    }
+
+    html.dark .landing-kicker{
+      background: rgba(255,255,255,.06);
+      border-color: rgba(119,208,196,.16);
+    }
+
+    .landing-kicker__dot{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background: var(--h-accent);
+      box-shadow: 0 0 0 6px rgba(15,143,131,.10);
+      flex: none;
+    }
+
+    .landing-subtitle{
+      max-width: 42rem;
+    }
+
+    .landing-actions{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, max-content));
+      gap: 12px;
+      align-items:center;
+      margin-top: 28px;
+    }
+
+    .landing-stats{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .landing-stat{
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.84);
+      border: 1px solid rgba(15,143,131,.12);
+      box-shadow: 0 14px 28px rgba(15,87,79,.08);
+    }
+
+    html.dark .landing-stat{
+      background: rgba(255,255,255,.05);
+      border-color: rgba(119,208,196,.15);
+      box-shadow: none;
+    }
+
+    .landing-trust{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top: 18px;
+    }
+
+    .landing-trust__item{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(15,143,131,.10);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--h-text-strong);
+    }
+
+    html.dark .landing-trust__item{
+      background: rgba(255,255,255,.06);
+      border-color: rgba(119,208,196,.16);
+    }
+
+    .landing-stage{
+      position:relative;
+      min-height: 560px;
+      overflow:hidden;
+      border-radius: 28px;
+      background:
+        radial-gradient(320px 220px at 84% 16%, rgba(255,214,92,.20), transparent 72%),
+        radial-gradient(260px 220px at 12% 88%, rgba(25,193,174,.22), transparent 72%),
+        linear-gradient(155deg, #0b2a2d 0%, #0d4c53 44%, #091a20 100%);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .landing-stage__poster,
+    .landing-stage__video{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+
+    .landing-stage__poster{
+      opacity:.24;
+      object-position:center;
+    }
+
+    .landing-stage__video{
+      opacity:.54;
+      object-position:center;
+    }
+
+    html.dark .landing-stage__video{
+      opacity:.46;
+    }
+
+    .landing-stage__overlay{
+      position:absolute;
+      inset:0;
+      background: rgba(6,24,24,.34);
+    }
+
+    @keyframes drift{
+      0%, 100%{ transform: translate3d(0, 0, 0) rotate(0deg); }
+      50%{ transform: translate3d(0, -14px, 0) rotate(1.4deg); }
+    }
+
+    @keyframes lightningPulse{
+      0%, 100%{ opacity:.34; transform:scaleX(.84); }
+      12%{ opacity:.94; transform:scaleX(1); }
+      18%{ opacity:.46; transform:scaleX(.92); }
+      22%{ opacity:.88; transform:scaleX(1.04); }
+      60%{ opacity:.38; transform:scaleX(.88); }
+    }
+
+    [data-parallax]{
+      will-change: transform;
+      transform-origin: center center;
+    }
+
+    .landing-floating-art{
+      position:absolute;
+      z-index:1;
+      pointer-events:none;
+      transition:transform .22s ease-out;
+    }
+
+    .landing-floating-art img{
+      display:block;
+      width:100%;
+      height:auto;
+      animation: drift 8s ease-in-out infinite;
+      filter: drop-shadow(0 26px 54px rgba(0,0,0,.28));
+    }
+
+    .landing-floating-art--orb{
+      top:-34px;
+      right:-44px;
+      width:min(30vw, 244px);
+    }
+
+    .landing-floating-art--stack{
+      left:-36px;
+      bottom:-52px;
+      width:min(23vw, 186px);
+    }
+
+    .landing-floating-art--stack img{
+      animation-delay:-2.6s;
+    }
+
+    .stage-energy{
+      position:absolute;
+      z-index:1;
+      height:4px;
+      border-radius:999px;
+      pointer-events:none;
+      background:linear-gradient(90deg, rgba(255,255,255,0), rgba(183,255,244,.92), rgba(255,214,92,.96), rgba(255,255,255,0));
+      box-shadow:0 0 18px rgba(149,244,230,.54), 0 0 40px rgba(255,205,88,.26);
+      animation: lightningPulse 4.8s ease-in-out infinite;
+      mix-blend-mode:screen;
+    }
+
+    .stage-energy::after{
+      content:"";
+      position:absolute;
+      top:50%;
+      right:8px;
+      width:12px;
+      height:12px;
+      transform:translateY(-50%);
+      border-radius:999px;
+      background:rgba(255,243,201,.94);
+      box-shadow:0 0 22px rgba(255,243,201,.68);
+    }
+
+    .stage-energy--a{
+      top:16%;
+      right:15%;
+      width:184px;
+      transform:rotate(-18deg);
+      animation-delay:-.6s;
+    }
+
+    .stage-energy--b{
+      left:11%;
+      bottom:18%;
+      width:146px;
+      transform:rotate(20deg);
+      animation-delay:-2.3s;
+    }
+
+    .landing-stage__frame{
+      position:absolute;
+      inset:18px;
+      border-radius:24px;
+      border:1px solid rgba(255,255,255,.14);
+    }
+
+    .landing-stage__cards{
+      position:relative;
+      z-index:2;
+      min-height:560px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      padding: 22px;
+    }
+
+    .landing-chip-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .landing-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 10px 14px;
+      border-radius:999px;
+      color:#f5fffd;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .landing-stage__bottom{
+      display:grid;
+      gap:14px;
+      justify-items:end;
+    }
+
+    .landing-mini-grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:12px;
+      width:min(100%, 360px);
+    }
+
+    .landing-mini-card{
+      padding: 14px 15px;
+      border-radius:22px;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.18);
+      color:#f4fffd;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .landing-mini-card .label{
+      font-size: 12px;
+      letter-spacing:.08em;
+      text-transform: uppercase;
+      opacity:.72;
+    }
+
+    .landing-mini-card .value{
+      margin-top: 6px;
+      font-weight: 800;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .landing-flow{
+      width:min(100%, 360px);
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(15,143,131,.12);
+      color: var(--h-text-strong);
+      box-shadow: 0 18px 44px rgba(0,0,0,.14);
+    }
+
+    html.dark .landing-flow{
+      background: rgba(9,30,33,.92);
+      border-color: rgba(119,208,196,.18);
+      box-shadow: none;
+    }
+
+    .landing-flow__title{
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--h-muted);
+    }
+
+    .landing-flow__steps{
+      display:flex;
+      align-items:center;
+      flex-wrap:wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .landing-flow__step{
+      padding: 9px 12px;
+      border-radius: 14px;
+      background: var(--h-accent-soft-2);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    html.dark .landing-flow__step{
+      background: rgba(255,255,255,.08);
+    }
+
+    .landing-flow p{
+      margin-top: 12px;
+      font-size: 14px;
+      color: var(--h-muted);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1100px){
+      .landing-hero__grid{
+        grid-template-columns: 1fr;
+      }
+
+      .landing-stage,
+      .landing-stage__cards{
+        min-height: 460px;
+      }
+
+      .landing-stage__bottom{
+        justify-items: stretch;
+      }
+
+      .landing-flow{
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 640px){
+      .site-header-shell{
+        padding: 12px !important;
+      }
+
+      .site-drawer-shell{
+        padding: 14px !important;
+      }
+
+      .landing-hero{
+        padding: 16px;
+      }
+
+      .landing-hero::before{
+        background-size: 420px auto;
+        background-position: right -110px bottom -20px;
+      }
+
+      .landing-actions{
+        grid-template-columns: 1fr;
+      }
+
+      .landing-stats{
+        grid-template-columns: 1fr;
+      }
+
+      .landing-stage,
+      .landing-stage__cards{
+        min-height: 420px;
+      }
+
+      .landing-chip{
+        font-size: 12px;
+      }
+
+      .landing-flow__steps{
+        gap: 8px;
+      }
+    }
+  </style>
+  <style>
+    body{
+      font-family:"Manrope","Segoe UI",sans-serif;
+    }
+
+    h1,h2,h3,.display-font{
+      font-family:"Space Grotesk","Manrope",sans-serif;
+    }
+
+    .site-header-shell{
+      background: rgba(255,255,255,.88) !important;
+      border: 1px solid rgba(15,143,131,.14) !important;
+      box-shadow: 0 18px 44px rgba(15,87,79,.12) !important;
+    }
+
+    html.dark .site-header-shell{
+      background: rgba(8,24,26,.88) !important;
+    }
+
+    .landing-hero{
+      position: relative;
+      overflow: hidden;
+      border-radius: 40px;
+      padding: 34px;
+      background:
+        radial-gradient(900px 420px at 12% 10%, rgba(32,214,198,.18), transparent 62%),
+        radial-gradient(540px 260px at 85% 88%, rgba(17,181,166,.12), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.94), rgba(243,252,250,.96));
+      border: 1px solid rgba(15,143,131,.14);
+      box-shadow: 0 34px 88px rgba(15,87,79,.14);
+    }
+
+    html.dark .landing-hero{
+      background:
+        radial-gradient(900px 420px at 12% 10%, rgba(32,214,198,.16), transparent 62%),
+        radial-gradient(540px 260px at 85% 88%, rgba(17,181,166,.10), transparent 60%),
+        linear-gradient(180deg, rgba(8,24,26,.96), rgba(9,31,35,.98));
+      box-shadow: 0 34px 90px rgba(0,0,0,.42);
+    }
+
+    .landing-hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(135deg, transparent 0 72%, rgba(255,255,255,.46) 72% 74%, transparent 74%),
+        url('/assets/theme-grid-light.svg') center/180px 180px repeat;
+      opacity:.52;
+      pointer-events:none;
+    }
+
+    html.dark .landing-hero::before{
+      background:
+        linear-gradient(135deg, transparent 0 72%, rgba(255,255,255,.06) 72% 74%, transparent 74%),
+        url('/assets/theme-grid-dark.svg') center/180px 180px repeat;
+      opacity:.44;
+    }
+
+    .landing-hero::after{
+      content:"";
+      position:absolute;
+      right:-90px;
+      top:-80px;
+      width:320px;
+      height:320px;
+      border-radius:999px;
+      background: radial-gradient(circle at 30% 30%, rgba(20,184,166,.2), rgba(20,184,166,0) 70%);
+      pointer-events:none;
+    }
+
+    .landing-hero__grid{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:minmax(0,1.02fr) minmax(360px,.98fr);
+      gap:28px;
+      align-items:stretch;
+    }
+
+    .landing-hero__content{
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      min-width:0;
+    }
+
+    .landing-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      width:max-content;
+      max-width:100%;
+      padding:12px 18px;
+      border-radius:999px;
+      background:rgba(255,255,255,.9);
+      border:1px solid rgba(15,143,131,.12);
+      color:var(--h-text-strong);
+      box-shadow:0 14px 34px rgba(15,87,79,.08);
+    }
+
+    html.dark .landing-kicker{
+      background:rgba(255,255,255,.06);
+      border-color:rgba(119,208,196,.16);
+      box-shadow:none;
+    }
+
+    .landing-kicker__dot{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:var(--h-accent);
+      box-shadow:0 0 0 7px rgba(15,143,131,.12);
+    }
+
+    .landing-title{
+      margin-top:22px;
+      max-width:11ch;
+      font-size:clamp(2.9rem,6.2vw,5.8rem);
+      line-height:.94;
+      letter-spacing:-.05em;
+      color:var(--h-text-strong);
+    }
+
+    .landing-title .accent{
+      color:var(--h-accent);
+    }
+
+    .landing-title .accent-soft{
+      color:#0a5e67;
+    }
+
+    html.dark .landing-title .accent-soft{
+      color:#9debe0;
+    }
+
+    .landing-subtitle{
+      max-width:44rem;
+      margin-top:18px;
+      font-size:clamp(1rem,1.8vw,1.18rem);
+      line-height:1.75;
+      color:var(--h-muted);
+    }
+
+    .landing-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:14px;
+      margin-top:28px;
+    }
+
+    .landing-actions a{
+      min-width:200px;
+    }
+
+    .landing-highlight-row{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+      margin-top:24px;
+    }
+
+    .landing-highlight-card{
+      padding:16px 18px;
+      border-radius:24px;
+      background:rgba(255,255,255,.86);
+      border:1px solid rgba(15,143,131,.1);
+      box-shadow:0 16px 34px rgba(15,87,79,.08);
+    }
+
+    html.dark .landing-highlight-card{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.14);
+      box-shadow:none;
+    }
+
+    .landing-highlight-card .eyebrow{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:var(--h-muted);
+      font-weight:800;
+    }
+
+    .landing-highlight-card .value{
+      margin-top:8px;
+      font-size:1.08rem;
+      font-weight:800;
+      color:var(--h-text-strong);
+      line-height:1.35;
+    }
+
+    .landing-trust{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:20px;
+    }
+
+    .landing-trust__item{
+      display:inline-flex;
+      align-items:center;
+      gap:9px;
+      padding:10px 16px;
+      border-radius:999px;
+      background:rgba(255,255,255,.82);
+      border:1px solid rgba(15,143,131,.1);
+      font-size:13px;
+      font-weight:800;
+      color:var(--h-text-strong);
+    }
+
+    html.dark .landing-trust__item{
+      background:rgba(255,255,255,.06);
+      border-color:rgba(119,208,196,.16);
+    }
+
+    .landing-stage{
+      position:relative;
+      min-height:620px;
+      overflow:hidden;
+      border-radius:34px;
+      background:linear-gradient(140deg,#0b4b51 0%,#0b7c80 48%,#0b3943 100%);
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:0 36px 88px rgba(5,30,33,.28);
+      isolation:isolate;
+    }
+
+    .landing-stage::before{
+      content:"";
+      position:absolute;
+      inset:14px;
+      border-radius:28px;
+      border:1px solid rgba(255,255,255,.14);
+      pointer-events:none;
+      z-index:1;
+    }
+
+    .landing-stage::after{
+      content:"";
+      position:absolute;
+      inset:auto -80px -120px auto;
+      width:300px;
+      height:300px;
+      border-radius:999px;
+      background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.26), rgba(255,255,255,0) 70%);
+      z-index:0;
+    }
+
+    .landing-ribbon{
+      position:absolute;
+      z-index:3;
+      padding:14px 32px;
+      border-radius:999px;
+      background:#d6ff1d;
+      color:#08363d;
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      box-shadow:0 18px 46px rgba(0,0,0,.18);
+    }
+
+    .landing-ribbon--primary{
+      top:46px;
+      left:-56px;
+      transform:rotate(-31deg);
+    }
+
+    .landing-ribbon--secondary{
+      right:-48px;
+      bottom:88px;
+      transform:rotate(-24deg);
+    }
+
+    .landing-stage__video,
+    .landing-stage__poster{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+
+    .landing-stage__poster{
+      opacity:.18;
+    }
+
+    .landing-stage__video{
+      opacity:.28;
+      mix-blend-mode:screen;
+    }
+
+    .landing-stage__overlay{
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg, rgba(3,18,19,.18), rgba(2,18,19,.34)),
+        radial-gradient(500px 280px at 85% 20%, rgba(255,255,255,.16), transparent 60%);
+      z-index:0;
+    }
+
+    .landing-stage__cards{
+      position:relative;
+      z-index:2;
+      min-height:620px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      padding:26px;
+      gap:18px;
+    }
+
+    .landing-stage__topline{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .landing-stage__window{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.18);
+      color:#f4fffd;
+      backdrop-filter:blur(14px);
+    }
+
+    .landing-stage__window i{
+      font-size:10px;
+      opacity:.72;
+    }
+
+    .landing-live-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.18);
+      color:#f4fffd;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      backdrop-filter:blur(14px);
+    }
+
+    .landing-live-pill .pulse{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:#d6ff1d;
+      box-shadow:0 0 0 8px rgba(214,255,29,.16);
+      animation:landingPulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes landingPulse{
+      0%,100%{ transform:scale(1); opacity:1; }
+      50%{ transform:scale(.78); opacity:.78; }
+    }
+
+    .landing-stage__headline{
+      max-width:360px;
+      margin-top:12px;
+      font-family:"Space Grotesk","Manrope",sans-serif;
+      font-size:clamp(1.9rem,4vw,3.1rem);
+      line-height:1.02;
+      letter-spacing:-.04em;
+      color:#f7fffd;
+      text-shadow:0 8px 24px rgba(0,0,0,.18);
+    }
+
+    .landing-stage__subcopy{
+      max-width:320px;
+      margin-top:12px;
+      color:rgba(244,255,253,.84);
+      font-size:14px;
+      line-height:1.65;
+    }
+
+    .landing-stage__dashboard{
+      display:grid;
+      gap:14px;
+      width:min(100%,390px);
+      align-self:flex-end;
+    }
+
+    .landing-call-card,
+    .landing-panel-card,
+    .landing-mini-card{
+      border-radius:28px;
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+    }
+
+    .landing-call-card{
+      padding:22px;
+      background:rgba(255,255,255,.16);
+      border:1px solid rgba(255,255,255,.18);
+      color:#f7fffd;
+      box-shadow:0 24px 60px rgba(0,0,0,.16);
+    }
+
+    .landing-call-card h3{
+      font-size:1.15rem;
+      font-weight:800;
+      letter-spacing:-.02em;
+    }
+
+    .landing-call-card p{
+      margin-top:10px;
+      font-size:13px;
+      color:rgba(247,255,253,.78);
+      line-height:1.65;
+    }
+
+    .landing-call-card .cta{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      margin-top:16px;
+      padding:12px 18px;
+      border-radius:999px;
+      background:#ffffff;
+      color:#0b4b51;
+      font-size:13px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .landing-panel-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+
+    .landing-panel-card{
+      padding:16px 16px 18px;
+      background:rgba(255,255,255,.9);
+      border:1px solid rgba(255,255,255,.36);
+      color:#08363d;
+      box-shadow:0 18px 46px rgba(0,0,0,.14);
+    }
+
+    .landing-panel-card .eyebrow{
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:rgba(8,54,61,.62);
+    }
+
+    .landing-panel-card .value{
+      margin-top:8px;
+      font-size:1.02rem;
+      line-height:1.45;
+      font-weight:800;
+      color:#0b3943;
+    }
+
+    .landing-avatar-stack{
+      display:flex;
+      align-items:center;
+      margin-top:12px;
+    }
+
+    .landing-avatar{
+      width:34px;
+      height:34px;
+      margin-left:-8px;
+      border-radius:999px;
+      border:2px solid rgba(255,255,255,.86);
+      display:grid;
+      place-items:center;
+      font-size:12px;
+      font-weight:900;
+      color:#ffffff;
+      box-shadow:0 10px 24px rgba(0,0,0,.16);
+    }
+
+    .landing-avatar:first-child{
+      margin-left:0;
+    }
+
+    .landing-avatar--a{ background:linear-gradient(135deg,#13b5a6,#0b6e77); }
+    .landing-avatar--b{ background:linear-gradient(135deg,#6fd5ca,#157a7f); }
+    .landing-avatar--c{ background:linear-gradient(135deg,#b7ff6b,#18a86e); color:#08363d; }
+
+    .landing-zoom-note{
+      margin-top:10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      font-size:12px;
+      color:rgba(8,54,61,.66);
+      font-weight:800;
+    }
+
+    .landing-proof-band{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:14px;
+      margin-top:6px;
+    }
+
+    .landing-proof-main,
+    .landing-proof-side{
+      padding:22px;
+      border-radius:30px;
+      background:rgba(255,255,255,.86);
+      border:1px solid rgba(15,143,131,.12);
+      box-shadow:0 22px 54px rgba(15,87,79,.1);
+    }
+
+    html.dark .landing-proof-main,
+    html.dark .landing-proof-side{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.14);
+      box-shadow:none;
+    }
+
+    .landing-proof-main{
+      display:grid;
+      gap:16px;
+      align-content:start;
+    }
+
+    .landing-proof-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+    }
+
+    .landing-proof-card{
+      padding:16px;
+      border-radius:22px;
+      background:rgba(15,143,131,.06);
+      border:1px solid rgba(15,143,131,.09);
+    }
+
+    html.dark .landing-proof-card{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(119,208,196,.12);
+    }
+
+    .landing-proof-card .num{
+      font-size:1.5rem;
+      font-weight:900;
+      color:var(--h-text-strong);
+    }
+
+    .landing-proof-card .txt{
+      margin-top:6px;
+      font-size:13px;
+      line-height:1.5;
+      color:var(--h-muted);
+      font-weight:700;
+    }
+
+    .landing-proof-side{
+      background:linear-gradient(155deg, rgba(12,88,91,.98), rgba(11,56,67,.98));
+      color:#f7fffd;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .landing-proof-side::before{
+      content:"";
+      position:absolute;
+      inset:auto -70px -90px auto;
+      width:240px;
+      height:240px;
+      border-radius:999px;
+      background:radial-gradient(circle at 35% 35%, rgba(214,255,29,.26), rgba(214,255,29,0) 70%);
+    }
+
+    .landing-proof-side p{
+      color:rgba(247,255,253,.82);
+    }
+
+    #imkoniyatlar .g-border{
+      position:relative;
+      overflow:hidden;
+      padding:28px;
+      border-radius:32px;
+    }
+
+    #imkoniyatlar .g-border::before{
+      content:"";
+      position:absolute;
+      inset:auto -40px -60px auto;
+      width:150px;
+      height:150px;
+      border-radius:999px;
+      background:radial-gradient(circle at 35% 35%, rgba(15,143,131,.14), rgba(15,143,131,0) 70%);
+      pointer-events:none;
+    }
+
+    #imkoniyatlar .g-border:nth-child(2n)::before{
+      background:radial-gradient(circle at 35% 35%, rgba(14,115,122,.14), rgba(14,115,122,0) 70%);
+    }
+
+    #imkoniyatlar .g-border:nth-child(3n)::before{
+      background:radial-gradient(circle at 35% 35%, rgba(183,107,58,.12), rgba(183,107,58,0) 70%);
+    }
+
+    .feature-intro{
+      display:grid;
+      grid-template-columns:1.04fr .96fr;
+      gap:18px;
+      align-items:end;
+      margin-bottom:24px;
+    }
+
+    .feature-rail{
+      padding:22px;
+      border-radius:30px;
+      display:grid;
+      gap:12px;
+      background:rgba(255,255,255,.86);
+      border:1px solid rgba(15,143,131,.12);
+      box-shadow:0 20px 54px rgba(15,87,79,.08);
+    }
+
+    html.dark .feature-rail{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.14);
+      box-shadow:none;
+    }
+
+    .feature-rail__item{
+      display:flex;
+      align-items:flex-start;
+      gap:14px;
+      padding:14px 16px;
+      border-radius:24px;
+      background:rgba(15,143,131,.06);
+      color:#0b3943;
+      font-size:14px;
+      font-weight:800;
+      line-height:1.55;
+    }
+
+    html.dark .feature-rail__item{
+      background:rgba(255,255,255,.04);
+      color:#f7fffd;
+    }
+
+    .feature-rail__num{
+      flex:0 0 auto;
+      width:34px;
+      height:34px;
+      display:grid;
+      place-items:center;
+      border-radius:999px;
+      background:#d6ff1d;
+      color:#08363d;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+    }
+
+    .feature-mosaic{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:16px;
+    }
+
+    .feature-card{
+      position:relative;
+      overflow:hidden;
+      display:grid;
+      gap:14px;
+      align-content:start;
+    }
+
+    .feature-card--wide{
+      grid-column:span 2;
+      min-height:280px;
+      background:
+        radial-gradient(circle at 88% 14%, rgba(214,255,29,.18), rgba(214,255,29,0) 34%),
+        linear-gradient(135deg, rgba(255,255,255,.94), rgba(242,251,249,.88));
+    }
+
+    html.dark .feature-card--wide{
+      background:
+        radial-gradient(circle at 88% 14%, rgba(214,255,29,.14), rgba(214,255,29,0) 34%),
+        linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    }
+
+    .feature-card--dark{
+      background:linear-gradient(155deg, rgba(11,77,82,.98), rgba(9,41,48,.98));
+      color:#f7fffd;
+      box-shadow:0 28px 70px rgba(6,32,37,.22);
+    }
+
+    .feature-card--dark .muted,
+    .feature-card--dark .muted2{
+      color:rgba(247,255,253,.78);
+    }
+
+    .feature-card__chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .feature-card__chips span{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.84);
+      border:1px solid rgba(15,143,131,.12);
+      color:#0a3740;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
+
+    html.dark .feature-card__chips span{
+      background:rgba(255,255,255,.08);
+      border-color:rgba(255,255,255,.1);
+      color:#f7fffd;
+    }
+
+    .feature-card__stats{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      margin-top:auto;
+    }
+
+    .feature-card__stat{
+      padding:14px 16px;
+      border-radius:22px;
+      background:rgba(15,143,131,.07);
+      border:1px solid rgba(15,143,131,.1);
+    }
+
+    html.dark .feature-card__stat{
+      background:rgba(255,255,255,.06);
+      border-color:rgba(255,255,255,.1);
+    }
+
+    .feature-card__stat strong{
+      display:block;
+      font-size:1rem;
+      color:var(--h-text-strong);
+    }
+
+    .feature-card__stat span{
+      display:block;
+      margin-top:6px;
+      color:var(--h-muted);
+      font-size:12px;
+      font-weight:800;
+      line-height:1.5;
+    }
+
+    .showcase-shell,
+    .service-showcase,
+    .testimonial-shell,
+    .faq-shell{
+      position:relative;
+      overflow:hidden;
+      border-radius:34px;
+    }
+
+    .showcase-shell::before,
+    .service-showcase::before,
+    .testimonial-shell::before,
+    .faq-shell::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:url('/assets/theme-ambient-light.svg') center/cover no-repeat;
+      opacity:.72;
+      pointer-events:none;
+    }
+
+    html.dark .showcase-shell::before,
+    html.dark .service-showcase::before,
+    html.dark .testimonial-shell::before,
+    html.dark .faq-shell::before{
+      background-image:url('/assets/theme-ambient-dark.svg');
+      opacity:.44;
+    }
+
+    .showcase-layout,
+    .service-layout,
+    .testimonial-layout,
+    .faq-layout{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:.92fr 1.08fr;
+      gap:18px;
+      align-items:center;
+    }
+
+    .timeline-card,
+    .showcase-visual,
+    .service-copy,
+    .service-visual,
+    .testimonial-copy,
+    .testimonial-grid,
+    .faq-copy,
+    .faq-list{
+      position:relative;
+      z-index:1;
+    }
+
+    .timeline-card{
+      padding:28px;
+      border-radius:32px;
+      background:linear-gradient(158deg, rgba(10,58,66,.98), rgba(8,34,39,.98));
+      color:#f7fffd;
+      box-shadow:0 30px 80px rgba(5,30,33,.22);
+    }
+
+    .timeline-card p{
+      color:rgba(247,255,253,.78);
+    }
+
+    .timeline-steps{
+      margin-top:22px;
+      display:grid;
+      gap:12px;
+    }
+
+    .timeline-step{
+      display:grid;
+      grid-template-columns:auto 1fr;
+      gap:14px;
+      align-items:start;
+      padding:14px 16px;
+      border-radius:24px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.1);
+    }
+
+    .timeline-step strong{
+      display:block;
+      font-size:14px;
+      color:#f7fffd;
+    }
+
+    .timeline-step span{
+      display:block;
+      margin-top:4px;
+      font-size:12px;
+      line-height:1.6;
+      color:rgba(247,255,253,.76);
+    }
+
+    .timeline-dot{
+      width:34px;
+      height:34px;
+      display:grid;
+      place-items:center;
+      border-radius:999px;
+      background:#d6ff1d;
+      color:#08363d;
+      font-size:12px;
+      font-weight:900;
+    }
+
+    .showcase-visual{
+      padding:22px;
+      border-radius:32px;
+      background:rgba(255,255,255,.88);
+      border:1px solid rgba(15,143,131,.12);
+      box-shadow:0 20px 54px rgba(15,87,79,.1);
+    }
+
+    html.dark .showcase-visual{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.14);
+      box-shadow:none;
+    }
+
+    .visual-tag{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 16px;
+      border-radius:999px;
+      background:rgba(15,143,131,.08);
+      color:var(--h-text-strong);
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .showcase-screen{
+      margin-top:16px;
+      padding:16px;
+      border-radius:28px;
+      background:linear-gradient(160deg, rgba(11,77,82,.98), rgba(8,34,39,.98));
+      overflow:hidden;
+    }
+
+    .showcase-screen img,
+    .service-screen img{
+      width:100%;
+      display:block;
+      border-radius:22px;
+    }
+
+    .showcase-note-grid{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+    }
+
+    .showcase-note{
+      padding:14px 16px;
+      border-radius:22px;
+      background:rgba(15,143,131,.06);
+      border:1px solid rgba(15,143,131,.1);
+      font-size:13px;
+      font-weight:800;
+      line-height:1.55;
+      color:var(--h-text-strong);
+    }
+
+    html.dark .showcase-note{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(119,208,196,.12);
+    }
+
+    .service-showcase{
+      padding:22px;
+      background:rgba(255,255,255,.56);
+      border:1px solid rgba(255,255,255,.4);
+      box-shadow:0 24px 68px rgba(15,87,79,.1);
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+    }
+
+    html.dark .service-showcase{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+    }
+
+    .service-copy{
+      padding:14px 8px;
+    }
+
+    .service-points{
+      margin-top:20px;
+      display:grid;
+      gap:12px;
+    }
+
+    .service-point{
+      padding:16px 18px;
+      border-radius:24px;
+      background:rgba(255,255,255,.72);
+      border:1px solid rgba(15,143,131,.12);
+      color:var(--h-text-strong);
+    }
+
+    html.dark .service-point{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.14);
+    }
+
+    .service-point strong{
+      display:block;
+      font-size:15px;
+    }
+
+    .service-point span{
+      display:block;
+      margin-top:6px;
+      font-size:13px;
+      line-height:1.6;
+      color:var(--h-muted);
+      font-weight:700;
+    }
+
+    .service-visual{
+      padding:22px;
+      border-radius:32px;
+      background:linear-gradient(160deg, rgba(8,44,49,.98), rgba(11,86,91,.96));
+      color:#f7fffd;
+      box-shadow:0 28px 74px rgba(5,30,33,.22);
+    }
+
+    .service-screen{
+      margin-top:14px;
+      padding:16px;
+      border-radius:28px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .service-chip-row{
+      margin-top:16px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .service-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.12);
+      color:#f7fffd;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .signal-shell{
+      position:relative;
+      overflow:hidden;
+      padding:28px;
+      border-radius:36px;
+      background:linear-gradient(145deg, rgba(9,39,45,.99), rgba(7,25,29,.99));
+      color:#f7fffd;
+      box-shadow:0 34px 86px rgba(5,22,27,.22);
+    }
+
+    .signal-shell::before{
+      content:"";
+      position:absolute;
+      inset:auto -110px -120px auto;
+      width:300px;
+      height:300px;
+      border-radius:999px;
+      background:radial-gradient(circle at 35% 35%, rgba(214,255,29,.22), rgba(214,255,29,0) 72%);
+      pointer-events:none;
+    }
+
+    .signal-layout{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:.95fr 1.05fr;
+      gap:18px;
+      align-items:start;
+    }
+
+    .signal-copy p,
+    .signal-copy .muted2{
+      color:rgba(247,255,253,.78);
+    }
+
+    .signal-grid{
+      margin-top:20px;
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+
+    .signal-mini{
+      padding:16px 18px;
+      border-radius:24px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.1);
+    }
+
+    .signal-mini strong{
+      display:block;
+      font-size:15px;
+    }
+
+    .signal-mini span{
+      display:block;
+      margin-top:6px;
+      font-size:13px;
+      line-height:1.6;
+      color:rgba(247,255,253,.76);
+      font-weight:700;
+    }
+
+    .signal-board{
+      padding:18px;
+      border-radius:30px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.1);
+      display:grid;
+      gap:12px;
+    }
+
+    .signal-board__header{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      padding-bottom:8px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+
+    .signal-feed{
+      padding:16px 18px;
+      border-radius:24px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .signal-feed__meta{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      font-size:12px;
+      color:rgba(247,255,253,.72);
+      font-weight:800;
+    }
+
+    .signal-feed__tags{
+      margin-top:12px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .signal-feed__tags span{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:9px 13px;
+      border-radius:999px;
+      background:rgba(214,255,29,.14);
+      color:#ecffd6;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .testimonial-shell{
+      padding:22px;
+      background:rgba(255,255,255,.56);
+      border:1px solid rgba(255,255,255,.42);
+      box-shadow:0 24px 68px rgba(15,87,79,.1);
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+    }
+
+    html.dark .testimonial-shell{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+    }
+
+    .testimonial-copy{
+      padding:8px;
+    }
+
+    .testimonial-stat{
+      margin-top:20px;
+      padding:18px 20px;
+      border-radius:28px;
+      background:linear-gradient(152deg, rgba(8,60,66,.98), rgba(10,95,100,.95));
+      color:#f7fffd;
+      box-shadow:0 26px 68px rgba(6,32,37,.18);
+    }
+
+    .testimonial-stat strong{
+      display:block;
+      font-size:2.4rem;
+      line-height:1;
+    }
+
+    .testimonial-stat span{
+      display:block;
+      margin-top:10px;
+      font-size:13px;
+      line-height:1.7;
+      color:rgba(247,255,253,.78);
+      font-weight:700;
+    }
+
+    .testimonial-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+    }
+
+    .testimonial-card{
+      padding:22px;
+      border-radius:28px;
+      background:rgba(255,255,255,.88);
+      border:1px solid rgba(15,143,131,.12);
+      box-shadow:0 16px 42px rgba(15,87,79,.08);
+    }
+
+    html.dark .testimonial-card{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+    }
+
+    .testimonial-stars{
+      color:#f5a623;
+      font-size:13px;
+      letter-spacing:.16em;
+    }
+
+    .testimonial-person{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-top:18px;
+    }
+
+    .testimonial-avatar{
+      width:46px;
+      height:46px;
+      border-radius:18px;
+      display:grid;
+      place-items:center;
+      font-size:14px;
+      font-weight:900;
+      color:#08363d;
+      background:linear-gradient(145deg, #d6ff1d, #77d0c4);
+    }
+
+    .faq-shell{
+      padding:22px;
+      background:rgba(255,255,255,.56);
+      border:1px solid rgba(255,255,255,.42);
+      box-shadow:0 24px 68px rgba(15,87,79,.1);
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+    }
+
+    html.dark .faq-shell{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+    }
+
+    .faq-copy{
+      padding:10px;
+    }
+
+    .faq-badges{
+      margin-top:18px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .faq-badges span{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(15,143,131,.08);
+      border:1px solid rgba(15,143,131,.12);
+      color:var(--h-text-strong);
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    html.dark .faq-badges span{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.12);
+    }
+
+    .faq-list{
+      display:grid;
+      gap:12px;
+    }
+
+    .faq-list details{
+      border-radius:24px;
+      background:rgba(255,255,255,.82);
+      border:1px solid rgba(15,143,131,.12);
+      padding:18px 20px;
+      box-shadow:0 14px 32px rgba(15,87,79,.06);
+    }
+
+    html.dark .faq-list details{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+    }
+
+    @media (max-width:1100px){
+      .landing-hero__grid,
+      .landing-proof-band,
+      .feature-intro,
+      .showcase-layout,
+      .service-layout,
+      .signal-layout,
+      .testimonial-layout,
+      .faq-layout{
+        grid-template-columns:1fr;
+      }
+
+      .landing-stage,
+      .landing-stage__cards{
+        min-height:540px;
+      }
+
+      .landing-stage__dashboard{
+        width:100%;
+      }
+
+      .feature-card--wide{
+        grid-column:span 1;
+      }
+    }
+
+    @media (max-width:760px){
+      .landing-hero{
+        padding:18px;
+        border-radius:30px;
+      }
+
+      .landing-title{
+        max-width:100%;
+        font-size:clamp(2.35rem,10vw,3.8rem);
+      }
+
+      .landing-highlight-row,
+      .landing-proof-grid,
+      .landing-panel-grid,
+      .feature-mosaic,
+      .showcase-note-grid,
+      .signal-grid,
+      .testimonial-grid{
+        grid-template-columns:1fr;
+      }
+
+      .landing-stage,
+      .landing-stage__cards{
+        min-height:500px;
+      }
+
+      .landing-ribbon{
+        font-size:10px;
+        padding:11px 22px;
+      }
+
+      .landing-ribbon--primary{
+        top:62px;
+        left:-74px;
+      }
+
+      .landing-ribbon--secondary{
+        right:-70px;
+        bottom:96px;
+      }
+
+      .timeline-card,
+      .showcase-visual,
+      .service-showcase,
+      .service-visual,
+      .signal-shell,
+      .testimonial-shell,
+      .faq-shell{
+        padding:18px;
+      }
+    }
+  </style>
+  <style>
+    :root{
+      --day-shell: rgba(255,255,255,.94);
+      --day-shell-strong: rgba(255,255,255,.975);
+      --day-border: rgba(15,143,131,.14);
+      --day-shadow-lg: 0 30px 82px rgba(9,88,79,.13);
+      --day-shadow-md: 0 22px 52px rgba(9,88,79,.10);
+    }
+
+    html:not(.dark){
+      --h-accent:#0ea596;
+      --h-accent-strong:#0b7e76;
+      --h-accent-soft:#def5f0;
+      --h-accent-soft-2:#eefaf7;
+      --h-accent-soft-3:#f8fcfb;
+      --h-text:#1c4944;
+      --h-text-strong:#092f35;
+      --h-muted:rgba(16,63,68,.76);
+      --h-bg:#eef8f5;
+      --h-panel-bg:rgba(255,255,255,.94);
+      --h-panel-bg-2:rgba(247,252,250,.98);
+      --h-border:rgba(196,232,225,.92);
+      --h-shadow:rgba(9,88,79,.10);
+      --h-menu-panel-bg:rgba(255,255,255,.97);
+      --h-menu-panel-bg-2:rgba(246,252,250,.98);
+      --h-menu-item-bg:rgba(243,251,248,.96);
+      --h-menu-item-bg-hover:rgba(231,246,241,.98);
+      --h-ring:rgba(14,165,150,.18);
+    }
+
+    html:not(.dark) body{
+      background:
+        radial-gradient(1200px 620px at 8% 12%, rgba(51,204,193,.18), transparent 62%),
+        radial-gradient(860px 480px at 92% 14%, rgba(255,214,83,.20), transparent 58%),
+        linear-gradient(180deg, #edf9f6 0%, #f6fbf9 52%, #eef8f5 100%) !important;
+    }
+
+    html:not(.dark) body::before{
+      opacity:.18;
+      filter:saturate(1.05);
+    }
+
+    html:not(.dark) body::after{
+      opacity:.08;
+    }
+
+    .ambient-video-layer{
+      position:fixed;
+      inset:0;
+      z-index:-3;
+      overflow:hidden;
+      pointer-events:none;
+      transform-origin:center center;
+      will-change:transform, opacity;
+    }
+
+    .ambient-video-layer video{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      object-position:center;
+      filter:saturate(1.18) contrast(1.02) brightness(1.02);
+      transform:scale(1.08);
+    }
+
+    .ambient-video-layer::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg, rgba(239,250,247,.82) 0%, rgba(239,250,247,.56) 24%, rgba(239,250,247,.26) 42%, rgba(239,250,247,.12) 60%, rgba(239,250,247,.72) 100%),
+        radial-gradient(circle at 18% 18%, rgba(19,184,166,.26), rgba(19,184,166,0) 34%),
+        radial-gradient(circle at 84% 14%, rgba(255,217,92,.24), rgba(255,217,92,0) 30%);
+    }
+
+    .ambient-video-layer::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,0) 24%, rgba(255,255,255,0) 78%, rgba(255,255,255,.14));
+    }
+
+    html.dark .ambient-video-layer{
+      opacity:.22;
+    }
+
+    html.dark .ambient-video-layer::before{
+      background:linear-gradient(180deg, rgba(5,20,22,.74), rgba(5,20,22,.48) 32%, rgba(5,20,22,.58) 100%);
+    }
+
+    .landing-section{
+      position:relative;
+      z-index:1;
+    }
+
+    .landing-section + .landing-section{
+      margin-top:clamp(18px, 4vw, 48px);
+    }
+
+    .landing-section--hero{
+      margin-top:8px;
+    }
+
+    html:not(.dark) .glass{
+      background:var(--day-shell);
+      border-color:rgba(196,232,225,.86);
+      box-shadow:var(--day-shadow-md);
+    }
+
+    html:not(.dark) .site-header-shell{
+      background:rgba(255,255,255,.97) !important;
+      border:1px solid rgba(196,232,225,.92) !important;
+      box-shadow:0 24px 62px rgba(9,88,79,.10) !important;
+    }
+
+    html:not(.dark) .landing-hero{
+      border-radius:42px;
+      padding:38px;
+      background:
+        linear-gradient(140deg, rgba(255,255,255,.97) 0%, rgba(245,252,250,.98) 46%, rgba(235,249,245,.92) 100%) !important;
+      border:1px solid rgba(196,232,225,.94);
+      box-shadow:0 36px 94px rgba(9,88,79,.14);
+    }
+
+    html:not(.dark) .landing-hero::before{
+      background:
+        linear-gradient(130deg, transparent 0 67%, rgba(255,255,255,.38) 67% 70%, transparent 70%),
+        url('/assets/theme-grid-light.svg') center/180px 180px repeat !important;
+      opacity:.36;
+    }
+
+    html:not(.dark) .landing-title{
+      max-width:8.6ch;
+      color:#0b3036;
+      text-shadow:0 1px 0 rgba(255,255,255,.45);
+    }
+
+    html:not(.dark) .landing-title .accent-soft{
+      color:#0c5a63;
+    }
+
+    html:not(.dark) .landing-title .accent{
+      color:#11a89b;
+    }
+
+    html:not(.dark) .landing-subtitle{
+      color:rgba(10,53,59,.82);
+    }
+
+    html:not(.dark) .landing-kicker,
+    html:not(.dark) .landing-highlight-card,
+    html:not(.dark) .landing-trust__item,
+    html:not(.dark) .landing-proof-main,
+    html:not(.dark) .feature-rail,
+    html:not(.dark) .showcase-visual,
+    html:not(.dark) .service-showcase,
+    html:not(.dark) .service-point,
+    html:not(.dark) .testimonial-shell,
+    html:not(.dark) .testimonial-card,
+    html:not(.dark) .faq-shell,
+    html:not(.dark) .faq-list details{
+      background:var(--day-shell-strong) !important;
+      border-color:rgba(196,232,225,.92) !important;
+      box-shadow:var(--day-shadow-md) !important;
+    }
+
+    html:not(.dark) #imkoniyatlar .g-border,
+    html:not(.dark) .gallery-shell{
+      background:linear-gradient(180deg, rgba(255,255,255,.97), rgba(244,252,249,.94));
+      border:1px solid rgba(196,232,225,.92);
+      box-shadow:var(--day-shadow-lg);
+    }
+
+    html:not(.dark) .landing-proof-side,
+    html:not(.dark) .timeline-card,
+    html:not(.dark) .service-visual,
+    html:not(.dark) .signal-shell{
+      box-shadow:0 34px 88px rgba(6,40,44,.18);
+    }
+
+    html:not(.dark) .landing-proof-band{
+      gap:18px;
+    }
+
+    .site-brand-block{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      min-width:0;
+    }
+
+    .site-brand-meta{
+      display:grid;
+      gap:2px;
+      min-width:0;
+    }
+
+    .site-brand-eyebrow{
+      font-size:10px;
+      line-height:1.2;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      font-weight:900;
+      color:var(--h-accent-strong);
+    }
+
+    .site-brand-name{
+      font-size:1.08rem;
+      font-weight:900;
+      letter-spacing:-.03em;
+      color:var(--h-text-strong);
+    }
+
+    .site-brand-sub{
+      font-size:12px;
+      line-height:1.4;
+      color:var(--h-muted);
+    }
+
+    .site-nav{
+      display:flex;
+      align-items:center;
+      gap:4px;
+      padding:6px;
+      border-radius:18px;
+      background:rgba(244,251,249,.82);
+      border:1px solid rgba(196,232,225,.88);
+      box-shadow:0 10px 24px rgba(9,88,79,.06);
+    }
+
+    html.dark .site-nav{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+    }
+
+    .site-nav__link{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px 14px;
+      border-radius:12px;
+      color:var(--h-muted);
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.01em;
+      transition:background .18s ease,color .18s ease, transform .18s ease;
+    }
+
+    .site-nav__link:hover{
+      background:rgba(15,143,131,.08);
+      color:var(--h-text-strong);
+      transform:translateY(-1px);
+    }
+
+    .site-header-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .site-utility-btn{
+      border-radius:14px !important;
+      border:1px solid rgba(196,232,225,.92) !important;
+      background:rgba(255,255,255,.95) !important;
+      box-shadow:0 12px 28px rgba(9,88,79,.06) !important;
+    }
+
+    html.dark .site-utility-btn{
+      background:rgba(255,255,255,.06) !important;
+      border-color:rgba(119,208,196,.14) !important;
+      box-shadow:none !important;
+    }
+
+    .site-primary-btn{
+      border-radius:14px !important;
+      padding-left:18px !important;
+      padding-right:18px !important;
+    }
+
+    .site-footer-shell{
+      position:relative;
+      border-radius:34px;
+      overflow:hidden;
+      background:
+        radial-gradient(460px 280px at 16% 16%, rgba(23,193,174,.22), transparent 70%),
+        radial-gradient(360px 240px at 84% 18%, rgba(255,209,90,.18), transparent 72%),
+        linear-gradient(145deg, rgba(5,25,30,.98) 0%, rgba(8,50,54,.97) 46%, rgba(5,15,24,.99) 100%),
+        url('/assets/theme-ambient-dark.svg') center/cover no-repeat;
+      border:1px solid rgba(119,208,196,.16) !important;
+      box-shadow:0 34px 92px rgba(3,22,25,.34) !important;
+    }
+
+    .site-footer-shell::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(130deg, rgba(255,255,255,.08) 0 8%, transparent 8% 62%, rgba(255,255,255,.05) 62% 66%, transparent 66%),
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 38%, rgba(255,255,255,.04));
+      pointer-events:none;
+    }
+
+    .site-footer-backword{
+      position:absolute;
+      left:50%;
+      bottom:12px;
+      z-index:0;
+      transform:translateX(-50%);
+      font-size:clamp(5rem, 17vw, 12rem);
+      line-height:.8;
+      letter-spacing:-.08em;
+      font-weight:900;
+      color:rgba(231,255,250,.08);
+      pointer-events:none;
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    .site-footer-illustration{
+      position:absolute;
+      right:-28px;
+      bottom:18px;
+      z-index:1;
+      width:min(38vw, 398px);
+      pointer-events:none;
+      filter:drop-shadow(0 28px 48px rgba(0,0,0,.28));
+    }
+
+    .site-footer-top{
+      display:grid;
+      grid-template-columns:1.06fr .94fr;
+      gap:24px;
+      align-items:start;
+      position:relative;
+      z-index:2;
+    }
+
+    .site-footer-brand{
+      padding-right:8px;
+    }
+
+    .site-footer-social{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom:18px;
+      flex-wrap:wrap;
+    }
+
+    .site-footer-social a{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:44px;
+      height:44px;
+      border-radius:16px;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(160,241,231,.16);
+      color:#f0fffb;
+      box-shadow:0 14px 28px rgba(0,0,0,.16);
+      transition:transform .18s ease, background .18s ease, color .18s ease;
+    }
+
+    .site-footer-social a:hover{
+      background:rgba(255,255,255,.16);
+      color:#fffdf4;
+      transform:translateY(-1px);
+    }
+
+    .site-footer-shell .site-brand-eyebrow{
+      color:#89efe1;
+    }
+
+    .site-footer-title{
+      margin-top:8px;
+      font-size:2rem;
+      line-height:1.02;
+      letter-spacing:-.04em;
+      font-weight:900;
+      color:#f5fffc;
+    }
+
+    .site-footer-copy{
+      margin-top:14px;
+      max-width:42rem;
+      font-size:14px;
+      line-height:1.8;
+      color:rgba(233,255,251,.74);
+    }
+
+    .site-footer-capsules{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:18px;
+    }
+
+    .site-footer-capsule{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(160,241,231,.14);
+      color:#f1fffc;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    html.dark .site-footer-capsule{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.12);
+      color:#effdfa;
+    }
+
+    .site-footer-columns{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+      position:relative;
+      z-index:2;
+    }
+
+    .site-footer-card{
+      padding:18px;
+      border-radius:24px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(160,241,231,.12);
+      box-shadow:0 14px 34px rgba(0,0,0,.12);
+      backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);
+    }
+
+    html.dark .site-footer-card{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+    }
+
+    .site-footer-card h4{
+      font-size:13px;
+      line-height:1.3;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#8feee0;
+      font-weight:900;
+    }
+
+    .site-footer-link{
+      display:block;
+      margin-top:12px;
+      color:#f6fffd;
+      font-size:14px;
+      font-weight:800;
+      line-height:1.55;
+    }
+
+    .site-footer-link:hover{
+      color:#ffd566;
+    }
+
+    .site-footer-meta{
+      margin-top:12px;
+      color:rgba(233,255,251,.66);
+      font-size:12px;
+      line-height:1.6;
+      font-weight:700;
+    }
+
+    .site-footer-bottom{
+      margin-top:22px;
+      padding-top:18px;
+      border-top:1px solid rgba(160,241,231,.12);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+      position:relative;
+      z-index:2;
+    }
+
+    html.dark .site-footer-bottom{
+      border-top-color:rgba(119,208,196,.12);
+    }
+
+    .site-footer-legal{
+      color:rgba(233,255,251,.66);
+      font-size:12px;
+      line-height:1.7;
+      font-weight:700;
+    }
+
+    .site-footer-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .site-footer-actions a{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:14px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(160,241,231,.12);
+      color:#f5fffc;
+      font-size:13px;
+      font-weight:800;
+      box-shadow:none;
+    }
+
+    html.dark .site-footer-actions a{
+      background:rgba(255,255,255,.05);
+      border-color:rgba(119,208,196,.12);
+      box-shadow:none;
+      color:#effdfa;
+    }
+
+    .site-footer-actions a:hover{
+      background:rgba(255,255,255,.14);
+    }
+
+    .site-footer-cta{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:22px;
+    }
+
+    .site-footer-cta a{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 18px;
+      border-radius:16px;
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.02em;
+      box-shadow:0 16px 30px rgba(0,0,0,.16);
+    }
+
+    .site-footer-cta a:first-child{
+      background:linear-gradient(135deg, rgba(20,184,166,1), rgba(255,209,90,1));
+      color:#062930;
+    }
+
+    .site-footer-cta a:last-child{
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(160,241,231,.14);
+      color:#f5fffc;
+    }
+
+    .gallery-shell{
+      position:relative;
+      overflow:hidden;
+      border-radius:38px;
+      padding:26px;
+    }
+
+    .gallery-shell::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(420px 220px at 86% 10%, rgba(20,184,166,.14), rgba(20,184,166,0) 70%),
+        radial-gradient(320px 180px at 16% 92%, rgba(255,216,82,.18), rgba(255,216,82,0) 70%);
+      pointer-events:none;
+    }
+
+    .gallery-head{
+      position:relative;
+      z-index:1;
+      display:flex;
+      align-items:end;
+      justify-content:space-between;
+      gap:18px;
+      flex-wrap:wrap;
+    }
+
+    .gallery-head__copy{
+      max-width:680px;
+    }
+
+    .gallery-scroll-note{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 16px;
+      border-radius:999px;
+      background:rgba(255,255,255,.86);
+      border:1px solid rgba(15,143,131,.12);
+      color:#0b3840;
+      font-size:13px;
+      font-weight:800;
+      box-shadow:0 16px 32px rgba(9,88,79,.08);
+    }
+
+    .gallery-grid{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:minmax(0,1.08fr) minmax(280px,.92fr);
+      gap:16px;
+      margin-top:24px;
+    }
+
+    .gallery-grid__side{
+      display:grid;
+      gap:16px;
+    }
+
+    .gallery-card{
+      position:relative;
+      overflow:hidden;
+      min-height:260px;
+      border-radius:30px;
+      background:#0b2a2d;
+      border:1px solid rgba(255,255,255,.2);
+      box-shadow:0 24px 62px rgba(8,44,48,.20);
+    }
+
+    .gallery-card--video{
+      min-height:564px;
+    }
+
+    .gallery-card--wide{
+      min-height:286px;
+    }
+
+    .gallery-card img,
+    .gallery-card video{
+      width:100%;
+      height:100%;
+      display:block;
+      object-fit:cover;
+      object-position:center;
+    }
+
+    .gallery-card::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg, rgba(4,24,26,.04), rgba(4,24,26,.1) 34%, rgba(4,24,26,.78) 100%);
+    }
+
+    .gallery-card--illustrated{
+      min-height:320px;
+      background:linear-gradient(145deg, rgba(7,40,46,.98), rgba(10,76,84,.96) 52%, rgba(7,25,34,.98));
+    }
+
+    .gallery-card--illustrated::after{
+      background:linear-gradient(180deg, rgba(4,24,26,.08), rgba(4,24,26,.12) 34%, rgba(4,24,26,.74) 100%);
+    }
+
+    .gallery-card__art{
+      object-fit:contain !important;
+      object-position:center bottom !important;
+      padding:26px 24px 6px;
+      filter:drop-shadow(0 28px 42px rgba(0,0,0,.26));
+    }
+
+    .gallery-card__panel{
+      position:absolute;
+      top:22px;
+      right:22px;
+      z-index:1;
+      width:min(42%, 244px);
+      padding:16px 18px;
+      border-radius:24px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);
+      color:#f7fffd;
+      box-shadow:0 20px 34px rgba(3,16,20,.18);
+    }
+
+    .gallery-card__panel-label{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:11px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      font-weight:900;
+      color:rgba(247,255,253,.8);
+    }
+
+    .gallery-card__panel strong{
+      display:block;
+      margin-top:10px;
+      font-size:1rem;
+      line-height:1.35;
+      letter-spacing:-.03em;
+    }
+
+    .gallery-card__panel span{
+      display:block;
+      margin-top:8px;
+      font-size:13px;
+      line-height:1.65;
+      color:rgba(247,255,253,.76);
+    }
+
+    .gallery-card__copy{
+      position:absolute;
+      left:22px;
+      right:22px;
+      bottom:22px;
+      z-index:1;
+      color:#f7fffd;
+    }
+
+    .gallery-card__eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 13px;
+      border-radius:999px;
+      background:rgba(255,255,255,.14);
+      border:1px solid rgba(255,255,255,.18);
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);
+    }
+
+    .gallery-card__copy h3{
+      margin-top:14px;
+      font-size:clamp(1.35rem, 2vw, 2rem);
+      line-height:1.08;
+      letter-spacing:-.03em;
+    }
+
+    .gallery-card__copy p{
+      margin-top:10px;
+      max-width:34rem;
+      font-size:14px;
+      line-height:1.65;
+      color:rgba(247,255,253,.82);
+    }
+
+    .testimonial-card{
+      overflow:hidden;
+    }
+
+    .testimonial-media{
+      margin:-22px -22px 18px;
+      height:136px;
+      background:linear-gradient(160deg, rgba(11,77,82,.98), rgba(8,34,39,.98));
+      overflow:hidden;
+    }
+
+    .testimonial-media img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      opacity:.76;
+    }
+
+    .testimonial-media--light{
+      background:linear-gradient(160deg, rgba(15,143,131,.94), rgba(11,77,82,.98));
+    }
+
+    @media (max-width:1100px){
+      .site-footer-top,
+      .site-footer-columns{
+        grid-template-columns:1fr;
+      }
+
+      .gallery-grid{
+        grid-template-columns:1fr;
+      }
+
+      .gallery-card--video{
+        min-height:420px;
+      }
+
+      .site-footer-illustration{
+        width:min(48vw, 360px);
+        right:-18px;
+      }
+    }
+
+    @media (max-width:760px){
+      .site-nav{
+        padding:4px;
+      }
+
+      .site-brand-eyebrow,
+      .site-brand-sub{
+        display:none;
+      }
+
+      .site-brand-name{
+        font-size:.98rem;
+      }
+
+      .landing-section + .landing-section{
+        margin-top:24px;
+      }
+
+      html:not(.dark) .landing-hero{
+        padding:18px;
+        border-radius:32px;
+      }
+
+      .gallery-shell{
+        padding:18px;
+        border-radius:30px;
+      }
+
+      .gallery-card,
+      .gallery-card--video,
+      .gallery-card--wide{
+        min-height:240px;
+      }
+
+      .gallery-card__copy{
+        left:16px;
+        right:16px;
+        bottom:16px;
+      }
+
+      .gallery-card__panel{
+        left:16px;
+        right:16px;
+        top:16px;
+        width:auto;
+      }
+
+      .landing-floating-art--orb{
+        width:172px;
+        top:-16px;
+        right:-36px;
+      }
+
+      .landing-floating-art--stack{
+        width:136px;
+        left:-30px;
+        bottom:-28px;
+      }
+
+      .stage-energy--a{
+        width:132px;
+        right:10%;
+      }
+
+      .stage-energy--b{
+        width:110px;
+      }
+
+      .testimonial-media{
+        margin:-22px -22px 16px;
+        height:120px;
+      }
+
+      .site-footer-shell{
+        border-radius:28px;
+      }
+
+      .site-footer-backword{
+        font-size:4.2rem;
+        bottom:88px;
+      }
+
+      .site-footer-illustration{
+        position:relative;
+        display:block;
+        right:auto;
+        bottom:auto;
+        width:min(84vw, 320px);
+        margin:18px auto 4px;
+      }
+
+      .site-footer-cta{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .site-footer-cta a{
+        justify-content:center;
+      }
+    }
+  </style>
+  <style>
+    header[data-official-topbar] .site-header-shell{
+      padding:10px 14px !important;
+      border-radius:22px !important;
+      box-shadow:0 14px 34px rgba(9,46,48,.08) !important;
+    }
+
+    header[data-official-topbar] .site-nav{
+      padding:4px !important;
+      gap:3px !important;
+      border-radius:15px !important;
+    }
+
+    header[data-official-topbar] .site-nav__link{
+      padding:8px 11px !important;
+      font-size:12px !important;
+    }
+
+    header[data-official-topbar] .site-header-actions{
+      gap:8px !important;
+    }
+
+    header[data-official-topbar] .site-utility-btn,
+    header[data-official-topbar] .site-primary-btn,
+    header[data-official-topbar] .site-menu-btn{
+      min-height:38px;
+      padding:8px 12px !important;
+      border-radius:13px !important;
+      font-size:12px !important;
+    }
+  </style>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+
+<body id="top" class="h-full text-slate-900 dark:text-slate-100">
+  <div id="progress"></div>
+  <div class="bg-orbs"></div>
+  <div class="bg-grid"></div>
+  <div class="ambient-video-layer" aria-hidden="true">
+    <video autoplay muted loop playsinline preload="auto">
+      <source src="/assets/hero-campus.mp4" type="video/mp4" />
+    </video>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 official-topbar" data-official-topbar>
+    <div class="mx-auto max-w-6xl px-4 py-3">
+      <div class="glass site-header-shell rounded-3xl px-4 py-3 flex items-center justify-between gap-4" data-nav-shell>
+        <a href="/index.html" class="site-brand-block">
+          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shadow-glass overflow-hidden"
+     style="background: rgba(15,143,131,.12); border: 1px solid rgba(15,143,131,.16);">
+  <svg viewBox="0 0 120 120" class="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px]" aria-hidden="true">
+    <defs>
+      <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="rgba(245,158,11,1)"/>
+        <stop offset="0.5" stop-color="rgba(250,204,21,1)"/>
+        <stop offset="1" stop-color="rgba(245,158,11,1)"/>
+      </linearGradient>
+      <linearGradient id="gIce" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="rgba(125,211,252,1)"/>
+        <stop offset="0.45" stop-color="rgba(34,211,238,1)"/>
+        <stop offset="1" stop-color="rgba(167,243,208,1)"/>
+      </linearGradient>
+      <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="2.2" result="b"/>
+        <feMerge>
+          <feMergeNode in="b"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+
+    <!-- outer ring -->
+    <circle cx="60" cy="60" r="54" fill="none" stroke="url(#gGold)" stroke-width="6" opacity="0.92"/>
+    <!-- inner oval -->
+    <ellipse cx="60" cy="64" rx="42" ry="24" fill="rgba(2,6,23,.88)" stroke="url(#gGold)" stroke-width="4"/>
+    <!-- sparkle -->
+    <path d="M20 44 L26 44 L28 38 L30 44 L36 44 L31 47 L33 53 L28 49 L23 53 L25 47 Z"
+          fill="rgba(250,204,21,.95)" filter="url(#softGlow)"/>
+
+    <!-- text -->
+    <text x="60" y="70" text-anchor="middle" font-size="22" font-family="Inter, ui-sans-serif" font-weight="800"
+          fill="url(#gIce)" style="letter-spacing:.5px">hallaym</text>
+  </svg>
+</div>
+          <div class="site-brand-meta">
+            <div class="site-brand-eyebrow">Rasmiy Ta'lim Platformasi</div>
+            <div class="site-brand-name">HALLAYM edu</div>
+            <div class="site-brand-sub">Online videodars, LMS va campus oqimi</div>
+          </div>
+        </a>
+
+        <nav class="site-nav hidden xl:flex">
+          <a href="#imkoniyatlar" class="site-nav__link">Imkoniyatlar</a>
+          <a href="#qanday-ishlaydi" class="site-nav__link">Jarayon</a>
+          <a href="#xizmatlar" class="site-nav__link">Xizmatlar</a>
+          <a href="/about.html" class="site-nav__link">About</a>
+        </nav>
+
+        <div class="site-header-actions">
+          <button id="mobileMenuBtn" class="glass rounded-xl px-3 py-2 text-sm font-extrabold btn-ghost glow-ring site-utility-btn site-menu-btn" aria-label="Menyu" aria-expanded="false" aria-controls="mobileMenu">
+            <i class="fa-solid fa-bars"></i>
+            <span class="hidden sm:inline">Menyu</span>
+          </button>
+
+          <button id="themeToggle" class="btn-ghost glass rounded-xl px-3 py-2 text-sm font-semibold muted glow-ring site-utility-btn">
+            <i id="themeIcon" class="fa-solid fa-moon"></i>
+            <span class="ml-2 hidden sm:inline" id="themeLabel">Tungi</span>
+          </button>
+
+          <a href="/login.html" class="glass rounded-xl px-4 py-2 text-sm font-bold btn-ghost glow-ring site-utility-btn hidden sm:inline-flex">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span class="ml-2 hidden sm:inline">Kirish</span>
+          </a>
+
+          <a href="/register.html" class="btn-primary rounded-xl px-4 py-2 text-sm font-bold text-white glow-ring magnet site-primary-btn">
+            <span class="hidden sm:inline">Ro‘yxatdan o‘tish</span>
+            <span class="sm:hidden">Start</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+
+  <section class="landing-section landing-section--hero mx-auto max-w-7xl px-4 pt-6 pb-10">
+    <div class="landing-hero reveal">
+      <div class="landing-hero__grid">
+        <div class="landing-hero__content">
+          <div class="landing-kicker">
+            <span class="landing-kicker__dot"></span>
+            Jonli videodars, yozuv va guruhlar bitta platformada
+          </div>
+
+          <h1 class="landing-title">
+            Jonli darslar uchun <span class="accent">sodda</span> va chiroyli <span class="accent-soft">platforma.</span>
+          </h1>
+
+          <p class="landing-subtitle">
+            HALLAYM edu video dars, screen share, guruhlar, yozib olingan darslar va campus xizmatlarini bitta tushunarli saytda jamlaydi.
+            Matnni ko'p o'qimaydigan foydalanuvchi ham rasm, video va yirik tugmalar orqali nima qilish kerakligini bir qarashda tushunadi.
+          </p>
+
+          <div class="landing-actions">
+            <a href="/register.html" class="btn-primary text-white px-6 py-3 rounded-2xl font-extrabold text-center glow-ring magnet">
+              Bepul boshlash <i class="fa-solid fa-arrow-right ml-2"></i>
+            </a>
+            <a href="/lives.html" class="glass px-6 py-3 rounded-2xl font-extrabold text-center btn-ghost glow-ring">
+              Live darslarni ko'rish <i class="fa-solid fa-video ml-2"></i>
+            </a>
+          </div>
+
+          <div class="landing-highlight-row">
+            <div class="landing-highlight-card">
+              <div class="eyebrow">Live rooms</div>
+              <div class="value"><span class="count" data-to="24">0</span>/7 videodars tajribasi</div>
+            </div>
+            <div class="landing-highlight-card">
+              <div class="eyebrow">Bitta platforma</div>
+              <div class="value">Dars, chat, guruh va xizmatlar bir joyda</div>
+            </div>
+            <div class="landing-highlight-card">
+              <div class="eyebrow">Foydalanuvchi uchun</div>
+              <div class="value">Sodda onboarding va premium ko'rinish</div>
+            </div>
+          </div>
+
+          <div class="landing-trust">
+            <div class="landing-trust__item"><i class="fa-solid fa-video"></i> Zoom kabi live dars</div>
+            <div class="landing-trust__item"><i class="fa-solid fa-desktop"></i> Screen share</div>
+            <div class="landing-trust__item"><i class="fa-solid fa-comments"></i> Guruh chat</div>
+            <div class="landing-trust__item"><i class="fa-solid fa-circle-play"></i> Dars yozuvi</div>
+            <div class="landing-trust__item"><i class="fa-solid fa-store"></i> Xizmatlar</div>
+            <div class="landing-trust__item"><i class="fa-solid fa-bell"></i> Campus Signal</div>
+          </div>
+        </div>
+
+        <div class="landing-stage reveal" aria-label="Platforma taqdimot videosi">
+          <div class="landing-ribbon landing-ribbon--primary">LIVE CLASSROOMS • SCREEN SHARE • LMS</div>
+          <div class="landing-ribbon landing-ribbon--secondary">CHAT • RECORDING • CAMPUS FLOW</div>
+          <img src="/assets/landing-hero-illustration.svg" alt="" class="landing-stage__poster" />
+          <video class="landing-stage__video" autoplay muted loop playsinline preload="metadata" poster="/assets/landing-hero-illustration.svg">
+            <source src="/assets/hero-campus.mp4" type="video/mp4" />
+          </video>
+          <div class="landing-stage__overlay"></div>
+          <div class="landing-stage__frame"></div>
+          <span class="stage-energy stage-energy--a" aria-hidden="true"></span>
+          <span class="stage-energy stage-energy--b" aria-hidden="true"></span>
+          <div class="landing-floating-art landing-floating-art--orb" data-parallax="0.12" data-parallax-x="-0.04" aria-hidden="true">
+            <img src="/assets/edu-hero-orbit-3d.svg" alt="" />
+          </div>
+          <div class="landing-floating-art landing-floating-art--stack" data-parallax="0.18" data-parallax-x="0.05" aria-hidden="true">
+            <img src="/assets/edu-gallery-stack-3d.svg" alt="" />
+          </div>
+
+          <div class="landing-stage__cards">
+            <div>
+              <div class="landing-stage__topline">
+                <div class="landing-stage__window">
+                  <i class="fa-solid fa-circle"></i>
+                  <i class="fa-solid fa-circle"></i>
+                  <i class="fa-solid fa-circle"></i>
+                  <span class="ml-1 font-extrabold tracking-wide">HALLAYM LIVE</span>
+                </div>
+                <div class="landing-live-pill">
+                  <span class="pulse"></span>
+                  Jonli dars
+                </div>
+              </div>
+
+              <div class="landing-stage__headline">
+                Ustoz, talaba va kurslar uchun premium live classroom.
+              </div>
+
+              <div class="landing-stage__subcopy">
+                Bir tomonda videodars, bir tomonda guruh chat, pastda yozuv va qatnashuv nazorati.
+                Hamma narsa bitta ochiq teal uslubida va chiroyli oqimda ishlaydi.
+              </div>
+            </div>
+
+            <div class="landing-stage__dashboard">
+              <div class="landing-call-card">
+                <h3>Bugungi asosiy dars</h3>
+                <p>Matematika live class, 19:30. O'qituvchi, talabalar va screen share bir xil xonada ishlaydi.</p>
+                <div class="landing-avatar-stack">
+                  <div class="landing-avatar landing-avatar--a">AZ</div>
+                  <div class="landing-avatar landing-avatar--b">MK</div>
+                  <div class="landing-avatar landing-avatar--c">RT</div>
+                </div>
+                <div class="landing-zoom-note">
+                  <span>500+ faol foydalanuvchi</span>
+                  <span>48.5/50 tajriba</span>
+                </div>
+                <a href="/register.html" class="cta">Darsga qo'shilish <i class="fa-solid fa-arrow-right"></i></a>
+              </div>
+
+              <div class="landing-panel-grid">
+                <div class="landing-panel-card">
+                  <div class="eyebrow">Realtime</div>
+                  <div class="value">HD video, chat va screen share</div>
+                </div>
+                <div class="landing-panel-card">
+                  <div class="eyebrow">Nazorat</div>
+                  <div class="value">Davomat, yozuv va dars oqimi</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hero -->
+  <section class="mx-auto max-w-7xl px-4 pt-10 pb-10" style="display:none">
+    <div class="grid lg:grid-cols-2 gap-8 items-center">
+      <div class="reveal">
+        <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+          <i class="fa-solid fa-sparkles"></i>
+          <span>Yangi avlod talabalar hamjamiyati</span>
+          <span class="mx-2 w-1 h-1 rounded-full bg-slate-400/40"></span>
+          <span class="muted2">Kanallar • Guruhlar • Chat • Xizmatlar</span>
+        </div>
+
+        <h1 class="mt-6 text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.05]">
+          Universitet hayoti uchun <span class="u-anim">bitta</span> platforma.
+        </h1>
+
+        <p class="mt-5 text-lg sm:text-xl muted leading-relaxed">
+          HALLAYM edu — talabalar uchun “hamjamiyat + bilim + imkoniyat” ekotizimi.
+          Kursdoshlar bilan tez yozishing, fan bo‘yicha guruhlarga kirishing, universitet kanallarida yangiliklarni ko‘rishing,
+          o‘z qo‘l mehnatingni sotishing va muammolarni anonim ko‘tarishing mumkin.
+        </p>
+
+        <div class="mt-7 flex flex-col sm:flex-row gap-3">
+          <a href="/channels.html" class="btn-primary text-white px-6 py-3 rounded-2xl font-extrabold text-center glow-ring magnet">
+            Kanallarni ko‘rish <i class="fa-solid fa-arrow-right ml-2"></i>
+          </a>
+          <a href="/messages.html" class="glass px-6 py-3 rounded-2xl font-extrabold text-center btn-ghost glow-ring">
+            Tez chat <i class="fa-regular fa-comments ml-2"></i>
+          </a>
+        </div>
+
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="glass rounded-2xl p-4 g-border">
+            <div class="text-xs muted font-semibold">Tezlik</div>
+            <div class="mt-1 text-2xl font-black"><span class="count" data-to="1">0</span>x</div>
+            <div class="mt-1 text-xs muted2">real-time yangilanish</div>
+          </div>
+          <div class="glass rounded-2xl p-4 g-border">
+            <div class="text-xs muted font-semibold">Tartib</div>
+            <div class="mt-1 text-2xl font-black"><span class="count" data-to="10">0</span>+</div>
+            <div class="mt-1 text-xs muted2">kategoriya & filtrlar</div>
+          </div>
+          <div class="glass rounded-2xl p-4 g-border">
+            <div class="text-xs muted font-semibold">Nazorat</div>
+            <div class="mt-1 text-2xl font-black"><span class="count" data-to="24">0</span>/7</div>
+            <div class="mt-1 text-xs muted2">moderatsiya & xavfsizlik</div>
+          </div>
+        </div>
+
+        <div class="mt-6 muted2 text-sm">
+          Kirgan odam odatda birinchi 5 daqiqada platformaning “ruhini” his qiladi:
+          <span class="font-semibold muted">o‘qish — hamkorlik — natija.</span>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <div class="glass rounded-3xl p-5 g-border">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-extrabold">Bugun nimani qilamiz?</div>
+              <div class="text-xs muted2 mt-1">Uchta tezkor ssenariy — bir klik</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-emerald-400/70"></div>
+              <div class="w-3 h-3 rounded-full bg-amber-400/70"></div>
+              <div class="w-3 h-3 rounded-full bg-rose-400/70"></div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid gap-3">
+            <a href="/channels.html" class="glass rounded-2xl p-4 btn-ghost group">
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+                  <i class="fa-solid fa-bullhorn"></i>
+                </div>
+                <div class="flex-1">
+                  <div class="font-extrabold">Universitet kanallari</div>
+                  <div class="text-sm muted2 mt-1">E’lonlar, stipendiya, tadbirlar, yo‘riqnomalar — tartibli formatda.</div>
+                  <div class="text-xs mt-2 muted group-hover:underline">Ko‘rish →</div>
+                </div>
+              </div>
+            </a>
+
+            <a href="/groups.html" class="glass rounded-2xl p-4 btn-ghost group">
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+                  <i class="fa-solid fa-people-group"></i>
+                </div>
+                <div class="flex-1">
+                  <div class="font-extrabold">O‘quv guruhlari</div>
+                  <div class="text-sm muted2 mt-1">Fan bo‘yicha jamlaning: konspekt, test, muhokama va tayyorlanish.</div>
+                  <div class="text-xs mt-2 muted group-hover:underline">Qo‘shilish →</div>
+                </div>
+              </div>
+            </a>
+
+            <a href="/services.html" class="glass rounded-2xl p-4 btn-ghost group">
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+                  <i class="fa-solid fa-store"></i>
+                </div>
+                <div class="flex-1">
+                  <div class="font-extrabold">Talabalar xizmatlari</div>
+                  <div class="text-sm muted2 mt-1">Dizayn, tarjima, repetitorlik, CV review — hammasi campus ichida.</div>
+                  <div class="text-xs mt-2 muted group-hover:underline">Boshlash →</div>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="mt-4 flex items-center justify-between">
+            <div class="text-xs muted2">
+              Maslahat: havolani ulashsangiz post preview avtomatik chiqadi.
+            </div>
+            <div class="text-xs muted">
+              <i class="fa-solid fa-shield-halved"></i> Verified & nazoratli
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid sm:grid-cols-2 gap-3">
+          <div class="glass rounded-3xl p-5 animate-floaty">
+            <div class="text-sm font-extrabold">“Campus Signal”</div>
+            <div class="mt-2 text-sm muted2">Muammolarni anonim ko‘taring, status bilan kuzating: open → resolved.</div>
+            <div class="mt-3 text-xs muted"><i class="fa-solid fa-bolt"></i> tezkor ko‘tarilish • mod queue</div>
+          </div>
+          <div class="glass rounded-3xl p-5 animate-floaty" style="animation-delay: .5s">
+            <div class="text-sm font-extrabold">“Bir post — bitta link”</div>
+            <div class="mt-2 text-sm muted2">Har postda permalink bor: Telegram/Discord’da preview chiqadi va post ochiladi.</div>
+            <div class="mt-3 text-xs muted"><i class="fa-solid fa-link"></i> ulashish oson • topish tez</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Logos / proof -->
+  <section class="landing-section landing-section--proof mx-auto max-w-7xl px-4 pb-6">
+    <div class="landing-proof-band reveal">
+      <div class="landing-proof-main">
+        <div>
+          <div class="text-sm font-extrabold">Nega aynan HALLAYM edu?</div>
+          <div class="mt-1 text-sm muted2">Saytning birinchi ekraniyoq platforma nima qilishi, kimga mo'ljallangani va qayerdan boshlash kerakligini ko'rsatadi.</div>
+        </div>
+
+        <div class="landing-proof-grid">
+          <div class="landing-proof-card">
+            <div class="num"><span class="count" data-to="100">0</span>+</div>
+            <div class="txt">interaktiv dars va kurs oqimi</div>
+          </div>
+          <div class="landing-proof-card">
+            <div class="num"><span class="count" data-to="4">0</span>x</div>
+            <div class="txt">tezroq onboarding va tushunarli oqim</div>
+          </div>
+          <div class="landing-proof-card">
+            <div class="num"><span class="count" data-to="1">0</span> ta</div>
+            <div class="txt">hisob bilan barcha bo'limlarga kirish</div>
+          </div>
+          <div class="landing-proof-card">
+            <div class="num"><span class="count" data-to="24">0</span>/7</div>
+            <div class="txt">moderatsiya va campus nazorati</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="landing-proof-side">
+        <div class="text-xs uppercase tracking-[0.18em] font-black opacity-75">Premium Learning Flow</div>
+        <h3 class="mt-3 text-2xl font-black tracking-tight">Zoom kabi dars, lekin campus uchun moslashtirilgan.</h3>
+        <p class="mt-3 text-sm leading-7">Live videodars, guruh chat, o'qituvchi nazorati, yozib olish, xizmatlar va campus signal bir-biridan uzilmagan yagona oqimda ishlaydi.</p>
+        <div class="mt-5 flex flex-wrap gap-3 text-xs font-extrabold">
+          <span class="landing-chip">LIVE</span>
+          <span class="landing-chip">RECORDING</span>
+          <span class="landing-chip">GROUP FLOW</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="galereya" class="landing-section mx-auto max-w-7xl px-4 py-10">
+    <div class="gallery-shell reveal">
+      <div class="gallery-head">
+        <div class="gallery-head__copy">
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-photo-film"></i> Galereya
+          </div>
+          <h2 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+            Bir qarashda tushunarli bo'lishi uchun sayt video va rasm bilan gapiradi.
+          </h2>
+          <p class="mt-3 muted text-lg max-w-3xl">
+            Har bir katta blok matndan oldin ko'rinish bilan tushuntiradi: jonli dars qanday ko'rinadi, telefon ichida oqim qanday ishlaydi,
+            marketplace va dars boshqaruvi qanday joylashadi.
+          </p>
+        </div>
+
+        <div class="gallery-scroll-note">
+          <i class="fa-solid fa-arrow-down"></i> Scroll qilsangiz bo'shliqlarda orqa fon video yana ko'rinadi
+        </div>
+      </div>
+
+      <div class="gallery-grid">
+        <article class="gallery-card gallery-card--video">
+          <video autoplay muted loop playsinline preload="metadata" poster="/assets/landing-hero-illustration.svg">
+            <source src="/assets/hero-campus.mp4" type="video/mp4" />
+          </video>
+          <div class="gallery-card__copy">
+            <div class="gallery-card__eyebrow"><i class="fa-solid fa-circle-play"></i> Jonli dars ichidan</div>
+            <h3>Ustoz, video, chat va yozib olish bir xil sahnada ko'rinadi.</h3>
+            <p>Asosiy sahifa foydalanuvchiga sayt haqiqatan ham real vaqt videodars uchun ekanini shu videoning o'zi bilan ko'rsatadi.</p>
+          </div>
+        </article>
+
+        <div class="gallery-grid__side">
+          <article class="gallery-card">
+            <img src="/assets/live-class-studio.svg" alt="Live classroom va dars boshqaruvi previewi" />
+            <div class="gallery-card__copy">
+              <div class="gallery-card__eyebrow"><i class="fa-solid fa-desktop"></i> Dars paneli</div>
+              <h3>16:9 kompozitsiya va aniq CTA.</h3>
+              <p>Ko'z avval video va tugmaga tushadi, keyin qolgan ma'lumotni oson qabul qiladi.</p>
+            </div>
+          </article>
+
+          <article class="gallery-card">
+            <img src="/assets/student-mobile-companion.svg" alt="Telefon ichidagi ta'lim oqimi previewi" />
+            <div class="gallery-card__copy">
+              <div class="gallery-card__eyebrow"><i class="fa-solid fa-mobile-screen-button"></i> Mobil oqim</div>
+              <h3>Telefon orqali ham sodda ko'rinish.</h3>
+              <p>Talaba kichik ekranda ham dars, guruh va e'lonlarni chalkashtirmasdan ko'radi.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="gallery-grid mt-4">
+        <article class="gallery-card gallery-card--wide gallery-card--illustrated">
+          <img src="/assets/edu-gallery-stack-3d.svg" alt="3D ta'lim oqimi illustratsiyasi" class="gallery-card__art" data-parallax="0.08" data-parallax-x="-0.03" />
+          <div class="gallery-card__panel">
+            <div class="gallery-card__panel-label"><i class="fa-solid fa-cubes"></i> 3D Layer</div>
+            <strong>Video, CTA va yo'nalish bir kompozitsiyada.</strong>
+            <span>Sahifa faqat matn bilan emas, shakl va obyektlar orqali ham platforma vazifasini tushuntiradi.</span>
+          </div>
+          <div class="gallery-card__copy">
+            <div class="gallery-card__eyebrow"><i class="fa-solid fa-layer-group"></i> Vizual oqim</div>
+            <h3>3D illustratsiya section'larni oddiy kartadan ko'ra boyroq va esda qoladigan qiladi.</h3>
+            <p>Scroll qilganda katta bo'shliqlar, ambient video va suzuvchi assetlar birga ishlaydi, natijada landing page jonli mahsulot taassurotini beradi.</p>
+          </div>
+        </article>
+
+        <article class="gallery-card gallery-card--wide">
+          <img src="/assets/service-market-grid.svg" alt="Campus marketplace previewi" />
+          <div class="gallery-card__copy">
+            <div class="gallery-card__eyebrow"><i class="fa-solid fa-store"></i> Marketplace</div>
+            <h3>Faqat dars emas, xizmatlar va campus ekotizimi ham ko'rinishda darhol bilinadi.</h3>
+            <p>Bu uslub savodi pastroq foydalanuvchiga ham saytning nima uchun ekanini tushuntirishni osonlashtiradi.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Premium Landing Sections -->
+  <section id="imkoniyatlar" class="landing-section mx-auto max-w-7xl px-4 py-10">
+    <div class="feature-intro reveal">
+      <div>
+        <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Imkoniyatlar
+        </div>
+        <h2 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+          Online ta'lim uchun kerakli oqimlarning hammasi bitta chiroyli tajribaga yig'ildi.
+        </h2>
+        <p class="mt-3 muted text-lg max-w-3xl">
+          HALLAYM edu endi reklama banneridek yorqin ko'rinadi, lekin ichki mantiqda juda tushunarli bo'lib qoldi.
+          Foydalanuvchi birinchi qarashdayoq bu sayt jonli videodars, kurs oqimi va kampus hamkorligi uchun qurilganini anglaydi.
+        </p>
+      </div>
+
+      <div class="feature-rail">
+        <div class="feature-rail__item">
+          <span class="feature-rail__num">01</span>
+          <div>Jonli dars, screen share, recording va qatnashuv nazorati bir xil live room ichida ishlaydi.</div>
+        </div>
+        <div class="feature-rail__item">
+          <span class="feature-rail__num">02</span>
+          <div>Kanal, guruh va chat oqimlari o'qituvchi bilan talaba orasidagi masofani qisqartiradi.</div>
+        </div>
+        <div class="feature-rail__item">
+          <span class="feature-rail__num">03</span>
+          <div>Xizmatlar va campus signal bo'limlari saytni oddiy portal emas, butun edtech ekotizimga aylantiradi.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-mosaic reveal">
+      <div class="glass rounded-3xl p-6 g-border feature-card feature-card--wide">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+            <i class="fa-solid fa-video"></i>
+          </div>
+          <div class="font-extrabold text-lg">Jonli videodars markazi</div>
+        </div>
+        <p class="muted2 text-sm leading-7 max-w-2xl">
+          Hero blokdagi video shunchaki dekor emas. U mahsulot ruhini ko'rsatadi: ustoz dars ochadi, talabalar kiradi, chat yonida turadi,
+          recording saqlanadi va keyin ham o'sha oqimdan chiqib ketmaydi.
+        </p>
+        <div class="feature-card__chips">
+          <span><i class="fa-solid fa-circle-play"></i> HD video</span>
+          <span><i class="fa-solid fa-desktop"></i> Screen share</span>
+          <span><i class="fa-solid fa-microphone-lines"></i> Audio nazorat</span>
+          <span><i class="fa-solid fa-clock-rotate-left"></i> Recording</span>
+        </div>
+        <div class="feature-card__stats">
+          <div class="feature-card__stat">
+            <strong><span class="count" data-to="24">0</span>/7 live flow</strong>
+            <span>Darslar kun davomida tartibli jadval va qayta ko'rish oqimi bilan ishlaydi.</span>
+          </div>
+          <div class="feature-card__stat">
+            <strong><span class="count" data-to="1">0</span> ta interface</strong>
+            <span>Talaba turli servislar orasida sarson bo'lmaydi, hammasi bitta platformada qoladi.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass rounded-3xl p-6 g-border feature-card feature-card--dark">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center text-white">
+            <i class="fa-solid fa-layer-group"></i>
+          </div>
+          <div class="font-extrabold text-lg">Soddalashtirilgan oqim</div>
+        </div>
+        <p class="muted2 text-sm leading-7">
+          Bosh sahifadan foydalanuvchi darhol qayerga bosishni tushunadi: boshlash, live darsga kirish, xizmatlarni ko'rish yoki signal yuborish.
+        </p>
+        <ul class="space-y-2 text-sm muted">
+          <li><i class="fa-solid fa-check mr-2"></i> CTA tugmalar aniq va ko'zga yaqin</li>
+          <li><i class="fa-solid fa-check mr-2"></i> Vizual ierarxiya kuchli</li>
+          <li><i class="fa-solid fa-check mr-2"></i> Kunduzgi va tungi mavzu uyg'un</li>
+        </ul>
+      </div>
+
+      <div class="glass rounded-3xl p-6 g-border feature-card">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+            <i class="fa-solid fa-bullhorn"></i>
+          </div>
+          <div class="font-extrabold">Kanallar va e'lonlar</div>
+        </div>
+        <p class="muted2 text-sm leading-7">
+          Universitet yangiliklari, kurs e'lonlari va darsga oid postlar vizual preview bilan ko'rinadi.
+        </p>
+      </div>
+
+      <div class="glass rounded-3xl p-6 g-border feature-card">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+            <i class="fa-solid fa-people-group"></i>
+          </div>
+          <div class="font-extrabold">O'quv guruhlari</div>
+        </div>
+        <p class="muted2 text-sm leading-7">
+          Har bir fan uchun alohida guruh, materiallar almashinuvi, tayyorlanish va mini hamjamiyat mavjud.
+        </p>
+      </div>
+
+      <div class="glass rounded-3xl p-6 g-border feature-card">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+            <i class="fa-solid fa-store"></i>
+          </div>
+          <div class="font-extrabold">Xizmatlar bozori</div>
+        </div>
+        <p class="muted2 text-sm leading-7">
+          Repetitorlik, dizayn, tarjima va ta'limga oid ko'plab xizmatlarni campus ichida ishonch bilan taklif qilish mumkin.
+        </p>
+      </div>
+
+      <div class="glass rounded-3xl p-6 g-border feature-card">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div class="font-extrabold">Nazorat va xavfsizlik</div>
+        </div>
+        <p class="muted2 text-sm leading-7">
+          Moderatsiya, spam himoyasi, audit va verified model platformani jiddiy va ishonchli ko'rinishda ushlab turadi.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="qanday-ishlaydi" class="landing-section mx-auto max-w-7xl px-4 py-10">
+    <div class="showcase-shell glass p-6 sm:p-8 reveal g-border">
+      <div class="showcase-layout">
+        <div class="timeline-card">
+          <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold" style="background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1);">
+            <i class="fa-solid fa-diagram-project"></i> Qanday ishlaydi
+          </div>
+          <h3 class="mt-4 text-3xl font-black tracking-tight">Jonli dars boshlanishidan recordinggacha uzilmaydigan mahsulot oqimi.</h3>
+          <p class="mt-3 text-sm leading-7">
+            Har bir section foydalanuvchiga keyingi qadamni ko'rsatadi va saytdagi asosiy funksiyani bir necha soniyada tushuntiradi.
+            Dizayn chiroyli, lekin foydalanuvchini yo'ldan chalg'itmaydi.
+          </p>
+
+          <div class="timeline-steps">
+            <div class="timeline-step">
+              <span class="timeline-dot">1</span>
+              <div>
+                <strong>Dars xonasi ochiladi</strong>
+                <span>O'qituvchi live room yaratadi, talabalar link yoki dashboard orqali kiradi.</span>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <span class="timeline-dot">2</span>
+              <div>
+                <strong>Chat va screen share yonma-yon ishlaydi</strong>
+                <span>Video, yozishmalar, material va savollar bir joyda bo'lgani uchun oqim uzilmaydi.</span>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <span class="timeline-dot">3</span>
+              <div>
+                <strong>Natija saqlanadi</strong>
+                <span>Recording, topshiriq, xizmat yoki signal keyin ham shu ekotizim ichida qoladi.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 flex flex-col sm:flex-row gap-3">
+            <a href="/register.html" class="btn-primary text-white px-6 py-3 rounded-2xl font-extrabold glow-ring magnet">
+              Hozir boshlash <i class="fa-solid fa-arrow-right ml-2"></i>
+            </a>
+            <a href="/lives.html" class="glass px-6 py-3 rounded-2xl font-extrabold btn-ghost glow-ring">
+              Live xonalarni ko'rish <i class="fa-solid fa-video ml-2"></i>
+            </a>
+          </div>
+        </div>
+
+        <div class="showcase-visual">
+          <div class="visual-tag"><i class="fa-solid fa-circle-play"></i> Live classroom preview</div>
+          <h3 class="mt-4 text-2xl font-black tracking-tight">16:9 sahna, premium karta va ravon animatsiya bir joyda uyg'unlashadi.</h3>
+          <p class="mt-3 muted text-sm leading-7">
+            Banner uslubidagi yirik kompozitsiya saqlanadi, lekin platforma mahsulot sifatida ko'rinadi. Shuning uchun video, ilustratsiya va kartalar bir-birini to'ldiradi.
+          </p>
+          <div class="showcase-screen">
+            <img src="/assets/live-class-studio.svg" alt="Jonli videodars va dars boshqaruvi previewi" />
+          </div>
+          <div class="showcase-note-grid">
+            <div class="showcase-note">Davomat, recording va rejalashtirilgan darslar shu oqimdan chiqmasdan boshqariladi.</div>
+            <div class="showcase-note">Katta teaser blok foydalanuvchiga sayt online real vaqt videodars uchun ekanini bir qarashda bildiradi.</div>
+            <div class="showcase-note">Ochiq teal fon, qoramtir karta va lime aksentlar premium ko'rinishni beradi.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="xizmatlar" class="landing-section mx-auto max-w-7xl px-4 py-10">
+    <div class="service-showcase reveal">
+      <div class="service-layout">
+        <div class="service-copy">
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-store"></i> Xizmatlar bozori
+          </div>
+          <h2 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+            Talaba va ustoz uchun foydali skill'larni daromadga aylantiradigan bo'lim.
+          </h2>
+          <p class="mt-3 muted text-lg leading-8">
+            Platforma faqat videodars bilan tugamaydi. Kimdadir repetitorlik bor, kimdadir dizayn, kimdadir tarjima yoki ta'limga oid xizmat bor.
+            HALLAYM edu shu ishlarni ham shu brend ruhida ko'rsatadi.
+          </p>
+
+          <div class="service-points">
+            <div class="service-point">
+              <strong>Repetitorlik va mini guruhlar</strong>
+              <span>Jonli dars va xizmat sahifasi o'zaro ulanadi, foydalanuvchi bir joyning o'zida buyurtma berishi yoki ro'yxatdan o'tishi mumkin.</span>
+            </div>
+            <div class="service-point">
+              <strong>Dizayn va prezentatsiya xizmatlari</strong>
+              <span>Poster, resume, slide, kontent tayyorlash kabi ishlar campus ichida ko'proq ishonch bilan topiladi.</span>
+            </div>
+            <div class="service-point">
+              <strong>Tarjima va akademik yordam</strong>
+              <span>Foydalanuvchi mahsulotni bir martalik vosita emas, kundalik yordamchi platforma sifatida qabul qiladi.</span>
+            </div>
+          </div>
+
+          <div class="mt-6 flex flex-col sm:flex-row gap-3">
+            <a href="/services.html" class="btn-primary text-white px-6 py-3 rounded-2xl font-extrabold glow-ring magnet">
+              Xizmatlarni ko'rish <i class="fa-solid fa-arrow-right ml-2"></i>
+            </a>
+            <a href="/register.html" class="glass px-6 py-3 rounded-2xl font-extrabold btn-ghost glow-ring">
+              Profil ochish <i class="fa-solid fa-user-plus ml-2"></i>
+            </a>
+          </div>
+        </div>
+
+        <div class="service-visual">
+          <div class="text-xs uppercase tracking-[0.18em] font-black opacity-75">Campus Marketplace</div>
+          <h3 class="mt-3 text-2xl font-black tracking-tight">Chiroyli karta, aniq kategoriya va ishonch hissi.</h3>
+          <div class="service-screen">
+            <img src="/assets/service-market-grid.svg" alt="Campus xizmatlari va marketplace previewi" />
+          </div>
+          <div class="service-chip-row">
+            <span class="service-chip"><i class="fa-solid fa-chalkboard-user"></i> Repetitorlik</span>
+            <span class="service-chip"><i class="fa-solid fa-pen-nib"></i> Dizayn</span>
+            <span class="service-chip"><i class="fa-solid fa-language"></i> Tarjima</span>
+            <span class="service-chip"><i class="fa-solid fa-star"></i> Review</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="signal" class="landing-section mx-auto max-w-7xl px-4 py-10">
+    <div class="signal-shell reveal">
+      <div class="signal-layout">
+        <div class="signal-copy">
+          <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold" style="background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1);">
+            <i class="fa-solid fa-bell"></i> Campus Signal
+          </div>
+          <h2 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+            Muammo ko'tarish ham platforma darajasida chiroyli va tartibli ko'rinishi kerak.
+          </h2>
+          <p class="mt-3 text-lg leading-8">
+            Bu bo'lim shikoyat devori emas. Bu boshqariladigan oqim: anonimlik, moderatsiya, status va yechimni ko'rsatadigan tizim.
+            Landing page'da ham shu jiddiylik qoramtir karta, och lime aksent va kuchli tipografiya bilan berildi.
+          </p>
+
+          <div class="signal-grid">
+            <div class="signal-mini">
+              <strong>Anonim, lekin mas'uliyatli</strong>
+              <span>Rate-limit, moderatsiya va report oqimi bilan signal tizimi nazorat ostida qoladi.</span>
+            </div>
+            <div class="signal-mini">
+              <strong>Status bilan yuradi</strong>
+              <span>Open, acknowledged, in progress va resolved holatlari muammoning qayerdaligini ko'rsatadi.</span>
+            </div>
+            <div class="signal-mini">
+              <strong>Realtime kuzatuv</strong>
+              <span>Moderator va talabalar oqimni kutmasdan, holatni darhol ko'radi.</span>
+            </div>
+            <div class="signal-mini">
+              <strong>Campusga mos til</strong>
+              <span>Texnik emas, oddiy foydalanuvchi ham tushunadigan ifodalar ishlatiladi.</span>
+            </div>
+          </div>
+
+          <div class="mt-6 flex flex-col sm:flex-row gap-3">
+            <a href="/signals.html" class="btn-primary text-white px-6 py-3 rounded-2xl font-extrabold glow-ring magnet">
+              Signal board <i class="fa-solid fa-arrow-right ml-2"></i>
+            </a>
+            <a href="/channels.html" class="glass px-6 py-3 rounded-2xl font-extrabold btn-ghost glow-ring">
+              Kanallarga o'tish <i class="fa-solid fa-bullhorn ml-2"></i>
+            </a>
+          </div>
+        </div>
+
+        <div class="signal-board">
+          <div class="signal-board__header">
+            <div>
+              <div class="font-extrabold">Signal oqimi preview</div>
+              <div class="text-xs text-white/70 mt-1">Real mahsulot kayfiyatini ko'rsatish uchun ishlab chiqilgan demo karta</div>
+            </div>
+            <div class="text-xs font-extrabold text-lime-200">LIVE MODERATION</div>
+          </div>
+
+          <div class="signal-feed">
+            <div class="flex items-center justify-between gap-3">
+              <div class="font-extrabold text-sm">Yotoqxonada issiq suv yo'q</div>
+              <div class="text-xs font-extrabold text-lime-200">Urgency 5</div>
+            </div>
+            <div class="signal-feed__meta mt-2">
+              <span>Dormitory</span>
+              <span>Status: acknowledged</span>
+            </div>
+            <div class="signal-feed__tags">
+              <span><i class="fa-solid fa-bolt"></i> Moderator ko'rdi</span>
+              <span><i class="fa-solid fa-clock"></i> 14 daqiqa oldin</span>
+            </div>
+          </div>
+
+          <div class="signal-feed">
+            <div class="flex items-center justify-between gap-3">
+              <div class="font-extrabold text-sm">Wi-Fi tezligi pasaygan</div>
+              <div class="text-xs font-extrabold text-sky-100">Urgency 3</div>
+            </div>
+            <div class="signal-feed__meta mt-2">
+              <span>Facilities</span>
+              <span>Status: open</span>
+            </div>
+            <div class="signal-feed__tags">
+              <span><i class="fa-solid fa-wifi"></i> Kampus interneti</span>
+              <span><i class="fa-solid fa-wave-square"></i> Monitoring</span>
+            </div>
+          </div>
+
+          <div class="signal-feed">
+            <div class="flex items-center justify-between gap-3">
+              <div class="font-extrabold text-sm">Dekanat navbati juda uzun</div>
+              <div class="text-xs font-extrabold text-white/80">Urgency 2</div>
+            </div>
+            <div class="signal-feed__meta mt-2">
+              <span>Administration</span>
+              <span>Status: in progress</span>
+            </div>
+            <div class="signal-feed__tags">
+              <span><i class="fa-solid fa-list-check"></i> Yechim yo'lda</span>
+              <span><i class="fa-solid fa-user-shield"></i> Admin nazorati</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fikrlar" class="landing-section mx-auto max-w-7xl px-4 py-10">
+    <div class="testimonial-shell reveal">
+      <div class="testimonial-layout">
+        <div class="testimonial-copy">
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-heart"></i> Tajriba
+          </div>
+          <h2 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+            Chiroyli landing page foydalanuvchini ushlab qoladi, tushunarli mahsulot esa uni qayta olib keladi.
+          </h2>
+          <p class="mt-3 muted text-lg leading-8">
+            Yangi ko'rinish reklama banneri darajasida yorqin, lekin haqiqiy mahsulot tuzilmasini yashirmaydi.
+            Har bir blok foydalanuvchiga "bu yerda nima qilsa bo'ladi" degan savolga darhol javob beradi.
+          </p>
+
+          <div class="testimonial-stat">
+            <strong><span class="count" data-to="87">0</span>%</strong>
+            <span>birinchi ekranidayoq platforma live dars, guruhlar va campus oqimi uchun ekanini his qilish kerak degan tamoyil asosida dizayn yig'ildi.</span>
+          </div>
+        </div>
+
+        <div class="testimonial-grid">
+          <div class="testimonial-card">
+            <div class="testimonial-media">
+              <img src="/assets/live-class-studio.svg" alt="Jonli dars previewi" />
+            </div>
+            <div class="testimonial-stars">5.0/5</div>
+            <p class="mt-4 text-sm muted leading-7">
+              "Landing page hozir haqiqiy edtech mahsulotga o'xshaydi. Live dars bloki darhol ko'zga tushadi va foydalanuvchini yo'naltiradi."
+            </p>
+            <div class="testimonial-person">
+              <div class="testimonial-avatar">MK</div>
+              <div>
+                <div class="font-extrabold">Malika</div>
+                <div class="text-xs muted2">2-kurs talabasi</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card">
+            <div class="testimonial-media testimonial-media--light">
+              <img src="/assets/student-mobile-companion.svg" alt="Mobil oqim previewi" />
+            </div>
+            <div class="testimonial-stars">5.0/5</div>
+            <p class="mt-4 text-sm muted leading-7">
+              "Videodars, guruh va xizmatlar bir-biriga bog'lanib turgani uchun sayt oddiy portal emas, butun ekotizim bo'lib ko'rinadi."
+            </p>
+            <div class="testimonial-person">
+              <div class="testimonial-avatar">JR</div>
+              <div>
+                <div class="font-extrabold">Javohir</div>
+                <div class="text-xs muted2">1-kurs talabasi</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card">
+            <div class="testimonial-media">
+              <img src="/assets/lesson-gallery-wall.svg" alt="Bo'limlar va sectionlar previewi" />
+            </div>
+            <div class="testimonial-stars">5.0/5</div>
+            <p class="mt-4 text-sm muted leading-7">
+              "Teal va qoramtir kartalar uyg'unligi premium kayfiyat berdi. Ayniqsa hero video va signal bo'limi juda ishonchli ko'rinadi."
+            </p>
+            <div class="testimonial-person">
+              <div class="testimonial-avatar">SN</div>
+              <div>
+                <div class="font-extrabold">Shahnoza</div>
+                <div class="text-xs muted2">Ustoz va mentor</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="landing-section mx-auto max-w-7xl px-4 py-10">
+    <div class="faq-shell reveal">
+      <div class="faq-layout">
+        <div class="faq-copy">
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-circle-question"></i> FAQ
+          </div>
+          <h2 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">Ko'p so'raladigan savollar.</h2>
+          <p class="mt-3 muted text-lg leading-8">
+            Bosh sahifa chiroyli ko'rinishi bilan birga foydalanuvchining asosiy savollariga ham javob berishi kerak.
+            Shu sabab bu blok soddalashtirilgan va aniq qoldirildi.
+          </p>
+
+          <div class="faq-badges">
+            <span><i class="fa-solid fa-video"></i> Live dars</span>
+            <span><i class="fa-solid fa-book"></i> Kurs oqimi</span>
+            <span><i class="fa-solid fa-store"></i> Xizmatlar</span>
+            <span><i class="fa-solid fa-bell"></i> Signal</span>
+          </div>
+
+          <a href="/register.html" class="mt-6 inline-flex btn-primary text-white px-6 py-3 rounded-2xl font-extrabold glow-ring magnet">
+            Hozir boshlash <i class="fa-solid fa-arrow-right ml-2"></i>
+          </a>
+        </div>
+
+        <div class="faq-list">
+          <details open>
+            <summary class="cursor-pointer font-extrabold">Platforma nimasi bilan boshqa o'quv saytlardan ajralib turadi?</summary>
+            <div class="mt-3 text-sm muted2 leading-7">Bu yerda live videodars, chat, guruh, xizmat va campus signal alohida bo'limlar sifatida emas, bitta mahsulot oqimi sifatida ko'rinadi.</div>
+          </details>
+
+          <details>
+            <summary class="cursor-pointer font-extrabold">Landing page nega video va ilustratsiyalar bilan boyitildi?</summary>
+            <div class="mt-3 text-sm muted2 leading-7">Sayt real vaqt videodars o'tkazishga mo'ljallangani uchun foydalanuvchi birinchi sekundlardanoq shu kayfiyatni his qilishi kerak edi. Video va previewlar aynan shu vazifani bajaradi.</div>
+          </details>
+
+          <details>
+            <summary class="cursor-pointer font-extrabold">Tungi mavzuda ham shu premium kayfiyat saqlanadimi?</summary>
+            <div class="mt-3 text-sm muted2 leading-7">Ha. Kunduzgi mavzuda och teal va oq fondan, tungi mavzuda esa yumshoq qora va yorug' teal aksentlardan foydalanildi.</div>
+          </details>
+
+          <details>
+            <summary class="cursor-pointer font-extrabold">Foydalanuvchi qayerdan boshlashi kerak?</summary>
+            <div class="mt-3 text-sm muted2 leading-7">Hero blokdagi "Bepul boshlash" yoki "Live darslarni ko'rish" tugmalari onboardingni eng tez boshlaydigan nuqtalar sifatida qoldirildi.</div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="landing-section mx-auto max-w-7xl px-4 pb-10">
+    <div class="glass site-footer-shell p-8 reveal g-border">
+      <div class="site-footer-backword" aria-hidden="true">HALLAYM</div>
+      <img src="/assets/edu-footer-atmosphere.svg" alt="" class="site-footer-illustration" aria-hidden="true" data-parallax="0.1" data-parallax-x="-0.03" />
+      <div class="site-footer-top">
+        <div class="site-footer-brand">
+          <div class="site-footer-social">
+            <a href="https://t.me/hallaym" aria-label="Telegram"><i class="fa-brands fa-telegram"></i></a>
+            <a href="/channels.html" aria-label="Kanallar"><i class="fa-solid fa-bullhorn"></i></a>
+            <a href="/lives.html" aria-label="Jonli darslar"><i class="fa-solid fa-video"></i></a>
+          </div>
+          <div class="site-brand-eyebrow">Rasmiy Platforma</div>
+          <div class="site-footer-title">HALLAYM edu</div>
+          <div class="site-footer-copy">
+            Online real vaqt videodars, kurs oqimi, talabalar hamkorligi, xizmatlar va campus signalni bitta tartibli platformaga yig'adigan rasmiy ta'lim muhiti.
+            Tashqi ko'rinish endi rasmiyroq, lekin premium kayfiyatni yo'qotmaydi: chuqur footer, 3D ilustratsiyalar va aniq yo'nalishlar foydalanuvchini keyingi qadamga olib boradi.
+          </div>
+          <div class="site-footer-capsules">
+            <span class="site-footer-capsule"><i class="fa-solid fa-video"></i> Live Classrooms</span>
+            <span class="site-footer-capsule"><i class="fa-solid fa-graduation-cap"></i> Learning Flow</span>
+            <span class="site-footer-capsule"><i class="fa-solid fa-shield-halved"></i> Official Platform</span>
+          </div>
+          <div class="site-footer-cta">
+            <a href="/register.html"><i class="fa-solid fa-user-plus"></i> Bepul boshlash</a>
+            <a href="/lives.html"><i class="fa-solid fa-circle-play"></i> Live darslarni ko'rish</a>
+          </div>
+        </div>
+
+        <div class="site-footer-columns">
+          <div class="site-footer-card">
+            <h4>Platforma</h4>
+            <a class="site-footer-link" href="/lives.html">Live darslar</a>
+            <a class="site-footer-link" href="/channels.html">Kanallar</a>
+            <a class="site-footer-link" href="/guide.html">Qo'llanma</a>
+            <div class="site-footer-meta">Asosiy ta'lim oqimi, foydalanish tartibi va rasmiy yo'nalishlar shu bo'limlarda jamlangan.</div>
+          </div>
+
+          <div class="site-footer-card">
+            <h4>Rasmiy sahifalar</h4>
+            <a class="site-footer-link" href="/about.html">About</a>
+            <a class="site-footer-link" href="/faq.html">FAQ</a>
+            <a class="site-footer-link" href="/contact.html">Aloqa</a>
+            <div class="site-footer-meta">Taqdimot, savollar, demo va rasmiy aloqa uchun alohida sahifalar qo'shildi.</div>
+          </div>
+
+          <div class="site-footer-card">
+            <h4>Tizim</h4>
+            <a class="site-footer-link" href="/services.html">Xizmatlar</a>
+            <a class="site-footer-link" href="/signals.html">Campus Signal</a>
+            <a class="site-footer-link" href="/groups.html">Guruhlar</a>
+            <div class="site-footer-meta">Qo'shimcha imkoniyatlar, campus boshqaruvi va ichki oqimlar uchun asosiy kirishlar.</div>
+          </div>
+
+          <div class="site-footer-card">
+            <h4>Aloqa va kirish</h4>
+            <a class="site-footer-link" href="https://t.me/hallaym">Telegram</a>
+            <a class="site-footer-link" href="/register.html">Ro'yxatdan o'tish</a>
+            <a class="site-footer-link" href="/login.html">Kirish</a>
+            <div class="site-footer-meta">Rasmiy savollar va tezkor bog'lanish uchun asosiy aloqa kanallari.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="site-footer-bottom">
+        <div class="site-footer-legal">
+          &copy; <span id="year"></span> <a href="https://t.me/hallaym" class="font-semibold"><span class="u-anim">HALLAYM</span></a>. Barcha huquqlar himoyalangan.
+        </div>
+
+        <div class="site-footer-actions">
+          <a href="/about.html"><i class="fa-solid fa-building-columns"></i> About</a>
+          <a href="/faq.html"><i class="fa-solid fa-circle-question"></i> FAQ</a>
+          <a href="#top"><i class="fa-solid fa-arrow-up"></i> Tepaga</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Legacy Features -->
+  <section id="imkoniyatlar-legacy" class="mx-auto max-w-7xl px-4 py-10" style="display:none">
+    <div class="reveal">
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Imkoniyatlar
+        </div>
+        <h2 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+          Har bir bo‘lim — <span class="u-anim">foyda</span> uchun qurilgan
+        </h2>
+        <p class="mt-3 muted text-lg max-w-2xl mx-auto">
+          “Chiroyli ko‘rinadi” emas — “Har kuni ishlatasiz” degan tamoyil.
+        </p>
+      </div>
+
+      <div class="mt-8 grid lg:grid-cols-3 gap-4">
+        <div class="glass rounded-3xl p-6 g-border feature-card">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+              <i class="fa-solid fa-video"></i>
+            </div>
+            <div class="font-extrabold">Jonli videodarslar</div>
+          </div>
+          <p class="mt-3 muted2 text-sm leading-relaxed">
+            Kursdoshlar bilan tez yozish, fayl ulashish, status ko‘rish, vaqtingizni tejaydi.
+          </p>
+          <ul class="mt-4 space-y-2 text-sm muted">
+            <li><i class="fa-solid fa-check mr-2"></i>Onlayn/oflayn ko‘rinadi</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Qidiruv va tez o‘tish</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Media bilan ishlash</li>
+          </ul>
+        </div>
+
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+              <i class="fa-solid fa-bullhorn"></i>
+            </div>
+            <div class="font-extrabold">Kanallar</div>
+          </div>
+          <p class="mt-3 muted2 text-sm leading-relaxed">
+            Postlar link bilan yashaydi: ulashganda preview chiqadi, bosganda aynan o‘sha post ochiladi.
+          </p>
+          <ul class="mt-4 space-y-2 text-sm muted">
+            <li><i class="fa-solid fa-check mr-2"></i>Like & kommentlar</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Rasm/video + matn</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Avatar/banner, nom, username tahriri</li>
+          </ul>
+        </div>
+
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+              <i class="fa-solid fa-people-group"></i>
+            </div>
+            <div class="font-extrabold">O‘quv guruhlari</div>
+          </div>
+          <p class="mt-3 muted2 text-sm leading-relaxed">
+            Fan bo‘yicha jamlaning: muhokama, tayyorlanish, konspekt almashish va topshiriqlar.
+          </p>
+          <ul class="mt-4 space-y-2 text-sm muted">
+            <li><i class="fa-solid fa-check mr-2"></i>Role & a’zolar</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Guruh chat</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Universitet bo‘yicha filter</li>
+          </ul>
+        </div>
+
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+              <i class="fa-solid fa-store"></i>
+            </div>
+            <div class="font-extrabold">Xizmatlar bozori</div>
+          </div>
+          <p class="mt-3 muted2 text-sm leading-relaxed">
+            Talabalar o‘z qo‘l mehnatini sotadi: tutorlik, tarjima, dizayn, laboratoriya yordam.
+          </p>
+          <ul class="mt-4 space-y-2 text-sm muted">
+            <li><i class="fa-solid fa-check mr-2"></i>Buyurtma statuslari</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Review & reyting</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Campus trust</li>
+          </ul>
+        </div>
+
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="font-extrabold">Xavfsizlik & nazorat</div>
+          </div>
+          <p class="mt-3 muted2 text-sm leading-relaxed">
+            Rate-limit, report, mod queue va audit log — platforma sog‘lom bo‘lishi uchun.
+          </p>
+          <ul class="mt-4 space-y-2 text-sm muted">
+            <li><i class="fa-solid fa-check mr-2"></i>Verified talaba</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Spamga qarshi himoya</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Moderator workflow</li>
+          </ul>
+        </div>
+
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl btn-primary flex items-center justify-center text-white">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+            <div class="font-extrabold">Aqlli qidiruv</div>
+          </div>
+          <p class="mt-3 muted2 text-sm leading-relaxed">
+            Foydalanuvchi, post, guruh va kanal bo‘yicha tez topish — vaqtingizni tejaydi.
+          </p>
+          <ul class="mt-4 space-y-2 text-sm muted">
+            <li><i class="fa-solid fa-check mr-2"></i>Tez filter</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Qidiruv tarixchasi</li>
+            <li><i class="fa-solid fa-check mr-2"></i>Natijani tartiblash</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legacy How it works -->
+  <section id="qanday-ishlaydi-legacy" class="mx-auto max-w-7xl px-4 py-10" style="display:none">
+    <div class="glass rounded-3xl p-8 reveal g-border">
+      <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+        <div>
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-diagram-project"></i> Qanday ishlaydi
+          </div>
+          <h3 class="mt-4 text-2xl sm:text-3xl font-black tracking-tight">
+            3 qadamda platforma ichida “o‘z joyingizni” topasiz
+          </h3>
+          <p class="mt-2 muted2 text-sm max-w-2xl">
+            Biz “yangi odam” uchun ham qulay onboarding fikriga amal qilamiz: avval kanallar, keyin guruhlar, so‘ng xizmatlar va signal.
+          </p>
+        </div>
+
+        <a href="/register.html" class="btn-primary text-white px-6 py-3 rounded-2xl font-extrabold glow-ring magnet">
+          Boshlash <i class="fa-solid fa-arrow-right ml-2"></i>
+        </a>
+      </div>
+
+      <div class="mt-7 grid md:grid-cols-3 gap-4">
+        <div class="glass rounded-3xl p-6">
+          <div class="text-sm font-extrabold"><span class="u-anim">1.</span> Universitetni tanlang</div>
+          <div class="mt-2 text-sm muted2">Profilingizda universitetni belgilang. Kontent shunga mos filtrlana boshlaydi.</div>
+          <div class="mt-4 text-xs muted"><i class="fa-solid fa-location-dot mr-2"></i>“All universities” ham bor</div>
+        </div>
+        <div class="glass rounded-3xl p-6">
+          <div class="text-sm font-extrabold"><span class="u-anim">2.</span> Kanal/guruhga qo‘shiling</div>
+          <div class="mt-2 text-sm muted2">Rasm/video postlar, kommentlar, like — hammasi bitta oqimda.</div>
+          <div class="mt-4 text-xs muted"><i class="fa-solid fa-link mr-2"></i>Har postning alohida linki bor</div>
+        </div>
+        <div class="glass rounded-3xl p-6">
+          <div class="text-sm font-extrabold"><span class="u-anim">3.</span> Natija qiling</div>
+          <div class="mt-2 text-sm muted2">Xizmat soting yoki buyurtma bering. Campus Signal orqali muammolarni ko‘taring.</div>
+          <div class="mt-4 text-xs muted"><i class="fa-solid fa-bolt mr-2"></i>Status va moderatsiya bilan</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legacy Services -->
+  <section id="xizmatlar-legacy" class="mx-auto max-w-7xl px-4 py-10" style="display:none">
+    <div class="reveal">
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+          <i class="fa-solid fa-store"></i> Xizmatlar bozori
+        </div>
+        <h2 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+          O‘z qo‘l mehnatingizni <span class="u-anim">qadriga</span> yetkazamiz
+        </h2>
+        <p class="mt-3 muted text-lg max-w-2xl mx-auto">
+          Sizda skill bormi? Uni campus ichida xizmatga aylantiring. Buyurtmachiga esa tez va ishonchli ijrochi topiladi.
+        </p>
+      </div>
+
+      <div class="mt-8 grid lg:grid-cols-3 gap-4">
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-chalkboard-user text-xl"></i>
+            <div class="font-extrabold">Repetitorlik</div>
+          </div>
+          <div class="mt-2 text-sm muted2">Matematika, fizika, ingliz tili — 1:1 yoki mini-guruh formatida.</div>
+          <div class="mt-4 text-xs muted"><i class="fa-solid fa-clock mr-2"></i>Slot booking (keyinroq)</div>
+        </div>
+
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-pen-nib text-xl"></i>
+            <div class="font-extrabold">Dizayn & Kontent</div>
+          </div>
+          <div class="mt-2 text-sm muted2">Poster, prezentatsiya, resume dizayni, social kontent.</div>
+          <div class="mt-4 text-xs muted"><i class="fa-solid fa-star mr-2"></i>Reyting va review</div>
+        </div>
+
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-language text-xl"></i>
+            <div class="font-extrabold">Tarjima</div>
+          </div>
+          <div class="mt-2 text-sm muted2">Hujjat, referat, email — tez va sifatli tarjima xizmatlari.</div>
+          <div class="mt-4 text-xs muted"><i class="fa-solid fa-shield mr-2"></i>Campus trust</div>
+        </div>
+      </div>
+
+      <div class="mt-7 text-center">
+        <a href="/services.html" class="btn-primary text-white px-6 py-3 rounded-2xl font-extrabold glow-ring magnet">
+          Xizmatlarni ko‘rish <i class="fa-solid fa-arrow-right ml-2"></i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legacy Campus signal -->
+  <section id="signal-legacy" class="mx-auto max-w-7xl px-4 py-10" style="display:none">
+    <div class="glass rounded-3xl p-8 reveal g-border">
+      <div class="grid lg:grid-cols-2 gap-8 items-center">
+        <div>
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-bell"></i> Campus Signal
+          </div>
+          <h2 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+            Muammo ko‘tarish — endi <span class="u-anim">tartibli</span>
+          </h2>
+          <p class="mt-3 muted text-lg">
+            Talabalar muammolarni anonim yozadi, tag va urgency bilan. Moderatorlar ko‘rib chiqadi, statuslar bilan yechim yo‘lga qo‘yiladi.
+          </p>
+
+          <div class="mt-6 grid sm:grid-cols-2 gap-3">
+            <div class="glass rounded-3xl p-5">
+              <div class="font-extrabold text-sm">Anonim, ammo nazoratli</div>
+              <div class="mt-2 text-sm muted2">Platforma ichida abuse’dan himoya: limit, report, mod queue.</div>
+            </div>
+            <div class="glass rounded-3xl p-5">
+              <div class="font-extrabold text-sm">Status bilan kuzatish</div>
+              <div class="mt-2 text-sm muted2">open → acknowledged → in_progress → resolved oqimi.</div>
+            </div>
+          </div>
+
+          <div class="mt-6 flex gap-3">
+            <a href="/signals.html" class="btn-primary text-white px-6 py-3 rounded-2xl font-extrabold glow-ring magnet">
+              Signal board <i class="fa-solid fa-arrow-right ml-2"></i>
+            </a>
+            <a href="/channels.html" class="glass px-6 py-3 rounded-2xl font-extrabold btn-ghost glow-ring">
+              Kanallar <i class="fa-solid fa-bullhorn ml-2"></i>
+            </a>
+          </div>
+        </div>
+
+        <div class="glass rounded-3xl p-6">
+          <div class="flex items-center justify-between">
+            <div class="font-extrabold">Misol: Signal oqimi</div>
+            <div class="text-xs muted"><i class="fa-solid fa-circle-check"></i> real-time</div>
+          </div>
+
+          <div class="mt-4 space-y-3">
+            <div class="glass rounded-2xl p-4">
+              <div class="flex items-center justify-between">
+                <div class="font-extrabold text-sm">Yotoqxonada issiq suv yo‘q</div>
+                <div class="text-xs px-2 py-1 rounded-full glass muted">Urgency: 5</div>
+              </div>
+              <div class="mt-2 text-sm muted2">Tag: Dorm • Status: acknowledged</div>
+            </div>
+
+            <div class="glass rounded-2xl p-4">
+              <div class="flex items-center justify-between">
+                <div class="font-extrabold text-sm">Wi‑Fi tezligi pas</div>
+                <div class="text-xs px-2 py-1 rounded-full glass muted">Urgency: 3</div>
+              </div>
+              <div class="mt-2 text-sm muted2">Tag: Facilities • Status: open</div>
+            </div>
+
+            <div class="glass rounded-2xl p-4">
+              <div class="flex items-center justify-between">
+                <div class="font-extrabold text-sm">Dekanatda navbat uzun</div>
+                <div class="text-xs px-2 py-1 rounded-full glass muted">Urgency: 2</div>
+              </div>
+              <div class="mt-2 text-sm muted2">Tag: Admin • Status: in_progress</div>
+            </div>
+          </div>
+
+          <div class="mt-4 text-xs muted2">
+            Eslatma: bu tizim “shikoyat devori” emas — yechimga xizmat qiladigan boshqariladigan oqim.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legacy Testimonials -->
+  <section class="mx-auto max-w-7xl px-4 py-10" style="display:none">
+    <div class="reveal">
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+          <i class="fa-solid fa-heart"></i> Talabalar nima deydi
+        </div>
+        <h2 class="mt-4 text-3xl sm:text-4xl font-black tracking-tight">
+          Kirgan odam nega “aylanib chiqadi”?
+        </h2>
+        <p class="mt-3 muted text-lg max-w-2xl mx-auto">
+          Chunki bu yerda har bir bo‘lim bir-birini to‘ldiradi: chat → kanal → guruh → xizmat → signal.
+        </p>
+      </div>
+
+      <div class="mt-8 grid lg:grid-cols-3 gap-4">
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl btn-primary flex items-center justify-center text-white">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <div>
+              <div class="font-extrabold">Malika, 2-kurs</div>
+              <div class="text-xs muted2">“Kanal postlari link bo‘lib qoladi — topish juda oson.”</div>
+            </div>
+          </div>
+          <div class="mt-4 text-sm muted">
+            “Telegramda post yo‘qolardi. SChat’da esa linkni yuboraman, preview chiqadi, ochsam aynan o‘sha post.”
+          </div>
+        </div>
+
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl btn-primary flex items-center justify-center text-white">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <div>
+              <div class="font-extrabold">Javohir, 1-kurs</div>
+              <div class="text-xs muted2">“Guruhlar bo‘limi juda tartibli. Tayyorlanish osonlashdi.”</div>
+            </div>
+          </div>
+          <div class="mt-4 text-sm muted">
+            “Fan bo‘yicha guruhga kirdim, kerakli materiallar bitta joyda. Chat ham yonida.”
+          </div>
+        </div>
+
+        <div class="glass rounded-3xl p-6 g-border">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl btn-primary flex items-center justify-center text-white">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <div>
+              <div class="font-extrabold">Shahnoza, 3-kurs</div>
+              <div class="text-xs muted2">“Xizmatlar bozorida tarjima qilaman — mijoz topish oson.”</div>
+            </div>
+          </div>
+          <div class="mt-4 text-sm muted">
+            “Campus ichida ishonch bor. Review bo‘lgani uchun hamma jiddiy qaraydi.”
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legacy FAQ -->
+  <section id="faq-legacy" class="mx-auto max-w-7xl px-4 py-10" style="display:none">
+    <div class="glass rounded-3xl p-8 reveal g-border">
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm font-semibold muted">
+            <i class="fa-solid fa-circle-question"></i> FAQ
+          </div>
+          <h2 class="mt-4 text-3xl font-black tracking-tight">Ko‘p so‘raladigan savollar</h2>
+          <p class="mt-2 muted2 text-sm">Tez javoblar — sizga vaqt tejash uchun.</p>
+        </div>
+        <a href="/register.html" class="btn-primary text-white px-6 py-3 rounded-2xl font-extrabold glow-ring magnet">
+          Hozir boshlash <i class="fa-solid fa-arrow-right ml-2"></i>
+        </a>
+      </div>
+
+      <div class="mt-6 grid lg:grid-cols-2 gap-4">
+        <details class="glass rounded-3xl p-5">
+          <summary class="cursor-pointer font-extrabold">Platforma bepulmi?</summary>
+          <div class="mt-3 text-sm muted2">Asosiy funksiyalar bepul. Keyinchalik premium imkoniyatlar qo‘shilishi mumkin (masalan, xizmatlarni “boost”).</div>
+        </details>
+
+        <details class="glass rounded-3xl p-5">
+          <summary class="cursor-pointer font-extrabold">Post link preview qayerda ishlaydi?</summary>
+          <div class="mt-3 text-sm muted2">Telegram, Discord, Facebook va ko‘plab platformalarda ishlaydi. Link ochilganda aynan o‘sha post chiqadi.</div>
+        </details>
+
+        <details class="glass rounded-3xl p-5">
+          <summary class="cursor-pointer font-extrabold">Campus Signal anonim bo‘lsa xavfsizmi?</summary>
+          <div class="mt-3 text-sm muted2">Ha. Public’da anonim, lekin spam/abuse’ga qarshi rate-limit, report va moderatsiya mavjud.</div>
+        </details>
+
+        <details class="glass rounded-3xl p-5">
+          <summary class="cursor-pointer font-extrabold">Universitetlar ko‘paytiriladimi?</summary>
+          <div class="mt-3 text-sm muted2">Ha. Arxitektura multi-university uchun qurilgan. Bir davlat bo‘yicha kengaytirish oson.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legacy Footer -->
+  <footer class="mx-auto max-w-7xl px-4 pb-10" style="display:none">
+    <div class="glass rounded-3xl p-8 reveal">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div>
+          <div class="font-black text-xl">HALLAYM edu</div>
+          <div class="mt-2 text-sm muted2 max-w-xl">
+            Talabalar hamjamiyati uchun yagona joy: aloqa, kontent, hamkorlik, xizmatlar va campus signal tizimi.
+          </div>
+          <div class="mt-3 text-xs muted2">
+            © <span id="yearLegacy"></span> <a href="https://t.me/hallaym" class="font-semibold"><span class="u-anim">HALLAYM</span></a> edu. Barcha huquqlar himoyalangan.
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+          <a class="glass rounded-2xl px-4 py-2 btn-ghost" href="/channels.html">Kanallar</a>
+          <a class="glass rounded-2xl px-4 py-2 btn-ghost" href="/groups.html">Guruhlar</a>
+          <a class="glass rounded-2xl px-4 py-2 btn-ghost" href="/messages.html">Xabarlar</a>
+          <a class="glass rounded-2xl px-4 py-2 btn-ghost" href="/services.html">Xizmatlar</a>
+          <a class="glass rounded-2xl px-4 py-2 btn-ghost" href="/signals.html">Signal</a>
+          <a class="glass rounded-2xl px-4 py-2 btn-ghost" href="/profile.html">Profil</a>
+        </div>
+      </div>
+
+      <div class="mt-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div class="text-xs muted2">
+          Maslahat: yuqoridagi menyudan bo‘limlarga kirib ko‘ring — hammasi bir-biriga ulangan.
+        </div>
+        <a href="#top" class="glass rounded-2xl px-4 py-2 text-sm font-bold btn-ghost">
+          Tepaga <i class="fa-solid fa-arrow-up ml-2"></i>
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Theme
+    (function(){
+      const key='theme';
+      const html=document.documentElement;
+
+      const btn=document.getElementById('themeToggle');
+      const icon=document.getElementById('themeIcon');
+      const label=document.getElementById('themeLabel');
+
+      function syncUI(mode){
+        const isDark = mode==='dark';
+        if(icon){ icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon'; }
+        if(label){ label.textContent = isDark ? 'Kunduzgi' : 'Tungi'; }
+      }
+
+      function apply(mode){
+        if(mode==='dark'){ html.classList.add('dark'); }
+        else { html.classList.remove('dark'); }
+        localStorage.setItem(key, mode);
+        syncUI(mode);
+      }
+
+      const saved = localStorage.getItem(key);
+      if(saved){ apply(saved); }
+      else {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        apply(prefersDark ? 'dark' : 'light');
+      }
+
+      function toggle(){
+        const isDark = html.classList.contains('dark');
+        apply(isDark ? 'light' : 'dark');
+      }
+
+      if(btn){ btn.addEventListener('click', toggle); }
+    })();
+
+    // Year
+    document.getElementById('year').textContent = new Date().getFullYear();
+    const yearLegacy = document.getElementById('yearLegacy');
+    if(yearLegacy) yearLegacy.textContent = new Date().getFullYear();
+
+    // Normalize a few legacy labels that were previously saved with broken apostrophe encoding.
+    document.querySelectorAll('header a[href="/register.html"]').forEach((el)=>{
+      el.textContent = "Ro'yxatdan o'tish";
+    });
+
+    // Scroll progress
+    (function(){
+      const bar = document.getElementById('progress');
+      function onScroll(){
+        const h = document.documentElement;
+        const sc = h.scrollTop || document.body.scrollTop;
+        const max = (h.scrollHeight - h.clientHeight) || 1;
+        bar.style.width = (sc / max * 100) + '%';
+      }
+      window.addEventListener('scroll', onScroll, {passive:true});
+      onScroll();
+    })();
+
+    // Ambient video motion
+    (function(){
+      const layer = document.querySelector('.ambient-video-layer');
+      if(!layer) return;
+
+      function onScroll(){
+        const sc = window.scrollY || document.documentElement.scrollTop || 0;
+        const shift = Math.min(42, sc * 0.04);
+        const scale = 1 + Math.min(0.05, sc * 0.00005);
+        layer.style.transform = `translate3d(0, ${shift}px, 0) scale(${scale})`;
+      }
+
+      window.addEventListener('scroll', onScroll, {passive:true});
+      onScroll();
+    })();
+
+    // Decorative parallax for floating art
+    (function(){
+      const items = Array.from(document.querySelectorAll('[data-parallax]'));
+      if(!items.length) return;
+      if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      let ticking = false;
+
+      function update(){
+        ticking = false;
+        const viewport = window.innerHeight || 1;
+
+        items.forEach((item)=>{
+          const rect = item.getBoundingClientRect();
+          const depth = parseFloat(item.getAttribute('data-parallax') || '0.1');
+          const depthX = parseFloat(item.getAttribute('data-parallax-x') || '0');
+          const center = rect.top + (rect.height / 2);
+          const distance = (center - viewport / 2) / viewport;
+          const shiftY = distance * depth * -120;
+          const shiftX = distance * depthX * -120;
+          const rotate = distance * depth * -12;
+          item.style.transform = `translate3d(${shiftX}px, ${shiftY}px, 0) rotate(${rotate}deg)`;
+        });
+      }
+
+      function requestTick(){
+        if(ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(update);
+      }
+
+      window.addEventListener('scroll', requestTick, {passive:true});
+      window.addEventListener('resize', requestTick);
+      update();
+    })();
+
+    // Reveal on scroll
+    (function(){
+      const els = document.querySelectorAll('.reveal');
+      const io = new IntersectionObserver((entries)=>{
+        entries.forEach(e=>{
+          if(e.isIntersecting){
+            e.target.classList.add('show');
+            io.unobserve(e.target);
+          }
+        });
+      }, {threshold: 0.12});
+      els.forEach(el=>io.observe(el));
+      // Initial
+      requestAnimationFrame(()=>els.forEach(el=>el.classList.add('show')));
+    })();
+
+    // Count-up
+    (function(){
+      const els = document.querySelectorAll('.count');
+      const seen = new WeakSet();
+      const io = new IntersectionObserver((entries)=>{
+        entries.forEach(e=>{
+          if(!e.isIntersecting) return;
+          const el = e.target;
+          if(seen.has(el)) return;
+          seen.add(el);
+          const to = parseInt(el.getAttribute('data-to')||'0',10);
+          const dur = 900;
+          const start = performance.now();
+          function tick(t){
+            const p = Math.min(1, (t-start)/dur);
+            const v = Math.floor(to * (0.15 + 0.85*p));
+            el.textContent = v;
+            if(p<1) requestAnimationFrame(tick);
+            else el.textContent = to;
+          }
+          requestAnimationFrame(tick);
+          io.unobserve(el);
+        });
+      }, {threshold: 0.5});
+      els.forEach(el=>io.observe(el));
+    })();
+
+    // Magnet buttons
+    (function(){
+      const magnets = document.querySelectorAll('.magnet');
+      magnets.forEach(btn=>{
+        btn.addEventListener('mousemove', (e)=>{
+          const r = btn.getBoundingClientRect();
+          const x = (e.clientX - r.left) / r.width - 0.5;
+          const y = (e.clientY - r.top) / r.height - 0.5;
+          btn.style.transform = `translate(${x*6}px, ${y*6}px)`;
+        });
+        btn.addEventListener('mouseleave', ()=> btn.style.transform = 'translate(0,0)');
+      });
+    })();
+  </script>
+  <script src="/official-nav.js" defer></script>
+  <script src="/ui-actions-menu.js" defer></script>
+  <script src="/global-assistant.js" defer></script>
+  <script src="/ui-premium-icons.js" defer></script>
+</body>
+</html>

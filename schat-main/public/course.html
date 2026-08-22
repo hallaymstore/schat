@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kurs sahifasi | HALLAYM edu</title>
+  <link rel="stylesheet" href="/ui-glass-theme.css">
+  <link rel="stylesheet" href="/course-suite.css">
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+<body class="course-body">
+  <header class="course-topbar">
+    <div class="course-shell">
+      <div class="course-nav">
+        <div class="course-brand">
+          <div class="course-brand-mark"></div>
+          <div class="course-brand-copy">
+            <h1>Course Detail</h1>
+            <p>Preview, comments, rating va join flow</p>
+          </div>
+          <span id="roleBadge" class="course-pill course-role-pill">STUDENT</span>
+          <span id="mePill" class="course-pill"></span>
+        </div>
+        <div class="course-nav-actions">
+          <button class="course-button ghost" id="themeBtn">Tema</button>
+          <a class="course-link-button ghost" href="/courses.html">Kurslar</a>
+          <a class="course-link-button ghost" id="dashboardLink" href="/student-dashboard.html">Dashboard</a>
+          <button class="course-button danger" id="logoutBtn">Chiqish</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="course-main">
+    <div class="course-shell">
+      <div id="pageAlert" class="course-alert"></div>
+      <div id="heroWrap"></div>
+      <div id="lessonsWrap" class="section-gap"></div>
+      <div id="ratingsWrap" class="section-gap"></div>
+      <div id="commentsWrap" class="section-gap"></div>
+    </div>
+  </main>
+
+  <footer class="course-footer">HALLAYM edu — course preview and community</footer>
+
+  <script src="/course-suite.js"></script>
+  <script src="/course-detail.js"></script>
+  <script src="/global-assistant.js" defer></script>
+</body>
+</html>

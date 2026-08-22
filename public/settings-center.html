@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Sozlamalar markazi — HALLAYM edu</title>
+  <meta name="description" content="Profil sozlamalari, xavfsizlik, premium holati va bildirishnoma boshqaruvi."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <link rel="stylesheet" href="/account-centers.css"/>
+  <link rel="stylesheet" href="/ui-glass-theme.css"/>
+  <script>
+    (function(){
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode = saved || (prefersDark ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', mode === 'dark');
+    })();
+  </script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+<body>
+  <div class="account-shell">
+    <header class="account-topbar">
+      <div class="account-topbar-inner">
+        <div class="brand-block">
+          <div class="brand-mark"><i class="fa-solid fa-sliders"></i></div>
+          <div>
+            <div class="brand-title">Sozlamalar markazi</div>
+            <div class="brand-sub">Profil, xavfsizlik, premium va shaxsiy sozlamalar</div>
+          </div>
+        </div>
+        <nav class="nav-pills">
+          <a class="nav-pill active" href="/settings-center.html"><i class="fa-solid fa-sliders"></i> Sozlamalar</a>
+          <a class="nav-pill" href="/notification-center.html"><i class="fa-solid fa-bell"></i> Bildirishnomalar</a>
+          <a class="nav-pill" href="/payment.html"><i class="fa-solid fa-credit-card"></i> Premium</a>
+          <a class="nav-pill" id="dashboardLink" href="/student-dashboard.html"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
+          <button class="ghost-btn" id="themeToggleBtn" type="button"><i class="fa-solid fa-moon"></i> Tema</button>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero-grid">
+      <article class="glass-card">
+        <div class="hero-kicker"><i class="fa-solid fa-shield-halved"></i> HALLAYM account control</div>
+        <h1 class="hero-title">Profilni tartibga keltiring, premiumni boshqaring va xavfsizlikni bir joydan nazorat qiling.</h1>
+        <p class="hero-text">Bu markazda til, tema, notification, privacy, sessionlar, parol va premium holati aniq ko‘rinadi. Keyinchalik qo‘shiladigan funksiyalar ham shu yerga yig‘iladi.</p>
+        <div class="hero-actions">
+          <a class="primary-btn" href="/payment.html"><i class="fa-solid fa-crown"></i> Premiumni boshqarish</a>
+          <a class="ghost-btn" href="/notification-center.html"><i class="fa-solid fa-bell"></i> Notification center</a>
+        </div>
+        <div class="hero-stats" id="heroStats"></div>
+      </article>
+
+      <aside class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Akkount ko‘rinishi</h2>
+            <p class="section-sub">Asosiy ma’lumotlar va joriy plan shu yerda.</p>
+          </div>
+        </div>
+        <div class="list-stack">
+          <div class="mini-card" id="profileCard"></div>
+          <div class="mini-card" id="premiumCard"></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section-grid">
+      <article class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Interface va privacy</h2>
+            <p class="section-sub">Savodi past foydalanuvchilar uchun ham soddaroq ko‘rinish, til va maxfiylik nazorati.</p>
+          </div>
+          <button class="primary-btn" id="saveSettingsBtn" type="button"><i class="fa-solid fa-floppy-disk"></i> Saqlash</button>
+        </div>
+
+        <form id="settingsForm" class="form-grid">
+          <label class="field-wrap">
+            <span class="field-label">Til</span>
+            <select class="field-select" id="languageInput">
+              <option value="uz">O‘zbek</option>
+              <option value="en">English</option>
+              <option value="ru">Русский</option>
+            </select>
+          </label>
+
+          <label class="field-wrap">
+            <span class="field-label">Tema</span>
+            <select class="field-select" id="themeInput">
+              <option value="system">System</option>
+              <option value="light">Kunduzgi</option>
+              <option value="dark">Tungi</option>
+            </select>
+          </label>
+
+          <label class="field-wrap">
+            <span class="field-label">Profil ko‘rinishi</span>
+            <select class="field-select" id="profileVisibilityInput">
+              <option value="public">Public</option>
+              <option value="campus">Campus only</option>
+              <option value="private">Private</option>
+            </select>
+          </label>
+
+          <div class="field-wrap">
+            <span class="field-label">Quick controls</span>
+            <div class="split-grid">
+              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Animated stickers</span><span class="switch-note">Premium bo‘lsa chatlarda sticker panel ochiladi.</span></span><input class="toggle" id="animatedStickersInput" type="checkbox"/></label>
+              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Sticker autoplay</span><span class="switch-note">Sticker SVG/GIF lar avtomatik harakatlanadi.</span></span><input class="toggle" id="stickerAutoplayInput" type="checkbox"/></label>
+              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Compact mode</span><span class="switch-note">Kartalar orasidagi bo‘shliq va matn bloklari ixchamroq bo‘ladi.</span></span><input class="toggle" id="compactModeInput" type="checkbox"/></label>
+              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Sound alerts</span><span class="switch-note">Muhim xabarlarda tovushli eslatma.</span></span><input class="toggle" id="soundEnabledInput" type="checkbox"/></label>
+            </div>
+          </div>
+
+          <div class="full-span">
+            <div class="section-head" style="margin-bottom:10px">
+              <div>
+                <h3 class="section-title" style="font-size:20px">Privacy</h3>
+                <p class="section-sub">Profilning qaysi qismi tashqi foydalanuvchiga ko‘rinishini tanlang.</p>
+              </div>
+            </div>
+            <div class="split-grid">
+              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Email ko‘rinsin</span><span class="switch-note">Faqat public profil ochilganda ko‘rsatiladi.</span></span><input class="toggle" id="showEmailInput" type="checkbox"/></label>
+              <label class="switch-row"><span class="switch-copy"><span class="switch-title">Telefon ko‘rinsin</span><span class="switch-note">Telefon profilingizda ko‘rinishi mumkin.</span></span><input class="toggle" id="showPhoneInput" type="checkbox"/></label>
+            </div>
+          </div>
+        </form>
+      </article>
+
+      <aside class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Notification turlari</h2>
+            <p class="section-sub">Qaysi turdagi bildirishnomalar muhimligini o‘zingiz tanlaysiz.</p>
+          </div>
+        </div>
+        <div class="list-stack" id="notificationToggleList"></div>
+      </aside>
+    </section>
+
+    <section class="section-grid">
+      <article class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Xavfsizlik</h2>
+            <p class="section-sub">Parolni yangilang va aktiv qurilmalarni nazorat qiling.</p>
+          </div>
+          <button class="ghost-btn" id="revokeOthersBtn" type="button"><i class="fa-solid fa-right-from-bracket"></i> Boshqalarni chiqarish</button>
+        </div>
+        <form id="passwordForm" class="form-grid">
+          <label class="field-wrap">
+            <span class="field-label">Joriy parol</span>
+            <input class="field-input" id="currentPasswordInput" type="password" placeholder="Joriy parol"/>
+          </label>
+          <label class="field-wrap">
+            <span class="field-label">Yangi parol</span>
+            <input class="field-input" id="nextPasswordInput" type="password" placeholder="Yangi parol"/>
+          </label>
+          <label class="field-wrap full-span">
+            <span class="field-label">Tasdiqlash</span>
+            <input class="field-input" id="confirmPasswordInput" type="password" placeholder="Yangi parolni qayta yozing"/>
+          </label>
+          <div class="full-span">
+            <button class="primary-btn" id="changePasswordBtn" type="submit"><i class="fa-solid fa-key"></i> Parolni yangilash</button>
+          </div>
+        </form>
+      </article>
+
+      <aside class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Qurilmalar</h2>
+            <p class="section-sub">Faol sessionlar va ulardan chiqish amallari.</p>
+          </div>
+        </div>
+        <div class="list-stack" id="sessionsList"></div>
+      </aside>
+    </section>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="/premium-ui.js" defer></script>
+  <script src="/settings-center.js" defer></script>
+  <script src="/global-assistant.js" defer></script>
+</body>
+</html>

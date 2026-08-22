@@ -1,0 +1,532 @@
+/* HALLAYM EDU — compact white/blue enterprise theme and classroom UI */
+:root,
+html.dark {
+  color-scheme: light;
+  --edu-blue-950: #0b1f3a;
+  --edu-blue-900: #12325b;
+  --edu-blue-800: #17477c;
+  --edu-blue-700: #1d5fa8;
+  --edu-blue-600: #2878c7;
+  --edu-blue-500: #3b8fe0;
+  --edu-blue-200: #bfdbfe;
+  --edu-blue-100: #dbeafe;
+  --edu-blue-50: #eff6ff;
+  --edu-ink: #172033;
+  --edu-muted: #5d6b82;
+  --edu-border: #cbd8ea;
+  --edu-panel: #ffffff;
+  --edu-bg: #f5f9ff;
+  --edu-danger: #c93645;
+
+  --h-accent: var(--edu-blue-600) !important;
+  --h-accent-strong: var(--edu-blue-700) !important;
+  --h-accent-soft: var(--edu-blue-100) !important;
+  --h-accent-soft-2: var(--edu-blue-50) !important;
+  --h-accent-soft-3: #f8fbff !important;
+  --h-text: var(--edu-ink) !important;
+  --h-text-strong: #0f1b2d !important;
+  --h-muted: var(--edu-muted) !important;
+  --h-bg: var(--edu-bg) !important;
+  --h-panel-bg: rgba(255, 255, 255, 0.98) !important;
+  --h-panel-bg-2: rgba(245, 249, 255, 0.98) !important;
+  --h-border: var(--edu-border) !important;
+  --h-shadow: rgba(31, 78, 132, 0.1) !important;
+  --h-input-bg: #ffffff !important;
+  --h-input-border: #b9c9dd !important;
+  --h-input-placeholder: #7b889b !important;
+  --h-ring: rgba(40, 120, 199, 0.18) !important;
+}
+
+html {
+  font-size: 13px !important;
+  background: var(--edu-bg) !important;
+}
+
+html body,
+html.dark body,
+body.uni-theme-body {
+  color: var(--edu-ink) !important;
+  background:
+    linear-gradient(rgba(255,255,255,.84), rgba(255,255,255,.84)),
+    linear-gradient(90deg, rgba(40,120,199,.045) 1px, transparent 1px),
+    linear-gradient(rgba(40,120,199,.045) 1px, transparent 1px),
+    var(--edu-bg) !important;
+  background-size: auto, 32px 32px, 32px 32px, auto !important;
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif !important;
+  font-size: 13px !important;
+  line-height: 1.42 !important;
+}
+
+body::before,
+body::after {
+  opacity: 0 !important;
+}
+
+body :where(h1) { font-size: clamp(1.38rem, 2.2vw, 1.82rem) !important; }
+body :where(h2) { font-size: clamp(1.18rem, 1.8vw, 1.48rem) !important; }
+body :where(h3) { font-size: clamp(1rem, 1.4vw, 1.22rem) !important; }
+body :where(h4,h5,h6) { font-size: .96rem !important; }
+
+body :where(button, .btn, [role="button"], input, textarea, select),
+body :where(.card, .panel, .modal, .modal-content, [class*="rounded-"]):not(.rounded-full),
+body :where([class*="radius-"]):not(.rounded-full) {
+  border-radius: 3px !important;
+}
+
+body :where(button, .btn, [role="button"], input[type="submit"]) {
+  min-height: 30px;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  letter-spacing: .005em;
+}
+
+body :where(input, textarea, select) {
+  min-height: 32px;
+  padding: 6px 8px !important;
+  color: var(--edu-ink) !important;
+  background: #fff !important;
+  border: 1px solid #b9c9dd !important;
+  box-shadow: none !important;
+}
+
+body :where(input, textarea, select):focus-visible,
+body :where(button, a, [role="button"]):focus-visible {
+  outline: 2px solid var(--edu-blue-600) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(40,120,199,.14) !important;
+}
+
+body :where(.btn-primary, .primary-btn, button.primary, [class*="bg-indigo-"], [class*="bg-purple-"]) {
+  color: #fff !important;
+  background: var(--edu-blue-700) !important;
+  border-color: var(--edu-blue-700) !important;
+  box-shadow: none !important;
+}
+
+body :where(.card, .panel, .modal-content, main, section, aside):not(#groupCallOverlay):not(#groupCallOverlay *) {
+  box-shadow: 0 4px 14px rgba(31,78,132,.07) !important;
+}
+
+header,
+nav,
+.official-topbar,
+html.dark header,
+html.dark nav {
+  color: var(--edu-ink) !important;
+  background: rgba(255,255,255,.98) !important;
+  border-color: var(--edu-border) !important;
+  box-shadow: 0 2px 10px rgba(31,78,132,.08) !important;
+}
+
+.official-topbar .site-header-shell,
+.official-topbar [data-nav-shell],
+.official-page-hero,
+.official-link-tile,
+.official-metric-card,
+.official-menu__panel,
+#schatAssistantPanel {
+  border-radius: 3px !important;
+}
+
+.rounded-full,
+[class~="rounded-full"],
+img.avatar,
+.member-avatar,
+.call-participant-avatar {
+  border-radius: 9999px !important;
+}
+
+.shadow-xl,
+.shadow-2xl,
+[class*="shadow-"] {
+  box-shadow: 0 5px 18px rgba(31,78,132,.1) !important;
+}
+
+::-webkit-scrollbar { width: 7px !important; height: 7px !important; }
+::-webkit-scrollbar-track { background: #eaf1fb !important; }
+::-webkit-scrollbar-thumb { background: #91afd1 !important; border-radius: 2px !important; }
+
+/* Existing AI panel follows the same compact language. */
+#schatAssistantDock { font-size: 12px !important; }
+#schatAssistantBtn {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 3px !important;
+  color: #fff !important;
+  background: var(--edu-blue-700) !important;
+  border: 1px solid var(--edu-blue-800) !important;
+  box-shadow: 0 5px 16px rgba(29,95,168,.22) !important;
+}
+#schatAssistantPanel,
+html.dark #schatAssistantPanel {
+  color: var(--edu-ink) !important;
+  background: #fff !important;
+  border: 1px solid var(--edu-border) !important;
+  box-shadow: 0 9px 28px rgba(31,78,132,.16) !important;
+}
+#schatAssistantPanel .schatAHead,
+#schatAssistantPanel .schatATabs,
+#schatAssistantPanel .schatAFoot,
+#schatAssistantPanel .schatABody {
+  color: var(--edu-ink) !important;
+  background: #fff !important;
+  border-color: var(--edu-border) !important;
+}
+#schatAssistantPanel :where(.schatATab,.schatQBtn,.schatABtn,.schatMsg) {
+  color: var(--edu-ink) !important;
+  background: var(--edu-blue-50) !important;
+  border-color: var(--edu-border) !important;
+  border-radius: 3px !important;
+}
+#schatAssistantPanel :where(.schatATab.active,.schatABtn.primary) {
+  color: #fff !important;
+  background: var(--edu-blue-700) !important;
+}
+
+/* Classroom: strict 16:9 teacher stage, light shell, dark media only. */
+#groupCallOverlay,
+html.dark #groupCallOverlay {
+  color: var(--edu-ink) !important;
+  background: #edf4fc !important;
+}
+
+#groupCallOverlayInner {
+  background: linear-gradient(180deg, #f8fbff 0%, #eaf2fb 100%) !important;
+}
+
+#groupCallTopBar,
+html.dark #groupCallTopBar {
+  min-height: 48px !important;
+  padding: 7px 9px !important;
+  color: var(--edu-ink) !important;
+  background: #fff !important;
+  border-bottom: 1px solid var(--edu-border) !important;
+  box-shadow: 0 2px 10px rgba(31,78,132,.08) !important;
+}
+
+#groupCallTopBar .text-white,
+#groupCallTopBar .text-white\/80,
+#groupCallTopBar .text-white\/70,
+#groupCallTopBar .text-white\/60 {
+  color: var(--edu-ink) !important;
+}
+
+#groupCallTopBar button,
+#teacherStageWrap button,
+#callMoreMenu button,
+#attendancePanel button {
+  min-width: 31px !important;
+  min-height: 29px !important;
+  padding: 5px 7px !important;
+  color: var(--edu-blue-900) !important;
+  background: var(--edu-blue-50) !important;
+  border: 1px solid var(--edu-border) !important;
+  border-radius: 3px !important;
+}
+
+#groupCallTopBar button:hover,
+#teacherStageWrap button:hover,
+#callMoreMenu button:hover,
+#attendancePanel button:hover {
+  background: var(--edu-blue-100) !important;
+  border-color: #8db5df !important;
+}
+
+#groupCallTopBar button.bg-red-600,
+#groupCallTopBar button[title="End/Leave"],
+#callMoreMenu button:last-child {
+  color: #fff !important;
+  background: var(--edu-danger) !important;
+  border-color: #a92234 !important;
+}
+
+#groupCallVideoLayout {
+  padding: 8px !important;
+  background: transparent !important;
+}
+
+#teacherStageWrap,
+html.dark #teacherStageWrap {
+  width: min(100%, 1440px) !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  color: var(--edu-ink) !important;
+  background: #fff !important;
+  border: 1px solid var(--edu-border) !important;
+  border-radius: 3px !important;
+  box-shadow: 0 5px 18px rgba(31,78,132,.1) !important;
+}
+
+#teacherStageWrap > div {
+  border: 0 !important;
+  border-radius: 3px !important;
+  background: #fff !important;
+}
+
+#teacherStageWrap .text-white\/80,
+#teacherStageWrap .text-white\/70,
+#teacherStageWrap .text-white\/60,
+#teacherStageWrap .text-white {
+  color: var(--edu-ink) !important;
+}
+
+#teacherStage,
+#teacherStageViewport,
+#teacherStageSurface,
+#teacherStage .stage-slot-primary {
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  background: var(--edu-blue-950) !important;
+  border-radius: 2px !important;
+}
+
+#teacherStage .video-tile,
+#teacherStage video,
+#teacherStage .stage-slot-primary video {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  border-radius: 2px !important;
+  background: var(--edu-blue-950) !important;
+}
+
+#teacherStage.whiteboard-live,
+#teacherStage.whiteboard-live #teacherStageViewport,
+#teacherStage.whiteboard-live #teacherStageSurface,
+#teacherStage.whiteboard-live .stage-slot-primary {
+  background: #fff !important;
+}
+
+#stageWhiteboardLayer {
+  border: 2px solid #7caee0 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+}
+
+#stageWhiteboardCanvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  background: #fff !important;
+}
+
+#stageWhiteboardCamPip {
+  top: 10px !important;
+  right: 10px !important;
+  width: clamp(150px, 20%, 300px) !important;
+  height: auto !important;
+  aspect-ratio: 16 / 9 !important;
+  object-fit: cover !important;
+  border: 2px solid #fff !important;
+  outline: 2px solid var(--edu-blue-600) !important;
+  border-radius: 2px !important;
+  box-shadow: 0 5px 16px rgba(11,31,58,.25) !important;
+}
+
+#stageWhiteboardToolbar,
+#stageWhiteboardTextPanel,
+#stageWhiteboardCalc,
+#stageWhiteboardQuickTools {
+  color: var(--edu-ink) !important;
+  background: rgba(255,255,255,.97) !important;
+  border: 1px solid var(--edu-border) !important;
+  border-radius: 3px !important;
+  box-shadow: 0 5px 16px rgba(31,78,132,.12) !important;
+}
+
+#studentsScrollArea {
+  width: min(100%, 1440px) !important;
+  margin: 6px auto 0 !important;
+  color: var(--edu-ink) !important;
+}
+
+#studentsScrollArea .text-white\/80,
+#studentsScrollArea .text-white\/70,
+#studentsScrollArea .text-white {
+  color: var(--edu-ink) !important;
+}
+
+#studentsGrid { gap: 6px !important; }
+#studentsGrid .video-tile {
+  border: 1px solid #8ca5c3 !important;
+  border-radius: 2px !important;
+  background: var(--edu-blue-950) !important;
+  box-shadow: 0 3px 9px rgba(31,78,132,.12) !important;
+}
+#studentsGrid video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 2px !important;
+}
+
+#teacherStageZoomHud,
+#stageCaptionLangRow,
+#stageCaptionInlineBar,
+#stageCaptionBar,
+#captionAudioHint {
+  border-radius: 3px !important;
+}
+
+#stageCaptionInlineText,
+#stageCaptionText {
+  color: #fff !important;
+  background: rgba(11,31,58,.94) !important;
+  border: 1px solid #85b4df !important;
+  border-radius: 3px !important;
+  font-size: clamp(14px, 1.7vw, 18px) !important;
+  line-height: 1.42 !important;
+  letter-spacing: .01em;
+}
+
+#attendancePanel,
+#callMoreMenu,
+html.dark #attendancePanel,
+html.dark #callMoreMenu {
+  color: var(--edu-ink) !important;
+  background: #fff !important;
+  border: 1px solid var(--edu-border) !important;
+  border-radius: 3px !important;
+}
+
+/* New accessibility/gesture controls. */
+#eduVoiceDock {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  z-index: 2147483638;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px;
+  color: var(--edu-ink);
+  background: rgba(255,255,255,.98);
+  border: 1px solid var(--edu-border);
+  border-radius: 3px;
+  box-shadow: 0 5px 18px rgba(31,78,132,.18);
+}
+
+#eduVoiceBtn,
+#eduVoiceHelpBtn {
+  min-height: 34px !important;
+  padding: 6px 9px !important;
+  color: var(--edu-blue-900) !important;
+  background: var(--edu-blue-50) !important;
+  border: 1px solid var(--edu-border) !important;
+  border-radius: 2px !important;
+}
+
+#eduVoiceBtn[aria-pressed="true"] {
+  color: #fff !important;
+  background: var(--edu-blue-700) !important;
+  border-color: var(--edu-blue-800) !important;
+}
+
+#eduVoiceStatus {
+  max-width: min(42vw, 320px);
+  padding: 0 6px;
+  color: var(--edu-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#eduVoiceHelp {
+  position: fixed;
+  left: 10px;
+  bottom: 55px;
+  z-index: 2147483639;
+  width: min(430px, calc(100vw - 20px));
+  padding: 10px;
+  color: var(--edu-ink);
+  background: #fff;
+  border: 1px solid var(--edu-border);
+  border-radius: 3px;
+  box-shadow: 0 8px 26px rgba(31,78,132,.2);
+}
+
+#eduVoiceHelp[hidden] { display: none !important; }
+#eduVoiceHelp strong { color: var(--edu-blue-900); }
+#eduVoiceHelp ul { margin: 7px 0 0 18px; padding: 0; }
+#eduVoiceHelp li { margin: 3px 0; font-size: 12px; }
+
+#eduGestureHud {
+  position: absolute;
+  left: 8px;
+  top: 43px;
+  z-index: 42;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  color: #fff;
+  background: rgba(11,31,58,.9);
+  border: 1px solid rgba(191,219,254,.65);
+  border-radius: 3px;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+#eduGestureHud.active { display: flex; }
+#eduGestureDot { width: 7px; height: 7px; border-radius: 50% !important; background: #54d68c; }
+#eduGestureCursor {
+  position: absolute;
+  z-index: 43;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #fff;
+  border-radius: 50% !important;
+  background: rgba(40,120,199,.35);
+  box-shadow: 0 0 0 3px rgba(40,120,199,.35);
+  pointer-events: none;
+  display: none;
+}
+
+#eduGestureCursor.active { display: block; }
+
+.edu-call-tool.active,
+.edu-caption-tool.active {
+  color: #fff !important;
+  background: var(--edu-blue-700) !important;
+  border-color: var(--edu-blue-800) !important;
+}
+
+.edu-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0,0,0,0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (max-width: 760px) {
+  html { font-size: 12px !important; }
+  #groupCallTopBar { min-height: 43px !important; padding: 5px 6px !important; }
+  #groupCallVideoLayout { padding: 5px !important; }
+  #studentsGrid { grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap: 4px !important; }
+  #stageWhiteboardCamPip { width: 27% !important; top: 6px !important; right: 6px !important; }
+  #eduVoiceDock { left: 6px; right: 6px; bottom: 6px; }
+  #eduVoiceStatus { flex: 1; max-width: none; }
+  #eduVoiceHelp { left: 6px; bottom: 50px; width: calc(100vw - 12px); }
+  #teacherStageZoomHud { transform: scale(.88); transform-origin: right bottom; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

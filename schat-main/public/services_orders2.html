@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Orders - UniConnect</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>.gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script>
+  tailwind = { config: { darkMode:'class', theme:{ extend:{
+    fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] },
+    keyframes:{
+      floaty:{'0%,100%':{transform:'translateY(0px)'},'50%':{transform:'translateY(-10px)'}},
+      shimmer:{'0%':{backgroundPosition:'0% 50%'},'100%':{backgroundPosition:'100% 50%'}},
+      pop:{'0%':{transform:'scale(.98)',opacity:'0'},'100%':{transform:'scale(1)',opacity:'1'}},
+      pulseSoft:{'0%,100%':{transform:'scale(1)'},'50%':{transform:'scale(1.02)'}}
+    },
+    animation:{
+      floaty:'floaty 7s ease-in-out infinite',
+      shimmer:'shimmer 7s ease-in-out infinite',
+      pop:'pop .45s ease-out both',
+      pulseSoft:'pulseSoft 3.2s ease-in-out infinite'
+    }
+  }}}};
+</script>
+<script>
+  (function(){
+    const key='theme';
+    const saved=localStorage.getItem(key);
+    const prefers=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const mode=saved || (prefers?'dark':'light');
+    if(mode==='dark') document.documentElement.classList.add('dark');
+  })();
+</script>
+<style id="ultraGlass">
+  :root{
+    --glass-bg: rgba(255,255,255,.58);
+    --glass-brd: rgba(255,255,255,.30);
+    --muted: rgba(15,23,42,.74);
+    --muted2: rgba(15,23,42,.56);
+    --grid: rgba(15,23,42,.06);
+    --ring: rgba(99,102,241,.45);
+    --shadow: rgba(0,0,0,.22);
+    --a1: rgba(99,102,241,1);
+    --a2: rgba(236,72,153,1);
+    --a3: rgba(34,197,94,1);
+  }
+  html.dark{
+    --glass-bg: rgba(2,6,23,.64);
+    --glass-brd: rgba(148,163,184,.16);
+    --muted: rgba(226,232,240,.80);
+    --muted2: rgba(226,232,240,.56);
+    --grid: rgba(148,163,184,.08);
+    --ring: rgba(236,72,153,.34);
+    --shadow: rgba(0,0,0,.52);
+  }
+
+  html, body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial !important; }
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 700px at 12% 12%, rgba(99,102,241,.28), transparent 60%),
+      radial-gradient(900px 600px at 88% 16%, rgba(236,72,153,.20), transparent 62%),
+      radial-gradient(900px 700px at 50% 96%, rgba(34,197,94,.16), transparent 60%),
+      linear-gradient(180deg, rgba(248,250,252,1), rgba(241,245,249,1)) !important;
+    background-attachment: fixed !important;
+    color: rgb(15 23 42);
+  }
+  html.dark body{
+    background:
+      radial-gradient(1200px 700px at 12% 12%, rgba(99,102,241,.20), transparent 60%),
+      radial-gradient(900px 600px at 88% 16%, rgba(236,72,153,.16), transparent 62%),
+      radial-gradient(900px 700px at 50% 96%, rgba(34,197,94,.12), transparent 60%),
+      linear-gradient(180deg, rgba(2,6,23,1), rgba(15,23,42,1)) !important;
+    color: rgb(226 232 240);
+  }
+
+  body:before{
+    content:"";
+    position:fixed; inset:0; z-index:-1;
+    background-image:
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(closest-side at 50% 35%, black 0%, transparent 70%);
+    opacity:.85;
+    pointer-events:none;
+  }
+
+  header, nav, .navbar, .topbar{
+    background: var(--glass-bg) !important;
+    border-bottom: 1px solid var(--glass-brd) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 18px 55px var(--shadow) !important;
+  }
+
+  .glass, .card, .panel, .container, .box, .content, main, section, aside,
+  [class*="card"], [class*="panel"], [class*="box"], [class*="container"], [class*="content"]{
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  main, .main, #main, #content, .content, .wrapper, .page, .page-content{
+    max-width: 1200px;
+    margin-left:auto; margin-right:auto;
+  }
+
+  input, textarea, select{
+    background: rgba(255,255,255,.42) !important;
+    border: 1px solid rgba(255,255,255,.26) !important;
+    color: rgb(15 23 42) !important;
+    border-radius: 14px !important;
+    outline: none !important;
+  }
+  html.dark input, html.dark textarea, html.dark select{
+    background: rgba(2,6,23,.34) !important;
+    border: 1px solid rgba(148,163,184,.18) !important;
+    color: rgb(226 232 240) !important;
+  }
+  input:focus, textarea:focus, select:focus{
+    box-shadow: 0 0 0 5px var(--ring) !important;
+    border-color: transparent !important;
+  }
+
+  button, .btn, [role="button"], input[type="submit"], .button{
+    border-radius: 14px !important;
+    transition: transform .18s ease, filter .18s ease, box-shadow .18s ease !important;
+  }
+  button:hover, .btn:hover, [role="button"]:hover{ transform: translateY(-1px); }
+  .btn-primary, button.primary, .primary-btn{
+    background: linear-gradient(135deg, var(--a1), var(--a2)) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255,255,255,.18) !important;
+    box-shadow: 0 18px 40px rgba(99,102,241,.22) !important;
+  }
+  a{ text-decoration:none; }
+
+  table{ border-collapse: separate !important; border-spacing: 0 10px !important; width:100% !important; }
+  thead th{ color: var(--muted2) !important; font-weight: 900 !important; font-size: 12px !important; letter-spacing: .04em; text-transform: uppercase; }
+  tbody tr{ background: var(--glass-bg) !important; border: 1px solid var(--glass-brd) !important; box-shadow: 0 18px 55px var(--shadow); }
+  tbody td{ padding: 12px 14px !important; }
+
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb{ background: rgba(148,163,184,.28); border-radius: 999px; }
+  ::-webkit-scrollbar-track{ background: transparent; }
+
+  #themeFab{
+    position: fixed;
+    right: 16px;
+    top: 92px;
+    z-index: 9999;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-brd);
+    box-shadow: 0 18px 55px var(--shadow);
+    border-radius: 16px;
+    padding: 10px 12px;
+    font-weight: 900;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  #themeFab .kicker{ font-weight: 900; opacity:.85; }
+
+  #pageHero{
+    border-radius: 26px;
+    border: 1px solid var(--glass-brd);
+    background: var(--glass-bg);
+    box-shadow: 0 20px 60px var(--shadow);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    overflow:hidden;
+  }
+  #pageHero .shine{
+    background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.28), rgba(255,255,255,0));
+    background-size: 200% 100%;
+  }
+</style>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="px-4 md:px-8 pt-6">
+  <div id="pageHero" class="max-w-6xl mx-auto p-6 md:p-8 animate-pop">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <div class="text-xs font-extrabold tracking-widest uppercase" style="color: var(--muted2);">SChat • Buyurtmalar</div>
+        <div class="mt-2 text-2xl md:text-3xl font-black leading-tight">Buyurtmalar</div>
+        <div class="mt-2 text-sm" style="color: var(--muted);">
+          Shisha uslubidagi ultra dizayn, yumshoq animatsiyalar va kunduzgi/tungi rejim.
+        </div>
+      </div>
+      <div class="glass rounded-2xl px-4 py-3 animate-floaty" style="border: 1px solid var(--glass-brd); background: var(--glass-bg);">
+        <div class="text-xs font-extrabold" style="color: var(--muted2);">Tezkor</div>
+        <div class="mt-1 flex items-center gap-2 text-sm font-extrabold" style="color: var(--muted);">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Effektlar yoqilgan
+        </div>
+      </div>
+    </div>
+    <div class="shine mt-5 h-1 rounded-full animate-shimmer"></div>
+  </div>
+</div>
+  <nav class="gradient-bg text-white h-16 flex items-center px-4">
+    <div class="container mx-auto flex justify-between items-center">
+      <a href="/services.html" class="flex items-center space-x-2">
+        <i class="fas fa-arrow-left"></i>
+        <span class="font-semibold">Back to Services</span>
+      </a>
+      <div class="flex items-center space-x-4">
+        <a href="/signals.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Campus Signals"><i class="fas fa-bell"></i></a>
+        <a href="/messages.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Messages"><i class="fas fa-comments"></i></a>
+        <a href="/profile.html" class="p-2 hover:bg-white/10 rounded-full transition" title="Profile"><i class="fas fa-user"></i></a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mx-auto px-4 py-6">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">My Orders</h1>
+        <p class="text-gray-600">Buyer yoki Seller sifatida buyurtmalarni boshqaring.</p>
+      </div>
+      <div class="flex gap-2">
+        <select id="role" class="border rounded-lg px-3 py-2">
+          <option value="buyer">As Buyer</option>
+          <option value="seller">As Seller</option>
+        </select>
+        <select id="status" class="border rounded-lg px-3 py-2">
+          <option value="">All statuses</option>
+          <option value="created">created</option>
+          <option value="in_progress">in_progress</option>
+          <option value="submitted">submitted</option>
+          <option value="accepted">accepted</option>
+          <option value="disputed">disputed</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+        <button onclick="loadOrders()" class="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg">
+          <i class="fas fa-sync mr-2"></i>Refresh
+        </button>
+      </div>
+    </div>
+
+    <div id="list" class="mt-6 space-y-3"></div>
+    <div id="empty" class="hidden mt-10 text-center text-gray-600">
+      <i class="fas fa-clipboard-list text-4xl mb-3 text-gray-400"></i>
+      <div class="font-semibold">No orders</div>
+    </div>
+  </main>
+
+  <!-- Upload modal -->
+  <div id="uploadModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl w-full max-w-xl shadow-xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b">
+        <h2 class="font-bold text-gray-800">Upload Deliverable</h2>
+        <button onclick="closeUpload()" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5">
+        <input id="upFile" type="file" class="w-full"/>
+        <label class="text-sm text-gray-600 mt-3 block">Note (optional)</label>
+        <textarea id="upNote" rows="3" class="mt-1 w-full border rounded-lg px-3 py-2"></textarea>
+      </div>
+      <div class="px-5 py-4 border-t flex justify-end gap-2">
+        <button onclick="closeUpload()" class="px-4 py-2 rounded-lg border">Cancel</button>
+        <button onclick="doUpload()" class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white">
+          <i class="fas fa-upload mr-2"></i>Upload
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    let currentUploadOrderId = null;
+
+    async function api(path, opts={}){
+      const headers = opts.headers || {};
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return fetch(path, { ...opts, headers });
+    }
+
+    function esc(s){ return String(s||'').replace(/[&<>"']/g, (m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    function statusBadge(s){
+      const map = {
+        created: 'bg-gray-100 text-gray-800',
+        in_progress: 'bg-blue-100 text-blue-800',
+        submitted: 'bg-yellow-100 text-yellow-800',
+        accepted: 'bg-green-100 text-green-800',
+        disputed: 'bg-red-100 text-red-800',
+        cancelled: 'bg-gray-200 text-gray-700'
+      };
+      return `<span class="text-xs px-2 py-1 rounded-full ${map[s]||'bg-gray-100'}">${s}</span>`;
+    }
+
+    function row(o, role){
+      const actions = [];
+      if (role === 'seller' && o.status === 'created') actions.push(`<button onclick="startOrder('${o._id}')" class="px-3 py-1 border rounded-lg text-sm">Start</button>`);
+      if (role === 'seller' && (o.status === 'in_progress' || o.status === 'created')) actions.push(`<button onclick="openUpload('${o._id}')" class="px-3 py-1 border rounded-lg text-sm">Upload</button>`);
+      if (role === 'buyer' && o.status === 'submitted') actions.push(`<button onclick="acceptOrder('${o._id}')" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm">Accept</button>`);
+      if (role === 'buyer' && (o.status === 'created')) actions.push(`<button onclick="cancelOrder('${o._id}')" class="px-3 py-1 border rounded-lg text-sm">Cancel</button>`);
+      if (o.status !== 'accepted' && o.status !== 'cancelled') actions.push(`<button onclick="disputeOrder('${o._id}')" class="px-3 py-1 border rounded-lg text-sm text-red-600">Dispute</button>`);
+
+      return `
+        <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="text-sm text-gray-500">Order ID: ${o._id}</div>
+              <div class="mt-1 text-gray-800"><span class="font-semibold">Price:</span> ${o.agreedPrice}</div>
+              <div class="mt-1 text-gray-800"><span class="font-semibold">Due:</span> ${o.dueAt ? new Date(o.dueAt).toLocaleString() : '-'}</div>
+            </div>
+            ${statusBadge(o.status)}
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <a href="/service.html?id=${o.serviceId}" class="px-3 py-1 border rounded-lg text-sm">View service</a>
+            ${actions.join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadOrders(){
+      if (!token) return (window.location.href='/login.html');
+      const role = document.getElementById('role').value;
+      const status = document.getElementById('status').value;
+      const params = new URLSearchParams();
+      params.set('role', role);
+      if (status) params.set('status', status);
+
+      const r = await api('/api/service-orders?' + params.toString());
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+
+      const list = document.getElementById('list');
+      list.innerHTML = (j.orders || []).map(o => row(o, role)).join('');
+      document.getElementById('empty').classList.toggle('hidden', (j.orders||[]).length>0);
+    }
+
+    async function startOrder(id){
+      const r = await api('/api/service-orders/' + id + '/start', { method: 'POST' });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+      loadOrders();
+    }
+    async function acceptOrder(id){
+      const r = await api('/api/service-orders/' + id + '/accept', { method: 'POST' });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+      loadOrders();
+    }
+    async function disputeOrder(id){
+      const r = await api('/api/service-orders/' + id + '/dispute', { method: 'POST' });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+      loadOrders();
+    }
+    async function cancelOrder(id){
+      const r = await api('/api/service-orders/' + id + '/cancel', { method: 'POST' });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Failed');
+      loadOrders();
+    }
+
+    function openUpload(orderId){
+      currentUploadOrderId = orderId;
+      document.getElementById('uploadModal').classList.remove('hidden');
+      document.getElementById('uploadModal').classList.add('flex');
+    }
+    function closeUpload(){
+      document.getElementById('uploadModal').classList.add('hidden');
+      document.getElementById('uploadModal').classList.remove('flex');
+      document.getElementById('upFile').value = '';
+      document.getElementById('upNote').value = '';
+      currentUploadOrderId = null;
+    }
+    async function doUpload(){
+      if (!currentUploadOrderId) return;
+      const f = document.getElementById('upFile').files[0];
+      const note = document.getElementById('upNote').value.trim();
+      if (!f) return alert('Choose a file');
+
+      const fd = new FormData();
+      fd.append('file', f);
+      fd.append('note', note);
+
+      const r = await api('/api/service-orders/' + currentUploadOrderId + '/deliverable', { method: 'POST', body: fd });
+      const j = await r.json();
+      if (!j.success) return alert(j.error || 'Upload failed');
+      closeUpload();
+      loadOrders();
+    }
+
+    (function init(){
+      const qs = new URLSearchParams(location.search);
+      const role = qs.get('role');
+      if (role) document.getElementById('role').value = role;
+      loadOrders();
+    })();
+  </script>
+<div id="themeFab" title="Kunduzgi / Tungi rejim">
+  <i id="themeFabIcon" class="fa-solid fa-moon"></i>
+  <span id="themeFabLabel">Tungi</span>
+  <span class="kicker">• Buyurtmalar</span>
+</div>
+<script>
+  (function(){
+    const key='theme';
+    const btn=document.getElementById('themeFab');
+    const icon=document.getElementById('themeFabIcon');
+    const label=document.getElementById('themeFabLabel');
+    function apply(mode){
+      if(mode==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+      localStorage.setItem(key, mode);
+      icon.className = mode==='dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+      label.textContent = mode==='dark' ? 'Kunduzgi' : 'Tungi';
+    }
+    const saved=localStorage.getItem(key);
+    const prefers=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    apply(saved || (prefers?'dark':'light'));
+    btn.addEventListener('click', ()=> apply(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
+  })();
+</script>
+  <script src="/ui-actions-menu.js" defer></script>
+  <script src="/global-assistant.js" defer></script>
+  <script src="/ui-premium-icons.js" defer></script>
+</body>
+</html>
+
+
+

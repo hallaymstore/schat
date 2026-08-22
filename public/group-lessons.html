@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Guruh dars yozuvlari • HALLAYM edu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    (function(){
+      try{
+        const key = 'theme';
+        const saved = localStorage.getItem(key);
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const mode = saved || (prefersDark ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', mode === 'dark');
+      }catch(_){}
+    })();
+  </script>
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,.84);
+      --glass-brd: rgba(13,118,102,.22);
+      --shadow: rgba(8,80,71,.14);
+      --ring1: rgba(20,138,118,.38);
+      --ring2: rgba(212,175,55,.42);
+      --muted: rgba(7,58,52,.78);
+      --muted2: rgba(7,58,52,.62);
+      --text: #0d4e48;
+      --text-strong: #062f2b;
+      --chip-bg: rgba(228,247,241,.9);
+      --chip-brd: rgba(13,118,102,.24);
+      --chip-text: #0a4b45;
+      --grid-line: rgba(10,104,91,.11);
+    }
+    html.dark{
+      --glass-bg: rgba(5,40,46,.8);
+      --glass-brd: rgba(94,224,200,.22);
+      --shadow: rgba(0,0,0,.45);
+      --ring1: rgba(66,227,201,.36);
+      --ring2: rgba(176,232,221,.3);
+      --muted: rgba(204,247,238,.82);
+      --muted2: rgba(183,233,223,.68);
+      --text: #ddfff8;
+      --text-strong: #f2fffd;
+      --chip-bg: rgba(8,58,65,.82);
+      --chip-brd: rgba(88,218,193,.28);
+      --chip-text: #dbfff8;
+      --grid-line: rgba(120,230,209,.12);
+    }
+    html,body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    body{
+      min-height:100vh;
+      color: var(--text);
+      background:
+        radial-gradient(900px 520px at 18% 18%, rgba(20,138,118,.18), transparent 55%),
+        radial-gradient(800px 520px at 84% 22%, rgba(212,175,55,.12), transparent 55%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(98,189,171,.14), transparent 60%),
+        linear-gradient(180deg, #ecfaf6, #dff3ee 55%, #eaf7f3);
+      background-attachment: fixed;
+      overflow-x:hidden;
+    }
+    html.dark body{
+      color: var(--text);
+      background:
+        radial-gradient(900px 520px at 18% 18%, rgba(20,138,118,.24), transparent 55%),
+        radial-gradient(800px 520px at 84% 22%, rgba(140,236,217,.14), transparent 55%),
+        radial-gradient(1000px 700px at 50% 92%, rgba(212,175,55,.1), transparent 60%),
+        linear-gradient(180deg, #04181b, #07272d 55%, #0a343c);
+    }
+    /* subtle grid */
+    body:before{
+      content:"";
+      position:fixed; inset:0; pointer-events:none; z-index:-1;
+      background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(closest-side at 50% 20%, black 0%, transparent 72%);
+      opacity:.55;
+    }
+
+    .glass{
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      box-shadow: 0 22px 70px var(--shadow);
+      border-radius: 22px;
+    }
+    .ring{ position:relative; }
+    .ring:before{
+      content:"";
+      position:absolute; inset:-2px; border-radius:24px; padding:2px;
+      background: linear-gradient(135deg, rgba(212,175,55,.95), rgba(255,255,255,.70), rgba(0,255,208,.70), rgba(212,175,55,.95));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      pointer-events:none;
+      opacity:.95;
+    }
+    .titleGlow{
+      font-weight:900;
+      letter-spacing:.2px;
+      color: var(--text-strong);
+      -webkit-text-fill-color: currentColor;
+      text-shadow: none;
+    }
+    .btn{
+      display:inline-flex; align-items:center; gap:.6rem;
+      padding:.65rem .9rem;
+      border-radius: 14px;
+      border: 1px solid var(--chip-brd);
+      background: var(--chip-bg);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      transition: transform .15s ease, filter .15s ease, background .15s ease;
+      color: var(--text-strong);
+      font-weight:800;
+      font-size: 13px;
+    }
+    .btn:hover{ transform: translateY(-1px); filter: brightness(1.03); }
+    .btn:active{ transform: translateY(0px); filter: brightness(.95); }
+    .btn-primary{
+      background: linear-gradient(135deg, rgba(20,138,118,.96), rgba(37,181,156,.92) 58%, rgba(212,175,55,.9));
+      border-color: rgba(212,175,55,.45);
+      color: #032723;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:.5rem;
+      padding:.35rem .6rem;
+      border-radius: 999px;
+      border: 1px solid var(--chip-brd);
+      background: var(--chip-bg);
+      color: var(--chip-text);
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .muted{ color: var(--muted); }
+    .muted2{ color: var(--muted2); }
+    a{ color: var(--text-strong); }
+    code{
+      background: var(--chip-bg);
+      color: var(--text-strong);
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--chip-brd);
+    }
+
+    /* list card */
+    .lessonCard{
+      border-radius: 22px;
+      border: 1px solid var(--glass-brd);
+      background:
+        radial-gradient(600px 240px at 20% 10%, rgba(20,138,118,.12), transparent 60%),
+        var(--glass-bg);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      box-shadow: 0 18px 55px var(--shadow);
+    }
+    .lessonCard:hover{ border-color: rgba(20,138,118,.35); transform: translateY(-1px); transition: transform .18s ease; }
+    .kpi{
+      display:flex; flex-wrap:wrap; gap:.45rem .55rem; margin-top:.45rem;
+      color: var(--muted2);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    /* modal */
+    #attModal{ backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+    @media (max-width: 640px){
+      .wrap{ padding: 12px !important; }
+      .btn{ padding:.6rem .85rem; }
+      .kpi{ font-size: 11px; }
+    }
+  </style>
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+
+<body>
+  <div class="wrap max-w-6xl mx-auto p-4">
+    <div class="glass ring p-5 sm:p-6">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl border border-white/15 bg-white/10 flex items-center justify-center">
+              <span style="font-size:20px">📚</span>
+            </div>
+            <div>
+              <h1 class="titleGlow text-2xl sm:text-3xl">Guruh dars yozuvlari</h1>
+              <div class="text-sm muted2 mt-1">Faqat shu guruh a’zolari ko‘ra oladi.</div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <span class="chip">Group ID: <span class="font-mono text-[11px]" id="gid">—</span></span>
+            <span class="chip">URL: <span class="font-mono text-[11px]" id="retInfo">—</span></span>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <a id="backLink" href="/groups.html" class="btn btn-primary">← Orqaga</a>
+          <button id="refreshBtn" class="btn">⟳ Yangilash</button>
+        </div>
+      </div>
+
+      <div class="mt-4 text-xs muted2">
+        Agar URL’da <code>?groupId=...</code> bo‘lmasa, bu sahifa ishlamaydi.
+        <span class="opacity-70"> (Tavsiya: group.html sahifasidan <code>return</code> param bilan oching.)</span>
+      </div>
+    </div>
+
+    <div id="msg" class="mt-4 text-sm muted"></div>
+    <div id="list" class="mt-4 grid gap-3"></div>
+
+    <!-- Attendance Modal -->
+    <div id="attModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-[9999]">
+      <div class="glass ring max-w-3xl w-full p-4 sm:p-5">
+        <div class="flex items-center justify-between gap-3">
+          <div class="font-extrabold text-lg">📋 Davomat</div>
+          <button id="attClose" class="btn">Yopish</button>
+        </div>
+        <div id="attBody" class="mt-3 text-sm text-white/80"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+function getToken(){ return localStorage.getItem('token') || ''; }
+function q(name){ return new URLSearchParams(location.search).get(name); }
+let currentUser = null;
+let lessonMap = new Map();
+
+async function loadCurrentUser(){
+  try{
+    const res = await fetch('/api/me', {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    const data = await res.json().catch(()=>null);
+    if(res.ok && data && data.success){
+      currentUser = data.user || data || null;
+      return;
+    }
+  }catch(_){}
+  currentUser = null;
+}
+
+function canImportLessonToCourse(lesson){
+  const role = String(currentUser?.role || '').toLowerCase();
+  if (role === 'admin') return true;
+  if (role !== 'teacher') return false;
+  const meId = String(currentUser?._id || currentUser?.id || '');
+  const hostId = String(lesson?.host?.userId || '');
+  return !!(meId && hostId && meId === hostId);
+}
+
+function canViewAttendanceLesson(lesson){
+  if (typeof lesson?.attendanceVisible === 'boolean') return !!lesson.attendanceVisible;
+  const role = String(currentUser?.role || '').toLowerCase();
+  const meId = String(currentUser?._id || currentUser?.id || '');
+  const hostId = String(lesson?.host?.userId || '');
+  if (role === 'admin') return true;
+  if (role === 'teacher' && meId && hostId && meId === hostId) return true;
+  if (role === 'organizer') {
+    const myUni = String(currentUser?.university || '').trim().toLowerCase();
+    const myFaculty = String(currentUser?.faculty || '').trim().toLowerCase();
+    const groupUni = String(lesson?.group?.university || '').trim().toLowerCase();
+    const groupFaculty = String(lesson?.group?.faculty || '').trim().toLowerCase();
+    if (!myUni || !groupUni || myUni !== groupUni) return false;
+    if (!myFaculty) return true;
+    return !!groupFaculty && myFaculty === groupFaculty;
+  }
+  return false;
+}
+
+async function addLessonToCourse(lessonId){
+  const lesson = lessonMap.get(String(lessonId));
+  if(!lesson || !lesson.recordingUrl){
+    alert('Bu darsda yozuv topilmadi.');
+    return;
+  }
+
+  const titleDefault = String(lesson.title || 'Recorded lesson').trim() || 'Recorded lesson';
+  const title = prompt('Kurs nomi:', titleDefault);
+  if(title === null) return;
+  const cleanTitle = String(title || '').trim();
+  if(!cleanTitle){
+    alert('Kurs nomi bo‘sh bo‘lmasin.');
+    return;
+  }
+
+  const modeInput = prompt("Kurs turi: free yoki paid", "free");
+  if(modeInput === null) return;
+  const type = String(modeInput || '').trim().toLowerCase() === 'paid' ? 'paid' : 'free';
+
+  let price = 0;
+  if(type === 'paid'){
+    const p = prompt("Narx (so'm):", "49000");
+    if(p === null) return;
+    const val = Number(String(p).replace(/[^\d]/g, ''));
+    if(!Number.isFinite(val) || val < 1){
+      alert("Narx 1 so'mdan katta bo‘lishi kerak.");
+      return;
+    }
+    price = Math.round(val);
+  }
+
+  const payload = {
+    lessonId: String(lessonId),
+    title: cleanTitle,
+    description: `Imported from group lesson: ${titleDefault}`,
+    type,
+    status: 'draft',
+    pricingCurrency: 'UZS',
+    freeForSourceGroup: true
+  };
+  if(type === 'paid') payload.price = price;
+
+  const res = await fetch('/api/courses/from-group-lesson', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(()=>null);
+  if(!res.ok || !data?.success){
+    alert(data?.error || `Kursga qo‘shib bo‘lmadi (HTTP ${res.status})`);
+    return;
+  }
+
+  const courseId = String(data?.course?._id || '');
+  alert("Dars kursga qo‘shildi (draft).");
+  if(courseId){
+    window.open(`/course.html?id=${encodeURIComponent(courseId)}`, '_blank');
+  }
+}
+
+function resolveBackLink(){
+  const groupId = q('groupId');
+  const ret = q('return');
+  const back = document.getElementById('backLink');
+  const retInfo = document.getElementById('retInfo');
+
+  // Show short info
+  try{ retInfo.textContent = ret ? 'return=1' : 'return=0'; }catch(e){}
+
+  // Priority:
+  // 1) explicit return param (coming from group.html / group01)
+  // 2) fallback to group page by id
+  // 3) fallback groups list
+  if (ret) {
+    try{
+      const decoded = decodeURIComponent(ret);
+      back.href = decoded;
+      back.title = 'Oldingi sahifaga qaytish';
+      return;
+    }catch(e){}
+  }
+  if (groupId) {
+    back.href = `/group.html?id=${encodeURIComponent(groupId)}`;
+    back.title = 'Shu guruh chatiga qaytish';
+  } else {
+    back.href = '/groups.html';
+    back.title = 'Guruhlar ro‘yxati';
+  }
+}
+
+function fmt(d){
+  if(!d) return '—';
+  const x=new Date(d);
+  return x.toLocaleString([], {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function fmtDur(sec){
+  sec = Number(sec||0);
+  const m=Math.floor(sec/60), s=sec%60;
+  return `${m}m ${String(s).padStart(2,'0')}s`;
+}
+
+function probeVideoDurationSec(url){
+  return new Promise((resolve) => {
+    try {
+      if (!url) return resolve(0);
+      const v = document.createElement('video');
+      let done = false;
+      const finish = (sec) => {
+        if (done) return;
+        done = true;
+        try { v.pause(); } catch (_) {}
+        try { v.removeAttribute('src'); v.load(); } catch (_) {}
+        resolve(Math.max(0, Math.round(Number(sec || 0))));
+      };
+      const onMeta = () => {
+        const sec = Number(v.duration || 0);
+        if (Number.isFinite(sec) && sec > 0) finish(sec);
+      };
+      v.preload = 'metadata';
+      v.muted = true;
+      v.playsInline = true;
+      v.addEventListener('loadedmetadata', onMeta, { once: true });
+      v.addEventListener('durationchange', onMeta);
+      v.addEventListener('error', () => finish(0), { once: true });
+      setTimeout(() => finish(0), 8000);
+      v.src = url;
+      try { v.load(); } catch (_) {}
+    } catch (_) {
+      resolve(0);
+    }
+  });
+}
+
+function attachLessonDurationHooks(cardEl, lesson){
+  try {
+    if (!cardEl || !lesson) return;
+    const lessonId = String(lesson._id || '');
+    const videoDurEl = cardEl.querySelector(`[data-video-duration="${lessonId}"]`);
+    if (!videoDurEl) return;
+
+    const dbDuration = Math.max(0, Math.round(Number(lesson.recordingDurationSec || 0)));
+    if (dbDuration > 0) {
+      videoDurEl.textContent = fmtDur(dbDuration);
+      return;
+    }
+    if (!lesson.recordingUrl) return;
+
+    const setDuration = (sec) => {
+      const s = Math.max(0, Math.round(Number(sec || 0)));
+      if (s > 0) videoDurEl.textContent = fmtDur(s);
+    };
+
+    const player = cardEl.querySelector('video');
+    if (player) {
+      const applyFromPlayer = () => {
+        const sec = Number(player.duration || 0);
+        if (Number.isFinite(sec) && sec > 0) setDuration(sec);
+      };
+      player.addEventListener('loadedmetadata', applyFromPlayer, { once: true });
+      player.addEventListener('durationchange', applyFromPlayer);
+      setTimeout(applyFromPlayer, 1200);
+    }
+
+    probeVideoDurationSec(toPlayableUrl(lesson.recordingUrl))
+      .then((sec) => setDuration(sec))
+      .catch(() => {});
+  } catch (_) {}
+}
+
+async function showAttendance(lessonId){
+  try{
+    const modal=document.getElementById('attModal');
+    const body=document.getElementById('attBody');
+    body.innerHTML='Yuklanmoqda...';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    const res = await fetch(`/api/group-lessons/${lessonId}/attendance`, {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    if(!res.ok){
+      body.innerHTML = `<div class="muted">Davomatni ko‘rsatib bo‘lmadi (HTTP ${res.status}). Bu funksiya faqat darsni o‘tgan o‘qituvchi, admin yoki fakultet organizer uchun.</div>`;
+      return;
+    }
+    const data = await res.json();
+    const joined = data.joined||[];
+    const absent = data.absent||[];
+
+    const jRows = joined.map(x => `<tr class="border-b border-white/10">
+      <td class="py-1 pr-2">${x.fullName||x.username||x.userId}</td>
+      <td class="py-1 pr-2 text-xs muted">${fmt(x.joinedAt)}</td>
+      <td class="py-1 pr-2 text-xs muted">${fmt(x.leftAt)}</td>
+      <td class="py-1 text-xs">${fmtDur(x.durationSec||0)}</td>
+    </tr>`).join('');
+
+    const aRows = absent.map(x => `<li class="py-0.5">${x.fullName||x.username||x.userId}</li>`).join('');
+
+    body.innerHTML = `
+      <div class="text-xs muted mb-2">Kirdi: <b>${joined.length}</b> • Kirmadi: <b>${absent.length}</b></div>
+      <div class="glass p-3" style="box-shadow:none;border-radius:18px">
+        <table class="w-full text-sm">
+          <thead class="muted">
+            <tr>
+              <th class="text-left py-1 pr-2">Ism</th>
+              <th class="text-left py-1 pr-2">Kirdi</th>
+              <th class="text-left py-1 pr-2">Chiqdi</th>
+              <th class="text-left py-1">Davomiylik</th>
+            </tr>
+          </thead>
+          <tbody>${jRows || `<tr><td class="py-2 muted2" colspan="4">Hech kim kirmagan</td></tr>`}</tbody>
+        </table>
+      </div>
+      <div class="mt-3">
+        <div class="font-semibold mb-1">Kirmagan talabalar</div>
+        <ul class="text-sm muted">${aRows || '<li class="muted2">Yo‘q</li>'}</ul>
+      </div>
+    `;
+  }catch(e){
+    console.error(e);
+    const body=document.getElementById('attBody');
+    body.innerHTML = `<div class="muted">Xatolik: ${e?.message||e}</div>`;
+  }
+}
+document.getElementById('attClose').addEventListener('click', ()=>{
+  const modal=document.getElementById('attModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+});
+
+
+function toDownloadUrl(url){
+  try{
+    if(!url) return url;
+
+    // Local recordings: use server download proxy (adds Content-Disposition).
+    if(url.startsWith('/uploads/lessons/')){
+      return '/api/group-lessons/download?url=' + encodeURIComponent(url);
+    }
+
+    // Cloudinary: build attachment MP4 URL
+    if(url.includes('res.cloudinary.com') && url.includes('/video/upload/')){
+      const marker = '/video/upload/';
+      const i = url.indexOf(marker);
+      const prefix = url.slice(0, i + marker.length);
+      let rest = url.slice(i + marker.length);
+
+      const parts = rest.split('/');
+      const vIndex = parts.findIndex(p => /^v\d+$/.test(p));
+      if(vIndex > 0) parts.splice(0, vIndex);
+      rest = parts.join('/');
+
+      rest = rest.replace(/\.[a-zA-Z0-9]+($|\?)/, '.mp4$1');
+
+      const transform = 'fl_attachment,q_auto,f_mp4/';
+      return prefix + transform + rest;
+    }
+
+    return url;
+  }catch(_){ return url; }
+}
+
+function toPlayableUrl(url){
+  try{
+    if(!url) return url;
+
+    // Local recordings served by our server: keep as-is (supports Range).
+    if(url.startsWith('/uploads/lessons/')) return url;
+
+    // Cloudinary: prefer MP4 derived URL (more compatible than WebM).
+    if(url.includes('res.cloudinary.com') && url.includes('/video/upload/')){
+      const marker = '/video/upload/';
+      const i = url.indexOf(marker);
+      const prefix = url.slice(0, i + marker.length);
+      let rest = url.slice(i + marker.length); // may include transforms and/or version segment
+
+      // Strip existing transforms if any (keep from first /v123... segment)
+      const parts = rest.split('/');
+      const vIndex = parts.findIndex(p => /^v\d+$/.test(p));
+      if(vIndex > 0) parts.splice(0, vIndex);
+      rest = parts.join('/');
+
+      // Convert filename extension to .mp4
+      rest = rest.replace(/\.[a-zA-Z0-9]+($|\?)/, '.mp4$1');
+
+      // Use safe transforms only (vc_auto can 400 on some accounts/files)
+      const transform = 'q_auto,f_mp4/';
+      return prefix + transform + rest;
+    }
+    return url;
+  }catch(_){ return url; }
+}
+
+
+async function downloadRecording(url, fallbackName){
+  if(!url) return;
+  const dl = toDownloadUrl(url);
+  const a = document.createElement('a');
+  a.href = dl;
+  a.download = fallbackName || '';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+async function load(){
+  resolveBackLink();
+  await loadCurrentUser();
+
+  const groupId = q('groupId');
+  document.getElementById('gid').textContent = groupId || '—';
+  if(!groupId){
+    document.getElementById('msg').innerHTML = 'URLga <code>?groupId=...</code> qo‘shing.';
+    return;
+  }
+
+  document.getElementById('msg').textContent = 'Yuklanmoqda...';
+  const res = await fetch(`/api/group-lessons?groupId=${encodeURIComponent(groupId)}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  });
+
+  if(!res.ok){
+    document.getElementById('msg').textContent = 'Xatolik: ' + res.status;
+    return;
+  }
+
+  const data = await res.json();
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  lessonMap = new Map();
+  const lessons = data.lessons || [];
+  document.getElementById('msg').textContent = lessons.length ? `${lessons.length} ta dars topildi` : 'Hali dars yozuvlari yo‘q';
+
+  lessons.forEach(l => {
+    lessonMap.set(String(l._id), l);
+    const div = document.createElement('div');
+    div.className = 'lessonCard p-4 sm:p-5';
+
+    const safeName = ((l.title||'lesson')+'').replace(/[^a-z0-9_-]+/gi,'_').slice(0,40);
+
+    const rec = l.recordingUrl
+      ? `
+        <div class="w-full max-w-[520px]">
+          <video class="w-full rounded-2xl border border-white/10 bg-black/30" controls preload="metadata" src="${toPlayableUrl(l.recordingUrl)}"></video>
+          <div class="mt-2 flex gap-2 flex-wrap">
+            <a class="btn btn-primary" href="${l.recordingUrl}" target="_blank" rel="noreferrer">▶ Ochish</a>
+            <button class="btn" onclick="downloadRecording('${l.recordingUrl}', '${safeName}')">⬇ Yuklab olish</button>
+          </div>
+          <div class="text-xs muted2 mt-1">Agar video o‘ynamasa: “Ochish” ni bosib alohida tabda ko‘ring.</div>
+        </div>`
+      : `<span class="chip">Yozuv yo‘q</span>`;
+    const importBtn = (l.recordingUrl && canImportLessonToCourse(l))
+      ? `<button class="btn btn-primary" onclick="addLessonToCourse('${l._id}')">🎓 Kursga qo‘shish</button>`
+      : '';
+
+    const title = (l.title && String(l.title).trim()) ? String(l.title).trim() : 'Live dars';
+    const attendanceBtn = canViewAttendanceLesson(l)
+      ? `<button class="btn" onclick="showAttendance('${l._id}')">📋 Davomat</button>`
+      : '';
+
+    div.innerHTML = `
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div class="min-w-[260px]">
+          <div class="text-lg sm:text-xl font-extrabold">${title}</div>
+          <div class="text-xs muted mt-1">
+            Teacher: <span class="font-semibold">${l.host?.fullName || 'Teacher'}</span>
+            • Boshlanish: ${fmt(l.startedAt)} • Tugash: ${fmt(l.endedAt)}
+          </div>
+
+          <div class="kpi">
+            <span class="chip">Live: <span data-live-duration="${l._id}">${fmtDur(l.liveDurationSec || 0)}</span></span>
+            <span class="chip">Video: <span data-video-duration="${l._id}">${fmtDur(l.recordingDurationSec || 0)}</span></span>
+            <span class="chip">Rejim: ${l.mode || 'camera'}</span>
+            <span class="chip">Status: ${l.status || '—'}</span>
+          </div>
+        </div>
+
+        <div class="text-sm flex gap-2 items-center flex-wrap justify-end">
+          ${rec}
+          ${importBtn}
+          ${attendanceBtn}
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+
+    attachLessonDurationHooks(div, l);
+  });
+}
+
+document.getElementById('refreshBtn').addEventListener('click', load);
+load();
+</script>
+  <script src="/ui-actions-menu.js" defer></script>
+  <script src="/global-assistant.js" defer></script>
+  <script src="/ui-premium-icons.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Premium Requests Admin — HALLAYM edu</title>
+  <meta name="description" content="Premium to‘lov screenshotlarini ko‘rib approve/reject qiladigan admin sahifa."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <link rel="stylesheet" href="/account-centers.css"/>
+  <link rel="stylesheet" href="/ui-glass-theme.css"/>
+  <script>
+    (function(){
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode = saved || (prefersDark ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', mode === 'dark');
+    })();
+  </script>
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+<body>
+  <div class="account-shell">
+    <header class="account-topbar">
+      <div class="account-topbar-inner">
+        <div class="brand-block">
+          <div class="brand-mark"><i class="fa-solid fa-user-shield"></i></div>
+          <div>
+            <div class="brand-title">Premium Requests Admin</div>
+            <div class="brand-sub">Payment screenshot, approve/reject va premium activation</div>
+          </div>
+        </div>
+        <nav class="nav-pills">
+          <a class="nav-pill active" href="/premium-requests.html"><i class="fa-solid fa-crown"></i> Premium requests</a>
+          <a class="nav-pill" href="/admin-dashboard.html"><i class="fa-solid fa-grid-2"></i> Admin dashboard</a>
+          <button class="ghost-btn" id="themeToggleBtn" type="button"><i class="fa-solid fa-moon"></i> Tema</button>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero-grid">
+      <article class="glass-card">
+        <div class="hero-kicker"><i class="fa-solid fa-shield-check"></i> Admin approval flow</div>
+        <h1 class="hero-title">Premium to‘lov so‘rovlarini tez tekshiring va bitta tugma bilan faollashtiring.</h1>
+        <p class="hero-text">Approve qilinganda premium plan avtomatik userga yoziladi, AI credits ochiladi, verified badge yoqiladi va foydalanuvchiga notification boradi.</p>
+        <div class="hero-stats" id="statsGrid"></div>
+      </article>
+      <aside class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Filtrlar</h2>
+            <p class="section-sub">Status va plan scope bo‘yicha tez ajrating.</p>
+          </div>
+        </div>
+        <div class="billing-switch" id="statusSwitch">
+          <button class="active" type="button" data-status="pending">Pending</button>
+          <button type="button" data-status="approved">Approved</button>
+          <button type="button" data-status="rejected">Rejected</button>
+          <button type="button" data-status="">All</button>
+        </div>
+        <div class="billing-switch" id="scopeSwitch" style="margin-top:12px">
+          <button class="active" type="button" data-scope="">All</button>
+          <button type="button" data-scope="user">User</button>
+          <button type="button" data-scope="university">Campus</button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section-grid" style="grid-template-columns:1fr; margin-top:18px">
+      <article class="glass-card">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Requests</h2>
+            <p class="section-sub">Screenshot, user va plan ma’lumotlari shu yerda.</p>
+          </div>
+          <button class="ghost-btn" id="refreshBtn" type="button"><i class="fa-solid fa-rotate"></i> Yangilash</button>
+        </div>
+        <div class="list-stack" id="requestList"></div>
+      </article>
+    </section>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+  <script src="/premium-ui.js" defer></script>
+  <script src="/premium-requests.js" defer></script>
+  <script src="/global-assistant.js" defer></script>
+</body>
+</html>

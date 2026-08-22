@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HALLAYM Slide Studio</title>
+  <meta name="description" content="HALLAYM Slide Studio yordamida AI bilan sodda, rasmiy va chiroyli taqdimotlar tayyorlang." />
+  <script>
+    (function () {
+      const key = 'theme';
+      const saved = localStorage.getItem(key);
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode = saved || (prefersDark ? 'dark' : 'light');
+      if (mode === 'dark') document.documentElement.classList.add('dark');
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="/ui-glass-theme.css" />
+  <link rel="stylesheet" href="/slides-studio.css" />
+  <script src="/global-loader.js"></script>
+  <script src="/global-uz-localize.js" defer></script>
+</head>
+<body class="uni-theme-body">
+  <div class="studio-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <a class="brand-mark" href="/index.html" aria-label="HALLAYM home">
+          <img src="/assets/landing-hero-illustration.svg" alt="" />
+        </a>
+        <div class="brand-copy">
+          <p>HALLAYM edu</p>
+          <h1>Slide Studio</h1>
+          <span id="welcomeUserLine">AI bilan sodda va rasmiy deck tayyorlang.</span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <a class="action-btn" href="/index.html"><i class="fa-solid fa-house"></i> Bosh sahifa</a>
+        <a class="action-btn" id="dashboardLink" href="/student-dashboard.html"><i class="fa-solid fa-table-cells-large"></i> Dashboard</a>
+        <button class="action-btn" type="button" id="themeToggleBtn"><i class="fa-solid fa-moon"></i> Tema</button>
+        <button class="action-btn danger" type="button" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i> Chiqish</button>
+      </div>
+    </header>
+
+    <main class="studio-layout">
+      <aside class="control-stack">
+        <section class="panel-card welcome-panel">
+          <p class="section-kicker">HALLAYM AI Studio</p>
+          <h2 class="section-title">Bir necha soniyada tayyor deck</h2>
+          <p class="section-subtitle">Mavzuni kiriting, uslubni tanlang va HALLAYM uchun chiroyli slidelar tayyor bo'ladi. Har bir slide pastida sizning watermark'ingiz chiqadi.</p>
+          <div class="welcome-note hidden" id="welcomeNote"></div>
+        </section>
+
+        <section class="panel-card">
+          <div class="inline-actions spread">
+            <div>
+              <p class="section-kicker">Yangi deck</p>
+              <h3 class="section-title small-title">Taqdimot yasash</h3>
+            </div>
+            <button class="action-btn primary alt" type="button" id="demoDeckBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> Demo</button>
+          </div>
+
+          <form id="generatorForm" class="field-grid">
+            <div>
+              <label class="field-label" for="promptInput">Mavzu</label>
+              <textarea id="promptInput" placeholder="Masalan: Sun'iy intellekt yordamida talabalar uchun samarali taqdimot tayyorlash" required></textarea>
+            </div>
+
+            <div class="two-col">
+              <div>
+                <label class="field-label" for="audienceInput">Auditoriya</label>
+                <input id="audienceInput" type="text" placeholder="Talabalar, teacherlar, rahbariyat..." />
+              </div>
+              <div>
+                <label class="field-label" for="languageInput">Til</label>
+                <select id="languageInput">
+                  <option value="uz">Uzbek</option>
+                  <option value="en">English</option>
+                  <option value="ru">Russian</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="range-wrap">
+              <label class="field-label" for="slideCountInput">Slide soni</label>
+              <div class="range-line">
+                <input id="slideCountInput" type="range" min="4" max="12" step="1" value="6" />
+                <div class="range-value" id="slideCountValue">6</div>
+              </div>
+            </div>
+
+            <div>
+              <label class="field-label">Dizayn uslubi</label>
+              <div class="style-grid" id="styleGrid"></div>
+            </div>
+
+            <div>
+              <label class="field-label">Rang yo'nalishi</label>
+              <div class="color-grid" id="colorMoodGrid"></div>
+              <p class="helper-copy">AI tanlaydi bosilganda mavzuga mos rang uyg'unligini o'zi topadi. Xohlasangiz shu yerda sovuq, issiq, to'q yoki royal yo'nalishni belgilaysiz.</p>
+            </div>
+
+            <div class="inline-actions">
+              <button class="action-btn primary" id="generateBtn" type="submit"><i class="fa-solid fa-sparkles"></i> AI bilan tayyorlash</button>
+              <button class="action-btn" id="resetPromptBtn" type="button"><i class="fa-solid fa-rotate-left"></i> Tozalash</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel-card">
+          <div class="inline-actions spread">
+            <div>
+              <p class="section-kicker">Tarix</p>
+              <h3 class="section-title small-title">Tayyor decklar</h3>
+            </div>
+            <button class="action-btn primary alt" id="refreshHistoryBtn" type="button"><i class="fa-solid fa-rotate"></i> Yangilash</button>
+          </div>
+          <p class="helper-copy">Oxirgi decklar shu yerda saqlanadi. Kerak bo'lsa qayta ochib ishlatasiz.</p>
+          <div class="history-list" id="historyList"></div>
+        </section>
+      </aside>
+
+      <section class="workspace-stack">
+        <section class="panel-card workspace-head">
+          <div class="workspace-header-row">
+            <div class="deck-summary">
+              <p class="section-kicker">Preview</p>
+              <h2 id="deckTitle">Slide Studio tayyor</h2>
+              <p id="deckSubtitle">Deck tanlang yoki yangi taqdimot tayyorlang. Slidelar sodda, rasmiy va tushunarli qilib chiqariladi.</p>
+              <div class="deck-meta-row" id="deckMetaRow"></div>
+            </div>
+            <div class="workspace-actions">
+              <button class="action-btn primary alt" type="button" id="copyOutlineBtn"><i class="fa-solid fa-copy"></i> Outline</button>
+              <button class="action-btn" type="button" id="downloadPdfBtn"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+              <button class="action-btn" type="button" id="downloadPptxBtn"><i class="fa-solid fa-file-powerpoint"></i> PPTX</button>
+              <button class="action-btn" type="button" id="autoplayBtn"><i class="fa-solid fa-play"></i> Auto play</button>
+              <button class="action-btn primary" type="button" id="presentBtn"><i class="fa-solid fa-display"></i> Taqdimot</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel-card preview-panel">
+          <div id="previewSlot" class="empty-state">HALLAYM AI deck shu yerda ko'rinadi. Chap tomondan mavzuni kiriting yoki tarixdan deck tanlang.</div>
+          <div class="nav-row">
+            <div class="nav-actions">
+              <button class="nav-pill" id="prevSlideBtn" type="button"><i class="fa-solid fa-arrow-left"></i> Oldingi</button>
+              <button class="nav-pill" id="nextSlideBtn" type="button">Keyingi <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+            <div class="nav-actions">
+              <div class="status-badge" id="slideIndicator">0 / 0</div>
+              <button class="action-btn danger" id="deleteDeckBtn" type="button"><i class="fa-solid fa-trash"></i> O'chirish</button>
+            </div>
+          </div>
+          <div class="thumb-track" id="thumbTrack"></div>
+        </section>
+
+        <section class="panel-card note-card">
+          <p class="section-kicker">Speaker note</p>
+          <h3 class="section-title small-title">Taqdimot izohi</h3>
+          <p id="speakerNote">Hozircha speaker note yo'q. Deck tanlanganda AI shu slide uchun qisqa gapirish tavsiyasini ham ko'rsatadi.</p>
+          <div class="sources-wrap" id="sourcesWrap"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="present-overlay" id="presentOverlay" hidden>
+    <div class="present-shell">
+      <div class="present-toolbar">
+        <div>
+          <strong id="presentDeckTitle">Taqdimot</strong>
+          <span id="presentDeckMeta" class="present-meta">Slide Studio</span>
+        </div>
+        <div class="inline-actions">
+          <button class="action-btn" id="presentPrevBtn" type="button"><i class="fa-solid fa-arrow-left"></i> Oldingi</button>
+          <button class="action-btn" id="presentNextBtn" type="button">Keyingi <i class="fa-solid fa-arrow-right"></i></button>
+          <button class="action-btn danger" id="presentCloseBtn" type="button"><i class="fa-solid fa-xmark"></i> Yopish</button>
+        </div>
+      </div>
+      <div class="present-slide" id="presentSlideSlot"></div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+  <script src="/vendor/html2canvas.min.js" defer></script>
+  <script src="/vendor/jspdf.umd.min.js" defer></script>
+  <script src="/vendor/pptxgen.bundle.js" defer></script>
+  <script src="/slides-studio.js" defer></script>
+  <script src="/ui-premium-icons.js" defer></script>
+  <script src="/global-assistant.js" defer></script>
+</body>
+</html>
