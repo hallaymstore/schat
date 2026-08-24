@@ -10,7 +10,8 @@ test('enterprise theme enforces compact white/blue classroom shell', () => {
   const css = `${read('public/enterprise-accessible.css')}\n${read('public/lms-core-v3.css')}`;
   assert.match(css, /--edu-blue-700:\s*#1d5fa8/i);
   assert.match(css, /#teacherStage[\s\S]*?aspect-ratio:\s*16\s*\/\s*9\s*!important/i);
-  assert.match(css, /#stageWhiteboardCamPip[\s\S]*?aspect-ratio:\s*16\s*\/\s*9\s*!important/i);
+  assert.match(css, /#stageWhiteboardLayer[\s\S]*?aspect-ratio:\s*16\s*\/\s*9\s*!important/i);
+  assert.match(css, /#eduFaceFocusPip[\s\S]*?aspect-ratio:\s*16\s*\/\s*9/i);
   assert.match(css, /border-radius:\s*3px\s*!important/i);
   assert.match(css, /#groupCallOverlay[\s\S]*?background:\s*#02070c\s*!important/i);
 });
@@ -28,6 +29,8 @@ test('voice assistant includes required Uzbek navigation and chat commands', () 
   }
   assert.match(js, /SpeechRecognition\s*\|\|\s*window\.webkitSpeechRecognition/);
   assert.match(js, /speechSynthesis/);
+  assert.match(js, /suspendedForSpeech/);
+  assert.match(js, /recognition\.abort/);
   for (const feature of ['setThemeMode', 'focusInteractive', 'setCaptionLanguage', 'setNavigationGesturesEnabled']) {
     assert.match(js, new RegExp(`function\\s+${feature}`));
   }
@@ -44,9 +47,14 @@ test('gesture assistant supports face focus, point freeze reset and board shapes
   assert.match(js, /emitStageFocus/);
   assert.match(js, /processNavigationGesture/);
   assert.match(js, /Chimchilash/);
+  assert.match(js, /cycleGestureTarget/);
+  assert.match(js, /Kaftni chap\/o‘ng silkiting/);
+  const focusBlock = js.slice(js.indexOf('function applyStageFocus'), js.indexOf('function emitStageFocus'));
+  assert.match(focusBlock, /eduFaceFocusPip/);
+  assert.doesNotMatch(focusBlock, /teacherStageZoom\.|applyTeacherStageZoom/);
 });
 
-test('whiteboard exposes editor tools and camera fallback', () => {
+test('whiteboard is a separate synchronized PiP with transformable objects', () => {
   const html = read('public/group.html');
   for (const tool of ['pen', 'select', 'text', 'line', 'arrow', 'rectangle', 'circle']) {
     assert.ok(html.includes(`data-wb-tool="${tool}"`) || html.includes(`setStageWhiteboardTool('${tool}')`), `missing whiteboard tool: ${tool}`);
@@ -55,8 +63,17 @@ test('whiteboard exposes editor tools and camera fallback', () => {
   assert.match(html, /wbTextSize/);
   assert.match(html, /undoStageWhiteboard/);
   assert.match(html, /redoStageWhiteboard/);
-  assert.match(html, /openCameraWithFallback/);
+  assert.doesNotMatch(html, /id="stageWhiteboardCamPip"/);
+  assert.match(html, /groupWhiteboardState/);
+  assert.match(html, /groupWhiteboardOp/);
+  assert.match(html, /emitStageWhiteboardStroke/);
+  assert.match(html, /transformSelectedStageWhiteboardObject/);
+  assert.match(html, /selectedShapeId/);
+  assert.match(html, /shapeTransform/);
+  assert.match(html, /toggleStageWhiteboardPipSize/);
   assert.match(html, /describeMediaCaptureError/);
+  const startBlock = html.slice(html.indexOf('async function startStageWhiteboardMode'), html.indexOf('async function stopStageWhiteboardMode'));
+  assert.doesNotMatch(startBlock, /replaceOutgoingStageVideoTrack|captureStream|stageWhiteboardCamPip/);
 });
 
 test('landing is full-width and exposes accessible entry points', () => {
@@ -74,6 +91,9 @@ test('server injects accessibility assets and authorizes gesture relay', () => {
   assert.match(server, /GLOBAL_ACCESSIBILITY_SCRIPT/);
   assert.match(server, /GLOBAL_LMS_V3_STYLESHEET/);
   assert.match(server, /socket\.on\('groupStageGesture'/);
+  assert.match(server, /socket\.on\('groupWhiteboardState'/);
+  assert.match(server, /socket\.on\('groupWhiteboardRequest'/);
+  assert.match(server, /socket\.on\('groupWhiteboardOp'/);
   assert.match(server, /ownerTeacherId/);
   assert.match(server, /now - Number\(socket\._lastGroupStageGestureAt/);
 });

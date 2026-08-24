@@ -2530,7 +2530,11 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             
             // Creator info
             if (group.creatorId) {
-                document.getElementById('creatorAvatar').src = group.creatorId.avatar;
+                const creatorAvatar = document.getElementById('creatorAvatar');
+                creatorAvatar.dataset.avatarUser = group.creatorId._id || '';
+                creatorAvatar.dataset.avatarRole = group.creatorId.role || 'teacher';
+                creatorAvatar.dataset.avatarGender = group.creatorId.gender || '';
+                creatorAvatar.src = group.creatorId.avatar || '';
                 document.getElementById('creatorName').textContent = group.creatorId.nickname;
             }
             
@@ -2554,7 +2558,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             container.innerHTML = members.map(member => `
                 <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
                     <div class="flex items-center space-x-3">
-                        <img src="${member.avatar||""}" class="w-10 h-10 rounded-full member-avatar" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,&lt;svg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; width=&#x27;80&#x27; height=&#x27;80&#x27;&gt;&lt;rect width=&#x27;100%&#x27; height=&#x27;100%&#x27; fill=&#x27;#ddd&#x27;/&gt;&lt;circle cx=&#x27;40&#x27; cy=&#x27;30&#x27; r=&#x27;16&#x27; fill=&#x27;#bbb&#x27;/&gt;&lt;rect x=&#x27;18&#x27; y=&#x27;52&#x27; width=&#x27;44&#x27; height=&#x27;20&#x27; rx=&#x27;10&#x27; fill=&#x27;#bbb&#x27;/&gt;&lt;/svg&gt;';">
+                        <img src="${member.avatar||""}" data-avatar-user="${member._id||''}" data-avatar-role="${member.role||'student'}" data-avatar-gender="${member.gender||''}" class="w-10 h-10 rounded-full member-avatar" alt="${member.nickname||'Foydalanuvchi'}">
                         <div>
                             <h4 class="font-medium text-gray-800">${member.nickname}</h4>
                             <p class="text-sm text-gray-500">@${member.username}</p>
@@ -3282,7 +3286,7 @@ function setupSocket() {
             return `
               <div class="message" data-id="${escapeAttr(msg._id)}">
                 <div class="flex items-start space-x-2">
-                  <img src="${avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${escapeAttr(sid)}')" title="Profil">
+                  <img src="${avatar}" data-avatar-user="${escapeAttr(sid)}" data-avatar-role="${escapeAttr(msg?.senderId?.role || 'student')}" data-avatar-gender="${escapeAttr(msg?.senderId?.gender || '')}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${escapeAttr(sid)}')" title="Profil">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center space-x-2 mb-1">
                       <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${escapeAttr(sid)}')" title="Profil">${nick}</span>
@@ -3769,7 +3773,10 @@ function setupSocket() {
         const GROUP_REMOTE_AUDIO_BASE_VOLUME = 0.94;
         const GROUP_REMOTE_AUDIO_NON_STAGE_VOLUME = 0.38;
         const GROUP_REMOTE_AUDIO_MIC_ON_STAGE_VOLUME = 0.62;
-        const GROUP_REMOTE_AUDIO_MIC_ON_NON_STAGE_VOLUME = 0.12;
+        // A non-stage participant must still be clearly audible on phones.  The
+        // feedback guard below already ducks true echo, so 12% was unnecessarily
+        // close to silence on many Android speakers.
+        const GROUP_REMOTE_AUDIO_MIC_ON_NON_STAGE_VOLUME = 0.42;
         const GROUP_REMOTE_AUDIO_DUCK_VOLUME = 0.28;
         const GROUP_REMOTE_AUDIO_HARD_DUCK_VOLUME = 0.08;
         const GROUP_FEEDBACK_GUARD = {
@@ -4292,6 +4299,9 @@ function setupSocket() {
         let _sfuConnectSeq = 0;
         let _sfuReconnectTimer = null;
         let _sfuReconnectAttempts = 0;
+        let _sfuNoMediaCycles = 0;
+        const SFU_MAX_RECONNECT_ATTEMPTS = 2;
+        const SFU_MAX_NO_MEDIA_CYCLES = 1;
 
         function clearSfuFallbackWatch() {
             if (_sfuFallbackTimer) clearTimeout(_sfuFallbackTimer);
@@ -4350,11 +4360,17 @@ function setupSocket() {
         async function bootstrapMeshFallback(reason = 'fallback', opts = {}) {
             if (!groupCall.active) return false;
             if (_sfuFallbackBusy) return false;
-            if (normalizeCallTransport(groupCall.transport || '') === 'mesh' && !groupCall.lk?.connected) return false;
+            if (
+                normalizeCallTransport(groupCall.transport || '') === 'mesh'
+                && groupCall.peers instanceof Map
+                && groupCall.peers.size > 0
+            ) return false;
             _sfuFallbackBusy = true;
             clearSfuFallbackWatch();
             try {
                 console.warn('Falling back to ExpressTURN mesh:', reason);
+                _sfuNoMediaCycles = 0;
+                _sfuReconnectAttempts = 0;
                 setRuntimeCallTransport('mesh');
                 if (opts.remoteNotice !== false && socket && groupCall.groupId && groupCall.callId) {
                     try {
@@ -4401,8 +4417,18 @@ function setupSocket() {
                 if (Number(groupCall.lk?.connectSeq || 0) !== seq) return;
                 const participantTotal = Number(groupCall.participantCount || groupCall.participantInfos?.size || 0);
                 if (participantTotal <= 1) return;
-                const confirmed = !!groupCall.lk?.confirmed;
-                if (confirmed || hasRenderableRemoteMedia()) return;
+                // A connected recv transport is not proof that another browser's
+                // media can traverse the public network.  Only an actual live
+                // remote track confirms the end-to-end path.
+                if (hasRenderableRemoteMedia()) {
+                    _sfuNoMediaCycles = 0;
+                    return;
+                }
+                _sfuNoMediaCycles += 1;
+                if (_sfuNoMediaCycles >= SFU_MAX_NO_MEDIA_CYCLES) {
+                    bootstrapMeshFallback(`${reason}-no-remote-media`, opts).catch(() => {});
+                    return;
+                }
                 scheduleSfuReconnect(reason, opts).catch(() => {});
             }, timeoutMs);
         }
@@ -4414,6 +4440,9 @@ function setupSocket() {
 
             _sfuReconnectAttempts += 1;
             const attempt = _sfuReconnectAttempts;
+            if (attempt > SFU_MAX_RECONNECT_ATTEMPTS) {
+                return bootstrapMeshFallback(`${reason}-retry-limit`, opts);
+            }
             const delayMs = Math.max(900, Math.min(6000, Number(opts.delayMs || (1000 + (attempt - 1) * 1200))));
             setGroupCallStatus(`Mediasoup qayta ulanmoqda... (${attempt})`);
 
@@ -4430,7 +4459,11 @@ function setupSocket() {
                 } catch (error) {
                     console.warn('Mediasoup reconnect failed', error);
                     if (groupCall.active && normalizeCallTransport(groupCall.transport || '') === 'mediasoup') {
-                        scheduleSfuReconnect(reason, opts).catch(() => {});
+                        if (_sfuReconnectAttempts >= SFU_MAX_RECONNECT_ATTEMPTS) {
+                            bootstrapMeshFallback(`${reason}-connect-failed`, opts).catch(() => {});
+                        } else {
+                            scheduleSfuReconnect(reason, opts).catch(() => {});
+                        }
                     }
                 }
             }, delayMs);
@@ -4482,6 +4515,7 @@ function setupSocket() {
                     groupCall.lk.recvState = 'connected';
                 }
                 _sfuReconnectAttempts = 0;
+                _sfuNoMediaCycles = 0;
                 clearSfuFallbackWatch();
                 clearSfuReconnectWatch();
                 const waiting = String(groupCall.status || '').toLowerCase() === 'waiting';
@@ -4505,7 +4539,6 @@ function setupSocket() {
                     groupCall.lk[direction === 'send' ? 'sendState' : 'recvState'] = state;
                 }
                 if (state === 'connected') {
-                    _sfuReconnectAttempts = 0;
                     const waiting = String(groupCall.status || '').toLowerCase() === 'waiting';
                     setGroupCallStatus(waiting ? "Teacher kutilmoqda..." : 'Connected (Mediasoup SFU)');
                 } else if (state === 'failed' || state === 'disconnected') {
@@ -4546,7 +4579,6 @@ function setupSocket() {
             }
 
             groupCall.lk.connected = true;
-            _sfuReconnectAttempts = 0;
             setGroupCallStatus('Mediasoup tayyor, media ulanmoqda...');
 
             if (allowPublish && publishExistingTracks) {
@@ -4562,6 +4594,7 @@ function setupSocket() {
         }
         const stageWhiteboard = {
             active: false,
+            remoteActive: false,
             busy: false,
             drawActive: false,
             stream: null,
@@ -4579,6 +4612,9 @@ function setupSocket() {
             tool: 'pen',
             shapeStart: null,
             shapePreview: null,
+            shapeObjects: [],
+            selectedShapeId: '',
+            shapeTransform: null,
             textMode: false,
             textValue: '',
             textObjects: [],
@@ -4596,7 +4632,17 @@ function setupSocket() {
             calcOpen: false,
             backgroundMode: 'plain',
             lastAccessWarnAt: 0,
-            calcHistory: []
+            calcHistory: [],
+            remoteImage: null,
+            remoteCanvas: null,
+            remoteCtx: null,
+            remoteByUserId: '',
+            broadcastTimer: null,
+            lastBroadcastAt: 0,
+            socketBound: false,
+            pipDrag: null,
+            lastStrokePoint: null,
+            lastStrokeEmitAt: 0
         };
         const GROUP_CALL_SESSION_KEY = 'schat:activeGroupCallSession';
         let __allowCallPageUnload = false;
@@ -4605,6 +4651,8 @@ function setupSocket() {
         let _captionTranscriberActive = false;
         let _captionTranscriberRestart = null;
         let _captionTranscriberEnabled = true;
+        let _captionTranscriberGeneration = 0;
+        let _captionTranscriberLocale = '';
         let _captionEmitAt = 0;
         let _captionLastInterim = '';
         let _captionLocalWarned = false;
@@ -4617,6 +4665,10 @@ function setupSocket() {
         let _captionLangInitTries = 0;
         let _captionLangDelegateBound = false;
         let _captionInterimTranslateAt = 0;
+        let _captionTranslateController = null;
+        let _captionLatestSourceText = '';
+        let _captionLatestSourceLang = 'uz';
+        let _captionLatestFinal = false;
 
         function getTeacherFallbackStageId() {
             try {
@@ -4737,20 +4789,14 @@ function setupSocket() {
         function syncStageWhiteboardModeUi() {
             const wrap = document.getElementById('teacherStageWrap');
             const stage = document.getElementById('teacherStage');
-            const host = document.querySelector('#teacherStage .stage-slot-primary') || null;
-            try {
-                document.querySelectorAll('#teacherStage .stage-slot.whiteboard-live').forEach((node) => {
-                    if (node !== host) node.classList.remove('whiteboard-live');
-                });
-            } catch(_) {}
-            if (host) host.classList.toggle('whiteboard-live', !!stageWhiteboard.active);
-            if (wrap) wrap.classList.toggle('whiteboard-live', !!stageWhiteboard.active);
-            if (stage) stage.classList.toggle('whiteboard-live', !!stageWhiteboard.active);
+            try { document.querySelectorAll('#teacherStage .whiteboard-live').forEach((node) => node.classList.remove('whiteboard-live')); } catch(_) {}
+            if (wrap) wrap.classList.remove('whiteboard-live');
+            if (stage) stage.classList.remove('whiteboard-live');
         }
 
         function syncStageWhiteboardHost() {
             const layer = document.getElementById('stageWhiteboardLayer');
-            const host = document.querySelector('#teacherStage .stage-slot-primary') || document.getElementById('teacherStage');
+            const host = document.getElementById('groupCallVideoLayout') || document.getElementById('groupCallOverlay');
             if (!layer || !host) {
                 syncStageWhiteboardModeUi();
                 return;
@@ -4794,7 +4840,10 @@ function setupSocket() {
             stageWhiteboard.textMode = next === 'text';
             stageWhiteboard.shapeStart = null;
             stageWhiteboard.shapePreview = null;
-            if (next !== 'select' && next !== 'text') stageWhiteboard.selectedTextId = '';
+            if (next !== 'select' && next !== 'text') {
+                stageWhiteboard.selectedTextId = '';
+                stageWhiteboard.selectedShapeId = '';
+            }
             if (next !== 'text') stageWhiteboard.textDrag = null;
             syncStageWhiteboardTextUi();
             updateStageWhiteboardToolbarUi();
@@ -4839,8 +4888,16 @@ function setupSocket() {
         }
 
         function deleteSelectedStageWhiteboardText() {
+            const shapeId = String(stageWhiteboard.selectedShapeId || '');
+            if (shapeId) {
+                pushStageWhiteboardHistory();
+                stageWhiteboard.shapeObjects = (stageWhiteboard.shapeObjects || []).filter((item) => String(item?.id || '') !== shapeId);
+                stageWhiteboard.selectedShapeId = '';
+                renderStageWhiteboardFrame();
+                return;
+            }
             const id = String(stageWhiteboard.selectedTextId || '');
-            if (!id) return notify('O‘chirish uchun matnni tanlang', 'info');
+            if (!id) return notify('O‘chirish uchun obyektni tanlang', 'info');
             pushStageWhiteboardHistory();
             stageWhiteboard.textObjects = (stageWhiteboard.textObjects || []).filter((item) => String(item?.id || '') !== id);
             stageWhiteboard.selectedTextId = '';
@@ -4855,6 +4912,7 @@ function setupSocket() {
             return {
                 ink,
                 textObjects: JSON.parse(JSON.stringify(stageWhiteboard.textObjects || [])),
+                shapeObjects: JSON.parse(JSON.stringify(stageWhiteboard.shapeObjects || [])),
                 backgroundMode: String(stageWhiteboard.backgroundMode || 'plain')
             };
         }
@@ -4873,7 +4931,9 @@ function setupSocket() {
             try {
                 ensureStageWhiteboardCanvases();
                 stageWhiteboard.textObjects = JSON.parse(JSON.stringify(snapshot.textObjects || []));
+                stageWhiteboard.shapeObjects = JSON.parse(JSON.stringify(snapshot.shapeObjects || []));
                 stageWhiteboard.selectedTextId = '';
+                stageWhiteboard.selectedShapeId = '';
                 stageWhiteboard.textValue = '';
                 stageWhiteboard.backgroundMode = normalizeStageWhiteboardBackground(snapshot.backgroundMode || 'plain');
                 const ctx = stageWhiteboard.inkCtx;
@@ -5126,6 +5186,11 @@ function setupSocket() {
                 const rect = getStageWhiteboardTextRect(ctx, item, W, H);
                 const align = ['left', 'center', 'right'].includes(String(item?.align || '')) ? String(item.align) : 'left';
                 ctx.save();
+                if (Number(item?.rotation || 0)) {
+                    ctx.translate(rect.x + rect.width / 2, rect.y + rect.height / 2);
+                    ctx.rotate(Number(item.rotation || 0));
+                    ctx.translate(-(rect.x + rect.width / 2), -(rect.y + rect.height / 2));
+                }
                 ctx.font = `${rect.fontWeight} ${rect.fontSize}px "${rect.fontFamily}", Arial, sans-serif`;
                 ctx.fillStyle = String(item?.color || (normalizeStageWhiteboardBackground(stageWhiteboard.backgroundMode) === 'dark' ? '#f8fafc' : '#0f172a'));
                 ctx.textBaseline = 'top';
@@ -5199,6 +5264,9 @@ function setupSocket() {
             stageWhiteboard.textValue = '';
             stageWhiteboard.textObjects = [];
             stageWhiteboard.selectedTextId = '';
+            stageWhiteboard.shapeObjects = [];
+            stageWhiteboard.selectedShapeId = '';
+            stageWhiteboard.shapeTransform = null;
             stageWhiteboard.shapeStart = null;
             stageWhiteboard.shapePreview = null;
             syncStageWhiteboardTextUi();
@@ -5241,92 +5309,157 @@ function setupSocket() {
             ctx.restore();
         }
 
+        function getSelectedStageWhiteboardShape() {
+            const id = String(stageWhiteboard.selectedShapeId || '');
+            if (!id) return null;
+            return (stageWhiteboard.shapeObjects || []).find((item) => String(item?.id || '') === id) || null;
+        }
+
+        function getStageWhiteboardShapeGeometry(shape, W, H) {
+            return {
+                cx: Number(shape?.x || .5) * W,
+                cy: Number(shape?.y || .5) * H,
+                width: Math.max(24, Number(shape?.width || .16) * W),
+                height: Math.max(24, Number(shape?.height || .14) * H),
+                rotation: Number(shape?.rotation || 0)
+            };
+        }
+
+        function rotateStageWhiteboardPoint(x, y, cx, cy, angle) {
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            const dx = x - cx;
+            const dy = y - cy;
+            return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+        }
+
+        function getStageWhiteboardShapeHandles(shape, W, H) {
+            const g = getStageWhiteboardShapeGeometry(shape, W, H);
+            return {
+                resize: rotateStageWhiteboardPoint(g.cx + g.width / 2, g.cy + g.height / 2, g.cx, g.cy, g.rotation),
+                rotate: rotateStageWhiteboardPoint(g.cx, g.cy - g.height / 2 - 34, g.cx, g.cy, g.rotation),
+                center: { x: g.cx, y: g.cy },
+                geometry: g
+            };
+        }
+
+        function hitTestStageWhiteboardShape(shape, point, W, H) {
+            const g = getStageWhiteboardShapeGeometry(shape, W, H);
+            const local = rotateStageWhiteboardPoint(point.x, point.y, g.cx, g.cy, -g.rotation);
+            return Math.abs(local.x - g.cx) <= g.width / 2 + 15 && Math.abs(local.y - g.cy) <= g.height / 2 + 15;
+        }
+
+        function drawStageWhiteboardObject(ctx, shape, W, H, selected = false) {
+            const g = getStageWhiteboardShapeGeometry(shape, W, H);
+            ctx.save();
+            ctx.translate(g.cx, g.cy);
+            ctx.rotate(g.rotation);
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = String(shape?.color || '#176fae');
+            ctx.fillStyle = String(shape?.fill || 'transparent');
+            ctx.lineWidth = Math.max(1, Number(shape?.size || 4));
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            if (shape.tool === 'rectangle') {
+                ctx.rect(-g.width / 2, -g.height / 2, g.width, g.height);
+            } else if (shape.tool === 'circle') {
+                ctx.ellipse(0, 0, g.width / 2, g.height / 2, 0, 0, Math.PI * 2);
+            } else {
+                ctx.moveTo(-g.width / 2, -g.height / 2);
+                ctx.lineTo(g.width / 2, g.height / 2);
+                if (shape.tool === 'arrow') {
+                    const angle = Math.atan2(g.height, g.width);
+                    const head = Math.max(18, Math.min(46, Math.hypot(g.width, g.height) * .16));
+                    ctx.moveTo(g.width / 2, g.height / 2);
+                    ctx.lineTo(g.width / 2 - head * Math.cos(angle - Math.PI / 6), g.height / 2 - head * Math.sin(angle - Math.PI / 6));
+                    ctx.moveTo(g.width / 2, g.height / 2);
+                    ctx.lineTo(g.width / 2 - head * Math.cos(angle + Math.PI / 6), g.height / 2 - head * Math.sin(angle + Math.PI / 6));
+                }
+            }
+            if (shape.fill && shape.fill !== 'transparent' && ['rectangle', 'circle'].includes(shape.tool)) ctx.fill();
+            ctx.stroke();
+            if (selected) {
+                ctx.setLineDash([8, 6]);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#1681c4';
+                ctx.strokeRect(-g.width / 2 - 8, -g.height / 2 - 8, g.width + 16, g.height + 16);
+                ctx.setLineDash([]);
+            }
+            ctx.restore();
+            if (selected) {
+                const handles = getStageWhiteboardShapeHandles(shape, W, H);
+                ctx.save();
+                ctx.strokeStyle = '#1681c4';
+                ctx.fillStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(handles.center.x, handles.center.y);
+                ctx.lineTo(handles.rotate.x, handles.rotate.y);
+                ctx.stroke();
+                [handles.resize, handles.rotate].forEach((handle) => {
+                    ctx.beginPath();
+                    ctx.arc(handle.x, handle.y, 9, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+                ctx.restore();
+            }
+        }
+
+        function transformSelectedStageWhiteboardObject(action) {
+            const shape = getSelectedStageWhiteboardShape();
+            const textItem = getSelectedStageWhiteboardText();
+            if (!shape && !textItem) return notify('Avval obyektni tanlang', 'info');
+            pushStageWhiteboardHistory();
+            const factor = action === 'larger' ? 1.12 : action === 'smaller' ? .88 : 1;
+            if (shape) {
+                if (factor !== 1) {
+                    shape.width = Math.max(.035, Math.min(.9, Number(shape.width || .16) * factor));
+                    shape.height = Math.max(.035, Math.min(.9, Number(shape.height || .14) * factor));
+                }
+                if (action === 'rotateLeft') shape.rotation = Number(shape.rotation || 0) - Math.PI / 12;
+                if (action === 'rotateRight') shape.rotation = Number(shape.rotation || 0) + Math.PI / 12;
+            } else if (textItem) {
+                if (factor !== 1) textItem.fontSize = Math.max(14, Math.min(140, Number(textItem.fontSize || 38) * factor));
+                if (action === 'rotateLeft') textItem.rotation = Number(textItem.rotation || 0) - Math.PI / 12;
+                if (action === 'rotateRight') textItem.rotation = Number(textItem.rotation || 0) + Math.PI / 12;
+            }
+            renderStageWhiteboardFrame();
+        }
+
         function renderStageWhiteboardFrame() {
-            if (!stageWhiteboard.active) return;
+            if (!stageWhiteboard.active && !stageWhiteboard.remoteActive) return;
             const canvas = ensureStageWhiteboardCanvases();
             const ctx = stageWhiteboard.ctx;
             if (!canvas || !ctx) return;
 
             const W = canvas.width;
             const H = canvas.height;
+            if (stageWhiteboard.remoteActive && !stageWhiteboard.active && (stageWhiteboard.remoteCanvas || stageWhiteboard.remoteImage)) {
+                ctx.clearRect(0, 0, W, H);
+                ctx.drawImage(stageWhiteboard.remoteCanvas || stageWhiteboard.remoteImage, 0, 0, W, H);
+                return;
+            }
             ctx.save();
             const textLayout = getStageWhiteboardTextLayout(W, H);
             renderStageWhiteboardBackground(ctx, W, H, textLayout);
             if (stageWhiteboard.inkCanvas) {
                 ctx.drawImage(stageWhiteboard.inkCanvas, 0, 0, W, H);
             }
+            (stageWhiteboard.shapeObjects || []).forEach((shape) => {
+                drawStageWhiteboardObject(ctx, shape, W, H, String(shape?.id || '') === String(stageWhiteboard.selectedShapeId || ''));
+            });
             if (stageWhiteboard.shapePreview) drawStageWhiteboardShape(ctx, stageWhiteboard.shapePreview, true);
             renderStageWhiteboardText(ctx, W, H);
-
-            const pip = stageWhiteboard.camVideo;
-            const canPip = !!(pip && pip.readyState >= 2 && (pip.videoWidth || 0) > 0 && (pip.videoHeight || 0) > 0);
-            if (canPip) {
-                const pipW = Math.max(170, Math.round(W * 0.18));
-                const pipH = Math.round((pipW * 9) / 16);
-                const m = Math.max(12, Math.round(W * 0.014));
-                const x = W - pipW - m;
-                const y = m;
-                const r = 3;
-                ctx.save();
-                ctx.shadowColor = 'rgba(2,6,23,.34)';
-                ctx.shadowBlur = Math.max(12, Math.round(W * 0.012));
-                ctx.shadowOffsetY = Math.max(6, Math.round(H * 0.01));
-                ctx.beginPath();
-                ctx.moveTo(x + r, y);
-                ctx.lineTo(x + pipW - r, y);
-                ctx.quadraticCurveTo(x + pipW, y, x + pipW, y + r);
-                ctx.lineTo(x + pipW, y + pipH - r);
-                ctx.quadraticCurveTo(x + pipW, y + pipH, x + pipW - r, y + pipH);
-                ctx.lineTo(x + r, y + pipH);
-                ctx.quadraticCurveTo(x, y + pipH, x, y + pipH - r);
-                ctx.lineTo(x, y + r);
-                ctx.quadraticCurveTo(x, y, x + r, y);
-                ctx.closePath();
-                ctx.clip();
-                ctx.drawImage(pip, x, y, pipW, pipH);
-                ctx.restore();
-
-                ctx.save();
-                ctx.lineWidth = Math.max(2, Math.round(W * 0.0018));
-                ctx.strokeStyle = 'rgba(255,255,255,.86)';
-                ctx.beginPath();
-                ctx.moveTo(x + r, y);
-                ctx.lineTo(x + pipW - r, y);
-                ctx.quadraticCurveTo(x + pipW, y, x + pipW, y + r);
-                ctx.lineTo(x + pipW, y + pipH - r);
-                ctx.quadraticCurveTo(x + pipW, y + pipH, x + pipW - r, y + pipH);
-                ctx.lineTo(x + r, y + pipH);
-                ctx.quadraticCurveTo(x, y + pipH, x, y + pipH - r);
-                ctx.lineTo(x, y + r);
-                ctx.quadraticCurveTo(x, y, x + r, y);
-                ctx.closePath();
-                ctx.stroke();
-
-                const chipW = Math.round(Math.min(pipW * 0.52, 128));
-                const chipH = Math.round(Math.max(26, pipH * 0.18));
-                const chipX = x + 10;
-                const chipY = y + pipH - chipH - 10;
-                ctx.fillStyle = 'rgba(15,23,42,.72)';
-                if (typeof ctx.roundRect === 'function') {
-                    ctx.beginPath();
-                    ctx.roundRect(chipX, chipY, chipW, chipH, 3);
-                    ctx.fill();
-                } else {
-                    ctx.fillRect(chipX, chipY, chipW, chipH);
-                }
-                ctx.fillStyle = '#f8fafc';
-                ctx.font = `700 ${Math.max(11, Math.round(W * 0.008))}px Inter, Arial, sans-serif`;
-                ctx.textBaseline = 'middle';
-                ctx.fillText('Ustoz live', chipX + 12, chipY + chipH / 2);
-                ctx.restore();
-            }
             ctx.restore();
+            scheduleStageWhiteboardBroadcast();
         }
 
         function stageWhiteboardPaintTick() {
-            if (!stageWhiteboard.active) return;
+            if (!stageWhiteboard.active && !stageWhiteboard.remoteActive) return;
             renderStageWhiteboardFrame();
-            stageWhiteboard.rafId = requestAnimationFrame(stageWhiteboardPaintTick);
+            stageWhiteboard.rafId = 0;
         }
 
         function getStageWhiteboardPoint(e) {
@@ -5350,6 +5483,36 @@ function setupSocket() {
                 const ctx = stageWhiteboard.ctx;
                 const W = stageWhiteboard.canvas?.width || 1;
                 const H = stageWhiteboard.canvas?.height || 1;
+                const shapes = Array.isArray(stageWhiteboard.shapeObjects) ? stageWhiteboard.shapeObjects : [];
+                let selectedShape = null;
+                for (let i = shapes.length - 1; i >= 0; i -= 1) {
+                    const handles = getStageWhiteboardShapeHandles(shapes[i], W, H);
+                    const onHandle = String(shapes[i]?.id || '') === String(stageWhiteboard.selectedShapeId || '')
+                        && (Math.hypot(p.x - handles.rotate.x, p.y - handles.rotate.y) <= 25
+                            || Math.hypot(p.x - handles.resize.x, p.y - handles.resize.y) <= 25);
+                    if (onHandle || hitTestStageWhiteboardShape(shapes[i], p, W, H)) {
+                        selectedShape = shapes[i];
+                        break;
+                    }
+                }
+                if (selectedShape && tool === 'select') {
+                    pushStageWhiteboardHistory();
+                    stageWhiteboard.selectedShapeId = String(selectedShape.id || '');
+                    stageWhiteboard.selectedTextId = '';
+                    const handles = getStageWhiteboardShapeHandles(selectedShape, W, H);
+                    const distance = (a, b) => Math.hypot(Number(a.x || 0) - Number(b.x || 0), Number(a.y || 0) - Number(b.y || 0));
+                    const mode = distance(p, handles.rotate) <= 24 ? 'rotate' : distance(p, handles.resize) <= 24 ? 'resize' : 'move';
+                    stageWhiteboard.shapeTransform = {
+                        id: selectedShape.id,
+                        mode,
+                        start: p,
+                        original: JSON.parse(JSON.stringify(selectedShape))
+                    };
+                    try { stageWhiteboard.canvas?.setPointerCapture?.(e.pointerId); } catch(_) {}
+                    renderStageWhiteboardFrame();
+                    e.preventDefault();
+                    return;
+                }
                 const objects = Array.isArray(stageWhiteboard.textObjects) ? stageWhiteboard.textObjects : [];
                 let selected = null;
                 for (let i = objects.length - 1; i >= 0; i -= 1) {
@@ -5366,6 +5529,7 @@ function setupSocket() {
                     setTimeout(() => { const input = document.getElementById('wbTextInput'); try { input?.select?.(); } catch(_) {} }, 0);
                 }
                 stageWhiteboard.selectedTextId = String(selected?.id || '');
+                stageWhiteboard.selectedShapeId = '';
                 if (selected) {
                     const rect = getStageWhiteboardTextRect(ctx, selected, W, H);
                     stageWhiteboard.textValue = String(selected.text || '');
@@ -5410,6 +5574,8 @@ function setupSocket() {
             }
             ink.lineTo(p.x + 0.01, p.y + 0.01);
             ink.stroke();
+            stageWhiteboard.lastStrokePoint = p;
+            emitStageWhiteboardStroke(p, { x: p.x + .01, y: p.y + .01 }, { eraser: tool === 'eraser', force: true });
             renderStageWhiteboardFrame();
             try { stageWhiteboard.canvas?.setPointerCapture?.(e.pointerId); } catch(_) {}
         }
@@ -5417,6 +5583,35 @@ function setupSocket() {
         function stageWhiteboardMoveDraw(e) {
             if (!stageWhiteboard.active) return;
             const p = getStageWhiteboardPoint(e);
+            if (stageWhiteboard.shapeTransform) {
+                const transform = stageWhiteboard.shapeTransform;
+                const item = getSelectedStageWhiteboardShape();
+                const original = transform.original;
+                const W = stageWhiteboard.canvas?.width || 1;
+                const H = stageWhiteboard.canvas?.height || 1;
+                if (item && original) {
+                    if (transform.mode === 'move') {
+                        item.x = Math.max(.02, Math.min(.98, Number(original.x || .5) + (p.x - transform.start.x) / W));
+                        item.y = Math.max(.02, Math.min(.98, Number(original.y || .5) + (p.y - transform.start.y) / H));
+                    } else if (transform.mode === 'rotate') {
+                        const cx = Number(original.x || .5) * W;
+                        const cy = Number(original.y || .5) * H;
+                        const startAngle = Math.atan2(transform.start.y - cy, transform.start.x - cx);
+                        const nextAngle = Math.atan2(p.y - cy, p.x - cx);
+                        item.rotation = Number(original.rotation || 0) + nextAngle - startAngle;
+                    } else if (transform.mode === 'resize') {
+                        const cx = Number(original.x || .5) * W;
+                        const cy = Number(original.y || .5) * H;
+                        const base = Math.max(20, Math.hypot(transform.start.x - cx, transform.start.y - cy));
+                        const factor = Math.max(.2, Math.min(5, Math.hypot(p.x - cx, p.y - cy) / base));
+                        item.width = Math.max(.035, Math.min(.92, Number(original.width || .16) * factor));
+                        item.height = Math.max(.035, Math.min(.92, Number(original.height || .14) * factor));
+                    }
+                    renderStageWhiteboardFrame();
+                    e.preventDefault();
+                }
+                return;
+            }
             if (stageWhiteboard.textDrag) {
                 const item = getSelectedStageWhiteboardText();
                 const W = stageWhiteboard.canvas?.width || 1;
@@ -5443,13 +5638,22 @@ function setupSocket() {
                 e.preventDefault();
                 return;
             }
+            const previous = stageWhiteboard.lastStrokePoint || p;
             ink.lineTo(p.x, p.y);
             ink.stroke();
+            emitStageWhiteboardStroke(previous, p, { eraser: String(stageWhiteboard.tool || '') === 'eraser' });
+            stageWhiteboard.lastStrokePoint = p;
             renderStageWhiteboardFrame();
             e.preventDefault();
         }
 
         function stageWhiteboardEndDraw(e) {
+            if (stageWhiteboard.shapeTransform) {
+                stageWhiteboard.shapeTransform = null;
+                try { stageWhiteboard.canvas?.releasePointerCapture?.(e.pointerId); } catch(_) {}
+                renderStageWhiteboardFrame();
+                return;
+            }
             if (stageWhiteboard.textDrag) {
                 stageWhiteboard.textDrag = null;
                 try { stageWhiteboard.canvas?.releasePointerCapture?.(e.pointerId); } catch(_) {}
@@ -5457,12 +5661,33 @@ function setupSocket() {
                 return;
             }
             if (!stageWhiteboard.drawActive) return;
-            if (stageWhiteboard.shapePreview && stageWhiteboard.inkCtx) {
-                drawStageWhiteboardShape(stageWhiteboard.inkCtx, stageWhiteboard.shapePreview, false);
+            if (stageWhiteboard.shapePreview) {
+                const shape = stageWhiteboard.shapePreview;
+                const W = stageWhiteboard.canvas?.width || 1;
+                const H = stageWhiteboard.canvas?.height || 1;
+                const dx = Number(shape.end?.x || 0) - Number(shape.start?.x || 0);
+                const dy = Number(shape.end?.y || 0) - Number(shape.start?.y || 0);
+                const object = {
+                    id: `wb_shape_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                    tool: String(shape.tool || 'rectangle'),
+                    x: Math.max(.01, Math.min(.99, (Number(shape.start?.x || 0) + dx / 2) / W)),
+                    y: Math.max(.01, Math.min(.99, (Number(shape.start?.y || 0) + dy / 2) / H)),
+                    width: Math.max(.035, Math.abs(dx) / W),
+                    height: Math.max(.035, Math.abs(dy) / H),
+                    rotation: 0,
+                    color: String(shape.color || stageWhiteboard.color || '#176fae'),
+                    size: Math.max(1, Number(shape.size || stageWhiteboard.size || 4)),
+                    fill: 'transparent'
+                };
+                stageWhiteboard.shapeObjects = Array.isArray(stageWhiteboard.shapeObjects) ? stageWhiteboard.shapeObjects : [];
+                stageWhiteboard.shapeObjects.push(object);
+                stageWhiteboard.selectedShapeId = object.id;
+                stageWhiteboard.selectedTextId = '';
                 stageWhiteboard.shapePreview = null;
                 stageWhiteboard.shapeStart = null;
             }
             stageWhiteboard.drawActive = false;
+            stageWhiteboard.lastStrokePoint = null;
             try { stageWhiteboard.inkCtx?.closePath?.(); } catch(_) {}
             try { stageWhiteboard.canvas?.releasePointerCapture?.(e.pointerId); } catch(_) {}
             renderStageWhiteboardFrame();
@@ -5518,6 +5743,206 @@ function setupSocket() {
             return stageWhiteboard.camStream;
         }
 
+        function toggleStageWhiteboardPipSize(force) {
+            const layer = document.getElementById('stageWhiteboardLayer');
+            if (!layer) return;
+            const expanded = typeof force === 'boolean' ? force : !layer.classList.contains('pip-expanded');
+            layer.classList.toggle('pip-expanded', expanded);
+            layer.style.left = '';
+            layer.style.top = '';
+            layer.style.right = '';
+            layer.style.bottom = '';
+            requestAnimationFrame(() => {
+                ensureStageWhiteboardCanvases();
+                renderStageWhiteboardFrame();
+            });
+        }
+
+        function bindStageWhiteboardPipDrag() {
+            const layer = document.getElementById('stageWhiteboardLayer');
+            const header = document.getElementById('stageWhiteboardPipHeader');
+            if (!layer || !header || header.dataset.dragBound === '1') return;
+            header.dataset.dragBound = '1';
+            if (typeof ResizeObserver === 'function') {
+                const observer = new ResizeObserver(() => {
+                    if (layer.classList.contains('pip-expanded') || !layer.classList.contains('active')) return;
+                    const width = layer.getBoundingClientRect().width;
+                    const targetHeight = Math.round(width * 9 / 16);
+                    if (Math.abs(layer.getBoundingClientRect().height - targetHeight) > 2) layer.style.height = `${targetHeight}px`;
+                    ensureStageWhiteboardCanvases();
+                    renderStageWhiteboardFrame();
+                });
+                observer.observe(layer);
+                stageWhiteboard.pipResizeObserver = observer;
+            }
+            header.addEventListener('pointerdown', (event) => {
+                if (event.target?.closest?.('button') || layer.classList.contains('pip-expanded')) return;
+                const rect = layer.getBoundingClientRect();
+                stageWhiteboard.pipDrag = { pointerId: event.pointerId, dx: event.clientX - rect.left, dy: event.clientY - rect.top };
+                try { header.setPointerCapture(event.pointerId); } catch(_) {}
+                event.preventDefault();
+            });
+            header.addEventListener('pointermove', (event) => {
+                const drag = stageWhiteboard.pipDrag;
+                if (!drag || drag.pointerId !== event.pointerId) return;
+                const host = document.getElementById('groupCallVideoLayout');
+                const hostRect = host?.getBoundingClientRect?.();
+                if (!hostRect) return;
+                const width = layer.offsetWidth;
+                const height = layer.offsetHeight;
+                const left = Math.max(4, Math.min(hostRect.width - width - 4, event.clientX - hostRect.left - drag.dx));
+                const top = Math.max(4, Math.min(hostRect.height - height - 4, event.clientY - hostRect.top - drag.dy));
+                layer.style.left = `${Math.round(left)}px`;
+                layer.style.top = `${Math.round(top)}px`;
+                layer.style.right = 'auto';
+                layer.style.bottom = 'auto';
+            });
+            const finish = (event) => {
+                if (!stageWhiteboard.pipDrag) return;
+                stageWhiteboard.pipDrag = null;
+                try { header.releasePointerCapture(event.pointerId); } catch(_) {}
+            };
+            header.addEventListener('pointerup', finish);
+            header.addEventListener('pointercancel', finish);
+        }
+
+        function getStageWhiteboardBroadcastImage() {
+            const source = stageWhiteboard.canvas;
+            if (!source?.width || !source?.height) return '';
+            const output = document.createElement('canvas');
+            output.width = 960;
+            output.height = 540;
+            output.getContext('2d', { alpha: false })?.drawImage(source, 0, 0, output.width, output.height);
+            let dataUrl = '';
+            try { dataUrl = output.toDataURL('image/webp', .68); } catch(_) {}
+            if (!dataUrl || dataUrl.length > 820000) {
+                try { dataUrl = output.toDataURL('image/jpeg', .56); } catch(_) {}
+            }
+            return dataUrl.length <= 900000 ? dataUrl : '';
+        }
+
+        function broadcastStageWhiteboardState(active = true) {
+            if (!socket?.emit || !groupCall?.active || !canUseStageWhiteboard()) return;
+            const dataUrl = active ? getStageWhiteboardBroadcastImage() : '';
+            if (active && !dataUrl) return;
+            stageWhiteboard.lastBroadcastAt = Date.now();
+            socket.emit('groupWhiteboardState', {
+                groupId: groupCall.groupId,
+                callId: groupCall.callId,
+                active: !!active,
+                image: dataUrl
+            });
+        }
+
+        function scheduleStageWhiteboardBroadcast(immediate = false) {
+            if (!stageWhiteboard.active || !canUseStageWhiteboard()) return;
+            if (stageWhiteboard.broadcastTimer) clearTimeout(stageWhiteboard.broadcastTimer);
+            const wait = immediate ? 0 : 520;
+            stageWhiteboard.broadcastTimer = setTimeout(() => {
+                stageWhiteboard.broadcastTimer = null;
+                if (stageWhiteboard.active) broadcastStageWhiteboardState(true);
+            }, wait);
+        }
+
+        function applyRemoteStageWhiteboardState(payload) {
+            if (!payload || String(payload.groupId || '') !== String(groupCall?.groupId || '') || String(payload.callId || '') !== String(groupCall?.callId || '')) return;
+            if (String(payload.byUserId || '') === String(myUserId() || '') || stageWhiteboard.active) return;
+            const layer = document.getElementById('stageWhiteboardLayer');
+            if (!layer) return;
+            if (!payload.active) {
+                stageWhiteboard.remoteActive = false;
+                stageWhiteboard.remoteImage = null;
+                stageWhiteboard.remoteCanvas = null;
+                stageWhiteboard.remoteCtx = null;
+                stageWhiteboard.remoteByUserId = '';
+                layer.classList.remove('active', 'remote-view');
+                return;
+            }
+            const imageData = String(payload.image || '');
+            if (!/^data:image\/(webp|jpeg|png);base64,/i.test(imageData) || imageData.length > 900000) return;
+            stageWhiteboard.remoteActive = true;
+            stageWhiteboard.remoteByUserId = String(payload.byUserId || '');
+            layer.classList.add('active', 'remote-view');
+            const state = document.getElementById('stageWhiteboardPipState');
+            if (state) state.textContent = 'O‘qituvchi doskasi';
+            syncStageWhiteboardHost();
+            bindStageWhiteboardPipDrag();
+            const image = new Image();
+            image.onload = () => {
+                stageWhiteboard.remoteImage = image;
+                if (!stageWhiteboard.remoteCanvas) {
+                    stageWhiteboard.remoteCanvas = document.createElement('canvas');
+                    stageWhiteboard.remoteCanvas.width = 960;
+                    stageWhiteboard.remoteCanvas.height = 540;
+                    stageWhiteboard.remoteCtx = stageWhiteboard.remoteCanvas.getContext('2d', { alpha: false });
+                }
+                stageWhiteboard.remoteCtx?.drawImage(image, 0, 0, stageWhiteboard.remoteCanvas.width, stageWhiteboard.remoteCanvas.height);
+                ensureStageWhiteboardCanvases();
+                renderStageWhiteboardFrame();
+            };
+            image.src = imageData;
+        }
+
+        function emitStageWhiteboardStroke(from, to, options = {}) {
+            if (!stageWhiteboard.active || !canUseStageWhiteboard() || !socket?.emit || !from || !to) return;
+            const now = Date.now();
+            if (!options.force && now - Number(stageWhiteboard.lastStrokeEmitAt || 0) < 42) return;
+            stageWhiteboard.lastStrokeEmitAt = now;
+            const W = stageWhiteboard.inkCanvas?.width || 1;
+            const H = stageWhiteboard.inkCanvas?.height || 1;
+            socket.emit('groupWhiteboardOp', {
+                groupId: groupCall.groupId,
+                callId: groupCall.callId,
+                type: 'stroke',
+                from: { x: Math.max(0, Math.min(1, Number(from.x || 0) / W)), y: Math.max(0, Math.min(1, Number(from.y || 0) / H)) },
+                to: { x: Math.max(0, Math.min(1, Number(to.x || 0) / W)), y: Math.max(0, Math.min(1, Number(to.y || 0) / H)) },
+                color: String(options.color || stageWhiteboard.color || '#176fae'),
+                size: Math.max(1, Math.min(48, Number(options.size || stageWhiteboard.size || 4))),
+                eraser: !!options.eraser
+            });
+        }
+
+        function applyRemoteStageWhiteboardOperation(payload) {
+            if (!payload || payload.type !== 'stroke' || !stageWhiteboard.remoteActive || stageWhiteboard.active) return;
+            if (String(payload.groupId || '') !== String(groupCall?.groupId || '') || String(payload.callId || '') !== String(groupCall?.callId || '')) return;
+            if (!stageWhiteboard.remoteCanvas) {
+                stageWhiteboard.remoteCanvas = document.createElement('canvas');
+                stageWhiteboard.remoteCanvas.width = 960;
+                stageWhiteboard.remoteCanvas.height = 540;
+                stageWhiteboard.remoteCtx = stageWhiteboard.remoteCanvas.getContext('2d', { alpha: false });
+                stageWhiteboard.remoteCtx.fillStyle = '#fff';
+                stageWhiteboard.remoteCtx.fillRect(0, 0, 960, 540);
+            }
+            const ctx = stageWhiteboard.remoteCtx;
+            const W = stageWhiteboard.remoteCanvas.width;
+            const H = stageWhiteboard.remoteCanvas.height;
+            ctx.save();
+            ctx.globalCompositeOperation = payload.eraser ? 'source-over' : 'source-over';
+            ctx.strokeStyle = payload.eraser ? '#fff' : String(payload.color || '#176fae');
+            ctx.lineWidth = Math.max(1, Math.min(48, Number(payload.size || 4))) * (W / 960);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(Math.max(0, Math.min(1, Number(payload.from?.x || 0))) * W, Math.max(0, Math.min(1, Number(payload.from?.y || 0))) * H);
+            ctx.lineTo(Math.max(0, Math.min(1, Number(payload.to?.x || 0))) * W, Math.max(0, Math.min(1, Number(payload.to?.y || 0))) * H);
+            ctx.stroke();
+            ctx.restore();
+            renderStageWhiteboardFrame();
+        }
+
+        function bindStageWhiteboardSocket() {
+            if (stageWhiteboard.socketBound || !socket?.on) return;
+            stageWhiteboard.socketBound = true;
+            socket.on('groupWhiteboardState', applyRemoteStageWhiteboardState);
+            socket.on('groupWhiteboardOp', applyRemoteStageWhiteboardOperation);
+        }
+
+        function requestStageWhiteboardState() {
+            bindStageWhiteboardSocket();
+            if (!socket?.emit || !groupCall?.active) return;
+            socket.emit('groupWhiteboardRequest', { groupId: groupCall.groupId, callId: groupCall.callId });
+        }
+
         function bindStageWhiteboardPointerEvents() {
             const canvas = document.getElementById('stageWhiteboardCanvas');
             if (!canvas || canvas.dataset.wbBound === '1') return;
@@ -5541,7 +5966,7 @@ function setupSocket() {
                 }
                 stopStageWhiteboardMode({ silent: true, keepCamera: false, reason: reason || 'access-lost' }).catch(() => {});
             }
-            if (layer && (!stageWhiteboard.active || !canUse)) {
+            if (layer && !stageWhiteboard.remoteActive && (!stageWhiteboard.active || !canUse)) {
                 layer.classList.remove('active');
             }
             syncStageWhiteboardModeUi();
@@ -5552,6 +5977,8 @@ function setupSocket() {
             stageWhiteboard.color = String(color || '#ef4444');
             const selected = getSelectedStageWhiteboardText();
             if (selected) selected.color = stageWhiteboard.color;
+            const selectedShape = getSelectedStageWhiteboardShape();
+            if (selectedShape) selectedShape.color = stageWhiteboard.color;
             if (String(stageWhiteboard.tool || '') === 'eraser') stageWhiteboard.tool = 'pen';
             stageWhiteboard.eraser = false;
             updateStageWhiteboardToolbarUi();
@@ -5560,7 +5987,10 @@ function setupSocket() {
 
         function setStageWhiteboardBrushSize(size) {
             stageWhiteboard.size = Math.max(1, Math.min(48, Number(size || 4)));
+            const selectedShape = getSelectedStageWhiteboardShape();
+            if (selectedShape) selectedShape.size = stageWhiteboard.size;
             updateStageWhiteboardToolbarUi();
+            renderStageWhiteboardFrame();
         }
 
         function toggleStageWhiteboardEraser() {
@@ -5658,50 +6088,42 @@ function setupSocket() {
             if (stageWhiteboard.active) return;
             stageWhiteboard.busy = true;
             try {
-                if (groupCall.isScreenSharing) {
-                    try { stopComposite(); } catch(_) {}
-                }
-
                 const layer = document.getElementById('stageWhiteboardLayer');
-                const pipVideo = document.getElementById('stageWhiteboardCamPip');
+                stageWhiteboard.active = true;
+                stageWhiteboard.remoteActive = false;
                 if (layer) layer.classList.add('active');
+                if (layer) layer.classList.remove('remote-view');
+                syncStageWhiteboardHost();
                 const canvas = ensureStageWhiteboardCanvases();
-                if (!layer || !pipVideo || !canvas) throw new Error('Whiteboard UI topilmadi');
+                if (!layer || !canvas) throw new Error('Whiteboard UI topilmadi');
                 clearStageWhiteboard({ silentHistory: true });
 
                 bindStageWhiteboardPointerEvents();
                 bindStageWhiteboardTextInput();
-                window.addEventListener('resize', ensureStageWhiteboardCanvases, { passive: true });
+                bindStageWhiteboardPipDrag();
+                bindStageWhiteboardSocket();
+                if (!window.__stageWhiteboardResizeBound) {
+                    window.__stageWhiteboardResizeBound = true;
+                    window.addEventListener('resize', () => {
+                        if (!stageWhiteboard.active && !stageWhiteboard.remoteActive) return;
+                        ensureStageWhiteboardCanvases();
+                        renderStageWhiteboardFrame();
+                    }, { passive: true });
+                }
 
-                const currentVideo = (groupCall.localStream?.getVideoTracks?.() || []).find((t) => t && t.readyState === 'live') || null;
-                const camStream = await ensureStageWhiteboardCameraSource(currentVideo);
-                if (!camStream) throw new Error('Kamera topilmadi');
-
-                pipVideo.srcObject = camStream;
-                pipVideo.muted = true;
-                pipVideo.playsInline = true;
-                try { await pipVideo.play(); } catch(_) {}
-                stageWhiteboard.camVideo = pipVideo;
-
-                const detailProfile = getScreenShareProfile({ srcW: Number(canvas.width || 0), srcH: Number(canvas.height || 0) });
-                const wbStream = canvas.captureStream(Math.max(10, Number(detailProfile.fps || 12)));
-                const wbTrack = wbStream.getVideoTracks?.()[0];
-                if (!wbTrack) throw new Error('Whiteboard stream yaratilmagan');
-                try { wbTrack.contentHint = 'detail'; } catch(_) {}
-
-                stageWhiteboard.active = true;
-                stageWhiteboard.stream = wbStream;
-                stageWhiteboard.track = wbTrack;
                 stageWhiteboard.tool = 'pen';
                 stageWhiteboard.eraser = false;
                 stageWhiteboard.textMode = false;
                 stageWhiteboard.textObjects = [];
+                stageWhiteboard.shapeObjects = [];
                 stageWhiteboard.selectedTextId = '';
+                stageWhiteboard.selectedShapeId = '';
                 stageWhiteboard.history = [];
                 stageWhiteboard.future = [];
                 stageWhiteboard.calcOpen = false;
-                syncStageWhiteboardHost();
                 syncStageWhiteboardModeUi();
+                const state = document.getElementById('stageWhiteboardPipState');
+                if (state) state.textContent = 'Jonli';
                 const calcBox = document.getElementById('stageWhiteboardCalc');
                 if (calcBox) calcBox.classList.remove('open');
                 syncStageWhiteboardTextUi();
@@ -5709,17 +6131,17 @@ function setupSocket() {
                 if (stageWhiteboard.rafId) cancelAnimationFrame(stageWhiteboard.rafId);
                 stageWhiteboard.rafId = requestAnimationFrame(stageWhiteboardPaintTick);
                 renderStageWhiteboardFrame();
-
-                await replaceOutgoingStageVideoTrack(wbTrack, wbStream);
-                groupCall.cameraOff = false;
                 updateCallControlUI();
-                setGroupCallStatus('Whiteboard mode');
+                setGroupCallStatus('Kamera + alohida oq doska');
                 const sz = document.getElementById('wbBrushSize');
                 if (sz) sz.value = String(Math.max(1, Math.min(24, Number(stageWhiteboard.size || 4))));
                 updateStageWhiteboardToolbarUi();
                 renderWbCalcHistory();
-                notify('Oq doska yoqildi', 'ok');
+                scheduleStageWhiteboardBroadcast(true);
+                notify('Oq doska alohida PiP oynada yoqildi — kamera uzluksiz qoladi', 'ok');
             } catch (e) {
+                stageWhiteboard.active = false;
+                document.getElementById('stageWhiteboardLayer')?.classList.remove('active');
                 console.error('startStageWhiteboardMode failed:', e);
                 notify('Whiteboard yoqilmadi: ' + (e?.message || e), 'err');
             } finally {
@@ -5729,15 +6151,18 @@ function setupSocket() {
 
         async function stopStageWhiteboardMode(opts = {}) {
             const silent = !!opts.silent;
-            const keepCamera = !!opts.keepCamera;
             if (stageWhiteboard.busy) return;
             stageWhiteboard.busy = true;
             try {
+                if (stageWhiteboard.active) broadcastStageWhiteboardState(false);
+                if (stageWhiteboard.broadcastTimer) clearTimeout(stageWhiteboard.broadcastTimer);
+                stageWhiteboard.broadcastTimer = null;
                 const layer = document.getElementById('stageWhiteboardLayer');
-                if (layer) layer.classList.remove('active');
+                if (layer) layer.classList.remove('active', 'remote-view', 'pip-expanded');
                 stageWhiteboard.drawActive = false;
                 stageWhiteboard.textMode = false;
                 stageWhiteboard.calcOpen = false;
+                stageWhiteboard.shapeTransform = null;
                 const calcBox = document.getElementById('stageWhiteboardCalc');
                 if (calcBox) calcBox.classList.remove('open');
                 syncStageWhiteboardTextUi();
@@ -5750,6 +6175,7 @@ function setupSocket() {
                 stageWhiteboard.stream = null;
                 stageWhiteboard.track = null;
                 stageWhiteboard.active = false;
+                stageWhiteboard.remoteActive = false;
                 syncStageWhiteboardModeUi();
 
                 try {
@@ -5762,18 +6188,6 @@ function setupSocket() {
                 }
                 stageWhiteboard.camVideo = null;
                 updateStageWhiteboardToolbarUi();
-
-                if (groupCall.active && String(groupCall.callType || 'video') !== 'audio' && !keepCamera) {
-                    try {
-                        const t = await publishLocalVideoTrack();
-                        if (t) {
-                            try { t.enabled = true; } catch(_) {}
-                            groupCall.cameraOff = false;
-                        }
-                    } catch(_) {
-                        groupCall.cameraOff = true;
-                    }
-                }
                 updateCallControlUI();
                 if (!silent) notify('Oq doska o‘chirildi', 'info');
             } finally {
@@ -5863,15 +6277,24 @@ function setupSocket() {
                     const t = ev?.target;
                     if (!t || t.id !== 'captionLangSelect') return;
                     _captionTargetLang = normalizeCaptionLangClient(t.value || 'uz');
-                    // Source tilni faqat hozir stage'da ko'rinayotgan foydalanuvchi o'zgartiradi.
+                    // For the stage speaker this is also the spoken language; the new
+                    // recognizer starts in ~40 ms. Viewers only switch translated output.
                     const me = String(myUserId() || '');
                     const stageVisible = !!(me && typeof isStageVisibleUserId === 'function' && isStageVisibleUserId(me));
-                    if (stageVisible) {
-                        _captionSourceLang = normalizeCaptionLangClient(_captionTargetLang || 'uz');
-                    }
+                    if (stageVisible) _captionSourceLang = _captionTargetLang;
                     persistCaptionLanguagePrefs();
                     _captionRenderSeq += 1;
-                    try { syncLiveCaptionTranscriber(); } catch(_) {}
+                    if (_captionLatestSourceText) {
+                        showStageCaptionLocalized(
+                            _captionLatestSourceText,
+                            { final: _captionLatestFinal },
+                            { sourceLang: _captionLatestSourceLang }
+                        ).catch(() => {});
+                    }
+                    setCaptionAudioHint('Til almashtirildi', 'listening');
+                    setTimeout(() => {
+                        try { syncLiveCaptionTranscriber(); } catch(_) {}
+                    }, 0);
                 } catch(_) {}
             }, true);
         }
@@ -5890,10 +6313,12 @@ function setupSocket() {
 
             try {
                 const token = localStorage.getItem('token') || '';
+                try { _captionTranslateController?.abort?.(); } catch(_) {}
                 const controller = new AbortController();
+                _captionTranslateController = controller;
                 const timer = setTimeout(() => {
                     try { controller.abort(); } catch(_) {}
-                }, 1800);
+                }, 1200);
                 try {
                     const res = await fetch('/api/translate/caption', {
                         method: 'POST',
@@ -5919,6 +6344,7 @@ function setupSocket() {
                     return out;
                 } finally {
                     clearTimeout(timer);
+                    if (_captionTranslateController === controller) _captionTranslateController = null;
                 }
             } catch(_) {
                 return clean;
@@ -6019,6 +6445,9 @@ function setupSocket() {
                 clean,
                 meta?.sourceLang || _captionSourceLang || _captionTargetLang || 'auto'
             );
+            _captionLatestSourceText = clean;
+            _captionLatestSourceLang = sourceLang;
+            _captionLatestFinal = !!(opts && opts.final);
             const targetLang = normalizeCaptionLangClient(_captionTargetLang || 'uz');
             showStageCaption(clean, opts);
             if (targetLang === sourceLang) return;
@@ -6076,6 +6505,7 @@ function setupSocket() {
         }
 
         function stopLiveCaptionTranscriber() {
+            _captionTranscriberGeneration += 1;
             try { if (_captionTranscriberRestart) clearTimeout(_captionTranscriberRestart); } catch(_) {}
             _captionTranscriberRestart = null;
             _captionTranscriberActive = false;
@@ -6085,23 +6515,28 @@ function setupSocket() {
                     _captionTranscriber.onresult = null;
                     _captionTranscriber.onend = null;
                     _captionTranscriber.onerror = null;
-                    _captionTranscriber.stop();
+                    _captionTranscriber.abort();
                 }
             } catch(_) {}
             _captionTranscriber = null;
+            _captionTranscriberLocale = '';
             _captionLastInterim = '';
             _captionEmitAt = 0;
         }
 
         function startLiveCaptionTranscriber() {
-            if (_captionTranscriberActive) return;
             if (!canRunLiveCaptionLocally()) return;
             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SR) return;
+            const nextLocale = captionSpeechLocale(_captionSourceLang || 'uz');
+            if (_captionTranscriberActive && _captionTranscriberLocale === nextLocale) return;
+            if (_captionTranscriberActive || _captionTranscriber) stopLiveCaptionTranscriber();
             try {
+                const generation = ++_captionTranscriberGeneration;
                 const rec = new SR();
                 _captionTranscriber = rec;
-                rec.lang = captionSpeechLocale(_captionSourceLang || _captionTargetLang || 'uz');
+                _captionTranscriberLocale = nextLocale;
+                rec.lang = nextLocale;
                 rec.interimResults = true;
                 rec.continuous = true;
                 rec.maxAlternatives = 1;
@@ -6137,6 +6572,7 @@ function setupSocket() {
 
                 rec.onerror = (evt) => {
                     const err = String(evt?.error || '');
+                    if (generation !== _captionTranscriberGeneration || err === 'aborted' || err === 'no-speech') return;
                     if (err === 'not-allowed' || err === 'service-not-allowed') {
                         _captionTranscriberEnabled = false;
                         if (!_captionLocalWarned) {
@@ -6147,12 +6583,14 @@ function setupSocket() {
                 };
 
                 rec.onend = () => {
+                    if (generation !== _captionTranscriberGeneration) return;
                     _captionTranscriberActive = false;
+                    _captionTranscriber = null;
                     if (canRunLiveCaptionLocally()) {
                         try { if (_captionTranscriberRestart) clearTimeout(_captionTranscriberRestart); } catch(_) {}
                         _captionTranscriberRestart = setTimeout(() => {
                             startLiveCaptionTranscriber();
-                        }, 350);
+                        }, 90);
                     }
                 };
 
@@ -6160,6 +6598,12 @@ function setupSocket() {
                 _captionTranscriberActive = true;
             } catch (e) {
                 _captionTranscriberActive = false;
+                _captionTranscriber = null;
+                _captionTranscriberLocale = '';
+                if (canRunLiveCaptionLocally()) {
+                    try { if (_captionTranscriberRestart) clearTimeout(_captionTranscriberRestart); } catch(_) {}
+                    _captionTranscriberRestart = setTimeout(startLiveCaptionTranscriber, 180);
+                }
                 if (!_captionLocalWarned) {
                     _captionLocalWarned = true;
                     notify("Transkripsiya ishga tushmadi: brauzer qo'llab-quvvatlamasligi mumkin.", 'info');
@@ -6169,6 +6613,12 @@ function setupSocket() {
 
         function syncLiveCaptionTranscriber() {
             if (canRunLiveCaptionLocally()) {
+                const wantedLocale = captionSpeechLocale(_captionSourceLang || 'uz');
+                if (_captionTranscriberActive && _captionTranscriberLocale !== wantedLocale) {
+                    stopLiveCaptionTranscriber();
+                    _captionTranscriberRestart = setTimeout(startLiveCaptionTranscriber, 40);
+                    return;
+                }
                 startLiveCaptionTranscriber();
             } else {
                 stopLiveCaptionTranscriber();
@@ -6570,7 +7020,7 @@ function getAdaptiveVideoConstraints() {
 function tuneLocalTrack(track) {
     if (!track) return;
     const n = getNetworkHints();
-    const detailStageActive = !!groupCall?.isScreenSharing || !!stageWhiteboard?.active;
+    const detailStageActive = !!groupCall?.isScreenSharing;
     try {
         if (track.kind === 'audio') track.contentHint = 'speech';
         if (track.kind === 'video') track.contentHint = detailStageActive ? 'detail' : (n.low ? 'motion' : 'detail');
@@ -6662,7 +7112,7 @@ async function applySenderNetworkProfile(pc) {
     try {
         if (!pc || typeof pc.getSenders !== 'function') return;
         const n = getNetworkHints();
-        const isDetailStage = !!groupCall?.isScreenSharing || !!stageWhiteboard?.active;
+        const isDetailStage = !!groupCall?.isScreenSharing;
         const detailProfile = isDetailStage ? (_activeScreenShareProfile || getScreenShareProfile()) : null;
         // Determine if this peer is teacher (stage) - give teacher higher bitrate priority
         const isTeacherSender = !!(typeof isMeStageOwnerTeacher === 'function' && isMeStageOwnerTeacher());
@@ -8388,6 +8838,9 @@ const video = tile.querySelector('video');
                 ? window.getTileContainerFor(userId)
                 : getTileContainerFor(userId);
             if (container) {
+                if (container.classList?.contains('stage-slot')) {
+                    container.querySelectorAll('.stage-placeholder').forEach((node) => node.remove());
+                }
                 if (!tile.parentElement || tile.parentElement !== container) {
                     container.appendChild(tile);
                 }
@@ -8397,6 +8850,13 @@ const video = tile.querySelector('video');
 
             try { syncTileMediaIndicators(String(userId || ''), tile, !!isLocal); } catch(_) {}
             ensureStagePlaceholder();
+            // Media tracks often arrive after the empty primary slot. Reconcile in the
+            // same task so the tile can never remain as a second row below that slot.
+            try {
+                queueMicrotask(() => {
+                    if (groupCall?.active && typeof renderGroupCallLayout === 'function') renderGroupCallLayout();
+                });
+            } catch(_) {}
         }
 
         function ensureParticipantTilesForRoster(userIds, opts = {}) {
@@ -9781,9 +10241,6 @@ async function startScreenWithCam() {
 
     try {
         const shareProfile = getScreenShareProfile();
-        if (stageWhiteboard.active) {
-            await stopStageWhiteboardMode({ silent: true, keepCamera: true });
-        }
         // 1) Ask for screen/window (prefer full surfaces, fallback to tab if browser limits)
         let screenStream = null;
         const baseVideo = {
@@ -12468,6 +12925,8 @@ async function toggleMute() {
                 groupCall.incoming = null;
                 hideIncomingGroupCallBanner({ resetDismissed: true });
                 groupCall.active = true;
+                _sfuNoMediaCycles = 0;
+                _sfuReconnectAttempts = 0;
                 try { setLiveCallOverlaySuppressed(true); } catch(_) {}
                 groupCall.callId = data.callId;
                 applyServerCallTransport(data);
@@ -12489,6 +12948,7 @@ async function toggleMute() {
                 startStageHealthMonitor();
                 startAutoStageSpeakerMonitor();
                 try { syncLiveCaptionTranscriber(); } catch(_) {}
+                try { bindStageWhiteboardSocket(); requestStageWhiteboardState(); } catch(_) {}
                 groupCall.starterId = String(data?.startedBy || meId || '');
                 setGroupCallStatus(shouldUseLiveKit() ? 'Mediasoup ulanmoqda...' : 'Connected (starter)');
                 const mediaPrimePromise = primeLocalMediaForCurrentCall(groupCall.callType, { silent: true }).catch(() => null);
@@ -12542,6 +13002,8 @@ async function toggleMute() {
                 groupCall.incoming = null;
                 hideIncomingGroupCallBanner({ resetDismissed: true });
                 groupCall.active = true;
+                _sfuNoMediaCycles = 0;
+                _sfuReconnectAttempts = 0;
                 try { setLiveCallOverlaySuppressed(true); } catch(_) {}
                 groupCall.callId = data.callId;
                 applyServerCallTransport(data);
@@ -12563,6 +13025,7 @@ async function toggleMute() {
                 startStageHealthMonitor();
                 startAutoStageSpeakerMonitor();
                 try { syncLiveCaptionTranscriber(); } catch(_) {}
+                try { bindStageWhiteboardSocket(); requestStageWhiteboardState(); } catch(_) {}
                 groupCall.starterId = String(data?.startedBy || '');
                 const waitingLabel = String(data?.status || '').toLowerCase() === 'waiting'
                     ? "Teacher kutilmoqda..."
@@ -13151,10 +13614,14 @@ async function toggleMute() {
         </div>
       </div>
 
-      <!-- Stage Whiteboard (only active on local 1-stage user; stream is sent to everyone) -->
+      <!-- Separate synchronized whiteboard PiP. The teacher camera remains a full 16:9 media track. -->
       <div id="stageWhiteboardLayer" aria-label="Stage whiteboard">
+        <header id="stageWhiteboardPipHeader">
+          <span><i class="fas fa-chalkboard"></i> <b>Oq doska</b></span>
+          <span id="stageWhiteboardPipState">Jonli</span>
+          <button type="button" onclick="toggleStageWhiteboardPipSize()" aria-label="Doska oynasini kattalashtirish"><i class="fas fa-expand"></i></button>
+        </header>
         <canvas id="stageWhiteboardCanvas"></canvas>
-        <video id="stageWhiteboardCamPip" autoplay playsinline muted></video>
         <div id="stageWhiteboardQuickTools">
           <button class="wb-quick-btn active" type="button" data-wb-tool="pen" onclick="setStageWhiteboardTool('pen')" title="Sichqoncha yoki sensor bilan chizish">
             <i class="fas fa-pen"></i><span>Qalam</span>
@@ -13162,6 +13629,10 @@ async function toggleMute() {
           <button class="wb-quick-btn" type="button" data-wb-tool="select" onclick="setStageWhiteboardTool('select')" title="Matnni tanlash va ko‘chirish">
             <i class="fas fa-arrow-pointer"></i><span>Tanlash</span>
           </button>
+          <button class="wb-quick-btn" type="button" onclick="transformSelectedStageWhiteboardObject('smaller')" title="Tanlangan shaklni kichraytirish"><i class="fas fa-down-left-and-up-right-to-center"></i></button>
+          <button class="wb-quick-btn" type="button" onclick="transformSelectedStageWhiteboardObject('larger')" title="Tanlangan shaklni kattalashtirish"><i class="fas fa-up-right-and-down-left-from-center"></i></button>
+          <button class="wb-quick-btn" type="button" onclick="transformSelectedStageWhiteboardObject('rotateLeft')" title="Chapga aylantirish"><i class="fas fa-rotate-left"></i></button>
+          <button class="wb-quick-btn" type="button" onclick="transformSelectedStageWhiteboardObject('rotateRight')" title="O‘ngga aylantirish"><i class="fas fa-rotate-right"></i></button>
           <button id="wbTextFab" class="wb-quick-btn" type="button" data-wb-tool="text" onclick="toggleStageWhiteboardTextMode()" title="Klaviatura matni">
             <i class="fas fa-keyboard"></i><span>Klaviatura</span>
           </button>
@@ -13528,7 +13999,14 @@ async function toggleMute() {
     const stageIds = computeStageUserIds();
     if(stageIds.includes(uid)) {
       const zoomStage = (typeof ensureTeacherStageZoomStructure === 'function') ? ensureTeacherStageZoomStructure() : null;
-      return zoomStage?.surface || document.getElementById('teacherStageSurface') || tStage || sGrid;
+      const surface = zoomStage?.surface || document.getElementById('teacherStageSurface') || tStage;
+      const matchingSlot = Array.from(surface?.querySelectorAll?.('.stage-slot') || [])
+        .find((slot) => str(slot.dataset?.stageUser) === uid);
+      if (matchingSlot) {
+        matchingSlot.querySelectorAll('.stage-placeholder').forEach((node) => node.remove());
+        return matchingSlot;
+      }
+      return surface || sGrid;
     }
     return sGrid || tStage;
   };

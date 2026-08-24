@@ -1,0 +1,144 @@
+/* HALLAYM EDU face gate — compact, high-contrast and mobile safe. */
+#hallaymFaceAuth[hidden] { display: none !important; }
+#hallaymFaceAuth {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483644;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  color: var(--lms-text, #172033);
+  background: rgba(7, 19, 29, .72);
+  backdrop-filter: blur(5px);
+}
+.face-auth-card {
+  width: min(720px, 100%);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  border: 1px solid var(--lms-line, #cbd8ea);
+  border-radius: 3px;
+  background: var(--lms-surface, #fff);
+  box-shadow: 0 18px 60px rgba(5, 25, 45, .28);
+}
+.face-auth-head,
+.face-auth-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-color: var(--lms-line, #cbd8ea);
+  background: var(--lms-surface-2, #eff6ff);
+}
+.face-auth-head { border-bottom: 1px solid var(--lms-line, #cbd8ea); }
+.face-auth-foot { border-top: 1px solid var(--lms-line, #cbd8ea); }
+.face-auth-title { margin: 0; color: var(--lms-heading, #0f1b2d); font-size: 15px; font-weight: 900; }
+.face-auth-subtitle { margin: 2px 0 0; color: var(--lms-muted, #5d6b82); font-size: 11px; }
+.face-auth-body { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(210px, .6fr); gap: 10px; padding: 10px; }
+.face-auth-camera {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 2px solid var(--lms-blue, #1d5fa8);
+  border-radius: 3px;
+  background: #07131d;
+}
+.face-auth-camera video,
+.face-auth-camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.face-auth-camera video { transform: scaleX(-1); }
+.face-auth-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44%;
+  height: 76%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255,255,255,.9);
+  border-radius: 48% 48% 42% 42%;
+  box-shadow: 0 0 0 999px rgba(3,12,20,.24);
+  pointer-events: none;
+}
+.face-auth-camera[data-quality="good"] { border-color: #50b9f0; }
+.face-auth-camera[data-quality="good"] .face-auth-frame { border-color: #8bd3ff; }
+.face-auth-side { display: flex; flex-direction: column; gap: 8px; }
+.face-auth-step {
+  padding: 9px;
+  color: var(--lms-text, #172033);
+  border: 1px solid var(--lms-line, #cbd8ea);
+  border-radius: 3px;
+  background: var(--lms-surface-2, #eff6ff);
+  font-size: 12px;
+}
+.face-auth-step strong { display: block; margin-bottom: 3px; color: var(--lms-blue-strong, #17477c); }
+.face-auth-status { min-height: 42px; padding: 9px; border-left: 3px solid var(--lms-blue, #1d5fa8); background: var(--lms-blue-soft, #eff6ff); font-size: 12px; font-weight: 750; }
+.face-auth-status[data-mode="error"] { color: #991b1b; border-left-color: #c93645; background: #fff1f2; }
+.face-auth-status[data-mode="success"] { color: var(--lms-blue-strong, #17477c); border-left-color: #2878c7; }
+.face-auth-progress { height: 5px; overflow: hidden; border-radius: 2px; background: var(--lms-line, #cbd8ea); }
+.face-auth-progress span { display: block; width: 0; height: 100%; background: var(--lms-blue, #1d5fa8); transition: width .12s linear; }
+.face-auth-consent { display: flex; align-items: flex-start; gap: 7px; color: var(--lms-muted, #5d6b82); font-size: 10px; line-height: 1.45; }
+.face-auth-consent input { width: 16px; min-height: 16px !important; margin-top: 1px; padding: 0 !important; }
+.face-auth-button {
+  min-height: 34px;
+  padding: 7px 11px;
+  color: #fff !important;
+  border: 1px solid var(--lms-blue-strong, #17477c) !important;
+  border-radius: 3px !important;
+  background: var(--lms-blue, #1d5fa8) !important;
+  font-size: 12px;
+  font-weight: 850;
+}
+.face-auth-button[disabled] { cursor: wait; opacity: .6; }
+.face-auth-cancel { color: var(--lms-text, #172033) !important; background: var(--lms-surface, #fff) !important; }
+.face-auth-privacy { color: var(--lms-muted, #5d6b82); font-size: 9px; }
+
+html.dark #hallaymFaceAuth,
+html[data-theme="dark"] #hallaymFaceAuth,
+body.dark-mode #hallaymFaceAuth { background: rgba(0, 6, 12, .82); }
+html.dark .face-auth-card,
+html[data-theme="dark"] .face-auth-card,
+body.dark-mode .face-auth-card { color: #eaf4ff; border-color: #31506b; background: #0b1c2a; }
+html.dark .face-auth-head,
+html.dark .face-auth-foot,
+html.dark .face-auth-step,
+html[data-theme="dark"] .face-auth-head,
+html[data-theme="dark"] .face-auth-foot,
+html[data-theme="dark"] .face-auth-step,
+body.dark-mode .face-auth-head,
+body.dark-mode .face-auth-foot,
+body.dark-mode .face-auth-step { color: #eaf4ff; border-color: #31506b; background: #10283a; }
+html.dark .face-auth-title,
+html.dark .face-auth-step strong,
+html[data-theme="dark"] .face-auth-title,
+html[data-theme="dark"] .face-auth-step strong,
+body.dark-mode .face-auth-title,
+body.dark-mode .face-auth-step strong { color: #f7fbff; }
+html.dark .face-auth-subtitle,
+html.dark .face-auth-consent,
+html.dark .face-auth-privacy,
+html[data-theme="dark"] .face-auth-subtitle,
+html[data-theme="dark"] .face-auth-consent,
+html[data-theme="dark"] .face-auth-privacy,
+body.dark-mode .face-auth-subtitle,
+body.dark-mode .face-auth-consent,
+body.dark-mode .face-auth-privacy { color: #b8c9d8; }
+html.dark .face-auth-status[data-mode="error"],
+html[data-theme="dark"] .face-auth-status[data-mode="error"],
+body.dark-mode .face-auth-status[data-mode="error"] { color: #ffb4bd; background: #3b1720; }
+html.dark .face-auth-cancel,
+html[data-theme="dark"] .face-auth-cancel,
+body.dark-mode .face-auth-cancel { color: #eaf4ff !important; border-color: #4c7091 !important; background: #10283a !important; }
+
+@media (max-width: 640px) {
+  #hallaymFaceAuth { padding: 5px; }
+  .face-auth-card { max-height: calc(100dvh - 10px); }
+  .face-auth-body { grid-template-columns: 1fr; padding: 6px; }
+  .face-auth-side { gap: 5px; }
+  .face-auth-step { padding: 6px; }
+  .face-auth-head,.face-auth-foot { padding: 7px; }
+  .face-auth-foot { align-items: stretch; flex-direction: column; }
+  .face-auth-button { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .face-auth-progress span { transition: none; }
+}

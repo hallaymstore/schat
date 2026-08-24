@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Tyutor paneli — HALLAYM EDU</title>
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css" />
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%}body{font-family:Inter,"Segoe UI",Arial,sans-serif;background:#f5f9ff;color:#172033}
+    .shell{width:min(1500px,100%);margin:auto;padding:10px}.top{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid #cbd8ea;background:#fff}
+    .brand{display:flex;align-items:center;gap:8px}.mark{width:34px;height:34px;display:grid;place-items:center;color:#fff;background:#1d5fa8;border-radius:3px}.brand strong{display:block;font-size:13px}.brand small{display:block;color:#5d6b82;font-size:9px}
+    .actions{display:flex;gap:5px;flex-wrap:wrap}.btn{min-height:32px;padding:6px 9px;color:#12325b;border:1px solid #cbd8ea;border-radius:3px;background:#fff;font-size:11px;font-weight:800;text-decoration:none;cursor:pointer}.btn.primary{color:#fff;background:#1d5fa8;border-color:#17477c}
+    .hero{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:9px;padding:14px;border:1px solid #cbd8ea;background:#fff}.hero h1{margin:0;font-size:20px}.hero p{margin:4px 0 0;color:#5d6b82;font-size:11px}.scope{padding:8px;border:1px solid #bfdbfe;background:#eff6ff;font-size:11px}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}.card{padding:10px;border:1px solid #cbd8ea;border-radius:3px;background:#fff}.card small{color:#5d6b82;font-size:10px}.card strong{display:block;margin-top:3px;color:#0f1b2d;font-size:21px}
+    .layout{display:grid;grid-template-columns:1.2fr .8fr;gap:8px;margin-top:8px}.panel{min-width:0;border:1px solid #cbd8ea;background:#fff}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px;border-bottom:1px solid #cbd8ea}.panel-head h2{margin:0;font-size:13px}.list{display:grid;gap:5px;padding:7px}.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px;border:1px solid #dbe5ef;background:#f8fbff}.row h3{margin:0;font-size:12px}.row p{margin:3px 0 0;color:#5d6b82;font-size:10px}.empty{padding:24px;color:#5d6b82;text-align:center;font-size:11px}.status{padding:8px;color:#17477c;border-left:3px solid #2878c7;background:#eff6ff;font-size:11px}.status.error{color:#991b1b;border-color:#c93645;background:#fff1f2}
+    html.dark body{background:#07131d;color:#edf6fb}.dark .top,.dark .hero,.dark .card,.dark .panel{border-color:#294252;background:#0d1c29}.dark .row{border-color:#294252;background:#122535}.dark .brand small,.dark .hero p,.dark .card small,.dark .row p,.dark .empty{color:#a9bdcb}.dark .card strong,.dark .row h3,.dark .panel-head h2,.dark .hero h1{color:#fff}.dark .btn{color:#edf6fb;border-color:#3d5d70;background:#122535}.dark .btn.primary{color:#07131d;background:#64b9ee}.dark .scope,.dark .status{color:#bfe5fb;border-color:#3d5d70;background:#102f43}
+    @media(max-width:760px){.shell{padding:4px}.top{align-items:flex-start}.brand small{display:none}.hero{grid-template-columns:1fr;padding:9px}.stats{grid-template-columns:1fr 1fr}.layout{grid-template-columns:1fr}.actions .btn span{display:none}.row{padding:6px}.card strong{font-size:17px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <div class="brand"><span class="mark"><i class="fa-solid fa-user-shield"></i></span><div><strong>HALLAYM EDU · Tyutor</strong><small>Talaba va guruh kuzatuvi</small></div></div>
+      <nav class="actions">
+        <a class="btn" href="/groups.html"><i class="fa-solid fa-users"></i> <span>Guruhlar</span></a>
+        <a class="btn" href="/courses.html"><i class="fa-solid fa-play"></i> <span>Videodarslar</span></a>
+        <a class="btn" href="/settings-center.html"><i class="fa-solid fa-gear"></i> <span>Sozlamalar</span></a>
+        <button id="themeBtn" class="btn" type="button"><i class="fa-solid fa-moon"></i> <span>Rejim</span></button>
+        <button id="logoutBtn" class="btn" type="button"><i class="fa-solid fa-right-from-bracket"></i> <span>Chiqish</span></button>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div><h1>Tyutor ish paneli</h1><p>Biriktirilgan fakultet va guruhlar, faol videodarslar hamda rejalashtirilgan mashg‘ulotlar bir joyda.</p></div>
+      <div id="scope" class="scope">Scope yuklanmoqda…</div>
+    </section>
+
+    <div id="status" class="status" hidden></div>
+    <section class="stats" aria-label="Ko‘rsatkichlar">
+      <article class="card"><small>Talabalar</small><strong id="usersCount">—</strong></article>
+      <article class="card"><small>Guruhlar</small><strong id="groupsCount">—</strong></article>
+      <article class="card"><small>Kanallar</small><strong id="channelsCount">—</strong></article>
+      <article class="card"><small>Videodarslar</small><strong id="lessonsCount">—</strong></article>
+    </section>
+
+    <section class="layout">
+      <article class="panel">
+        <header class="panel-head"><h2><i class="fa-solid fa-people-group"></i> Biriktirilgan guruhlar</h2><button id="refreshGroups" class="btn" type="button">Yangilash</button></header>
+        <div id="groupsList" class="list"><div class="empty">Yuklanmoqda…</div></div>
+      </article>
+      <article class="panel">
+        <header class="panel-head"><h2><i class="fa-solid fa-calendar-check"></i> Yaqin videodarslar</h2><button id="refreshLessons" class="btn" type="button">Yangilash</button></header>
+        <div id="lessonsList" class="list"><div class="empty">Yuklanmoqda…</div></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (function(){
+      const token=localStorage.getItem('token')||'';
+      const $=(id)=>document.getElementById(id);
+      const esc=(value)=>String(value==null?'':value).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const headers={Authorization:`Bearer ${token}`};
+      let scope={university:'',faculty:''};
+      function setTheme(mode){document.documentElement.classList.toggle('dark',mode==='dark');localStorage.setItem('theme',mode);}
+      setTheme(localStorage.getItem('theme')||((matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light'));
+      $('themeBtn').onclick=()=>setTheme(document.documentElement.classList.contains('dark')?'light':'dark');
+      $('logoutBtn').onclick=()=>{localStorage.removeItem('token');location.href='/login.html';};
+      function message(value,error){const el=$('status');el.hidden=!value;el.textContent=value||'';el.classList.toggle('error',!!error);}
+      async function api(url){const r=await fetch(url,{headers});const j=await r.json().catch(()=>({}));if(r.status===401){localStorage.removeItem('token');location.href='/login.html';throw new Error('Sessiya tugagan');}if(!r.ok)throw new Error(j.error||'So‘rov bajarilmadi');return j;}
+      function scopedUrl(path){const q=new URLSearchParams();if(scope.university)q.set('university',scope.university);if(scope.faculty)q.set('faculty',scope.faculty);return `${path}?${q}`;}
+      async function authenticate(){if(!token){location.href='/login.html';return false;}const data=await api('/api/me');const me=data.user||data;const role=String(me.role||'').toLowerCase();if(role!=='tutor'&&!me.isAdmin){location.href=role==='rector'?'/rector-dashboard.html':role==='prorector'?'/prorector-dashboard.html':role==='admin'?'/admin-dashboard.html':'/student-dashboard.html';return false;}const s=await api('/api/organizer/me');scope=s.scope||{};$('scope').textContent=`${scope.university||'Universitet'} · ${scope.faculty||'Fakultet'}`;return true;}
+      async function loadOverview(){const data=await api(scopedUrl('/api/organizer/overview'));const o=data.overview||{};$('usersCount').textContent=o.users??0;$('groupsCount').textContent=o.groups??0;$('channelsCount').textContent=o.channels??0;}
+      async function loadGroups(){const host=$('groupsList');host.innerHTML='<div class="empty">Yuklanmoqda…</div>';const data=await api(scopedUrl('/api/organizer/groups'));const list=data.groups||data.items||[];host.innerHTML=list.length?list.map((g)=>`<article class="row"><div><h3>${esc(g.name||g.username||'Guruh')}</h3><p>${esc(g.studyGroup||g.faculty||'')} · ${Number(g.memberCount||(g.members||[]).length||0)} a’zo</p></div><a class="btn primary" href="/group.html?id=${encodeURIComponent(g._id)}">Ochish</a></article>`).join(''):'<div class="empty">Biriktirilgan guruh topilmadi.</div>';}
+      async function loadLessons(){const host=$('lessonsList');host.innerHTML='<div class="empty">Yuklanmoqda…</div>';const data=await api(scopedUrl('/api/organizer/group-lessons'));const list=data.lessons||data.items||[];$('lessonsCount').textContent=data.total??list.length;host.innerHTML=list.length?list.slice(0,20).map((l)=>`<article class="row"><div><h3>${esc(l.title||'Videodars')}</h3><p>${esc(l.groupName||l.group?.name||'Guruh')} · ${l.scheduledFor||l.startedAt?new Date(l.scheduledFor||l.startedAt).toLocaleString('uz-UZ'):'Vaqt belgilanmagan'}</p></div><a class="btn" href="/group.html?id=${encodeURIComponent(l.groupId||l.group?._id||'')}">Ko‘rish</a></article>`).join(''):'<div class="empty">Yaqin videodars yo‘q.</div>';}
+      $('refreshGroups').onclick=()=>loadGroups().catch((e)=>message(e.message,true));
+      $('refreshLessons').onclick=()=>loadLessons().catch((e)=>message(e.message,true));
+      (async()=>{try{if(!await authenticate())return;await Promise.all([loadOverview(),loadGroups(),loadLessons()]);message('Panel yangilandi.');setTimeout(()=>message(''),1800);}catch(e){message(e.message||'Panel yuklanmadi',true);}})();
+    })();
+  </script>
+</body>
+</html>

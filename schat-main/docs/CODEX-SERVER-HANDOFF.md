@@ -1,9 +1,14 @@
-# HALLAYM EDU v3 — Codex server handoff
+# HALLAYM EDU v5.2 — Codex server handoff
 
 Bu arxiv serverga ulash uchun tayyorlangan yakuniy loyiha. `npm start` kirish
 nuqtasi `server115007.js`. Mavjud `.env` qiymatlari dizayn yangilanishi vaqtida
 o‘zgartirilmagan. Arxivni ochiq repozitoriyga yoki ommaviy fayl almashuviga
 joylamang.
+
+Arxivda foydalanuvchi bergan asl loyihadagi to‘liq `node_modules` ham saqlangan.
+Server operatsion tizimi yoki Node.js versiyasi boshqacha bo‘lsa, native
+`mediasoup` moduli aynan server uchun qayta yig‘ilishi sabab `npm ci` baribir
+tavsiya qilinadi.
 
 ## 1. Production `.env`
 
@@ -39,6 +44,11 @@ MongoDB Atlas ichida yangi database user yarating, server public IP manzilini
 Network Access ro‘yxatiga kiriting va URI parolidagi maxsus belgilarni URL
 formatida kodlang.
 
+Server ishga tushgach `GET /api/rtc-health` ni oching. Javobda
+`turn.ready: true` bo‘lishi kerak. `mediasoup.ready: false` bo‘lsa videoqo‘ng‘iroq
+ExpressTURN mesh orqali ishlaydi; SFU ishga tushishi uchun public announced IP
+va media portlari ochiq bo‘lishi shart.
+
 ## 2. TURN va mediasoup
 
 Mobil operator, universitet Wi-Fi va qat’iy NAT tarmoqlari uchun TURN majburiy.
@@ -56,6 +66,17 @@ yoki vaqtinchalik credential beruvchi shared secret:
 TURN_URLS=turn:turn.example.uz:3478?transport=udp,turn:turn.example.uz:3478?transport=tcp,turns:turn.example.uz:5349?transport=tcp
 TURN_SECRET=...
 TURN_TTL_SECONDS=86400
+```
+
+ExpressTURN premium dashboard nomlari bilan ham ishlaydi:
+
+```env
+EXPRESSTURN_HOST=relay1.expressturn.com
+EXPRESSTURN_USERNAME=...
+EXPRESSTURN_PASSWORD=...
+# Yoki username/password o‘rniga:
+EXPRESSTURN_SECRET_KEY=...
+EXPRESSTURN_TTL=86400
 ```
 
 Firewall/security group:
@@ -82,7 +103,16 @@ R2_BUCKET=hallaym-edu
 R2_PUBLIC_BASE_URL=https://media.example.uz
 MAX_UPLOAD_MB=250
 UPLOAD_TMP_DIR=/tmp/hallaym-edu-uploads
+COURSE_VIDEO_MAX_GB=5
+COURSE_VIDEO_PART_MB=8
+COURSE_VIDEO_UPLOAD_TTL_SECONDS=86400
 ```
+
+`R2_PUBLIC_BASE_URL` public R2 custom domain bo‘lishi kerak. 1 GB+ videolar 8 MB
+bo‘laklarda yuklanadi va uzilishdan keyin aynan qolgan qismidan davom etadi.
+Nginx uchun `client_max_body_size 10m;` yetarli, chunki katta fayl bitta request
+emas. R2/custom domain `Range` so‘rovlarini saqlashi kerak; shunda 40–80 daqiqalik
+video istalgan joyidan tez ochiladi.
 
 ## 4. O‘rnatish va ishga tushirish
 
@@ -111,14 +141,35 @@ Server mavjud admin parolini avtomatik almashtirmaydi; faqat ataylab
 ## 6. Qabul testi
 
 1. `GET /api/health` `200` qaytarsin.
-2. `GET /api/rtc-config` ichida `mediasoupConfigured: true` va productionda
-   `hasTurn: true` bo‘lsin.
+2. `GET /api/rtc-health` ichida `turn.ready: true` bo‘lsin; SFU ishlatilsa
+   `mediasoup.ready: true` va `publicAnnouncedAddress: true` bo‘lsin.
 3. Ikki turli internet tarmog‘idagi qurilmada guruh darsiga kiring.
 4. Kamera/mikrofonni yoqib-o‘chiring, ekranni ulashing, 10+ daqiqa kuzating.
-5. Oq doskada qalam, matn, shakl, undo/redo va o‘qituvchi PiP’ini tekshiring.
-6. `Ovoz` va `Imo` tugmalariga kamera/mikrofon ruxsatini bering.
-7. O‘zbek/Rus/Ingliz subtitrlarini ikki ishtirokchida sinang.
-8. Telefon, planshet va desktopda kunduzgi/tungi mavzuni tekshiring.
+5. Asosiy kamera to‘liq 16:9 qolganini, bo‘sh primary-slot sabab yarim ekran
+   paydo bo‘lmasligini tekshiring; so‘ng alohida oq doska PiP’ini oching;
+   ikki foydalanuvchida qalamning jonli sinxroni, matn, shaklni ko‘chirish,
+   kattalashtirish, aylantirish va undo/redo’ni tekshiring.
+6. AI fokusda yuz kuzatuvi, ko‘rsatkich bilan nuqtani qotirish va musht bilan
+   yuz kuzatuviga qaytishni tekshiring; asosiy kamera kadrining kesilmasligini
+   alohida tasdiqlang.
+7. `Ovoz` va `Imo` tugmalariga kamera/mikrofon ruxsatini bering; yordamchi o‘z
+   javobini buyruq deb qayta qabul qilmasligini sinang.
+8. O‘zbek/Rus/Ingliz subtitrlarini ikki ishtirokchida sinang; tilni dars paytida
+   almashtirib, audio uzilmasdan yangi recognizer darhol ishga tushishini tekshiring.
+9. Telefon, planshet va desktopda kunduzgi/tungi mavzuni tekshiring.
+10. Teacher Studio orqali kamida 1 GB qurilma videosi va bitta YouTube darsi
+    qo‘shing; uploadni o‘rtada pauza qilib va sahifani qayta ochib davom ettiring.
+    Katalog hover-preview, 16:9 watch player, Range seek va playlistni tekshiring.
+11. Video-like, root comment, reply va ikkala comment-like hisobini ikki
+    foydalanuvchi bilan tekshiring.
+12. Profil rasmini bo‘sh qoldirib teacher, qiz/ayol, o‘g‘il/erkak va neytral
+    avtomatik SVG ikonlarini guruh a’zolari hamda chat xabarlarida tekshiring.
+13. Ovozli yordamchiga 5 soniyadan uzun va noto‘g‘riroq talaffuzli buyruq ayting;
+    sahifa almashtirgach ovoz va imo-navigatsiya avtomatik qaytishini tekshiring.
+14. Ochiq kursni enrollment qilmagan talaba ko‘ra olishini, izoh/reply/like
+    ishlashini va “Siz uchun” ro‘yxati fan/fakultet/guruhga mosligini tekshiring.
+15. Mobil telefonda global aylanadigan loader ko‘rinmasligini, elementlar bosilishi
+    davom etishini va talabalar kamerasi bir xil 16:9 panjarada turishini tekshiring.
 
 Brauzer konsolida doimiy WebSocket reconnect, ICE failure yoki mediasoup worker
 `died` logi bo‘lmasligi kerak. TURN relayi uchun vaqtincha `TURN_FORCE_RELAY=1`

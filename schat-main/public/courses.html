@@ -16,8 +16,8 @@
         <div class="course-brand">
           <div class="course-brand-mark"><span class="course-icon" aria-hidden="true"></span></div>
           <div class="course-brand-copy">
-            <h1>HALLAYM Courses</h1>
-            <p>Videodars, PDF va progress kuzatuvi</p>
+            <h1>Video kurslar</h1>
+            <p>O‘qituvchilar tayyorlagan darslar</p>
           </div>
           <span id="roleBadge" class="course-pill course-role-pill">STUDENT</span>
           <span id="mePill" class="course-pill"></span>
@@ -39,9 +39,9 @@
       <section class="course-card">
         <div class="course-split">
           <div>
-            <div class="course-eyebrow">Kurslar katalogi</div>
-            <h2 class="course-big-title" style="font-size:clamp(2rem, 1.3rem + 2vw, 3.8rem)">Bir joyda kurslar, darslar va teacher studio</h2>
-            <p class="course-section-copy">Student kursga qo‘shiladi, videodarsni ko‘radi, PDF ochadi, comment va rating qoldiradi. Teacher esa course studio orqali mavzular, lesson quiz va requestlarni boshqaradi.</p>
+            <div class="course-eyebrow">Video kutubxona</div>
+            <h2 class="course-big-title" style="font-size:clamp(1.8rem, 1.3rem + 2vw, 3.3rem)">Kerakli darsni toping va darhol tomosha qiling</h2>
+            <p class="course-section-copy">Qurilmadan yuklangan yoki YouTube orqali qo‘shilgan videolar. Video ustiga kelsangiz har 7 soniyada boshqa qismidan ovozsiz tezkor preview ko‘rinadi.</p>
           </div>
           <div class="course-kpi-grid">
             <div class="course-kpi"><div class="course-muted">Kurslar</div><div class="course-kpi-value" id="catalogCount">0</div></div>
@@ -65,6 +65,12 @@
               <select class="course-select" id="facultyFilter">
                 <option value="">Fakultet: barchasi</option>
               </select>
+            </div>
+          </div>
+          <div class="course-col-3">
+            <div class="course-form-group">
+              <label for="categoryFilter">Fan</label>
+              <select class="course-select" id="categoryFilter"><option value="">Fanlar: barchasi</option></select>
             </div>
           </div>
           <div class="course-col-2">
@@ -105,8 +111,16 @@
         </div>
       </section>
 
-      <section class="course-card section-gap">
-        <div class="course-stack" id="courseList">
+      <section class="section-gap" id="recommendedSection" hidden>
+        <div class="course-inline-actions" style="justify-content:space-between;margin-bottom:12px">
+          <div><div class="course-eyebrow">Siz uchun</div><h2 class="course-section-title">Yo‘nalish va fanlaringizga mos</h2></div>
+          <span class="course-muted">Avtomatik tavsiyalar</span>
+        </div>
+        <div class="yt-course-grid" id="recommendedList"></div>
+      </section>
+
+      <section class="section-gap">
+        <div class="yt-course-grid" id="courseList">
           <div class="course-empty">Kurslar yuklanmoqda...</div>
         </div>
       </section>

@@ -31,11 +31,9 @@
     var style = doc.createElement('style');
     style.id = 'schat-global-loader-style';
     style.textContent = [
-      '#schatGlobalLoader{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .16s ease;}',
-      '#schatGlobalLoader.visible{display:flex;opacity:1;}',
-      '.schat-loader-spinner{width:44px;height:44px;border-radius:999px;border:3px solid rgba(18,95,87,.18);border-top-color:#0f766e;border-right-color:#14b8a6;animation:schatLoaderSpin .72s linear infinite;box-shadow:0 10px 28px rgba(15,118,110,.16);background:transparent;}',
-      'html.dark .schat-loader-spinner{border-color:rgba(255,255,255,.16);border-top-color:#5eead4;border-right-color:#99f6e4;}',
-      '@keyframes schatLoaderSpin{to{transform:rotate(360deg)}}'
+      '#schatGlobalLoader{display:none!important;pointer-events:none!important;}',
+      '#schatGlobalLoader.visible{display:none!important;}',
+      '.schat-loader-spinner{display:none!important;animation:none!important;}'
     ].join('');
     doc.head.appendChild(style);
   }
@@ -46,7 +44,7 @@
       state.overlay = doc.createElement('div');
       state.overlay.id = 'schatGlobalLoader';
       state.overlay.setAttribute('aria-hidden', 'true');
-      state.overlay.innerHTML = '<div class="schat-loader-spinner"></div>';
+      state.overlay.innerHTML = '';
       doc.body.appendChild(state.overlay);
     }
     return true;
@@ -68,6 +66,7 @@
     state.hideTimer = null;
     state.visible = false;
     if (state.overlay) state.overlay.classList.remove('visible');
+    try { doc.documentElement.removeAttribute('data-background-loading'); } catch (_) {}
   }
 
   function showOverlay() {
@@ -80,8 +79,10 @@
     if (!ensureUi() || !state.overlay) return;
     if (!state.visible) {
       state.visible = true;
-      state.minVisibleUntil = Date.now() + 220;
+      state.minVisibleUntil = Date.now();
       state.overlay.classList.add('visible');
+      // Loading is state-only. Content stays interactive and no spinner is rendered.
+      try { doc.documentElement.setAttribute('data-background-loading', '1'); } catch (_) {}
     }
   }
 
@@ -385,7 +386,20 @@
     };
   }
 
+  function applyRuntimeProfile() {
+    try {
+      var nav = window.navigator || {};
+      var smallViewport = window.matchMedia && window.matchMedia('(max-width: 1024px)').matches;
+      var groupPage = /(?:^|\/)group\.html$/i.test(String(window.location.pathname || ''));
+      var lowMemory = Number(nav.deviceMemory || 99) <= 8;
+      var lowCpu = Number(nav.hardwareConcurrency || 99) <= 8;
+      var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      doc.documentElement.classList.toggle('edu-lite-runtime', !!(groupPage || smallViewport || lowMemory || lowCpu || reduced));
+    } catch (_) {}
+  }
+
   injectStyle();
+  applyRuntimeProfile();
   pruneExpiredCache();
   patchFetch();
   patchXhr();
@@ -402,5 +416,6 @@
   state.maxBootTimer = setTimeout(function () {
     state.booting = false;
     hideOverlayIfAllowed();
-  }, 8000);
+  }, 1500);
+  window.addEventListener('resize', applyRuntimeProfile, { passive: true });
 })();

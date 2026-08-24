@@ -8,7 +8,8 @@ const STUDIO_STATE = {
   course: null,
   lessons: [],
   activeLessonId: "",
-  creatingLesson: false
+  creatingLesson: false,
+  videoUpload: null
 };
 
 function alertStudio(type, message){
@@ -30,11 +31,15 @@ function courseDefaults(){
     type: "free",
     price: 0,
     status: "draft",
+    visibility: "public",
     joinMode: "open",
     allowComments: true,
     allowRatings: true,
     allowSequential: true,
     faculty: "",
+    category: "",
+    tags: [],
+    studyDirections: [],
     groups: [],
     language: "uz",
     level: "beginner",
@@ -72,11 +77,15 @@ function readCourseForm(){
     type: $("courseType").value,
     price: Number($("coursePrice").value || 0),
     status: $("courseStatus").value,
+    visibility: $("courseVisibility").value,
     joinMode: $("courseJoinMode").value,
     allowComments: $("courseAllowComments").checked,
     allowRatings: $("courseAllowRatings").checked,
     allowSequential: $("courseAllowSequential").checked,
     faculty: $("courseFaculty").value.trim(),
+    category: $("courseCategory").value.trim(),
+    tags: $("courseTags").value.split(",").map((item)=> item.trim()).filter(Boolean),
+    studyDirections: $("courseDirections").value.split(",").map((item)=> item.trim()).filter(Boolean),
     groups: $("courseGroups").value.split(",").map((item)=> item.trim()).filter(Boolean),
     language: $("courseLanguage").value.trim(),
     level: $("courseLevel").value,
@@ -93,11 +102,15 @@ function fillCourseForm(course){
   $("courseType").value = course.type || "free";
   $("coursePrice").value = Number(course.price || 0);
   $("courseStatus").value = course.status || "draft";
+  $("courseVisibility").value = course.visibility || "public";
   $("courseJoinMode").value = course.joinMode || "open";
   $("courseAllowComments").checked = course.allowComments !== false;
   $("courseAllowRatings").checked = course.allowRatings !== false;
   $("courseAllowSequential").checked = course.allowSequential !== false;
   $("courseFaculty").value = course.faculty || "";
+  $("courseCategory").value = course.category || "";
+  $("courseTags").value = (course.tags || []).join(", ");
+  $("courseDirections").value = (course.studyDirections || []).join(", ");
   $("courseGroups").value = (course.groups || []).join(", ");
   $("courseLanguage").value = course.language || "uz";
   $("courseLevel").value = course.level || "beginner";
@@ -229,6 +242,7 @@ function fillLessonForm(lesson){
   $("lessonYoutube").value = current.youtubeUrl || "";
   $("lessonVideo").value = current.videoUrl || "";
   $("lessonPdf").value = current.pdfUrl || "";
+  syncLessonSourceFields();
   $("lessonPreview").checked = !!current.isPreview;
   $("lessonQuizEnabled").checked = !!current.quizEnabled;
   $("lessonQuizTitle").value = current.quizTitle || "";
@@ -238,6 +252,19 @@ function fillLessonForm(lesson){
   $("lessonDeleteBtn").style.display = current.id ? "inline-flex" : "none";
   $("lessonAssetUploadBtn").disabled = !current.id;
   $("lessonMaterialsUploadBtn").disabled = !current.id;
+}
+
+function syncLessonSourceFields(){
+  const type = String($("lessonType")?.value || "video");
+  const visibility = {
+    lessonYoutubeField: type === "youtube",
+    lessonVideoField: type === "video",
+    lessonPdfField: type === "pdf"
+  };
+  Object.entries(visibility).forEach(([id, visible])=>{
+    const element = $(id);
+    if(element) element.style.display = visible ? "" : "none";
+  });
 }
 
 function renderLessonMaterials(materials){
@@ -414,6 +441,194 @@ async function deleteMaterial(materialId){
   }
 }
 
+function videoUploadStorageKey(file, lesson){
+  return [
+    "hallaym:course-video:v1",
+    STUDIO_STATE.course?.id || "",
+    lesson?.id || "",
+    file?.name || "",
+    Number(file?.size || 0),
+    Number(file?.lastModified || 0)
+  ].join(":");
+}
+
+function formatUploadBytes(value){
+  const bytes = Math.max(0, Number(value || 0));
+  if(bytes >= 1024 ** 3) return (bytes / (1024 ** 3)).toFixed(2) + " GB";
+  if(bytes >= 1024 ** 2) return (bytes / (1024 ** 2)).toFixed(1) + " MB";
+  return Math.round(bytes / 1024) + " KB";
+}
+
+function showLargeVideoProgress(file, percent, status){
+  const wrap = $("largeVideoUpload");
+  wrap.hidden = false;
+  $("largeVideoUploadName").textContent = file?.name || "Video yuklanmoqda";
+  $("largeVideoUploadPercent").textContent = Math.max(0, Math.min(100, Math.round(percent || 0))) + "%";
+  $("largeVideoUploadBar").value = Math.max(0, Math.min(100, Number(percent || 0)));
+  $("largeVideoUploadStatus").textContent = status || "Yuklanmoqda…";
+}
+
+async function waitForVideoUploadResume(state){
+  while(state.paused && !state.cancelled && !state.failed){
+    await new Promise((resolve)=> window.setTimeout(resolve, 220));
+  }
+}
+
+async function uploadLargeLessonVideo(file, lesson){
+  const base = `/api/courses/${encodeURIComponent(STUDIO_STATE.course.id)}/content/${encodeURIComponent(lesson.id)}/video-upload`;
+  const storageKey = videoUploadStorageKey(file, lesson);
+  const state = {
+    file,
+    lesson,
+    base,
+    storageKey,
+    paused: false,
+    cancelled: false,
+    failed: false,
+    controllers: new Set(),
+    session: null
+  };
+  STUDIO_STATE.videoUpload = state;
+  $("largeVideoPauseBtn").textContent = "Pauza";
+  showLargeVideoProgress(file, 0, `${formatUploadBytes(file.size)} video uchun davom ettiriladigan yuklash tayyorlanmoqda…`);
+
+  let saved = null;
+  try{ saved = JSON.parse(localStorage.getItem(storageKey) || "null"); }catch(_){ saved = null; }
+  if(saved?.token){
+    try{
+      const status = await apiFetch(base + "/status", { headers: { "X-Upload-Token": saved.token } });
+      state.session = { ...saved, ...status, token: saved.token };
+    }catch(_){
+      localStorage.removeItem(storageKey);
+    }
+  }
+
+  if(!state.session){
+    const started = await apiFetch(base + "/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type || "video/mp4",
+        lastModified: file.lastModified || 0
+      })
+    });
+    state.session = started;
+    localStorage.setItem(storageKey, JSON.stringify({
+      token: started.token,
+      partSize: started.partSize,
+      partCount: started.partCount,
+      fileName: file.name,
+      fileSize: file.size,
+      lastModified: file.lastModified || 0
+    }));
+  }
+
+  const session = state.session;
+  const partSize = Number(session.partSize || (8 * 1024 * 1024));
+  const partCount = Number(session.partCount || Math.ceil(file.size / partSize));
+  const uploaded = new Set((session.uploadedParts || []).map((part)=> Number(part.partNumber || 0)).filter(Boolean));
+  const missing = [];
+  for(let partNumber = 1; partNumber <= partCount; partNumber += 1){
+    if(!uploaded.has(partNumber)) missing.push(partNumber);
+  }
+
+  const uploadedBytes = ()=>{
+    let total = 0;
+    uploaded.forEach((partNumber)=>{
+      const start = (partNumber - 1) * partSize;
+      total += Math.max(0, Math.min(partSize, file.size - start));
+    });
+    return total;
+  };
+  const update = ()=>{
+    const doneBytes = uploadedBytes();
+    const percent = file.size ? (doneBytes / file.size) * 100 : 0;
+    showLargeVideoProgress(
+      file,
+      percent,
+      state.paused
+        ? `Pauza: ${formatUploadBytes(doneBytes)} / ${formatUploadBytes(file.size)}`
+        : `${formatUploadBytes(doneBytes)} / ${formatUploadBytes(file.size)} • ${uploaded.size}/${partCount} bo‘lak`
+    );
+  };
+  update();
+
+  let cursor = 0;
+  const worker = async ()=>{
+    while(cursor < missing.length && !state.cancelled && !state.failed){
+      await waitForVideoUploadResume(state);
+      if(state.cancelled || state.failed) return;
+      const partNumber = missing[cursor++];
+      const start = (partNumber - 1) * partSize;
+      const end = Math.min(file.size, start + partSize);
+      const controller = new AbortController();
+      state.controllers.add(controller);
+      try{
+        await apiFetch(`${base}/part/${partNumber}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "X-Upload-Token": session.token
+          },
+          body: file.slice(start, end),
+          signal: controller.signal
+        });
+        uploaded.add(partNumber);
+        update();
+      }catch(error){
+        if(!state.cancelled){
+          state.failed = true;
+          throw error;
+        }
+      }finally{
+        state.controllers.delete(controller);
+      }
+    }
+  };
+
+  try{
+    await Promise.all([worker(), worker()]);
+    if(state.cancelled) return false;
+    if(state.failed) throw new Error("Video bo‘lagini yuklash to‘xtadi. Qayta bosilsa davom etadi.");
+    showLargeVideoProgress(file, 100, "Video tekshirilmoqda va kursga biriktirilmoqda…");
+    await apiFetch(base + "/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: session.token })
+    });
+    localStorage.removeItem(storageKey);
+    showLargeVideoProgress(file, 100, "Video muvaffaqiyatli yuklandi.");
+    return true;
+  }catch(error){
+    if(!state.cancelled){
+      showLargeVideoProgress(file, (uploadedBytes() / file.size) * 100, "Ulanish uzildi. Shu faylni qayta tanlab bosilsa davom etadi.");
+    }
+    throw error;
+  }finally{
+    if(STUDIO_STATE.videoUpload === state && (state.cancelled || !state.failed)) STUDIO_STATE.videoUpload = null;
+  }
+}
+
+async function cancelLargeVideoUpload(){
+  const state = STUDIO_STATE.videoUpload;
+  if(!state) return;
+  state.cancelled = true;
+  state.controllers.forEach((controller)=> controller.abort());
+  try{
+    if(state.session?.token){
+      await apiFetch(state.base, {
+        method: "DELETE",
+        headers: { "X-Upload-Token": state.session.token }
+      });
+    }
+  }catch(_){}
+  localStorage.removeItem(state.storageKey);
+  STUDIO_STATE.videoUpload = null;
+  showLargeVideoProgress(state.file, 0, "Yuklash bekor qilindi.");
+}
+
 async function uploadLessonAsset(target){
   const lesson = currentLesson();
   if(!lesson || !lesson.id){
@@ -427,6 +642,14 @@ async function uploadLessonAsset(target){
     return;
   }
   try{
+    if(target === "video" && Number(file.size || 0) >= (32 * 1024 * 1024)){
+      const completed = await uploadLargeLessonVideo(file, lesson);
+      if(!completed) return;
+      input.value = "";
+      await loadLessons();
+      alertStudio("success", "Katta video yuklandi va barcha talabalar uchun tayyor.");
+      return;
+    }
     const formData = new FormData();
     formData.append("file", file);
     formData.append("target", target);
@@ -502,6 +725,7 @@ async function init(){
   initStoredTheme();
   applyTheme($("themeBtn"));
   $("logoutBtn").addEventListener("click", logout);
+  $("lessonType").addEventListener("change", syncLessonSourceFields);
   STUDIO_STATE.me = await getMe();
   if(!STUDIO_STATE.me) return;
   if(!["teacher", "admin"].includes(String(STUDIO_STATE.me.role || "").toLowerCase())){
@@ -525,6 +749,14 @@ async function init(){
     uploadLessonAsset(target);
   });
   $("lessonMaterialsUploadBtn").addEventListener("click", uploadLessonMaterials);
+  $("largeVideoPauseBtn").addEventListener("click", ()=>{
+    const state = STUDIO_STATE.videoUpload;
+    if(!state) return;
+    state.paused = !state.paused;
+    $("largeVideoPauseBtn").textContent = state.paused ? "Davom ettirish" : "Pauza";
+    showLargeVideoProgress(state.file, Number($("largeVideoUploadBar").value || 0), state.paused ? "Yuklash pauzada." : "Yuklash davom etmoqda…");
+  });
+  $("largeVideoCancelBtn").addEventListener("click", cancelLargeVideoUpload);
 }
 
 init().catch((error)=>{

@@ -37,6 +37,34 @@ html.dark {
   --h-ring: rgba(40, 120, 199, 0.18) !important;
 }
 
+html[data-edu-high-contrast="on"]{
+  filter:contrast(1.16) saturate(1.05);
+}
+html[data-edu-high-contrast="on"] button,
+html[data-edu-high-contrast="on"] a,
+html[data-edu-high-contrast="on"] input,
+html[data-edu-high-contrast="on"] textarea,
+html[data-edu-high-contrast="on"] select{
+  outline-color:currentColor;
+}
+html[data-edu-large-text="on"] body{
+  font-size:112.5% !important;
+}
+html[data-edu-large-text="on"] input,
+html[data-edu-large-text="on"] textarea,
+html[data-edu-large-text="on"] select,
+html[data-edu-large-text="on"] button{
+  font-size:max(14px,1em) !important;
+}
+html[data-edu-reduced-motion="on"] *,
+html[data-edu-reduced-motion="on"] *::before,
+html[data-edu-reduced-motion="on"] *::after{
+  scroll-behavior:auto !important;
+  animation-duration:.001ms !important;
+  animation-iteration-count:1 !important;
+  transition-duration:.001ms !important;
+}
+
 html {
   font-size: 13px !important;
   background: var(--edu-bg) !important;
@@ -270,10 +298,7 @@ html.dark #teacherStageWrap {
   color: var(--edu-ink) !important;
 }
 
-#teacherStage,
-#teacherStageViewport,
-#teacherStageSurface,
-#teacherStage .stage-slot-primary {
+#teacherStage {
   width: 100% !important;
   aspect-ratio: 16 / 9 !important;
   min-height: 0 !important;
@@ -283,13 +308,35 @@ html.dark #teacherStageWrap {
   border-radius: 2px !important;
 }
 
+#teacherStageViewport,
+#teacherStageSurface,
+#teacherStage .stage-slot-primary {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  overflow: hidden !important;
+  background: var(--edu-blue-950) !important;
+  border-radius: 2px !important;
+}
+
+/* A late media track must never become a second grid row below the empty slot. */
+#teacherStageSurface > .stage-slot-primary,
+#teacherStageSurface > .video-tile {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 #teacherStage .video-tile,
 #teacherStage video,
 #teacherStage .stage-slot-primary video {
   width: 100% !important;
   height: 100% !important;
   aspect-ratio: 16 / 9 !important;
-  object-fit: cover !important;
+  object-fit: contain !important;
   object-position: center center !important;
   border-radius: 2px !important;
   background: var(--edu-blue-950) !important;
@@ -361,8 +408,34 @@ html.dark #teacherStageWrap {
 #studentsGrid video {
   width: 100% !important;
   height: 100% !important;
-  object-fit: cover !important;
+  object-fit: contain !important;
   border-radius: 2px !important;
+  background: #02070c !important;
+}
+#studentsGrid .video-tile.is-portrait {
+  aspect-ratio: 16 / 9 !important;
+  max-height: none !important;
+}
+
+@media (min-width: 1024px) {
+  #groupCallVideoLayout {
+    grid-template-columns: minmax(0, 3fr) minmax(250px, 1fr) !important;
+    gap: 7px !important;
+  }
+  #teacherStageWrap > .w-full {
+    height: 100% !important;
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+  }
+  #teacherStage {
+    width: min(100%, calc((100dvh - 128px) * 16 / 9)) !important;
+    height: auto !important;
+    align-self: center !important;
+    justify-self: center !important;
+  }
+  #studentsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
 
 #teacherStageZoomHud,
@@ -497,6 +570,7 @@ html.dark #callMoreMenu {
   background: var(--edu-blue-700) !important;
   border-color: var(--edu-blue-800) !important;
 }
+.edu-camera-label { margin-left: 3px; font-size: 9px; font-weight: 900; }
 
 .edu-sr-only {
   position: absolute !important;
@@ -520,6 +594,31 @@ html.dark #callMoreMenu {
   #eduVoiceStatus { flex: 1; max-width: none; }
   #eduVoiceHelp { left: 6px; bottom: 50px; width: calc(100vw - 12px); }
   #teacherStageZoomHud { transform: scale(.88); transform-origin: right bottom; }
+  #eduFaceFocusPip { width: clamp(118px, 34%, 184px) !important; left: 5px !important; bottom: 5px !important; }
+  #eduFaceFocusPip canvas { image-rendering: auto; }
+  #teacherStageWrap { min-height: 0 !important; max-height: 59dvh !important; }
+  #teacherStage { min-height: 0 !important; height: auto !important; }
+  #studentsScrollArea { margin-top: 3px !important; }
+  #studentsGrid .video-tile { min-height: 0 !important; max-height: none !important; }
+}
+
+/* Low-cost render profile: no glass blur, no decorative motion, no blocking loader. */
+html.edu-lite-runtime *,
+html.edu-lite-runtime *::before,
+html.edu-lite-runtime *::after {
+  animation: none !important;
+  transition-duration: .01ms !important;
+  scroll-behavior: auto !important;
+}
+html.edu-lite-runtime #groupCallOverlay :where(#groupCallTopBar,#teacherStageWrap,#callMoreMenu,#attendancePanel,.video-status .media-chip),
+html.edu-lite-runtime #eduVoiceDock,
+html.edu-lite-runtime #eduVoiceHelp {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+html.edu-lite-runtime #studentsGrid .video-tile {
+  contain: layout paint style !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

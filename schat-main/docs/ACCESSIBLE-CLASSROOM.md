@@ -11,11 +11,16 @@ ikki xil imo-ishora boshqaruvi, ovozli buyruqlar va jonli subtitr qatlamini qo�
 - Asosiy shrift 12–13 px; sarlavhalar responsive.
 - Kontent 1800 px gacha kengayadi, tor eski konteynerlar bekor qilingan.
 - O‘qituvchi sahnasi qat’iy 16:9.
-- Oq doska 16:9 video oqimi sifatida yuboriladi va o‘qituvchi kamerasi uning
-  yuqori o‘ng burchagida 16:9 PiP ko‘rinishida turadi.
+- Kamera doim alohida mediasoup/WebRTC video treki va `object-fit: contain`
+  bilan to‘liq 16:9 kadrda qoladi; oq doska kamerani almashtirmaydi.
+- Oq doska o‘qituvchi va talabalarga alohida 16:9 PiP sifatida Socket.IO orqali
+  sinxronlanadi. Erkin chiziqlar ixcham koordinata operatsiyalari bilan jonli,
+  to‘liq holat esa tahrir tugagach siqilgan 960×540 kadr bilan tekislanadi.
+  Oynani ko‘chirish, burchagidan o‘lchash va to‘liq yoyish mumkin.
 - Oq doskada qalam, o‘chirgich, tanlash, ko‘chiriladigan matn, shrift oilasi,
   14–140 px o‘lcham, qalinlik, tekislash, chiziq, strelka, doira,
-  to‘rtburchak, takrorlash, o‘chirish, undo va redo mavjud.
+  to‘rtburchak, shaklni ko‘chirish/kattalashtirish/kichraytirish/aylantirish,
+  takrorlash, o‘chirish, undo va redo mavjud.
 - Klaviatura va screen-reader uchun fokus halqasi, skip-link va ARIA live holatlari.
 
 ## AI imo-ishora boshqaruvi
@@ -25,10 +30,12 @@ tasviri brauzer ichida MediaPipe Tasks Vision bilan qayta ishlanadi; video yoki
 biometrik kadr serverga yuborilmaydi. Serverga faqat 0–1 oralig‘idagi fokus
 koordinatalari va rejim nomi jo‘natiladi.
 
-- Yuz topilsa — o‘qituvchi yuzi avtomatik yaqin fokusga olinadi.
-- Ko‘rsatkich barmoq — ko‘rsatilgan joyni 2.55x yaqinlashtiradi.
+- Yuz topilsa — alohida 16:9 AI fokus oynasi o‘qituvchi yuzini kuzatadi;
+  asosiy kamera kesilmaydi va kattalashtirilmaydi.
+- Ko‘rsatkich barmoq — AI fokus oynasida ko‘rsatilgan joyni 2.55x yaqinlashtiradi
+  va barmoq yo‘qolganda oxirgi joyda qotib qoladi.
 - Ochiq kaft (STOP) — joriy fokusni qotirib saqlaydi.
-- Mushtni aylantirish — sahnani 1:1 holatiga uzoqlashtiradi.
+- Musht — qotirilgan nuqtani bo‘shatib, yuz kuzatuviga qaytaradi.
 - Oq doskada ko‘rsatkich barmoq — erkin chizadi.
 - Ikki barmoq — doira chizadi.
 - Uch barmoq — to‘rtburchak chizadi.
@@ -45,7 +52,8 @@ rejim bosh sahifadan boshlab ishlaydi:
 
 - Ko‘rsatkich barmoq — ekrandagi kursorni yuritadi.
 - Bosh va ko‘rsatkich barmoqni qisish — tanlangan tugmani bosadi.
-- Ochiq kaft — foydalanuvchining guruhini ochadi.
+- Ochiq kaftni chap/o‘ng silkitish — ekrandagi tugma, karta va bo‘limlar bo‘ylab
+  birma-bir yuradi; kamera PiP oynasi ochiq qoladi.
 - V belgisi — faol videodarsni topib qo‘shiladi.
 - Uch barmoq — xabarlar sahifasini ochadi.
 - Musht — oldingi sahifaga qaytadi.
@@ -59,6 +67,10 @@ Brauzer xavfsizlik talabi sabab mikrofon avtomatik yoqilmaydi. Foydalanuvchi
 saytning pastki chap burchagidagi `Ovoz` tugmasini yoki `Alt+V` ni bir marta
 bosadi. Qo‘llab-quvvatlanadigan buyruqlar:
 
+Yordamchi o‘zi gapirayotganda SpeechRecognition vaqtincha to‘xtaydi va javob
+tugagach 900 ms himoya oralig‘idan so‘ng qayta yoqiladi. Bu echo/self-listening
+zanjirini to‘xtatadi.
+
 - `Guruhimga kir`
 - `Darsga qo‘shil`
 - `Chatga yoz ...`
@@ -70,6 +82,8 @@ bosadi. Qo‘llab-quvvatlanadigan buyruqlar:
 - `Subtitr O‘zbek`, `Subtitr Rus`, `Subtitr Ingliz`
 - `Oq doskani och` / `Oq doskani yop`
 - `Doska qalam`, `Doska matn`, `Doska doira`, `Doska strelka`, `Bekor qil`
+- `Doskani kattalashtir`, `Doskani kichraytir`, `Shaklni kattalashtir`,
+  `Shaklni kichraytir`, `Shaklni chapga/o‘ngga aylantir`
 - `Kamerani yoq` / `Kamerani o‘chir`
 - `Mikrofonni yoq` / `Mikrofonni o‘chir`
 - `Ekranni ulash`, `Davomatni och`, `To‘liq ekran`, `Yaqinlashtir`

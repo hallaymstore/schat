@@ -1,6 +1,6 @@
 {
   "name": "university-chat-platform",
-  "version": "3.0.0",
+  "version": "5.2.0",
   "description": "Real-time social chat platform for university students",
   "main": "server115007.js",
   "scripts": {

@@ -42,8 +42,8 @@
       --muted: rgba(15,23,42,.72);
       --muted2: rgba(15,23,42,.55);
       --grid: rgba(15,23,42,.06);
-      --ring: rgba(245,158,11,.55);
-      --ok: rgba(34,197,94,.18);
+      --ring: rgba(40,120,199,.32);
+      --ok: rgba(40,120,199,.16);
       --bad: rgba(239,68,68,.18);
       --shadow: rgba(0,0,0,.22);
     }
@@ -53,8 +53,8 @@
       --muted: rgba(226,232,240,.78);
       --muted2: rgba(226,232,240,.55);
       --grid: rgba(148,163,184,.08);
-      --ring: rgba(236,72,153,.35);
-      --ok: rgba(34,197,94,.14);
+      --ring: rgba(100,185,238,.28);
+      --ok: rgba(100,185,238,.14);
       --bad: rgba(239,68,68,.14);
       --shadow: rgba(0,0,0,.52);
     }
@@ -76,19 +76,19 @@
     .g-border::before{
       content:"";
       position:absolute; inset:-2px;
-      background: linear-gradient(135deg, rgba(99,102,241,.9), rgba(236,72,153,.9), rgba(34,197,94,.7));
+      background: linear-gradient(135deg, rgba(29,95,168,.9), rgba(90,159,224,.8), rgba(219,234,254,.78));
       filter: blur(14px);
       opacity:.35;
       z-index:0;
     }
     .g-border > *{ position:relative; z-index:1; }
 
-    .btn-primary{ background: linear-gradient(135deg, rgba(16,185,129,1), rgba(245,158,11,1)); }
+    .btn-primary{ background: linear-gradient(135deg, #1d5fa8, #2878c7); }
     .btn-primary:hover{ filter: brightness(1.05); }
     .btn-ghost:hover{ background: rgba(148,163,184,.12); }
     .glow-ring:focus{ outline:none; box-shadow: 0 0 0 5px var(--ring); }
     .chip{ background: rgba(148,163,184,.12); border: 1px solid rgba(148,163,184,.18); }
-    .chip.active{ background: rgba(20,184,166,.22); border-color: rgba(99,102,241,.32); }
+    .chip.active{ background: rgba(219,234,254,.92); border-color: rgba(40,120,199,.32); }
 
     /* Robot stage */
     .stage{
@@ -98,16 +98,16 @@
       overflow:hidden;
       border: 1px solid rgba(148,163,184,.18);
       background:
-        radial-gradient(900px 550px at 15% 0%, rgba(20,184,166,.22), transparent 55%),
-        radial-gradient(900px 550px at 85% 10%, rgba(245,158,11,.18), transparent 60%),
-        radial-gradient(900px 550px at 50% 105%, rgba(34,211,238,.16), transparent 55%),
+        radial-gradient(900px 550px at 15% 0%, rgba(40,120,199,.20), transparent 55%),
+        radial-gradient(900px 550px at 85% 10%, rgba(191,219,254,.54), transparent 60%),
+        radial-gradient(900px 550px at 50% 105%, rgba(90,159,224,.14), transparent 55%),
         linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0));
     }
     .dark .stage{
       background:
-        radial-gradient(900px 550px at 15% 0%, rgba(99,102,241,.22), transparent 55%),
-        radial-gradient(900px 550px at 85% 10%, rgba(236,72,153,.20), transparent 60%),
-        radial-gradient(900px 550px at 50% 105%, rgba(34,211,238,.16), transparent 55%),
+        radial-gradient(900px 550px at 15% 0%, rgba(100,185,238,.22), transparent 55%),
+        radial-gradient(900px 550px at 85% 10%, rgba(23,71,124,.28), transparent 60%),
+        radial-gradient(900px 550px at 50% 105%, rgba(90,159,224,.16), transparent 55%),
         linear-gradient(180deg, rgba(15,23,42,.32), rgba(2,6,23,.0));
     }
     .robot-wrap{
@@ -142,33 +142,33 @@
     .stage.theme-night{
       background:
         radial-gradient(900px 550px at 18% 8%, rgba(30,41,59,.48), transparent 58%),
-        radial-gradient(900px 550px at 82% 12%, rgba(14,116,144,.30), transparent 62%),
+        radial-gradient(900px 550px at 82% 12%, rgba(40,120,199,.30), transparent 62%),
         linear-gradient(180deg, rgba(2,6,23,.44), rgba(15,23,42,.22));
     }
     .stage.theme-sunset{
       background:
-        radial-gradient(900px 550px at 18% 8%, rgba(251,146,60,.30), transparent 58%),
-        radial-gradient(900px 550px at 82% 12%, rgba(244,63,94,.28), transparent 62%),
+        radial-gradient(900px 550px at 18% 8%, rgba(90,159,224,.30), transparent 58%),
+        radial-gradient(900px 550px at 82% 12%, rgba(191,219,254,.48), transparent 62%),
         linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0));
     }
     .stage.theme-mint{
       background:
-        radial-gradient(900px 550px at 18% 8%, rgba(16,185,129,.26), transparent 58%),
-        radial-gradient(900px 550px at 82% 12%, rgba(34,211,238,.24), transparent 62%),
+        radial-gradient(900px 550px at 18% 8%, rgba(40,120,199,.24), transparent 58%),
+        radial-gradient(900px 550px at 82% 12%, rgba(90,159,224,.22), transparent 62%),
         linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0));
     }
     .stage.theme-aurora{
       background:
-        radial-gradient(900px 550px at 15% 0%, rgba(20,184,166,.22), transparent 55%),
-        radial-gradient(900px 550px at 85% 10%, rgba(245,158,11,.18), transparent 60%),
-        radial-gradient(900px 550px at 50% 105%, rgba(34,211,238,.16), transparent 55%),
+        radial-gradient(900px 550px at 15% 0%, rgba(40,120,199,.20), transparent 55%),
+        radial-gradient(900px 550px at 85% 10%, rgba(191,219,254,.54), transparent 60%),
+        radial-gradient(900px 550px at 50% 105%, rgba(90,159,224,.14), transparent 55%),
         linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0));
     }
     .dark .stage.theme-aurora{
       background:
-        radial-gradient(900px 550px at 15% 0%, rgba(99,102,241,.22), transparent 55%),
-        radial-gradient(900px 550px at 85% 10%, rgba(236,72,153,.20), transparent 60%),
-        radial-gradient(900px 550px at 50% 105%, rgba(34,211,238,.16), transparent 55%),
+        radial-gradient(900px 550px at 15% 0%, rgba(100,185,238,.22), transparent 55%),
+        radial-gradient(900px 550px at 85% 10%, rgba(23,71,124,.28), transparent 60%),
+        radial-gradient(900px 550px at 50% 105%, rgba(90,159,224,.16), transparent 55%),
         linear-gradient(180deg, rgba(15,23,42,.32), rgba(2,6,23,.0));
     }
 
@@ -228,9 +228,9 @@
       line-height: 1;
     }
     .scene-chip.active{
-      border-color: rgba(16,185,129,.42);
-      background: rgba(16,185,129,.18);
-      box-shadow: 0 0 0 3px rgba(16,185,129,.12);
+      border-color: rgba(40,120,199,.36);
+      background: rgba(219,234,254,.78);
+      box-shadow: 0 0 0 3px rgba(40,120,199,.12);
     }
 
     /* Companion bubble */
@@ -362,10 +362,10 @@
 </style>
 
 <style id="hallaymProfileTweaks">
-  /* Logo-like teal/gold accents */
-  .btn-primary{ background: linear-gradient(135deg, rgba(34,211,238,1), rgba(20,184,166,1), rgba(245,158,11,1)) !important; }
+  /* HALLAYM white/blue brand accents */
+  .btn-primary{ background: linear-gradient(135deg, #1d5fa8, #2878c7) !important; }
   .g-border::before{
-    background: linear-gradient(135deg, rgba(34,211,238,.75), rgba(20,184,166,.65), rgba(245,158,11,.55)) !important;
+    background: linear-gradient(135deg, rgba(29,95,168,.72), rgba(90,159,224,.52), rgba(219,234,254,.72)) !important;
     opacity:.32 !important;
   }
 
@@ -391,28 +391,28 @@
     background: rgba(148,163,184,.12);
   }
   .security-badge.current{
-    border-color: rgba(16,185,129,.34);
-    background: rgba(16,185,129,.16);
+    border-color: rgba(40,120,199,.30);
+    background: rgba(219,234,254,.72);
   }
   .security-badge.risk{
-    border-color: rgba(245,158,11,.35);
-    background: rgba(245,158,11,.16);
+    border-color: rgba(40,120,199,.30);
+    background: rgba(239,246,255,.96);
   }
   .security-advice{
-    border: 1px solid rgba(245,158,11,.24);
-    background: rgba(245,158,11,.10);
+    border: 1px solid rgba(40,120,199,.22);
+    background: rgba(239,246,255,.94);
   }
   .security-advice.safe{
-    border-color: rgba(16,185,129,.24);
-    background: rgba(16,185,129,.10);
+    border-color: rgba(40,120,199,.22);
+    background: rgba(219,234,254,.64);
   }
   #securityPwdMsg{
     border: 1px solid rgba(148,163,184,.18);
     background: rgba(148,163,184,.10);
   }
   #securityPwdMsg.success{
-    border-color: rgba(16,185,129,.28);
-    background: rgba(16,185,129,.12);
+    border-color: rgba(40,120,199,.26);
+    background: rgba(219,234,254,.70);
   }
   #securityPwdMsg.error{
     border-color: rgba(239,68,68,.28);
@@ -457,9 +457,9 @@
   <div class="fixed inset-0 -z-10 pointer-events-none">
     <div class="absolute inset-0"
       style="background:
-        radial-gradient(1200px 800px at 15% 10%, rgba(20,184,166,.22), transparent 60%),
-        radial-gradient(1100px 740px at 85% 12%, rgba(236,72,153,.14), transparent 62%),
-        radial-gradient(1000px 700px at 50% 95%, rgba(34,197,94,.14), transparent 60%),
+        radial-gradient(1200px 800px at 15% 10%, rgba(40,120,199,.18), transparent 60%),
+        radial-gradient(1100px 740px at 85% 12%, rgba(191,219,254,.36), transparent 62%),
+        radial-gradient(1000px 700px at 50% 95%, rgba(90,159,224,.12), transparent 60%),
         linear-gradient(180deg, rgba(255,255,255,.58), rgba(255,255,255,.18));">
     </div>
     <div class="absolute inset-0 opacity-60"
@@ -477,12 +477,12 @@
           <svg viewBox="0 0 120 120" class="w-11 h-11 drop-shadow-[0_10px_22px_rgba(0,0,0,.25)]" aria-hidden="true">
             <defs>
               <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#fbbf24"/>
-                <stop offset="1" stop-color="#f59e0b"/>
+                <stop offset="0" stop-color="#5a9fe0"/>
+                <stop offset="1" stop-color="#1d5fa8"/>
               </linearGradient>
               <linearGradient id="gAqua" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#22d3ee"/>
-                <stop offset="1" stop-color="#34d399"/>
+                <stop offset="0" stop-color="#88cdf7"/>
+                <stop offset="1" stop-color="#2878c7"/>
               </linearGradient>
             </defs>
             <circle cx="60" cy="60" r="52" fill="none" stroke="url(#gGold)" stroke-width="8"/>
@@ -553,7 +553,7 @@
       <!-- Left: Profile card -->
       <section class="lg:col-span-4 glass rounded-3xl p-6 g-border animate-pop">
         <div class="relative rounded-3xl overflow-hidden border border-white/20 dark:border-slate-700/30">
-          <div id="cover" class="h-28 bg-gradient-to-r from-indigo-500/30 via-pink-500/25 to-emerald-500/25"></div>
+          <div id="cover" class="h-28 bg-gradient-to-r from-blue-700/35 via-blue-500/25 to-blue-100/70"></div>
           <div class="absolute -bottom-8 left-5 w-16 h-16 rounded-3xl overflow-hidden border-4 border-white/60 dark:border-slate-900/70 shadow-xl bg-white/30">
             <img id="avatar" alt="avatar" class="w-full h-full object-cover" src=""/>
           </div>
@@ -887,8 +887,8 @@
   // ===== Toast =====
   function toast(msg, type='info'){
     const el = document.getElementById('toast');
-    const bg = type==='error' ? 'rgba(239,68,68,.18)' : type==='success' ? 'rgba(34,197,94,.18)' : 'rgba(99,102,241,.14)';
-    const br = type==='error' ? 'rgba(239,68,68,.30)' : type==='success' ? 'rgba(34,197,94,.26)' : 'rgba(245,158,11,.22)';
+    const bg = type==='error' ? 'rgba(239,68,68,.18)' : type==='success' ? 'rgba(219,234,254,.84)' : 'rgba(239,246,255,.96)';
+    const br = type==='error' ? 'rgba(239,68,68,.30)' : type==='success' ? 'rgba(40,120,199,.26)' : 'rgba(40,120,199,.22)';
     el.innerHTML = `
       <div class="glass rounded-2xl p-4 g-border" style="background:${bg}; border-color:${br}">
         <div class="text-sm font-extrabold">${escapeHtml(msg)}</div>
@@ -1288,11 +1288,18 @@
     }
   }
 
+  function profileAvatarUrl(u){
+    const avatar = String(u?.avatar || '');
+    if(avatar && !/res\.cloudinary\.com\/demo\/.*default-avatar/i.test(avatar)) return avatar;
+    const id = String(u?._id || u?.id || 'anonymous');
+    return `/api/avatar-placeholder/${encodeURIComponent(id)}.svg?role=${encodeURIComponent(u?.role || 'student')}&gender=${encodeURIComponent(u?.gender || '')}`;
+  }
+
   function setProfileUI(u){
-    document.getElementById('avatar').src = u.avatar || 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png';
+    document.getElementById('avatar').src = profileAvatarUrl(u);
     document.getElementById('cover').style.background = u.coverBanner
       ? `url('${u.coverBanner}') center/cover no-repeat`
-      : 'linear-gradient(90deg, rgba(245,158,11,.22), rgba(20,184,166,.20), rgba(34,211,238,.16))';
+      : 'linear-gradient(90deg, rgba(29,95,168,.24), rgba(90,159,224,.20), rgba(219,234,254,.72))';
 
     document.getElementById('name').textContent = u.fullName || u.nickname || 'Foydalanuvchi';
     document.getElementById('uname').textContent = '@' + (u.username || '');
@@ -1382,10 +1389,10 @@
   }
 
   function setProfileUI(u){
-    document.getElementById('avatar').src = u.avatar || 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png';
+    document.getElementById('avatar').src = profileAvatarUrl(u);
     document.getElementById('cover').style.background = u.coverBanner
       ? `url('${u.coverBanner}') center/cover no-repeat`
-      : 'linear-gradient(90deg, rgba(245,158,11,.22), rgba(20,184,166,.20), rgba(34,211,238,.16))';
+      : 'linear-gradient(90deg, rgba(29,95,168,.24), rgba(90,159,224,.20), rgba(219,234,254,.72))';
 
     document.getElementById('name').innerHTML = renderProfileBadgesHtml(u);
     document.getElementById('uname').textContent = '@' + (u.username || '');
@@ -1405,7 +1412,7 @@
     }
   }
 
-  function robotSVG({ body='#6366f1', outfit='#ec4899', typeId='starter' }){
+  function robotSVG({ body='#2878c7', outfit='#dbeafe', typeId='starter' }){
     // Layers toggled by CSS classes on wrapper
     return `
     <svg viewBox="0 0 240 240" width="240" height="240" aria-hidden="true">
@@ -1426,8 +1433,8 @@
 
       <!-- Aura (lux) -->
       <g class="aura" opacity="0">
-        <circle cx="120" cy="120" r="100" fill="none" stroke="rgba(236,72,153,.35)" stroke-width="10"></circle>
-        <circle cx="120" cy="120" r="86" fill="none" stroke="rgba(99,102,241,.30)" stroke-width="8"></circle>
+        <circle cx="120" cy="120" r="100" fill="none" stroke="rgba(90,159,224,.35)" stroke-width="10"></circle>
+        <circle cx="120" cy="120" r="86" fill="none" stroke="rgba(40,120,199,.30)" stroke-width="8"></circle>
       </g>
 
       <!-- Stars (astro) -->
@@ -1483,8 +1490,8 @@
 
   function applyRobot(wrapper, robot){
     const typeId = robot?.typeId || 'starter';
-    const body = robot?.baseColor || '#6366f1';
-    const outfit = robot?.outfitColor || '#ec4899';
+    const body = robot?.baseColor || '#2878c7';
+    const outfit = robot?.outfitColor || '#dbeafe';
     const motion = String(sceneState?.robotMotion || 'float');
     const fx = String(sceneState?.robotFx || 'auto');
 
@@ -1750,11 +1757,11 @@
   function setStudioValues(activeRobot, activeCompanion){
     if(!isOwner) return;
     document.getElementById('studioRobotName').value = activeRobot?.name || '';
-    document.getElementById('studioRobotColor').value = activeRobot?.baseColor || '#6366f1';
-    document.getElementById('studioRobotOutfit').value = activeRobot?.outfitColor || '#ec4899';
+    document.getElementById('studioRobotColor').value = activeRobot?.baseColor || '#2878c7';
+    document.getElementById('studioRobotOutfit').value = activeRobot?.outfitColor || '#dbeafe';
     document.getElementById('studioCompanionName').value = activeCompanion?.name || '';
-    document.getElementById('studioCompanionColor').value = activeCompanion?.color || '#14b8a6';
-    document.getElementById('studioCompanionAccessory').value = activeCompanion?.accessoryColor || '#f59e0b';
+    document.getElementById('studioCompanionColor').value = activeCompanion?.color || '#5a9fe0';
+    document.getElementById('studioCompanionAccessory').value = activeCompanion?.accessoryColor || '#bfdbfe';
   }
 
   async function saveStudioData(activeRobot, activeCompanion){
@@ -1830,8 +1837,8 @@
               _id: `trial_${it.id}`,
               typeId: it.id,
               name: it.name || trialState.name || 'Trial Robot',
-              baseColor: '#6366f1',
-              outfitColor: '#ec4899',
+              baseColor: '#2878c7',
+              outfitColor: '#dbeafe',
               level: 1,
               cuteness: it.baseCuteness || 60
             };
@@ -2027,6 +2034,18 @@
     if (teacherFields) teacherFields.classList.toggle('hidden', !isTeacher);
   }
 
+  function syncEditAccessibilityMode(){
+    const disclosure = document.getElementById('editAccessibilityDisclosure')?.value || '';
+    document.getElementById('editDisabilityTypes')?.classList.toggle('hidden', disclosure !== 'disability');
+  }
+
+  function setCheckedValues(name, values){
+    const selected = new Set(Array.isArray(values) ? values.map(String) : []);
+    document.querySelectorAll(`[name="${name}"]`).forEach((input)=>{
+      input.checked = selected.has(String(input.value || ''));
+    });
+  }
+
   function openEdit(){
     const u = viewed || {};
     const isTeacher = isTeacherEditorProfile(u);
@@ -2035,6 +2054,8 @@
     document.getElementById('editFullName').value = u.fullName || u.fullname || '';
     document.getElementById('editNick').value = u.nickname || '';
     document.getElementById('editBio').value = u.bio || '';
+    const editGender = document.getElementById('editGender');
+    if (editGender) editGender.value = String(u.gender || '');
     document.getElementById('editGroup').innerHTML = '<option value="">— Tanlang —</option>';
     const sub = document.getElementById('editTeachingSubject');
     const subs = document.getElementById('editTeachingSubjects');
@@ -2043,6 +2064,16 @@
       const list = Array.isArray(u.teachingSubjects) ? u.teachingSubjects : [];
       subs.value = list.join(', ');
     }
+    const accessibility = u.accessibilityProfile || {};
+    const disclosure = document.getElementById('editAccessibilityDisclosure');
+    if (disclosure) disclosure.value = String(accessibility.disclosure || '');
+    setCheckedValues('editDisabilityTypes', accessibility.disabilityTypes || []);
+    setCheckedValues('editAssistancePreferences', accessibility.assistancePreferences || []);
+    const accessibilityNotes = document.getElementById('editAccessibilityNotes');
+    if (accessibilityNotes) accessibilityNotes.value = String(accessibility.notes || '');
+    const accessibilityConsent = document.getElementById('editAccessibilityConsent');
+    if (accessibilityConsent) accessibilityConsent.checked = !!accessibility.consentToUseForSupport;
+    syncEditAccessibilityMode();
     syncEditRoleMode(isTeacher);
 
     // load catalog and select current values
@@ -2173,6 +2204,7 @@
       const isTeacher = isTeacherEditorProfile(viewed || me || {});
       const fullName = document.getElementById('editFullName').value.trim();
       const nickname = document.getElementById('editNick').value.trim();
+      const gender = String(document.getElementById('editGender')?.value || '');
       const bio = document.getElementById('editBio').value.trim();
       const university = document.getElementById('editUniversity').value.trim();
       const faculty = document.getElementById('editFaculty').value.trim();
@@ -2181,6 +2213,13 @@
       const teachingSubject = String(document.getElementById('editTeachingSubject')?.value || '').trim();
       const teachingSubjectsRaw = String(document.getElementById('editTeachingSubjects')?.value || '');
       const teachingSubjects = teachingSubjectsRaw.split(',').map((x)=>x.trim()).filter(Boolean);
+      const accessibilityProfile = {
+        disclosure: String(document.getElementById('editAccessibilityDisclosure')?.value || ''),
+        disabilityTypes: Array.from(document.querySelectorAll('[name="editDisabilityTypes"]:checked')).map((input)=>String(input.value || '')),
+        assistancePreferences: Array.from(document.querySelectorAll('[name="editAssistancePreferences"]:checked')).map((input)=>String(input.value || '')),
+        notes: String(document.getElementById('editAccessibilityNotes')?.value || '').trim(),
+        consentToUseForSupport: !!document.getElementById('editAccessibilityConsent')?.checked
+      };
 
       if(!university){
         showEditMsg('Universitetni tanlang.');
@@ -2211,7 +2250,7 @@
       const cv = document.getElementById('editCoverFile').files[0];
       if(cv) await uploadCover(cv, token);
 
-      const payload = { fullName, nickname, bio, university, faculty };
+      const payload = { fullName, nickname, gender, bio, university, faculty, accessibilityProfile };
       if (isTeacher) {
         payload.teachingSubject = teachingSubject;
         payload.teachingSubjects = teachingSubjects;
@@ -2231,6 +2270,16 @@
 
       const j = await r.json().catch(()=> ({}));
       if(!r.ok) throw new Error(j.error || 'Saqlab bo‘lmadi');
+
+      if(accessibilityProfile.consentToUseForSupport){
+        const prefs = new Set(accessibilityProfile.assistancePreferences);
+        localStorage.setItem('hallaym:voice-assistant-enabled', prefs.has('voice_navigation') ? '1' : '0');
+        localStorage.setItem('hallaym:navigation-gesture-enabled', prefs.has('gesture_navigation') ? '1' : '0');
+        localStorage.setItem('hallaym:captions-enabled', prefs.has('captions') ? '1' : '0');
+        localStorage.setItem('hallaym:high-contrast', prefs.has('high_contrast') ? '1' : '0');
+        localStorage.setItem('hallaym:large-text', prefs.has('large_text') ? '1' : '0');
+        localStorage.setItem('hallaym:reduced-motion', prefs.has('reduced_motion') ? '1' : '0');
+      }
 
       toast('Profil yangilandi', 'success');
       closeEdit();
@@ -2281,6 +2330,15 @@
             <div class="text-xs muted2 font-extrabold mb-1">Nick</div>
             <input id="editNick" class="w-full glass rounded-2xl px-4 py-3 text-sm outline-none" placeholder="Nick"/>
           </label>
+          <label class="block">
+            <div class="text-xs muted2 font-extrabold mb-1">Rasm bo‘lmagandagi profil ikoni</div>
+            <select id="editGender" class="w-full glass rounded-2xl px-4 py-3 text-sm outline-none">
+              <option value="">Neytral ikon</option>
+              <option value="female">Qiz / ayol ikoni</option>
+              <option value="male">O‘g‘il / erkak ikoni</option>
+              <option value="prefer_not_to_say">Aytilmasin</option>
+            </select>
+          </label>
           <label class="block md:col-span-2">
             <div class="text-xs muted2 font-extrabold mb-1">Bio</div>
             <textarea id="editBio" rows="3" class="w-full glass rounded-2xl px-4 py-3 text-sm outline-none" placeholder="O‘zingiz haqingizda"></textarea>
@@ -2318,6 +2376,39 @@
               <input id="editTeachingSubjects" class="w-full glass rounded-2xl px-4 py-3 text-sm outline-none" placeholder="Masalan: Kimyo, Biologiya" />
             </label>
           </div>
+
+          <fieldset class="md:col-span-2 glass rounded-2xl p-4">
+            <legend class="px-2 text-xs muted2 font-extrabold">Maxsus qulayliklar (ixtiyoriy va maxfiy)</legend>
+            <label class="block mt-2">
+              <div class="text-xs muted2 font-extrabold mb-1">Holat</div>
+              <select id="editAccessibilityDisclosure" onchange="syncEditAccessibilityMode()" class="w-full glass rounded-2xl px-4 py-3 text-sm outline-none">
+                <option value="">Belgilanmagan</option>
+                <option value="none">Maxsus ehtiyojim yo‘q</option>
+                <option value="disability">Maxsus qulaylik kerak</option>
+                <option value="prefer_not_to_say">Aytilmasin</option>
+              </select>
+            </label>
+            <div id="editDisabilityTypes" class="hidden mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs muted2">
+              <label><input type="checkbox" name="editDisabilityTypes" value="visual"> Ko‘rish</label>
+              <label><input type="checkbox" name="editDisabilityTypes" value="hearing"> Eshitish</label>
+              <label><input type="checkbox" name="editDisabilityTypes" value="speech"> Nutq</label>
+              <label><input type="checkbox" name="editDisabilityTypes" value="mobility"> Harakat</label>
+              <label><input type="checkbox" name="editDisabilityTypes" value="learning"> O‘rganish</label>
+              <label><input type="checkbox" name="editDisabilityTypes" value="neurodivergent"> Neyroxilma-xillik</label>
+              <label><input type="checkbox" name="editDisabilityTypes" value="multiple"> Bir nechta</label>
+              <label><input type="checkbox" name="editDisabilityTypes" value="other"> Boshqa</label>
+            </div>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs muted2">
+              <label><input type="checkbox" name="editAssistancePreferences" value="voice_navigation"> Ovozli navigatsiya</label>
+              <label><input type="checkbox" name="editAssistancePreferences" value="gesture_navigation"> Imo-navigatsiya</label>
+              <label><input type="checkbox" name="editAssistancePreferences" value="captions"> Jonli subtitr</label>
+              <label><input type="checkbox" name="editAssistancePreferences" value="high_contrast"> Yuqori kontrast</label>
+              <label><input type="checkbox" name="editAssistancePreferences" value="large_text"> Katta matn</label>
+              <label><input type="checkbox" name="editAssistancePreferences" value="reduced_motion"> Kam animatsiya</label>
+            </div>
+            <textarea id="editAccessibilityNotes" rows="2" maxlength="500" class="w-full glass rounded-2xl px-4 py-3 text-sm outline-none mt-3" placeholder="Qo‘shimcha izoh (ixtiyoriy)"></textarea>
+            <label class="flex gap-2 items-start mt-3 text-xs muted2"><input id="editAccessibilityConsent" type="checkbox" class="mt-0.5"> Tanlovlarimni saqlash va mos yordamchi funksiyalarni yoqishga roziman.</label>
+          </fieldset>
 
           <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
             <label class="block">

@@ -1,38 +1,38 @@
 :root {
   color-scheme: light;
 
-  --h-accent: #0f8f83;
-  --h-accent-strong: #0a6f66;
-  --h-accent-soft: #dcefeb;
-  --h-accent-soft-2: #eef7f5;
-  --h-accent-soft-3: #f6fbfa;
+  --h-accent: #1d5fa8;
+  --h-accent-strong: #17477c;
+  --h-accent-soft: #dbeafe;
+  --h-accent-soft-2: #eff6ff;
+  --h-accent-soft-3: #f8fbff;
 
-  --h-text: #21443f;
-  --h-text-strong: #0d2623;
-  --h-muted: rgba(33, 68, 63, 0.74);
+  --h-text: #172033;
+  --h-text-strong: #0f1b2d;
+  --h-muted: rgba(29, 50, 91, 0.74);
 
-  --h-bg: #f7fbfa;
+  --h-bg: #f5f9ff;
   --h-panel-bg: rgba(255, 255, 255, 0.92);
-  --h-panel-bg-2: rgba(247, 251, 250, 0.96);
-  --h-border: rgba(15, 111, 102, 0.14);
-  --h-shadow: rgba(15, 87, 79, 0.11);
+  --h-panel-bg-2: rgba(245, 249, 255, 0.96);
+  --h-border: rgba(40, 120, 199, 0.16);
+  --h-shadow: rgba(31, 78, 132, 0.11);
 
   --h-input-bg: rgba(255, 255, 255, 0.96);
-  --h-input-border: rgba(15, 111, 102, 0.18);
-  --h-input-placeholder: rgba(33, 68, 63, 0.46);
+  --h-input-border: rgba(40, 120, 199, 0.20);
+  --h-input-placeholder: rgba(29, 50, 91, 0.46);
 
-  --h-ring: rgba(15, 143, 131, 0.18);
+  --h-ring: rgba(40, 120, 199, 0.18);
   --h-btn-text: #ffffff;
-  --h-btn-text-dark: #062422;
+  --h-btn-text-dark: #0b1f3a;
 
   --h-menu-panel-bg: rgba(255, 255, 255, 0.96);
-  --h-menu-panel-bg-2: rgba(244, 251, 249, 0.98);
-  --h-menu-item-bg: rgba(241, 248, 246, 0.94);
-  --h-menu-item-bg-hover: rgba(227, 241, 237, 0.98);
+  --h-menu-panel-bg-2: rgba(245, 249, 255, 0.98);
+  --h-menu-item-bg: rgba(239, 246, 255, 0.94);
+  --h-menu-item-bg-hover: rgba(219, 234, 254, 0.98);
 
-  --h-scroll-track: rgba(15, 111, 102, 0.08);
-  --h-scroll-thumb-a: rgba(115, 193, 183, 0.78);
-  --h-scroll-thumb-b: rgba(15, 143, 131, 0.92);
+  --h-scroll-track: rgba(40, 120, 199, 0.08);
+  --h-scroll-thumb-a: rgba(145, 175, 209, 0.78);
+  --h-scroll-thumb-b: rgba(29, 95, 168, 0.92);
 
   --h-surface-image: url("/assets/theme-ambient-light.svg");
   --h-grid-image: url("/assets/theme-grid-light.svg");
@@ -41,38 +41,38 @@
 html.dark {
   color-scheme: dark;
 
-  --h-accent: #77d0c4;
-  --h-accent-strong: #98e4d8;
-  --h-accent-soft: #133336;
-  --h-accent-soft-2: #0d272a;
-  --h-accent-soft-3: #081c1e;
+  --h-accent: #64b9ee;
+  --h-accent-strong: #88cdf7;
+  --h-accent-soft: #102f43;
+  --h-accent-soft-2: #0d1c29;
+  --h-accent-soft-3: #07131d;
 
-  --h-text: #d8f5f1;
-  --h-text-strong: #effdfa;
-  --h-muted: rgba(216, 245, 241, 0.74);
+  --h-text: #edf6fb;
+  --h-text-strong: #ffffff;
+  --h-muted: rgba(219, 234, 254, 0.74);
 
-  --h-bg: #071517;
-  --h-panel-bg: rgba(11, 31, 34, 0.9);
-  --h-panel-bg-2: rgba(7, 22, 24, 0.96);
-  --h-border: rgba(119, 208, 196, 0.2);
+  --h-bg: #07131d;
+  --h-panel-bg: rgba(13, 28, 41, 0.94);
+  --h-panel-bg-2: rgba(7, 19, 29, 0.98);
+  --h-border: rgba(100, 185, 238, 0.22);
   --h-shadow: rgba(0, 0, 0, 0.34);
 
-  --h-input-bg: rgba(14, 38, 41, 0.94);
-  --h-input-border: rgba(119, 208, 196, 0.24);
-  --h-input-placeholder: rgba(216, 245, 241, 0.44);
+  --h-input-bg: rgba(16, 47, 67, 0.94);
+  --h-input-border: rgba(100, 185, 238, 0.24);
+  --h-input-placeholder: rgba(219, 234, 254, 0.44);
 
-  --h-ring: rgba(119, 208, 196, 0.2);
-  --h-btn-text: #062422;
-  --h-btn-text-dark: #effdfa;
+  --h-ring: rgba(100, 185, 238, 0.22);
+  --h-btn-text: #0b1f3a;
+  --h-btn-text-dark: #ffffff;
 
-  --h-menu-panel-bg: rgba(9, 27, 29, 0.96);
-  --h-menu-panel-bg-2: rgba(7, 22, 24, 0.98);
-  --h-menu-item-bg: rgba(15, 39, 42, 0.92);
-  --h-menu-item-bg-hover: rgba(22, 54, 58, 0.95);
+  --h-menu-panel-bg: rgba(13, 28, 41, 0.98);
+  --h-menu-panel-bg-2: rgba(7, 19, 29, 0.98);
+  --h-menu-item-bg: rgba(16, 47, 67, 0.92);
+  --h-menu-item-bg-hover: rgba(23, 71, 124, 0.95);
 
-  --h-scroll-track: rgba(119, 208, 196, 0.1);
-  --h-scroll-thumb-a: rgba(119, 208, 196, 0.72);
-  --h-scroll-thumb-b: rgba(152, 228, 216, 0.92);
+  --h-scroll-track: rgba(100, 185, 238, 0.1);
+  --h-scroll-thumb-a: rgba(100, 185, 238, 0.72);
+  --h-scroll-thumb-b: rgba(136, 205, 247, 0.92);
 
   --h-surface-image: url("/assets/theme-ambient-dark.svg");
   --h-grid-image: url("/assets/theme-grid-dark.svg");
@@ -282,6 +282,194 @@ a[class*="btn"]:hover,
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* v5.1 final palette guard: every application surface is white/navy/blue. */
+::selection {
+  background: rgba(40,120,199,.18);
+}
+
+.g-border::before {
+  border-color: rgba(40,120,199,.18) !important;
+  background: linear-gradient(135deg,rgba(29,95,168,.70),rgba(90,159,224,.46),rgba(219,234,254,.70)) !important;
+}
+
+header .nav,
+#callMoreMenu,
+#groupActionsMenu,
+#userMenu,
+#groupInfoMenu,
+.toolbar,
+.topbar,
+.navbar,
+.nav-shell,
+.drawer,
+.modal,
+.modal-content,
+.dialog,
+.dialog-card,
+.popup,
+.popover,
+.sheet {
+  background: var(--h-menu-panel-bg) !important;
+  border-color: var(--h-border) !important;
+  box-shadow: 0 16px 38px var(--h-shadow) !important;
+}
+
+.logo,
+.logoWrap,
+.thumb,
+.viewerHeader,
+.previewHeader,
+.modal header,
+.dot {
+  color: #fff !important;
+  border-color: rgba(40,120,199,.22) !important;
+  background: linear-gradient(135deg,#1d5fa8,#2878c7 58%,#5a9fe0) !important;
+  box-shadow: 0 12px 28px rgba(31,78,132,.14) !important;
+}
+
+.btn.primary,
+button.btn.primary,
+a.btn.primary,
+.btn-primary,
+button.btn-primary,
+a.btn-primary,
+.primary-btn,
+button.primary,
+a.primary,
+.fab,
+.floating-action,
+.quick-action,
+.shortcut-btn,
+.ctrl-active {
+  color: #fff !important;
+  border-color: #17477c !important;
+  background: #1d5fa8 !important;
+  background-image: none !important;
+  box-shadow: 0 10px 24px rgba(31,78,132,.14) !important;
+}
+
+.btn.danger,
+button.btn.danger,
+a.btn.danger,
+.ctrl-off,
+.alert.error,
+.notice.error,
+.toast.error,
+.badge.error,
+.chip.error {
+  color: #991b1b !important;
+  border-color: rgba(220,38,38,.24) !important;
+  background: #fff1f2 !important;
+  background-image: none !important;
+}
+
+.card,
+.course,
+.courseItem,
+.item,
+.lesson,
+.lessonCard,
+.viewer,
+.preview,
+.qcard,
+.cta,
+.materialItem,
+.qrow,
+.skeleton,
+.official-link-tile,
+.official-metric-card {
+  background: var(--h-panel-bg) !important;
+  border-color: var(--h-border) !important;
+  box-shadow: 0 12px 28px var(--h-shadow) !important;
+}
+
+.chip.active,
+.nav a:hover,
+nav a:hover,
+.sidebar a:hover,
+.menu a:hover,
+.tabs a:hover,
+.tabs button:hover,
+.tab:hover,
+.nav-link:hover,
+.menu-link:hover,
+.nav a.active,
+nav a.active,
+.sidebar a.active,
+.menu a.active,
+.tabs a.active,
+.tabs button.active,
+.tab.active,
+.nav-link.active,
+.menu-link.active,
+[aria-current="page"],
+[aria-selected="true"],
+.alert:not(.error),
+.notice:not(.error),
+.toast:not(.error),
+.banner,
+.callout,
+.status-pill,
+.chip.success,
+.badge.success,
+.alert.warn,
+.notice.warn,
+.toast.warn,
+.badge.warn,
+.chip.warn,
+.official-kicker {
+  color: var(--h-accent-strong) !important;
+  border-color: rgba(40,120,199,.20) !important;
+  background: var(--h-accent-soft-2) !important;
+  background-image: none !important;
+}
+
+.badge.student,
+.badge.teacher,
+.badge.admin,
+html.dark .badge.student,
+html.dark .badge.teacher,
+html.dark .badge.admin,
+.text-teal-500,
+.text-teal-600,
+.text-teal-700,
+.text-emerald-500,
+.text-emerald-600,
+.text-cyan-600,
+.text-cyan-700,
+.brand-accent,
+.accent,
+.highlight {
+  color: var(--h-accent-strong) !important;
+}
+
+.bg-gradient-to-r,
+.bg-gradient-to-br,
+.bg-gradient-to-b,
+.bg-gradient-to-tr,
+.hero-accent,
+.cta-accent,
+.accent-surface,
+.bar > div {
+  background: linear-gradient(135deg,#1d5fa8,#5a9fe0 58%,#dbeafe) !important;
+}
+
+.bar,
+.kpi .box,
+.kv .box,
+table tr:hover,
+.table tr:hover,
+.list-row:hover,
+.row-hover:hover {
+  border-color: var(--h-border) !important;
+  background: var(--h-accent-soft-2) !important;
+}
+
+.drawerHr,
+.divider {
+  background: linear-gradient(90deg,transparent,rgba(40,120,199,.28),transparent) !important;
 }
 
 .u-anim,
@@ -3360,7 +3548,89 @@ html.dark .ctrl-off {
       border-radius: 24px !important;
     }
 
-    .official-menu__panel {
+  .official-menu__panel {
       padding: 14px;
     }
   }
+
+/* v5.1 palette lock: last in cascade so legacy page rules cannot reintroduce mixed colors. */
+::selection { background: rgba(40,120,199,.18) !important; }
+
+header .nav,
+#callMoreMenu,#groupActionsMenu,#userMenu,#groupInfoMenu,
+.toolbar,.topbar,.navbar,.nav-shell,.drawer,.modal,.modal-content,
+.dialog,.dialog-card,.popup,.popover,.sheet {
+  background: var(--h-menu-panel-bg) !important;
+  border-color: var(--h-border) !important;
+  box-shadow: 0 16px 38px var(--h-shadow) !important;
+}
+
+.g-border::before {
+  border-color: rgba(40,120,199,.18) !important;
+  background: linear-gradient(135deg,rgba(29,95,168,.70),rgba(90,159,224,.46),rgba(219,234,254,.70)) !important;
+}
+
+.logo,.logoWrap,.thumb,.viewerHeader,.previewHeader,.modal header,.dot {
+  color: #fff !important;
+  border-color: rgba(40,120,199,.22) !important;
+  background: linear-gradient(135deg,#1d5fa8,#2878c7 58%,#5a9fe0) !important;
+  box-shadow: 0 12px 28px rgba(31,78,132,.14) !important;
+}
+
+.btn.primary,button.btn.primary,a.btn.primary,.btn-primary,button.btn-primary,a.btn-primary,
+.primary-btn,button.primary,a.primary,.fab,.floating-action,.quick-action,.shortcut-btn,.ctrl-active {
+  color: #fff !important;
+  border-color: #17477c !important;
+  background: #1d5fa8 !important;
+  background-image: none !important;
+  box-shadow: 0 10px 24px rgba(31,78,132,.14) !important;
+}
+
+.btn.danger,button.btn.danger,a.btn.danger,.ctrl-off,
+.alert.error,.notice.error,.toast.error,.badge.error,.chip.error {
+  color: #991b1b !important;
+  border-color: rgba(220,38,38,.24) !important;
+  background: #fff1f2 !important;
+  background-image: none !important;
+}
+
+.card,.course,.courseItem,.item,.lesson,.lessonCard,.viewer,.preview,
+.qcard,.cta,.materialItem,.qrow,.skeleton,.official-link-tile,.official-metric-card {
+  background: var(--h-panel-bg) !important;
+  border-color: var(--h-border) !important;
+  box-shadow: 0 12px 28px var(--h-shadow) !important;
+}
+
+.chip.active,
+.nav a:hover,nav a:hover,.sidebar a:hover,.menu a:hover,.tabs a:hover,.tabs button:hover,
+.tab:hover,.nav-link:hover,.menu-link:hover,.nav a.active,nav a.active,.sidebar a.active,
+.menu a.active,.tabs a.active,.tabs button.active,.tab.active,.nav-link.active,.menu-link.active,
+[aria-current="page"],[aria-selected="true"],.alert:not(.error),.notice:not(.error),
+.toast:not(.error),.banner,.callout,.status-pill,.chip.success,.badge.success,
+.alert.warn,.notice.warn,.toast.warn,.badge.warn,.chip.warn,.official-kicker {
+  color: var(--h-accent-strong) !important;
+  border-color: rgba(40,120,199,.20) !important;
+  background: var(--h-accent-soft-2) !important;
+  background-image: none !important;
+}
+
+.badge.student,.badge.teacher,.badge.admin,
+html.dark .badge.student,html.dark .badge.teacher,html.dark .badge.admin,
+.text-teal-500,.text-teal-600,.text-teal-700,.text-emerald-500,.text-emerald-600,
+.text-cyan-600,.text-cyan-700,.brand-accent,.accent,.highlight {
+  color: var(--h-accent-strong) !important;
+}
+
+.bg-gradient-to-r,.bg-gradient-to-br,.bg-gradient-to-b,.bg-gradient-to-tr,
+.hero-accent,.cta-accent,.accent-surface,.bar > div {
+  background: linear-gradient(135deg,#1d5fa8,#5a9fe0 58%,#dbeafe) !important;
+}
+
+.bar,.kpi .box,.kv .box,table tr:hover,.table tr:hover,.list-row:hover,.row-hover:hover {
+  border-color: var(--h-border) !important;
+  background: var(--h-accent-soft-2) !important;
+}
+
+.drawerHr,.divider {
+  background: linear-gradient(90deg,transparent,rgba(40,120,199,.28),transparent) !important;
+}

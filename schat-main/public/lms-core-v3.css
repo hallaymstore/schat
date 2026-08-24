@@ -1,4 +1,4 @@
-/* HALLAYM EDU LMS v3 — unified production interface
+/* HALLAYM EDU LMS v4 — unified production interface
    Final visual layer for legacy functional pages. */
 :root {
   color-scheme: light;
@@ -14,13 +14,13 @@
   --lms-blue: #176fae;
   --lms-blue-strong: #0c568d;
   --lms-blue-soft: #e5f3fc;
-  --lms-teal: #0d8b75;
-  --lms-teal-soft: #e4f7f2;
-  --lms-orange: #f26532;
-  --lms-orange-soft: #fff0e9;
+  --lms-teal: #176fae;
+  --lms-teal-soft: #e5f3fc;
+  --lms-orange: #176fae;
+  --lms-orange-soft: #e5f3fc;
   --lms-danger: #c93e4c;
-  --lms-warning: #a96605;
-  --lms-success: #18765f;
+  --lms-warning: #0c568d;
+  --lms-success: #176fae;
   --lms-shadow: 0 5px 18px rgba(28, 68, 94, .08);
   --lms-shadow-strong: 0 12px 34px rgba(20, 55, 79, .14);
   --lms-radius: 3px;
@@ -36,7 +36,7 @@
   --border: var(--lms-line) !important;
   --teal: var(--lms-teal) !important;
   --gold: var(--lms-orange) !important;
-  --gold2: #f58a42 !important;
+  --gold2: var(--lms-blue) !important;
   --sky: var(--lms-blue) !important;
   --danger: var(--lms-danger) !important;
   --ok: var(--lms-success) !important;
@@ -60,13 +60,13 @@ html.dark {
   --lms-blue: #64b9ee;
   --lms-blue-strong: #88cdf7;
   --lms-blue-soft: #102f43;
-  --lms-teal: #4dd4b7;
-  --lms-teal-soft: #10372f;
-  --lms-orange: #ff916a;
-  --lms-orange-soft: #41261e;
+  --lms-teal: #64b9ee;
+  --lms-teal-soft: #102f43;
+  --lms-orange: #64b9ee;
+  --lms-orange-soft: #102f43;
   --lms-danger: #ff7c89;
-  --lms-warning: #ffc766;
-  --lms-success: #62d7b6;
+  --lms-warning: #88cdf7;
+  --lms-success: #64b9ee;
   --lms-shadow: 0 6px 20px rgba(0,0,0,.24);
   --lms-shadow-strong: 0 14px 40px rgba(0,0,0,.38);
   --glass-bg: rgba(13,28,41,.98) !important;
@@ -341,7 +341,7 @@ table th { color: var(--lms-muted) !important; background: var(--lms-surface-2) 
   border-radius: 2px !important;
   background: var(--lms-surface-2) !important;
 }
-#eduGestureNavVideo { width: 100%; aspect-ratio: 16/9; display: block; object-fit: cover; transform: scaleX(-1); border: 1px solid var(--lms-line-strong); border-radius: 3px; background: #02070c; }
+#eduGestureNavVideo { width: 100%; aspect-ratio: 16/9; display: block; object-fit: contain; transform: scaleX(-1); border: 1px solid var(--lms-line-strong); border-radius: 3px; background: #02070c; }
 #eduGestureNavStatus { min-height: 30px; display: flex; align-items: center; margin-top: 5px; padding: 5px 7px; color: var(--lms-blue-strong); border-left: 3px solid var(--lms-blue); background: var(--lms-blue-soft); font-size: 10px; font-weight: 750; }
 #eduGestureNavPanel[data-mode="error"] #eduGestureNavStatus { color: #8e1b1b; border-left-color: #dc2626; background: #fff1f1; }
 #eduGestureNavPanel ul { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; margin: 7px 0 0; padding: 0; list-style: none; }
@@ -481,6 +481,20 @@ html.dark #teacherStageWrap {
   background: #0a1721 !important;
   box-shadow: none !important;
 }
+
+/* v5.2 stage integrity: one strict 16:9 surface.  A late camera track may be
+   inserted before the roster render runs; force both the temporary tile and
+   the final primary slot into the same layer instead of a second grid row. */
+#teacherStageSurface{display:block!important;position:absolute!important;inset:0!important}
+#teacherStageSurface>.stage-slot-primary,
+#teacherStageSurface>.video-tile{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important}
+#teacherStageSurface>.stage-slot-primary>.video-tile{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important}
+#teacherStageSurface video{width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important}
+@media (min-width:1024px){
+  #teacherStageWrap{height:auto!important;align-self:start!important}
+  #teacherStageWrap>.w-full{height:auto!important}
+  #teacherStage{height:auto!important;aspect-ratio:16/9!important}
+}
 #stageWhiteboardCanvas { border-radius: 0 !important; }
 #stageWhiteboardCamPip {
   top: 10px !important;
@@ -541,6 +555,77 @@ html.dark #teacherStageWrap {
 #wbTextStyleRow :where(select,input,button) { min-width: 0; }
 #wbTextSize { width: 100% !important; }
 #wbShapeTools { display: inline-flex; align-items: center; gap: 3px; }
+
+/* v4 classroom: the board is its own movable/resizable PiP, never the camera track. */
+#groupCallVideoLayout { position: relative !important; isolation: isolate; }
+#stageWhiteboardLayer,
+#teacherStage .stage-slot-primary.whiteboard-live #stageWhiteboardLayer {
+  position: absolute !important;
+  inset: auto 18px 18px auto !important;
+  width: min(48vw,760px) !important;
+  min-width: 360px !important;
+  max-width: calc(100% - 36px) !important;
+  height: auto !important;
+  aspect-ratio: 16 / 9 !important;
+  z-index: 90 !important;
+  overflow: hidden !important;
+  resize: both !important;
+  border: 2px solid #5ba9d4 !important;
+  border-radius: 3px !important;
+  background: #fff !important;
+  box-shadow: 0 18px 48px rgba(0,0,0,.48) !important;
+}
+#stageWhiteboardLayer.pip-expanded {
+  inset: 8px !important;
+  width: auto !important;
+  max-width: none !important;
+  aspect-ratio: auto !important;
+  resize: none !important;
+}
+#stageWhiteboardPipHeader {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 12;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 7px;
+  color: #eff9ff;
+  border-bottom: 1px solid #38596d;
+  background: #0b2231;
+  cursor: move;
+  user-select: none;
+}
+#stageWhiteboardPipHeader > span:first-child { margin-right: auto; font-size: 11px; }
+#stageWhiteboardPipState { color: #80d8c7; font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+#stageWhiteboardPipHeader button { width: 28px; height: 26px; min-height: 26px !important; padding: 0 !important; border-radius: 3px; }
+#stageWhiteboardCanvas { top: 34px !important; height: calc(100% - 34px) !important; }
+#stageWhiteboardQuickTools { top: 42px !important; max-width: calc(100% - 18px); flex-wrap: wrap; }
+#stageWhiteboardLayer.remote-view #stageWhiteboardQuickTools,
+#stageWhiteboardLayer.remote-view #stageWhiteboardToolbar,
+#stageWhiteboardLayer.remote-view #stageWhiteboardTextPanel,
+#stageWhiteboardLayer.remote-view #stageWhiteboardCalc { display: none !important; }
+#stageWhiteboardLayer.remote-view #stageWhiteboardPipHeader { cursor: default; }
+
+#eduFaceFocusPip {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 18;
+  width: clamp(168px,22%,260px);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 2px solid rgba(128,216,199,.95);
+  border-radius: 3px;
+  background: #020609;
+  box-shadow: 0 9px 28px rgba(0,0,0,.42);
+  pointer-events: none;
+}
+#eduFaceFocusPip canvas { width: 100%; height: 100%; display: block; }
+#eduFaceFocusPip span { position: absolute; top: 5px; left: 5px; padding: 3px 5px; color: #fff; border-radius: 2px; background: rgba(4,17,25,.74); font-size: 9px; font-weight: 800; }
+#eduFaceFocusPip[data-mode="point"] { border-color: #f5b942; }
+#eduFaceFocusPip[data-mode="reset"] { opacity: 0; visibility: hidden; }
 
 #stageCaptionBar,
 #stageCaptionInlineBar {
@@ -643,9 +728,10 @@ html.dark #teacherStageWrap {
 ::-webkit-scrollbar-thumb { border-radius: 2px; background: var(--lms-line-strong); }
 
 @media (min-width: 1024px) {
-  #groupCallVideoLayout { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(280px,22vw) !important; grid-template-rows: minmax(0,1fr) !important; }
-  #teacherStageWrap { display: flex !important; align-items: center !important; justify-content: center !important; }
-  #teacherStageWrap > .w-full { max-height: 100% !important; }
+  #groupCallVideoLayout { display: grid !important; grid-template-columns: minmax(520px,72%) minmax(250px,1fr) !important; grid-template-rows: minmax(0,1fr) !important; align-items: start !important; }
+  #teacherStageWrap { display: flex !important; align-items: flex-start !important; justify-content: center !important; max-width: 1040px !important; height: fit-content !important; margin-inline: auto !important; }
+  #teacherStageWrap > .w-full { max-height: none !important; }
+  #teacherStage { max-height: min(66dvh,650px) !important; }
 }
 
 @media (max-width: 980px) {
@@ -684,7 +770,8 @@ html.dark #teacherStageWrap {
   #teacherStage { max-height: 50dvh !important; }
   #studentsScrollArea { border-left: 0; border-top: 1px solid #203746; padding: 4px 0 0 !important; }
   #studentsGrid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
-  #stageWhiteboardCamPip { width: min(34vw,150px) !important; top: 6px !important; right: 6px !important; }
+  #stageWhiteboardLayer { inset: auto 5px 5px auto !important; width: min(92vw,620px) !important; min-width: 280px !important; max-width: calc(100% - 10px) !important; }
+  #stageWhiteboardLayer.pip-expanded { inset: 5px !important; width: auto !important; }
   #stageWhiteboardToolbar { left: 4px !important; right: 4px !important; bottom: 4px !important; max-height: 96px; overflow-y: auto; }
   #stageWhiteboardTextPanel { left: 5px !important; top: 44px !important; width: min(68vw,320px) !important; max-width: calc(100% - 150px) !important; padding: 7px !important; }
   #wbTextStyleRow { grid-template-columns: 1fr 72px; }
@@ -706,4 +793,153 @@ html.dark #teacherStageWrap {
 @media (prefers-contrast: more) {
   :root { --lms-line: #879fad; --lms-line-strong: #5f7d8e; }
   html.dark { --lms-line: #6e8fa2; --lms-line-strong: #91adbd; }
+}
+
+/* v5.1 single brand palette: white surfaces, blue actions, pale-blue separation. */
+:root {
+  --course-bg: #f5f9ff !important;
+  --course-surface: #ffffff !important;
+  --course-surface-2: #eff6ff !important;
+  --course-text: #172033 !important;
+  --course-muted: #5d6b82 !important;
+  --course-border: #cbd8ea !important;
+  --course-border-strong: #91afd1 !important;
+  --course-accent: #1d5fa8 !important;
+  --course-accent-2: #5a9fe0 !important;
+  --course-ink: #12325b !important;
+  --course-warm: #2878c7 !important;
+  --course-success: #1d5fa8 !important;
+  --course-ring: 0 0 0 3px rgba(40,120,199,.16) !important;
+  --ws-panel: rgba(255,255,255,.98) !important;
+  --ws-panel-alt: rgba(239,246,255,.98) !important;
+  --ws-border: rgba(40,120,199,.18) !important;
+  --ws-outline: rgba(40,120,199,.20) !important;
+  --ws-gold: #2878c7 !important;
+  --ws-success: #1d5fa8 !important;
+  --studio-panel: rgba(255,255,255,.98) !important;
+  --studio-panel-alt: rgba(239,246,255,.98) !important;
+  --studio-border: rgba(40,120,199,.18) !important;
+  --studio-outline: rgba(40,120,199,.20) !important;
+  --ac-teal: #1d5fa8 !important;
+  --ac-teal-2: #5a9fe0 !important;
+  --ac-gold: #bfdbfe !important;
+}
+
+html.dark {
+  --course-bg: #07131d !important;
+  --course-surface: #0d1c29 !important;
+  --course-surface-2: #102f43 !important;
+  --course-text: #edf6fb !important;
+  --course-muted: #a9bdcb !important;
+  --course-border: #294252 !important;
+  --course-border-strong: #3d5d70 !important;
+  --course-accent: #64b9ee !important;
+  --course-accent-2: #88cdf7 !important;
+  --course-ink: #edf6fb !important;
+  --course-warm: #64b9ee !important;
+  --course-success: #64b9ee !important;
+  --ws-panel: rgba(13,28,41,.98) !important;
+  --ws-panel-alt: rgba(16,47,67,.98) !important;
+  --ws-border: rgba(100,185,238,.22) !important;
+  --ws-outline: rgba(100,185,238,.25) !important;
+  --studio-panel: rgba(13,28,41,.98) !important;
+  --studio-panel-alt: rgba(16,47,67,.98) !important;
+  --studio-border: rgba(100,185,238,.22) !important;
+  --studio-outline: rgba(100,185,238,.25) !important;
+  --ac-teal: #64b9ee !important;
+  --ac-teal-2: #88cdf7 !important;
+  --ac-gold: #bfdbfe !important;
+}
+
+body.course-body,
+body.website-studio-body,
+body.slides-studio-body {
+  background: var(--lms-bg) !important;
+}
+
+#cover:not([style*="url("]) {
+  background: linear-gradient(90deg,#1d5fa8 0%,#5a9fe0 58%,#dbeafe 100%) !important;
+}
+.g-border::before {
+  background: linear-gradient(135deg,rgba(29,95,168,.72),rgba(90,159,224,.52),rgba(219,234,254,.72)) !important;
+}
+body .stage,
+body .stage.theme-aurora,
+body .stage.theme-mint,
+body .stage.theme-sunset {
+  background:
+    radial-gradient(700px 420px at 18% 5%,rgba(40,120,199,.18),transparent 60%),
+    radial-gradient(700px 420px at 84% 12%,rgba(191,219,254,.62),transparent 62%),
+    linear-gradient(180deg,#ffffff,#eff6ff) !important;
+}
+html.dark body .stage,
+html.dark body .stage.theme-aurora,
+html.dark body .stage.theme-mint,
+html.dark body .stage.theme-sunset,
+html.dark body .stage.theme-night {
+  background: linear-gradient(180deg,#12325b,#0b1f3a) !important;
+}
+
+body :where(.chip,.scene-chip,.security-badge,.status-pill.approved,.billing-switch button.active) {
+  color: var(--lms-blue-strong) !important;
+  border-color: var(--lms-line) !important;
+  background: var(--lms-blue-soft) !important;
+}
+body :where(button,a)[class*="bg-teal-"],
+body :where(button,a)[class*="bg-emerald-"],
+body :where(button,a)[class*="bg-green-"],
+body :where(button,a)[class*="bg-indigo-"],
+body :where(button,a)[class*="bg-purple-"],
+body :where(button,a)[class*="bg-pink-"],
+body :where(button,a)[class*="bg-amber-"],
+body :where(button,a)[class*="bg-orange-"] {
+  color: #fff !important;
+  border-color: var(--lms-blue-strong) !important;
+  background: var(--lms-blue) !important;
+  background-image: none !important;
+}
+body :where(span,div,section,article,aside,label)[class*="bg-teal-"],
+body :where(span,div,section,article,aside,label)[class*="bg-emerald-"],
+body :where(span,div,section,article,aside,label)[class*="bg-green-"],
+body :where(span,div,section,article,aside,label)[class*="bg-indigo-"],
+body :where(span,div,section,article,aside,label)[class*="bg-purple-"],
+body :where(span,div,section,article,aside,label)[class*="bg-pink-"],
+body :where(span,div,section,article,aside,label)[class*="bg-amber-"],
+body :where(span,div,section,article,aside,label)[class*="bg-orange-"] {
+  color: var(--lms-blue-strong) !important;
+  border-color: var(--lms-line) !important;
+  background: var(--lms-blue-soft) !important;
+  background-image: none !important;
+}
+body :where([class*="text-teal-"],[class*="text-emerald-"],[class*="text-green-"],[class*="text-indigo-"],[class*="text-purple-"],[class*="text-pink-"],[class*="text-amber-"],[class*="text-orange-"]) {
+  color: var(--lms-blue-strong) !important;
+}
+body :where([class*="border-teal-"],[class*="border-emerald-"],[class*="border-green-"],[class*="border-indigo-"],[class*="border-purple-"],[class*="border-pink-"],[class*="border-amber-"],[class*="border-orange-"]) {
+  border-color: var(--lms-line-strong) !important;
+}
+body :where(.bg-gradient-to-r,.bg-gradient-to-br,.bg-gradient-to-b,.bg-gradient-to-tr) {
+  background-image: linear-gradient(135deg,#1d5fa8,#5a9fe0 58%,#dbeafe) !important;
+}
+.yt-teacher-avatar,
+.yt-comment-avatar {
+  color: #17477c !important;
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+}
+.lms-live-card,
+.yt-watch-empty {
+  background: linear-gradient(135deg,#12325b,#1d5fa8) !important;
+}
+#eduGestureDot { background: #3b8fe0 !important; }
+
+body :where(.brand-mark,.style-card.active,.tone-card.active,.history-card.active,.thumb-card.active,.nav-pill.active,.tool-btn.active,.action-btn.primary,.premium-chip,.verified-badge) {
+  color: var(--lms-blue-strong) !important;
+  border-color: var(--lms-line-strong) !important;
+  background: var(--lms-blue-soft) !important;
+  background-image: none !important;
+}
+body :where(button.action-btn.primary,a.action-btn.primary,button.nav-pill.active,a.nav-pill.active) {
+  color: #fff !important;
+  border-color: var(--lms-blue-strong) !important;
+  background: var(--lms-blue) !important;
 }

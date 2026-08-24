@@ -12,7 +12,16 @@ const PDFDocument = require('pdfkit');
 const multer = require('multer');
 const PptxGenJS = require('pptxgenjs');
 const cloudinary = require('cloudinary').v2;
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand,
+  ListPartsCommand
+} = require('@aws-sdk/client-s3');
 const { Readable, Writable } = require('stream');
 const { v4: uuidv4 } = require('uuid');
 const { renderDeckSlidePngBuffers } = require('./slide-export-renderer');
@@ -119,6 +128,7 @@ const io = socketIO(server, {
     origin: checkCorsOrigin,
     credentials: true
   },
+  maxHttpBufferSize: 1_200_000,
   transports: ['websocket', 'polling']
 });
 
@@ -153,15 +163,17 @@ const GLOBAL_THEME_STYLESHEET = '/ui-glass-theme.css';
 const GLOBAL_ENTERPRISE_STYLESHEET = '/enterprise-accessible.css';
 const GLOBAL_LMS_V3_STYLESHEET = '/lms-core-v3.css';
 const GLOBAL_ACCESSIBILITY_SCRIPT = '/accessibility-assistant.js';
+const GLOBAL_AVATAR_FALLBACK_SCRIPT = '/avatar-fallback.js';
 const THEMED_HTML_CACHE = new Map();
 
 function injectGlobalHtmlTheme(html) {
   let output = String(html || '');
-  const themeMeta = '<meta name="theme-color" content="#0f8f83">';
+  const themeMeta = '<meta name="theme-color" content="#176fae">';
   const themeLink = `  <link rel="stylesheet" href="${GLOBAL_THEME_STYLESHEET}" />`;
   const enterpriseLink = `  <link rel="stylesheet" href="${GLOBAL_ENTERPRISE_STYLESHEET}" />`;
   const lmsV3Link = `  <link rel="stylesheet" href="${GLOBAL_LMS_V3_STYLESHEET}" />`;
   const accessibilityScript = `  <script src="${GLOBAL_ACCESSIBILITY_SCRIPT}" defer></script>`;
+  const avatarFallbackScript = `  <script src="${GLOBAL_AVATAR_FALLBACK_SCRIPT}" defer></script>`;
 
   if (!/name=["']theme-color["']/i.test(output)) {
     if (/<\/head>/i.test(output)) output = output.replace(/<\/head>/i, `${themeMeta}\n</head>`);
@@ -186,6 +198,11 @@ function injectGlobalHtmlTheme(html) {
   if (!new RegExp(`src=["']${GLOBAL_ACCESSIBILITY_SCRIPT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`, 'i').test(output)) {
     if (/<\/head>/i.test(output)) output = output.replace(/<\/head>/i, `${accessibilityScript}\n</head>`);
     else output = `${accessibilityScript}\n${output}`;
+  }
+
+  if (!new RegExp(`src=["']${GLOBAL_AVATAR_FALLBACK_SCRIPT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`, 'i').test(output)) {
+    if (/<\/head>/i.test(output)) output = output.replace(/<\/head>/i, `${avatarFallbackScript}\n</head>`);
+    else output = `${avatarFallbackScript}\n${output}`;
   }
 
   return output;
@@ -790,6 +807,45 @@ app.get('/api/rtc-config', async (req, res) => {
   }
 });
 
+// Safe production diagnostics: this never returns TURN/R2 credentials.
+app.get('/api/rtc-health', async (req, res) => {
+  try {
+    await ensureMediasoupRuntime(req);
+    const rtc = buildRtcConfigPayload();
+    const mediaInfo = rtc?.mediasoup || {};
+    const announcedAddress = String(mediaInfo.announcedAddress || '').trim();
+    const publicAnnouncedAddress = !!announcedAddress && !isLoopbackOrLocalAddress(announcedAddress);
+    const warnings = [];
+    if (!rtc.hasTurn) warnings.push('TURN credentials are missing or disabled');
+    if (!rtc.mediasoupConfigured) warnings.push('Mediasoup is not ready; ExpressTURN mesh will be used');
+    if (rtc.mediasoupConfigured && !publicAnnouncedAddress) warnings.push('Mediasoup announced address is not public');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({
+      success: true,
+      recommendedTransport: String(rtc.recommendedTransport || 'mesh'),
+      turn: {
+        ready: !!rtc.hasTurn,
+        provider: String(rtc.turnProvider || (rtc.hasTurn ? 'custom' : 'stun')),
+        serverGroups: Math.max(0, Number((rtc.iceServers || []).length) - 1),
+        forceRelayDefault: !!rtc.forceRelayDefault
+      },
+      mediasoup: {
+        ready: !!rtc.mediasoupConfigured,
+        announcedAddress: announcedAddress || '',
+        publicAnnouncedAddress,
+        rtcMinPort: Number(mediaInfo.rtcMinPort || mediasoupRuntimeConfig?.rtcMinPort || 40000),
+        rtcMaxPort: Number(mediaInfo.rtcMaxPort || mediasoupRuntimeConfig?.rtcMaxPort || 49999),
+        udp: mediasoupRuntimeConfig?.enableUdp !== false,
+        tcp: mediasoupRuntimeConfig?.enableTcp !== false
+      },
+      warnings
+    });
+  } catch (error) {
+    console.error('GET /api/rtc-health error:', error);
+    return res.status(500).json({ success: false, error: 'RTC health check failed' });
+  }
+});
+
 
 
 const rtcConfigController = createRtcConfigController({
@@ -855,9 +911,40 @@ app.use(express.static('public', {
 
 // Static fallbacks (avoid noisy 404s)
 app.get('/favicon.ico', (req, res) => res.status(204).end());
-app.get('/default-avatar.png', (req, res) => res.redirect('https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png'));
+app.get('/default-avatar.png', (req, res) => res.redirect('/api/avatar-placeholder/anonymous.svg'));
 app.get('/default-group.png', (req, res) => res.redirect('https://res.cloudinary.com/demo/image/upload/v1692290000/default-group.png'));
 app.get('/default-channel.png', (req, res) => res.redirect('https://res.cloudinary.com/demo/image/upload/v1692290000/default-channel.png'));
+
+app.get('/api/avatar-placeholder/:userId.svg', async (req, res) => {
+  try {
+    const userId = String(req.params.userId || '').trim();
+    const user = mongoose.Types.ObjectId.isValid(userId)
+      ? await User.findById(userId).select('role gender').lean().catch(() => null)
+      : null;
+    const role = String(user?.role || req.query.role || '').toLowerCase();
+    const gender = String(user?.gender || req.query.gender || '').toLowerCase();
+    const isTeacher = ['teacher', 'admin', 'organizer', 'dean', 'prorector', 'rector'].includes(role);
+    const palette = isTeacher
+      ? { bg: '#e7f0ff', ring: '#8db4ef', shirt: '#17477c', hair: '#233247', skin: '#f1bd92' }
+      : gender === 'female'
+        ? { bg: '#fff0f5', ring: '#edabc1', shirt: '#b83b6d', hair: '#4a2c35', skin: '#f2bd96' }
+        : gender === 'male'
+          ? { bg: '#e9f8f5', ring: '#8bd4c8', shirt: '#087a6c', hair: '#243842', skin: '#eeb98e' }
+          : { bg: '#eef3f7', ring: '#aebdca', shirt: '#526779', hair: '#344653', skin: '#efbd97' };
+    const hair = gender === 'female'
+      ? `<path d="M22 39c0-18 9-27 26-27s26 9 26 27v25H62V39H34v25H22z" fill="${palette.hair}"/>`
+      : `<path d="M25 37c1-16 10-24 23-24 14 0 22 8 24 24-7-5-14-7-22-7-10 0-18 3-25 7z" fill="${palette.hair}"/>`;
+    const teacherMark = isTeacher
+      ? `<path d="M17 24 48 9l31 15-31 15z" fill="#17477c"/><path d="M72 27v17" stroke="#17477c" stroke-width="4" stroke-linecap="round"/><circle cx="72" cy="46" r="3" fill="#17477c"/>`
+      : '';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="Avtomatik profil ikoni"><rect width="96" height="96" rx="48" fill="${palette.bg}"/><circle cx="48" cy="48" r="44" fill="none" stroke="${palette.ring}" stroke-width="3"/>${teacherMark}${hair}<circle cx="48" cy="40" r="17" fill="${palette.skin}"/><circle cx="42" cy="40" r="1.7" fill="#26333a"/><circle cx="54" cy="40" r="1.7" fill="#26333a"/><path d="M42 49c4 3 8 3 12 0" fill="none" stroke="#9b5a50" stroke-width="2" stroke-linecap="round"/><path d="M18 91c2-20 13-30 30-30s28 10 30 30" fill="${palette.shirt}"/></svg>`;
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+    res.send(svg);
+  } catch (error) {
+    res.status(500).type('image/svg+xml').send('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" rx="48" fill="#eef3f7"/><circle cx="48" cy="37" r="18" fill="#aebdca"/><path d="M18 96c2-24 13-35 30-35s28 11 30 35" fill="#526779"/></svg>');
+  }
+});
 
 
 
@@ -951,6 +1038,9 @@ const R2_READY = !!(R2_ENDPOINT && R2_BUCKET && R2_ACCESS_KEY_ID && R2_SECRET_AC
 const CLOUDINARY_READY = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 const LOCAL_UPLOAD_ROOT = path.join(__dirname, 'uploads');
 const MAX_UPLOAD_BYTES = Math.max(1, Number(process.env.MAX_UPLOAD_MB || 100)) * 1024 * 1024;
+const COURSE_VIDEO_MAX_BYTES = Math.max(1, Number(process.env.COURSE_VIDEO_MAX_GB || 5)) * 1024 * 1024 * 1024;
+const COURSE_VIDEO_PART_BYTES = Math.max(5, Math.min(64, Number(process.env.COURSE_VIDEO_PART_MB || 8))) * 1024 * 1024;
+const COURSE_VIDEO_UPLOAD_TTL_SECONDS = Math.max(3600, Number(process.env.COURSE_VIDEO_UPLOAD_TTL_SECONDS || 86400));
 try { fs.mkdirSync(LOCAL_UPLOAD_ROOT, { recursive: true }); } catch (_) {}
 let r2Client = null;
 
@@ -1724,6 +1814,7 @@ function buildPremiumNotificationPrefsSummary(settings) {
 // User Model
 const UserSchema = new mongoose.Schema({
   fullName: { type: String, required: true },
+  gender: { type: String, enum: ['', 'female', 'male', 'prefer_not_to_say'], default: '' },
   nickname: { type: String, default: '' },
   username: { type: String, required: true, unique: true },
   bio: { type: String, default: '' },
@@ -1734,7 +1825,7 @@ const UserSchema = new mongoose.Schema({
   phone: { type: String, default: undefined, trim: true },
   email: { type: String, default: undefined, trim: true, lowercase: true },
   password: { type: String, required: true },
-  avatar: { type: String, default: 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png' },
+  avatar: { type: String, default: '' },
   coverBanner: { type: String, default: '' },
   isOnline: { type: Boolean, default: false },
   lastSeen: { type: Date, default: Date.now },
@@ -1747,6 +1838,26 @@ const UserSchema = new mongoose.Schema({
   },
   lastActive: { type: Date, default: Date.now },
   verified: { type: Boolean, default: false },
+  accessibilityProfile: {
+    disclosure: {
+      type: String,
+      enum: ['', 'none', 'disability', 'prefer_not_to_say'],
+      default: ''
+    },
+    disabilityTypes: {
+      type: [String],
+      enum: ['visual', 'hearing', 'speech', 'mobility', 'learning', 'neurodivergent', 'multiple', 'other'],
+      default: []
+    },
+    assistancePreferences: {
+      type: [String],
+      enum: ['voice_navigation', 'gesture_navigation', 'captions', 'high_contrast', 'large_text', 'reduced_motion'],
+      default: []
+    },
+    notes: { type: String, default: '', maxlength: 500 },
+    consentToUseForSupport: { type: Boolean, default: false },
+    updatedAt: { type: Date, default: null }
+  },
   settings: {
     language: { type: String, enum: ['uz', 'en', 'ru'], default: 'uz' },
     theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
@@ -1888,6 +1999,52 @@ UserSchema.index(
   { unique: true, partialFilterExpression: { email: { $exists: true, $type: 'string' } } }
 );
 const User = mongoose.model('User', UserSchema);
+
+const ACCESSIBILITY_DISCLOSURES = new Set(['', 'none', 'disability', 'prefer_not_to_say']);
+const ACCESSIBILITY_DISABILITY_TYPES = new Set(['visual', 'hearing', 'speech', 'mobility', 'learning', 'neurodivergent', 'multiple', 'other']);
+const ACCESSIBILITY_ASSISTANCE_PREFERENCES = new Set(['voice_navigation', 'gesture_navigation', 'captions', 'high_contrast', 'large_text', 'reduced_motion']);
+
+function normalizeAccessibilityStringList(raw, allowed, limit = 12) {
+  const list = Array.isArray(raw) ? raw : (raw == null || raw === '' ? [] : String(raw).split(','));
+  return Array.from(new Set(list.map((item) => String(item || '').trim()).filter((item) => allowed.has(item)))).slice(0, limit);
+}
+
+function normalizeAccessibilityProfile(raw, current) {
+  const input = raw && typeof raw === 'object' ? raw : {};
+  const previous = current && typeof current === 'object' ? current : {};
+  const disclosureValue = input.disclosure !== undefined ? String(input.disclosure || '').trim() : String(previous.disclosure || '').trim();
+  const disclosure = ACCESSIBILITY_DISCLOSURES.has(disclosureValue) ? disclosureValue : '';
+  const disabilityTypes = disclosure === 'disability'
+    ? normalizeAccessibilityStringList(
+        input.disabilityTypes !== undefined ? input.disabilityTypes : previous.disabilityTypes,
+        ACCESSIBILITY_DISABILITY_TYPES,
+        8
+      )
+    : [];
+  const assistancePreferences = normalizeAccessibilityStringList(
+    input.assistancePreferences !== undefined ? input.assistancePreferences : previous.assistancePreferences,
+    ACCESSIBILITY_ASSISTANCE_PREFERENCES,
+    8
+  );
+  const notesValue = input.notes !== undefined ? input.notes : previous.notes;
+  return {
+    disclosure,
+    disabilityTypes,
+    assistancePreferences,
+    notes: cleanText(notesValue, 500),
+    consentToUseForSupport: input.consentToUseForSupport !== undefined
+      ? input.consentToUseForSupport === true || String(input.consentToUseForSupport) === 'true' || String(input.consentToUseForSupport) === '1'
+      : !!previous.consentToUseForSupport,
+    updatedAt: new Date()
+  };
+}
+
+function publicAvatarUrl(user) {
+  const avatar = String(user?.avatar || '').trim();
+  if (avatar && !/res\.cloudinary\.com\/demo\/.*default-avatar/i.test(avatar)) return avatar;
+  const id = String(user?._id || user?.id || 'anonymous');
+  return `/api/avatar-placeholder/${encodeURIComponent(id)}.svg`;
+}
 
 const AuthSessionSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -3503,29 +3660,44 @@ async function buildGroupListPayload(groups, opts = {}) {
   });
 
   const users = await User.find({ _id: { $in: Array.from(previewUserIds) } })
-    .select('username nickname avatar')
+    .select('username nickname avatar role gender')
     .lean()
     .catch(() => []);
   const userMap = new Map((users || []).map((user) => [String(user._id || ''), user]));
 
   return list.map((group) => {
     const creator = userMap.get(String(group.creatorId || ''));
+    const activeCall = activeGroupCalls.get(String(group._id || '')) || null;
     const previewMembers = (group.members || []).slice(0, previewLimit).map((memberId) => {
       const user = userMap.get(String(memberId || '')) || {};
       return {
         _id: String(memberId || ''),
         username: String(user.username || ''),
         nickname: String(user.nickname || user.username || 'Member'),
-        avatar: String(user.avatar || 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png')
+        avatar: String(user.avatar || ''),
+        role: String(user.role || 'student'),
+        gender: String(user.gender || '')
       };
     });
     return {
       ...group,
+      liveLesson: activeCall ? {
+        active: true,
+        callId: String(activeCall.callId || ''),
+        title: String(activeCall.title || 'Jonli dars'),
+        callType: String(activeCall.callType || 'video'),
+        teacherSubject: String(activeCall.lessonSubject || ''),
+        startedAt: Number(activeCall.startedAt || Date.now()),
+        participantCount: Number(activeCall.participants?.size || 0),
+        transport: resolveGroupCallTransport(activeCall)
+      } : null,
       creatorId: creator ? {
         _id: String(creator._id || group.creatorId || ''),
         username: String(creator.username || ''),
         nickname: String(creator.nickname || creator.username || 'Creator'),
-        avatar: String(creator.avatar || 'https://res.cloudinary.com/demo/image/upload/v1692290000/default-avatar.png')
+        avatar: String(creator.avatar || ''),
+        role: String(creator.role || 'teacher'),
+        gender: String(creator.gender || '')
       } : null,
       members: previewMembers
     };
@@ -12090,6 +12262,108 @@ adminEmit('admin:groupCallUpdate', { action: 'joined', groupId: String(groupId),
     }
   });
 
+  // The whiteboard is synchronized as a separate low-frequency PiP surface.
+  // Camera media remains on its original WebRTC/mediasoup video producer.
+  socket.on('groupWhiteboardState', (payload) => {
+    try {
+      if (!socket.userId) return;
+      const groupId = String(payload?.groupId || '').trim();
+      const callId = String(payload?.callId || '').trim();
+      if (!groupId || !callId) return;
+      const call = activeGroupCalls.get(groupId);
+      if (!call || String(call.callId || '') !== callId) return;
+      if (!(call.participants && call.participants.has(String(socket.userId)))) return;
+
+      const stage = getCallStage(call);
+      const ownerTeacherId = String(stage?.ownerTeacherId || '').trim();
+      const role = String(socket.userRole || '').toLowerCase();
+      const isAdmin = !!socket.isAdmin || role === 'admin';
+      if (ownerTeacherId && ownerTeacherId !== String(socket.userId) && !isAdmin) return;
+      if (!ownerTeacherId && role !== 'teacher' && !isAdmin) return;
+
+      const now = Date.now();
+      const active = !!payload?.active;
+      if (active && now - Number(socket._lastGroupWhiteboardAt || 0) < 260) return;
+      socket._lastGroupWhiteboardAt = now;
+      const image = active ? String(payload?.image || '') : '';
+      if (active && (!/^data:image\/(webp|jpeg|png);base64,/i.test(image) || image.length > 900000)) return;
+
+      call.whiteboardState = active ? {
+        groupId,
+        callId,
+        byUserId: String(socket.userId),
+        active: true,
+        image,
+        ts: now
+      } : null;
+      activeGroupCalls.set(groupId, call);
+      io.to(getGroupRoomName(groupId)).emit('groupWhiteboardState', {
+        groupId,
+        callId,
+        byUserId: String(socket.userId),
+        active,
+        image,
+        ts: now
+      });
+    } catch (e) {
+      console.error('groupWhiteboardState error:', e);
+    }
+  });
+
+  socket.on('groupWhiteboardRequest', (payload) => {
+    try {
+      if (!socket.userId) return;
+      const groupId = String(payload?.groupId || '').trim();
+      const callId = String(payload?.callId || '').trim();
+      const call = activeGroupCalls.get(groupId);
+      if (!groupId || !callId || !call || String(call.callId || '') !== callId) return;
+      if (!(call.participants && call.participants.has(String(socket.userId)))) return;
+      if (call.whiteboardState?.active) socket.emit('groupWhiteboardState', call.whiteboardState);
+    } catch (e) {
+      console.error('groupWhiteboardRequest error:', e);
+    }
+  });
+
+  socket.on('groupWhiteboardOp', (payload) => {
+    try {
+      if (!socket.userId || String(payload?.type || '') !== 'stroke') return;
+      const groupId = String(payload?.groupId || '').trim();
+      const callId = String(payload?.callId || '').trim();
+      const call = activeGroupCalls.get(groupId);
+      if (!groupId || !callId || !call || String(call.callId || '') !== callId) return;
+      if (!(call.participants && call.participants.has(String(socket.userId)))) return;
+      const stage = getCallStage(call);
+      const ownerTeacherId = String(stage?.ownerTeacherId || '').trim();
+      const role = String(socket.userRole || '').toLowerCase();
+      const isAdmin = !!socket.isAdmin || role === 'admin';
+      if (ownerTeacherId && ownerTeacherId !== String(socket.userId) && !isAdmin) return;
+      if (!ownerTeacherId && role !== 'teacher' && !isAdmin) return;
+      const now = Date.now();
+      if (now - Number(socket._lastGroupWhiteboardOpAt || 0) < 28) return;
+      socket._lastGroupWhiteboardOpAt = now;
+      const unit = (value) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? Math.max(0, Math.min(1, number)) : 0;
+      };
+      const rawColor = String(payload?.color || '#176fae').trim();
+      const color = /^#[0-9a-f]{6}$/i.test(rawColor) ? rawColor : '#176fae';
+      socket.to(getGroupRoomName(groupId)).emit('groupWhiteboardOp', {
+        groupId,
+        callId,
+        byUserId: String(socket.userId),
+        type: 'stroke',
+        from: { x: unit(payload?.from?.x), y: unit(payload?.from?.y) },
+        to: { x: unit(payload?.to?.x), y: unit(payload?.to?.y) },
+        color,
+        size: Math.max(1, Math.min(48, Number(payload?.size || 4))),
+        eraser: !!payload?.eraser,
+        ts: now
+      });
+    } catch (e) {
+      console.error('groupWhiteboardOp error:', e);
+    }
+  });
+
   socket.on('groupLabStateUpdate', async (payload) => {
     try {
       if (!socket.userId) return;
@@ -13279,7 +13553,7 @@ socket.on('groupCallLeave', async (data) => {
       await Stats.findOneAndUpdate({}, { $inc: { totalMessages: 1 } });
       
       const populatedMessageDoc = await Message.findById(message._id)
-        .populate('senderId', 'username nickname avatar')
+        .populate('senderId', 'username nickname avatar role gender')
         .populate('receiverId', 'username nickname avatar');
 
       // Attach clientTempId (used for optimistic UI reconciliation)
@@ -14274,6 +14548,7 @@ const hashedPassword = await bcrypt.hash(_password, 10);
     
     const user = new User({
       fullName: _fullName,
+      gender: ['female', 'male', 'prefer_not_to_say'].includes(String(req.body?.gender || '').toLowerCase()) ? String(req.body.gender).toLowerCase() : '',
       nickname: _nickname,
       username: _usernameRaw,
       bio,
@@ -14287,6 +14562,7 @@ const hashedPassword = await bcrypt.hash(_password, 10);
       teacherBalance: 0,
       phone: phoneVal,
       email: emailVal,
+      accessibilityProfile: normalizeAccessibilityProfile(req.body?.accessibilityProfile || {}, {}),
       password: hashedPassword
     });
     
@@ -14311,14 +14587,16 @@ const hashedPassword = await bcrypt.hash(_password, 10);
       user: {
         id: user._id,
         username: user.username,
+        gender: user.gender || '',
         nickname: user.nickname,
-        avatar: user.avatar,
+        avatar: publicAvatarUrl(user),
         university: user.university,
         role: (user.isAdmin ? 'admin' : (user.role || 'student')),
         teachingSubject: user.teachingSubject || '',
         teachingSubjects: Array.isArray(user.teachingSubjects) ? user.teachingSubjects : [],
         coins: user.coins || 0,
         teacherBalance: user.teacherBalance || 0,
+        accessibilityProfile: user.accessibilityProfile || {},
         isOnline: false
       }
     });
@@ -14635,6 +14913,7 @@ app.get('/api/me', authenticateToken, async (req, res) => {
 
     // Backward compatibility: derive/override role
     safeUser.role = safeUser.isAdmin ? 'admin' : (safeUser.role || 'student');
+    safeUser.avatar = publicAvatarUrl(safeUser);
     // UI compatibility fields
     safeUser.group = safeUser.studyGroup || safeUser.group || '';
     safeUser.faculty = safeUser.faculty || '';
@@ -14968,6 +15247,10 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
     // Whitelist fields users can edit
     const updates = {};
     if (body.nickname !== undefined) updates.nickname = pickStr(body.nickname, 40);
+    if (body.gender !== undefined) {
+      const gender = String(body.gender || '').toLowerCase();
+      updates.gender = ['female', 'male', 'prefer_not_to_say'].includes(gender) ? gender : '';
+    }
     if (body.fullName !== undefined) updates.fullName = pickStr(body.fullName, 80);
     if (body.bio !== undefined) updates.bio = pickStr(body.bio, 500);
     if (body.phone !== undefined) {
@@ -14985,6 +15268,9 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
       const raw = body.teachingSubjects;
       if (Array.isArray(raw)) updates.teachingSubjects = raw.map((x) => pickStr(x, 80)).filter(Boolean);
       else updates.teachingSubjects = String(raw || '').split(',').map((x) => pickStr(x, 80)).filter(Boolean);
+    }
+    if (body.accessibilityProfile !== undefined) {
+      updates.accessibilityProfile = normalizeAccessibilityProfile(body.accessibilityProfile, user.accessibilityProfile || {});
     }
 
     // Academic identity (used by schedule / groups)
@@ -15773,7 +16059,7 @@ app.post('/api/messages/voice', authenticateToken, upload.single('audio'), async
     await Stats.findOneAndUpdate({}, { $inc: { totalMessages: 1 } });
     
     const populatedMessage = await Message.findById(message._id)
-      .populate('senderId', 'username nickname avatar')
+      .populate('senderId', 'username nickname avatar role gender')
       .populate('receiverId', 'username nickname avatar');
     
     const receiverSocketId = getUserSocketId(receiverId);
@@ -15862,7 +16148,7 @@ app.post('/api/messages/file', authenticateToken, upload.single('file'), async (
     await Stats.findOneAndUpdate({}, { $inc: { totalMessages: 1 } });
     
     const populatedMessage = await Message.findById(message._id)
-      .populate('senderId', 'username nickname avatar')
+      .populate('senderId', 'username nickname avatar role gender')
       .populate('receiverId', 'username nickname avatar');
     
     const receiverSocketId = getUserSocketId(receiverId);
@@ -16115,7 +16401,7 @@ app.get('/api/groups/:groupId/messages', authenticateToken, async (req, res) => 
 
     let cursor = GroupMessage.find(query)
       .sort({ createdAt: -1, _id: -1 })
-      .populate('senderId', 'username nickname avatar')
+      .populate('senderId', 'username nickname avatar role gender')
       .lean();
 
     if (limit > 0) {
@@ -16196,7 +16482,7 @@ app.post('/api/groups/:groupId/messages/file', authenticateToken, upload.single(
     });
     await msg.save();
 
-    const populated = await GroupMessage.findById(msg._id).populate('senderId', 'username nickname avatar');
+    const populated = await GroupMessage.findById(msg._id).populate('senderId', 'username nickname avatar role gender');
     io.to(`group_${groupId}`).emit('newGroupMessage', populated);
     try { require('fs').unlinkSync(req.file.path); } catch (_) {}
 
@@ -16240,7 +16526,7 @@ app.post('/api/groups/:groupId/messages', authenticateToken, async (req, res) =>
     await message.save();
     
     const populatedMessage = await GroupMessage.findById(message._id)
-      .populate('senderId', 'username nickname avatar');
+      .populate('senderId', 'username nickname avatar role gender');
     
     io.to(`group_${groupId}`).emit('newGroupMessage', populatedMessage);
     
@@ -16270,7 +16556,7 @@ app.put('/api/groups/:groupId/messages/:messageId', authenticateToken, async (re
     msg.editedAt = new Date();
     await msg.save();
 
-    const populated = await GroupMessage.findById(msg._id).populate('senderId', 'username nickname avatar');
+    const populated = await GroupMessage.findById(msg._id).populate('senderId', 'username nickname avatar role gender');
     io.to(`group_${groupId}`).emit('groupMessageUpdated', populated);
     return res.json({ success: true, message: populated });
   } catch (e) {
@@ -16341,7 +16627,7 @@ app.post('/api/groups/:groupId/messages/:messageId/reactions', authenticateToken
     msg.reactions = msg.reactions.filter(r => Array.isArray(r.users) && r.users.length > 0);
     await msg.save();
 
-    const populated = await GroupMessage.findById(msg._id).populate('senderId', 'username nickname avatar');
+    const populated = await GroupMessage.findById(msg._id).populate('senderId', 'username nickname avatar role gender');
     io.to(`group_${groupId}`).emit('groupMessageReaction', populated);
     return res.json({ success: true, message: populated });
   } catch (e) {
@@ -16894,7 +17180,7 @@ app.get('/api/search/messages', authenticateToken, async (req, res) => {
         { receiverId: req.userId }
       ]
     })
-    .populate('senderId', 'username nickname avatar')
+    .populate('senderId', 'username nickname avatar role gender')
     .populate('receiverId', 'username nickname avatar')
     .limit(20);
     
@@ -16997,8 +17283,8 @@ app.get('/api/groups/:groupId', authenticateToken, async (req, res) => {
       User.findById(req.userId).select('university faculty role isAdmin').lean(),
       Group.findById(req.params.groupId)
         .select('name description university faculty studyType studyGroup creatorId members createdAt isPublic username avatar')
-        .populate('creatorId', 'username nickname avatar')
-        .populate('members', 'username nickname avatar isOnline')
+        .populate('creatorId', 'username nickname avatar role gender')
+        .populate('members', 'username nickname avatar isOnline role gender')
         .lean()
     ]);
     
@@ -22415,6 +22701,7 @@ const CourseSchema = new mongoose.Schema({
   price: { type: Number, default: 0, min: 0 },
   pricingCurrency: { type: String, default: 'UZS' }, // display currency (so'm)
   status: { type: String, enum: ['draft', 'published'], default: 'draft' },
+  visibility: { type: String, enum: ['public', 'university', 'restricted'], default: 'public', index: true },
   joinMode: { type: String, enum: ['open', 'approval'], default: 'open' },
   allowComments: { type: Boolean, default: true },
   allowRatings: { type: Boolean, default: true },
@@ -22424,6 +22711,7 @@ const CourseSchema = new mongoose.Schema({
   language: { type: String, default: 'uz', trim: true },
   durationMinutes: { type: Number, default: 0, min: 0 },
   tags: { type: [String], default: [] },
+  studyDirections: { type: [String], default: [] },
   requirements: { type: String, default: '', trim: true },
   outcomes: { type: String, default: '', trim: true },
   faculty: { type: String, default: '', trim: true },
@@ -22455,6 +22743,10 @@ const CourseContentSchema = new mongoose.Schema({
   youtubeUrl: { type: String, default: '' },
   videoUrl: { type: String, default: '' },
   pdfUrl: { type: String, default: '' },
+  assetPublicId: { type: String, default: '', trim: true },
+  assetSizeBytes: { type: Number, default: 0, min: 0 },
+  assetMimeType: { type: String, default: '', trim: true },
+  uploadedAt: { type: Date, default: null },
   durationMinutes: { type: Number, default: 0, min: 0 },
   isPreview: { type: Boolean, default: false },
   quizEnabled: { type: Boolean, default: false },
@@ -22523,6 +22815,20 @@ const CourseCommentSchema = new mongoose.Schema({
   body: { type: String, default: '' }
 }, { timestamps: true });
 CourseCommentSchema.index({ courseId: 1, createdAt: -1 });
+
+const CourseLikeSchema = new mongoose.Schema({
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
+  contentId: { type: mongoose.Schema.Types.ObjectId, ref: 'CourseContent', default: null, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true }
+}, { timestamps: true });
+CourseLikeSchema.index({ courseId: 1, contentId: 1, userId: 1 }, { unique: true });
+
+const CourseCommentLikeSchema = new mongoose.Schema({
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
+  commentId: { type: mongoose.Schema.Types.ObjectId, ref: 'CourseComment', required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true }
+}, { timestamps: true });
+CourseCommentLikeSchema.index({ commentId: 1, userId: 1 }, { unique: true });
 
 const CourseEnrollmentRequestSchema = new mongoose.Schema({
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
@@ -22690,6 +22996,8 @@ const CourseEnrollment = mongoose.models.CourseEnrollment || mongoose.model('Cou
 const CourseProgress = mongoose.models.CourseProgress || mongoose.model('CourseProgress', CourseProgressSchema);
 const CourseRating = mongoose.models.CourseRating || mongoose.model('CourseRating', CourseRatingSchema);
 const CourseComment = mongoose.models.CourseComment || mongoose.model('CourseComment', CourseCommentSchema);
+const CourseLike = mongoose.models.CourseLike || mongoose.model('CourseLike', CourseLikeSchema);
+const CourseCommentLike = mongoose.models.CourseCommentLike || mongoose.model('CourseCommentLike', CourseCommentLikeSchema);
 const CourseEnrollmentRequest = mongoose.models.CourseEnrollmentRequest || mongoose.model('CourseEnrollmentRequest', CourseEnrollmentRequestSchema);
 const Test = mongoose.models.Test || mongoose.model('Test', TestSchema);
 const TestSubmission = mongoose.models.TestSubmission || mongoose.model('TestSubmission', TestSubmissionSchema);
@@ -22699,6 +23007,82 @@ const WebsiteMember = mongoose.models.WebsiteMember || mongoose.model('WebsiteMe
 const WebsiteLead = mongoose.models.WebsiteLead || mongoose.model('WebsiteLead', WebsiteLeadSchema);
 const ExternalApiKey = mongoose.models.ExternalApiKey || mongoose.model('ExternalApiKey', ExternalApiKeySchema);
 const PlatformWallet = mongoose.models.PlatformWallet || mongoose.model('PlatformWallet', PlatformWalletSchema);
+
+function signCourseVideoUploadToken(payload) {
+  return jwt.sign(
+    { ...payload, type: 'course-video-multipart' },
+    AUTH_JWT_SECRET,
+    {
+      expiresIn: COURSE_VIDEO_UPLOAD_TTL_SECONDS,
+      issuer: 'hallaym-edu',
+      audience: 'course-video-upload'
+    }
+  );
+}
+
+function verifyCourseVideoUploadToken(token) {
+  const decoded = jwt.verify(String(token || ''), AUTH_JWT_SECRET, {
+    issuer: 'hallaym-edu',
+    audience: 'course-video-upload'
+  });
+  if (String(decoded?.type || '') !== 'course-video-multipart') throw new Error('Invalid upload token');
+  return decoded;
+}
+
+async function requireOwnedCourseContent(req, res) {
+  const course = await Course.findById(req.params.id);
+  if (!course) {
+    res.status(404).json({ error: 'Course not found' });
+    return null;
+  }
+  const role = String(req.userRole || '').toLowerCase();
+  if (role === 'teacher' && String(course.teacherId) !== String(req.userId)) {
+    res.status(403).json({ error: 'Not owner' });
+    return null;
+  }
+  const item = await CourseContent.findOne({ _id: req.params.contentId, courseId: req.params.id });
+  if (!item) {
+    res.status(404).json({ error: 'Content not found' });
+    return null;
+  }
+  return { course, item };
+}
+
+function readCourseUploadToken(req) {
+  return String(req.query?.token || req.body?.token || req.headers['x-upload-token'] || '').trim();
+}
+
+function assertCourseUploadScope(decoded, req) {
+  if (
+    String(decoded?.userId || '') !== String(req.userId || '')
+    || String(decoded?.courseId || '') !== String(req.params.id || '')
+    || String(decoded?.contentId || '') !== String(req.params.contentId || '')
+  ) {
+    const error = new Error('Upload token scope mismatch');
+    error.status = 403;
+    throw error;
+  }
+}
+
+async function listAllMultipartParts(uploadId, key) {
+  const parts = [];
+  let marker;
+  do {
+    const page = await r2Client.send(new ListPartsCommand({
+      Bucket: R2_BUCKET,
+      Key: key,
+      UploadId: uploadId,
+      ...(marker ? { PartNumberMarker: marker } : {})
+    }));
+    (page.Parts || []).forEach((part) => parts.push({
+      PartNumber: Number(part.PartNumber || 0),
+      ETag: String(part.ETag || ''),
+      Size: Number(part.Size || 0)
+    }));
+    marker = page.IsTruncated ? page.NextPartNumberMarker : undefined;
+  } while (marker);
+  return parts.filter((part) => part.PartNumber > 0 && part.ETag).sort((a, b) => a.PartNumber - b.PartNumber);
+}
 
 // ---------- Ensure User schema has faculty field (non-breaking) ----------
 try {
@@ -22718,7 +23102,7 @@ async function getCourseStatsMap(courseIds = []) {
   ).map((id) => new mongoose.Types.ObjectId(id));
   if (!normalizedIds.length) return new Map();
 
-  const [ratingAgg, lessonAgg, commentAgg, pendingAgg] = await Promise.all([
+  const [ratingAgg, lessonAgg, commentAgg, pendingAgg, likeAgg] = await Promise.all([
     CourseRating.aggregate([
       { $match: { courseId: { $in: normalizedIds } } },
       { $group: { _id: '$courseId', average: { $avg: '$rating' }, count: { $sum: 1 } } }
@@ -22734,6 +23118,10 @@ async function getCourseStatsMap(courseIds = []) {
     CourseEnrollmentRequest.aggregate([
       { $match: { courseId: { $in: normalizedIds }, status: 'pending' } },
       { $group: { _id: '$courseId', count: { $sum: 1 } } }
+    ]),
+    CourseLike.aggregate([
+      { $match: { courseId: { $in: normalizedIds }, contentId: null } },
+      { $group: { _id: '$courseId', count: { $sum: 1 } } }
     ])
   ]);
 
@@ -22744,7 +23132,8 @@ async function getCourseStatsMap(courseIds = []) {
       ratingCount: 0,
       lessonCount: 0,
       commentCount: 0,
-      pendingRequests: 0
+      pendingRequests: 0,
+      likeCount: 0
     });
   }
 
@@ -22769,7 +23158,42 @@ async function getCourseStatsMap(courseIds = []) {
     item.pendingRequests = Number(row?.count || 0);
     map.set(String(row?._id), item);
   }
+  for (const row of likeAgg || []) {
+    const item = map.get(String(row?._id)) || {};
+    item.likeCount = Number(row?.count || 0);
+    map.set(String(row?._id), item);
+  }
 
+  return map;
+}
+
+async function getCoursePreviewMap(courseIds = []) {
+  const normalizedIds = Array.from(
+    new Set((courseIds || []).map((id) => String(id || '').trim()).filter((id) => mongoose.Types.ObjectId.isValid(id)))
+  ).map((id) => new mongoose.Types.ObjectId(id));
+  if (!normalizedIds.length) return new Map();
+  const rows = await CourseContent.find({
+    courseId: { $in: normalizedIds },
+    type: { $in: ['youtube', 'video'] },
+    $or: [{ youtubeUrl: { $ne: '' } }, { videoUrl: { $ne: '' } }]
+  })
+    .sort({ courseId: 1, order: 1, createdAt: 1 })
+    .select('courseId type title youtubeUrl videoUrl durationMinutes order isPreview')
+    .lean();
+  const map = new Map();
+  for (const row of rows) {
+    const key = String(row.courseId || '');
+    if (map.has(key)) continue;
+    map.set(key, {
+      contentId: String(row._id || ''),
+      type: String(row.type || ''),
+      title: String(row.title || ''),
+      youtubeUrl: String(row.youtubeUrl || ''),
+      videoUrl: String(row.videoUrl || ''),
+      durationMinutes: Number(row.durationMinutes || 0),
+      isPreview: !!row.isPreview
+    });
+  }
   return map;
 }
 
@@ -22823,15 +23247,131 @@ app.get('/api/courses', async (req, res) => {
     }
 
     const list = await Course.find(query).sort({ createdAt: -1 }).lean();
-    const statsMap = await getCourseStatsMap(list.map((course) => course._id));
-    const courses = list.map((course) => ({
-      ...course,
-      ...(statsMap.get(String(course._id)) || {})
-    }));
+    const [statsMap, previewMap] = await Promise.all([
+      getCourseStatsMap(list.map((course) => course._id)),
+      getCoursePreviewMap(list.map((course) => course._id))
+    ]);
+    const courses = list.map((course) => {
+      const preview = previewMap.get(String(course._id)) || null;
+      const isOwner = String(course.teacherId || '') === String(req.userId || '');
+      const canExposePreview = !preview || course.type === 'free' || preview.isPreview || role === 'admin' || isOwner;
+      return {
+        ...course,
+        ...(statsMap.get(String(course._id)) || {}),
+        previewMedia: canExposePreview ? preview : null
+      };
+    });
     res.json({ courses });
   } catch (e) {
     console.error('GET /api/courses error:', e);
     res.status(500).json({ error: 'Failed to load courses' });
+  }
+});
+
+function courseRecommendationTokens(value) {
+  return new Set(
+    String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9À-ɏЀ-ӿʻʼ‘’ʻʼ\s-]/gi, ' ')
+      .split(/[\s,-]+/)
+      .map((item) => item.trim())
+      .filter((item) => item.length >= 3)
+  );
+}
+
+function recommendationTokenOverlap(a, b) {
+  let count = 0;
+  for (const token of a) if (b.has(token)) count += 1;
+  return count;
+}
+
+// Personalized, deterministic recommendations; no private profile data is
+// returned to the browser.
+app.get('/api/courses/recommendations', async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(24, Number(req.query.limit || 10)));
+    const excludeCourseId = String(req.query.excludeCourseId || '').trim();
+    const viewer = await User.findById(req.userId)
+      .select('university faculty studyType studyGroup teachingSubject teachingSubjects')
+      .lean();
+
+    const visibilityQuery = [
+      { visibility: { $exists: false } },
+      { visibility: 'public' }
+    ];
+    if (String(viewer?.university || '').trim()) {
+      visibilityQuery.push({
+        visibility: 'university',
+        sourceUniversity: new RegExp(`^${escapeRegex(String(viewer.university).trim())}$`, 'i')
+      });
+    }
+    const query = { status: 'published', $or: visibilityQuery };
+    if (mongoose.Types.ObjectId.isValid(excludeCourseId)) query._id = { $ne: new mongoose.Types.ObjectId(excludeCourseId) };
+
+    const [candidates, recentEnrollments] = await Promise.all([
+      Course.find(query).sort({ createdAt: -1 }).limit(240).lean(),
+      CourseEnrollment.find({ userId: req.userId }).sort({ updatedAt: -1 }).limit(30).select('courseId').lean()
+    ]);
+    const historyIds = recentEnrollments.map((row) => row.courseId).filter(Boolean);
+    const historyCourses = historyIds.length
+      ? await Course.find({ _id: { $in: historyIds } }).select('category tags studyDirections faculty groups').lean()
+      : [];
+    const historyTokens = courseRecommendationTokens(historyCourses.map((course) => [
+      course.category,
+      course.faculty,
+      ...(course.tags || []),
+      ...(course.studyDirections || []),
+      ...(course.groups || [])
+    ].join(' ')).join(' '));
+    const profileTokens = courseRecommendationTokens([
+      viewer?.faculty,
+      viewer?.studyType,
+      viewer?.studyGroup,
+      viewer?.teachingSubject,
+      ...(viewer?.teachingSubjects || [])
+    ].join(' '));
+
+    const statsMap = await getCourseStatsMap(candidates.map((course) => course._id));
+    const previewMap = await getCoursePreviewMap(candidates.map((course) => course._id));
+    const scored = candidates.map((course) => {
+      const stats = statsMap.get(String(course._id)) || {};
+      const courseTokens = courseRecommendationTokens([
+        course.title,
+        course.description,
+        course.category,
+        course.faculty,
+        ...(course.tags || []),
+        ...(course.studyDirections || []),
+        ...(course.groups || [])
+      ].join(' '));
+      let score = 0;
+      const reasons = [];
+      const sameGroup = (course.groups || []).some((group) => String(group || '').trim().toLowerCase() === String(viewer?.studyGroup || '').trim().toLowerCase());
+      const sameFaculty = !!course.faculty && String(course.faculty).trim().toLowerCase() === String(viewer?.faculty || '').trim().toLowerCase();
+      if (sameGroup) { score += 80; reasons.push('o‘quv guruhingizga mos'); }
+      if (sameFaculty) { score += 45; reasons.push('fakultetingizga mos'); }
+      const profileOverlap = recommendationTokenOverlap(courseTokens, profileTokens);
+      const historyOverlap = recommendationTokenOverlap(courseTokens, historyTokens);
+      if (profileOverlap) { score += Math.min(40, profileOverlap * 8); if (!reasons.length) reasons.push('yo‘nalishingizga mos'); }
+      if (historyOverlap) { score += Math.min(28, historyOverlap * 5); if (reasons.length < 2) reasons.push('ko‘rgan fanlaringizga o‘xshash'); }
+      score += Math.min(18, Math.log2(1 + Number(course.enrolledCount || 0)) * 3);
+      score += Math.min(15, Number(stats.ratingAverage || 0) * 2.4);
+      score += Math.min(10, Math.log2(1 + Number(stats.likeCount || 0)) * 2);
+      const ageDays = Math.max(0, (Date.now() - new Date(course.createdAt || 0).getTime()) / 86400000);
+      score += Math.max(0, 8 - (ageDays / 45));
+      return {
+        ...course,
+        ...stats,
+        previewMedia: previewMap.get(String(course._id)) || null,
+        recommendationScore: Math.round(score * 10) / 10,
+        recommendationReason: reasons.slice(0, 2).join(' • ') || 'ommabop yangi kurs'
+      };
+    }).sort((a, b) => b.recommendationScore - a.recommendationScore || new Date(b.createdAt) - new Date(a.createdAt));
+
+    return res.json({ success: true, courses: scored.slice(0, limit) });
+  } catch (error) {
+    console.error('GET /api/courses/recommendations error:', error);
+    return res.status(500).json({ error: 'Recommendations could not be loaded' });
   }
 });
 
@@ -22848,12 +23388,16 @@ app.get('/api/courses/:id', async (req, res) => {
     if (role === 'teacher' && String(c.teacherId || '') !== String(req.userId || '') && c.status !== 'published') {
       return res.status(403).json({ error: 'Course is not published' });
     }
-    const statsMap = await getCourseStatsMap([c._id]);
+    const [statsMap, previewMap] = await Promise.all([
+      getCourseStatsMap([c._id]),
+      getCoursePreviewMap([c._id])
+    ]);
     const viewer = await getCourseViewerState(c, req.userId);
     res.json({
       course: {
         ...c,
         ...(statsMap.get(String(c._id)) || {}),
+        previewMedia: previewMap.get(String(c._id)) || null,
         viewer,
         isOwner: String(c.teacherId || '') === String(req.userId || '')
       }
@@ -22874,6 +23418,9 @@ app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teache
     const tags = Array.isArray(req.body.tags)
       ? req.body.tags.map((t) => String(t || '').trim()).filter(Boolean).slice(0, 24)
       : String(req.body.tags || '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 24);
+    const studyDirections = Array.isArray(req.body.studyDirections)
+      ? req.body.studyDirections.map((item) => cleanText(item, 120)).filter(Boolean).slice(0, 24)
+      : String(req.body.studyDirections || '').split(',').map((item) => cleanText(item, 120)).filter(Boolean).slice(0, 24);
     const type = (req.body.type || 'free').toLowerCase();
     const price = normalizeMoneyValue(req.body.price);
     const pricingCurrency = String(req.body.pricingCurrency || 'UZS').toUpperCase();
@@ -22902,6 +23449,9 @@ app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teache
       price: type === 'paid' ? price : 0,
       pricingCurrency,
       status: (req.body.status || 'draft') === 'published' ? 'published' : 'draft',
+      visibility: ['university', 'restricted'].includes(String(req.body.visibility || '').toLowerCase())
+        ? String(req.body.visibility).toLowerCase()
+        : 'public',
       joinMode,
       allowComments,
       allowRatings,
@@ -22911,6 +23461,7 @@ app.post('/api/courses', authenticateToken, attachUserRole, requireRole(['teache
       language: String(req.body.language || 'uz').trim().toLowerCase(),
       durationMinutes: Math.max(0, Number(req.body.durationMinutes || req.body.durationMin || 0) || 0),
       tags,
+      studyDirections,
       requirements: String(req.body.requirements || '').trim(),
       outcomes: String(req.body.outcomes || '').trim(),
       faculty: String(req.body.faculty || '').trim(),
@@ -23017,6 +23568,9 @@ app.post('/api/courses/from-group-lesson', authenticateToken, attachUserRole, re
     const tags = Array.isArray(req.body.tags)
       ? req.body.tags.map((t) => String(t || '').trim()).filter(Boolean).slice(0, 24)
       : String(req.body.tags || '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 24);
+    const studyDirections = Array.isArray(req.body.studyDirections)
+      ? req.body.studyDirections.map((item) => cleanText(item, 120)).filter(Boolean).slice(0, 24)
+      : String(req.body.studyDirections || '').split(',').map((item) => cleanText(item, 120)).filter(Boolean).slice(0, 24);
 
     const title = String(req.body.title || '').trim() || String(lesson.title || '').trim() || 'Recorded lesson course';
     const description = String(req.body.description || '').trim()
@@ -23040,11 +23594,15 @@ app.post('/api/courses/from-group-lesson', authenticateToken, attachUserRole, re
       price: type === 'paid' ? price : 0,
       pricingCurrency: String(req.body.pricingCurrency || 'UZS').toUpperCase(),
       status,
+      visibility: ['university', 'restricted'].includes(String(req.body.visibility || '').toLowerCase())
+        ? String(req.body.visibility).toLowerCase()
+        : 'public',
       category: String(req.body.category || 'recorded-lesson').trim(),
       level: String(req.body.level || 'intermediate').trim().toLowerCase(),
       language: String(req.body.language || 'uz').trim().toLowerCase(),
       durationMinutes: Math.max(0, Number(req.body.durationMinutes || req.body.durationMin || 0) || 0),
       tags,
+      studyDirections,
       requirements: String(req.body.requirements || '').trim(),
       outcomes: String(req.body.outcomes || '').trim(),
       faculty: String(req.body.faculty || group?.faculty || '').trim(),
@@ -23105,6 +23663,10 @@ app.put('/api/courses/:id', authenticateToken, attachUserRole, requireRole(['tea
     if (req.body.title !== undefined) c.title = String(req.body.title).trim();
     if (req.body.description !== undefined) c.description = String(req.body.description || '').trim();
     if (req.body.status !== undefined) c.status = (req.body.status === 'published') ? 'published' : 'draft';
+    if (req.body.visibility !== undefined) {
+      const visibility = String(req.body.visibility || 'public').toLowerCase();
+      c.visibility = ['public', 'university', 'restricted'].includes(visibility) ? visibility : 'public';
+    }
     if (req.body.joinMode !== undefined) c.joinMode = String(req.body.joinMode || 'open').toLowerCase() === 'approval' ? 'approval' : 'open';
     if (req.body.allowComments !== undefined) c.allowComments = req.body.allowComments !== false;
     if (req.body.allowRatings !== undefined) c.allowRatings = req.body.allowRatings !== false;
@@ -23119,6 +23681,11 @@ app.put('/api/courses/:id', authenticateToken, attachUserRole, requireRole(['tea
       c.tags = Array.isArray(req.body.tags)
         ? req.body.tags.map((t) => String(t || '').trim()).filter(Boolean).slice(0, 24)
         : String(req.body.tags || '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 24);
+    }
+    if (req.body.studyDirections !== undefined) {
+      c.studyDirections = Array.isArray(req.body.studyDirections)
+        ? req.body.studyDirections.map((item) => cleanText(item, 120)).filter(Boolean).slice(0, 24)
+        : String(req.body.studyDirections || '').split(',').map((item) => cleanText(item, 120)).filter(Boolean).slice(0, 24);
     }
     if (req.body.requirements !== undefined) c.requirements = String(req.body.requirements || '').trim();
     if (req.body.outcomes !== undefined) c.outcomes = String(req.body.outcomes || '').trim();
@@ -23176,7 +23743,10 @@ app.put('/api/courses/:id', authenticateToken, attachUserRole, requireRole(['tea
 
     if (req.body.lessons !== undefined) {
       const lessons = Array.isArray(req.body.lessons) ? req.body.lessons : [];
-      await CourseContent.deleteMany({ courseId: c._id });
+      await Promise.all([
+        CourseContent.deleteMany({ courseId: c._id }),
+        CourseLike.deleteMany({ courseId: c._id, contentId: { $ne: null } })
+      ]);
       const docs = lessons
         .map((l, i) => buildCourseContentDocFromLesson(l, c._id, i))
         .filter((d) => d && d.title);
@@ -23216,6 +23786,8 @@ app.delete('/api/courses/:id', authenticateToken, attachUserRole, requireRole(['
       CourseProgress.deleteMany({ courseId: course._id }),
       CourseRating.deleteMany({ courseId: course._id }),
       CourseComment.deleteMany({ courseId: course._id }),
+      CourseLike.deleteMany({ courseId: course._id }),
+      CourseCommentLike.deleteMany({ courseId: course._id }),
       Course.deleteOne({ _id: course._id })
     ]);
 
@@ -23279,18 +23851,28 @@ app.post('/api/courses/:id/join', authenticateToken, attachUserRole, requireRole
   }
 });
 
-// Course content list (joined students / owner teacher / admin)
+// Course content list. Published public courses are open to every authenticated
+// student; restricted courses keep the enrollment gate.
 app.get('/api/courses/:id/content', async (req, res) => {
   try {
     const course = await Course.findById(req.params.id).lean();
     if (!course) return res.status(404).json({ error: 'Course not found' });
 
     const role = (req.userRole || 'student').toLowerCase();
-    if (role === 'student') {
-      const joined = await CourseEnrollment.findOne({ courseId: course._id, userId: req.userId }).lean();
-      if (!joined) return res.status(403).json({ error: 'Not joined' });
-    } else if (role === 'teacher') {
-      if (String(course.teacherId) !== String(req.userId)) return res.status(403).json({ error: 'Not owner' });
+    const owner = String(course.teacherId || '') === String(req.userId || '');
+    if (!owner && role !== 'admin') {
+      if (String(course.status || '') !== 'published') return res.status(403).json({ error: 'Course is not published' });
+      const visibility = String(course.visibility || 'public').toLowerCase();
+      let openAccess = visibility === 'public';
+      if (visibility === 'university') {
+        const viewer = await User.findById(req.userId).select('university').lean();
+        const targetUniversity = String(course.sourceUniversity || '').trim().toLowerCase();
+        openAccess = !!targetUniversity && String(viewer?.university || '').trim().toLowerCase() === targetUniversity;
+      }
+      if (!openAccess) {
+        const joined = await CourseEnrollment.findOne({ courseId: course._id, userId: req.userId }).select('_id').lean();
+        if (!joined) return res.status(403).json({ error: 'Bu kursga kirish cheklangan' });
+      }
     }
 
     const includeAnswers = role === 'admin' || (role === 'teacher' && String(course.teacherId) === String(req.userId));
@@ -23412,11 +23994,196 @@ app.delete('/api/courses/:id/content/:contentId', authenticateToken, attachUserR
       return res.status(403).json({ error: 'Not owner' });
     }
 
-    await CourseContent.deleteOne({ _id: req.params.contentId, courseId: req.params.id });
+    await Promise.all([
+      CourseContent.deleteOne({ _id: req.params.contentId, courseId: req.params.id }),
+      CourseLike.deleteMany({ courseId: req.params.id, contentId: req.params.contentId })
+    ]);
     res.json({ success: true });
   } catch (e) {
     console.error('DELETE /api/courses/:id/content/:contentId error:', e);
     res.status(500).json({ error: 'Failed to delete content' });
+  }
+});
+
+// Resumable multipart upload for long recorded lessons (1 GB and larger).
+// Each request buffers only one small part, never the complete video.
+app.post('/api/courses/:id/content/:contentId/video-upload/start', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const owned = await requireOwnedCourseContent(req, res);
+    if (!owned) return;
+    if (!R2_READY || !r2Client) return res.status(503).json({ error: 'R2 storage is not configured' });
+    if (!R2_PUBLIC_BASE_URL) return res.status(503).json({ error: 'R2_PUBLIC_BASE_URL is required for video streaming' });
+
+    const fileName = path.basename(String(req.body?.fileName || 'lesson-video.mp4')).slice(0, 220);
+    const fileSize = Math.max(0, Number(req.body?.fileSize || 0));
+    const mimeType = String(req.body?.mimeType || guessMimeTypeFromExt(fileName)).toLowerCase().slice(0, 120);
+    const ext = String(path.extname(fileName || '')).toLowerCase();
+    const videoExts = new Set(['.mp4', '.webm', '.mov', '.m4v', '.mkv']);
+    if (!mimeType.startsWith('video/') && !videoExts.has(ext)) return res.status(400).json({ error: 'Faqat video fayl yuklash mumkin' });
+    if (!Number.isFinite(fileSize) || fileSize < 1) return res.status(400).json({ error: 'fileSize required' });
+    if (fileSize > COURSE_VIDEO_MAX_BYTES) {
+      return res.status(413).json({ error: `Video hajmi ${Number(process.env.COURSE_VIDEO_MAX_GB || 5)} GB dan oshmasligi kerak` });
+    }
+
+    const key = buildObjectKey({
+      fileName,
+      folder: `course-videos/${String(owned.course._id)}/${String(owned.item._id)}`,
+      uniqueFilename: true
+    });
+    const created = await r2Client.send(new CreateMultipartUploadCommand({
+      Bucket: R2_BUCKET,
+      Key: key,
+      ContentType: mimeType,
+      CacheControl: 'public, max-age=31536000, immutable',
+      Metadata: {
+        courseid: String(owned.course._id),
+        contentid: String(owned.item._id),
+        ownerid: String(req.userId)
+      }
+    }));
+    const uploadId = String(created.UploadId || '');
+    if (!uploadId) throw new Error('R2 did not return upload id');
+
+    const token = signCourseVideoUploadToken({
+      userId: String(req.userId),
+      courseId: String(owned.course._id),
+      contentId: String(owned.item._id),
+      uploadId,
+      key,
+      fileName,
+      fileSize,
+      mimeType,
+      partSize: COURSE_VIDEO_PART_BYTES,
+      partCount: Math.ceil(fileSize / COURSE_VIDEO_PART_BYTES)
+    });
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(201).json({
+      success: true,
+      token,
+      uploadId,
+      partSize: COURSE_VIDEO_PART_BYTES,
+      partCount: Math.ceil(fileSize / COURSE_VIDEO_PART_BYTES),
+      maxBytes: COURSE_VIDEO_MAX_BYTES,
+      expiresInSeconds: COURSE_VIDEO_UPLOAD_TTL_SECONDS
+    });
+  } catch (error) {
+    console.error('video-upload/start error:', error);
+    return res.status(Number(error?.status || 500)).json({ error: error?.message || 'Video upload could not start' });
+  }
+});
+
+app.get('/api/courses/:id/content/:contentId/video-upload/status', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const owned = await requireOwnedCourseContent(req, res);
+    if (!owned) return;
+    const decoded = verifyCourseVideoUploadToken(readCourseUploadToken(req));
+    assertCourseUploadScope(decoded, req);
+    const parts = await listAllMultipartParts(String(decoded.uploadId || ''), String(decoded.key || ''));
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({
+      success: true,
+      partSize: Number(decoded.partSize || COURSE_VIDEO_PART_BYTES),
+      partCount: Number(decoded.partCount || 0),
+      uploadedParts: parts.map((part) => ({ partNumber: part.PartNumber, etag: part.ETag, size: part.Size }))
+    });
+  } catch (error) {
+    console.error('video-upload/status error:', error);
+    return res.status(Number(error?.status || 400)).json({ error: error?.message || 'Upload status unavailable' });
+  }
+});
+
+app.put(
+  '/api/courses/:id/content/:contentId/video-upload/part/:partNumber',
+  authenticateToken,
+  attachUserRole,
+  requireRole(['teacher', 'admin']),
+  express.raw({ type: 'application/octet-stream', limit: COURSE_VIDEO_PART_BYTES + (128 * 1024) }),
+  async (req, res) => {
+    try {
+      const owned = await requireOwnedCourseContent(req, res);
+      if (!owned) return;
+      const decoded = verifyCourseVideoUploadToken(readCourseUploadToken(req));
+      assertCourseUploadScope(decoded, req);
+      const partNumber = Number(req.params.partNumber || 0);
+      const partCount = Number(decoded.partCount || 0);
+      if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > partCount) return res.status(400).json({ error: 'Invalid part number' });
+      if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Empty video part' });
+      if (req.body.length > Number(decoded.partSize || COURSE_VIDEO_PART_BYTES)) return res.status(413).json({ error: 'Video part is too large' });
+
+      const uploaded = await r2Client.send(new UploadPartCommand({
+        Bucket: R2_BUCKET,
+        Key: String(decoded.key || ''),
+        UploadId: String(decoded.uploadId || ''),
+        PartNumber: partNumber,
+        Body: req.body,
+        ContentLength: req.body.length
+      }));
+      return res.json({ success: true, partNumber, etag: String(uploaded.ETag || '') });
+    } catch (error) {
+      console.error('video-upload/part error:', error);
+      return res.status(Number(error?.status || 400)).json({ error: error?.message || 'Video part upload failed' });
+    }
+  }
+);
+
+app.post('/api/courses/:id/content/:contentId/video-upload/complete', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const owned = await requireOwnedCourseContent(req, res);
+    if (!owned) return;
+    const decoded = verifyCourseVideoUploadToken(readCourseUploadToken(req));
+    assertCourseUploadScope(decoded, req);
+    const parts = await listAllMultipartParts(String(decoded.uploadId || ''), String(decoded.key || ''));
+    if (parts.length !== Number(decoded.partCount || 0)) {
+      return res.status(409).json({ error: 'Barcha video bo‘laklari hali yuklanmagan', uploadedParts: parts.length, partCount: Number(decoded.partCount || 0) });
+    }
+
+    await r2Client.send(new CompleteMultipartUploadCommand({
+      Bucket: R2_BUCKET,
+      Key: String(decoded.key || ''),
+      UploadId: String(decoded.uploadId || ''),
+      MultipartUpload: { Parts: parts.map((part) => ({ PartNumber: part.PartNumber, ETag: part.ETag })) }
+    }));
+
+    const previousPublicId = String(owned.item.assetPublicId || '');
+    const publicUrl = toPublicObjectUrl(String(decoded.key || ''));
+    owned.item.type = 'video';
+    owned.item.videoUrl = publicUrl;
+    owned.item.youtubeUrl = '';
+    owned.item.pdfUrl = '';
+    owned.item.assetPublicId = String(decoded.key || '');
+    owned.item.assetSizeBytes = Number(decoded.fileSize || 0);
+    owned.item.assetMimeType = String(decoded.mimeType || 'video/mp4');
+    owned.item.uploadedAt = new Date();
+    await owned.item.save();
+    if (previousPublicId && previousPublicId !== String(decoded.key || '')) {
+      r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: previousPublicId })).catch(() => {});
+    }
+    return res.json({
+      success: true,
+      fileUrl: publicUrl,
+      item: sanitizeCourseContentForRole(owned.item, true)
+    });
+  } catch (error) {
+    console.error('video-upload/complete error:', error);
+    return res.status(Number(error?.status || 400)).json({ error: error?.message || 'Video upload could not complete' });
+  }
+});
+
+app.delete('/api/courses/:id/content/:contentId/video-upload', authenticateToken, attachUserRole, requireRole(['teacher', 'admin']), async (req, res) => {
+  try {
+    const owned = await requireOwnedCourseContent(req, res);
+    if (!owned) return;
+    const decoded = verifyCourseVideoUploadToken(readCourseUploadToken(req));
+    assertCourseUploadScope(decoded, req);
+    await r2Client.send(new AbortMultipartUploadCommand({
+      Bucket: R2_BUCKET,
+      Key: String(decoded.key || ''),
+      UploadId: String(decoded.uploadId || '')
+    }));
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('video-upload abort error:', error);
+    return res.status(Number(error?.status || 400)).json({ error: error?.message || 'Upload abort failed' });
   }
 });
 
@@ -23647,7 +24414,11 @@ app.post('/api/courses/:id/ratings', authenticateToken, attachUserRole, requireR
     if (!course.allowRatings) return res.status(403).json({ error: 'Ratings are disabled for this course' });
 
     const joined = await CourseEnrollment.findOne({ courseId: course._id, userId: req.userId }).lean();
-    if (String(req.userRole || '').toLowerCase() === 'student' && !joined) {
+    if (
+      String(req.userRole || '').toLowerCase() === 'student'
+      && !joined
+      && String(course.visibility || 'public') !== 'public'
+    ) {
       return res.status(403).json({ error: 'Only joined students can rate this course' });
     }
 
@@ -23688,6 +24459,67 @@ app.post('/api/courses/:id/ratings', authenticateToken, attachUserRole, requireR
   }
 });
 
+function requestedCourseContentId(req) {
+  const raw = String(req.query?.contentId || req.body?.contentId || '').trim();
+  return raw ? toObjectIdOrNull(raw) : null;
+}
+
+app.get('/api/courses/:id/likes', async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).select('_id status teacherId').lean();
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    const requested = String(req.query?.contentId || '').trim();
+    const contentId = requestedCourseContentId(req);
+    if (requested && !contentId) return res.status(400).json({ error: 'Invalid contentId' });
+    if (contentId) {
+      const contentExists = await CourseContent.exists({ _id: contentId, courseId: course._id });
+      if (!contentExists) return res.status(404).json({ error: 'Course video not found' });
+    }
+    const query = { courseId: course._id, contentId: contentId || null };
+    const [count, mine] = await Promise.all([
+      CourseLike.countDocuments(query),
+      CourseLike.exists({ ...query, userId: req.userId })
+    ]);
+    res.json({ success: true, contentId: contentId ? String(contentId) : '', count, liked: !!mine });
+  } catch (e) {
+    console.error('GET /api/courses/:id/likes error:', e);
+    res.status(500).json({ error: 'Failed to load likes' });
+  }
+});
+
+app.post('/api/courses/:id/likes', async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id).select('_id status teacherId').lean();
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    const requested = String(req.body?.contentId || '').trim();
+    const contentId = requestedCourseContentId(req);
+    if (requested && !contentId) return res.status(400).json({ error: 'Invalid contentId' });
+    if (contentId) {
+      const contentExists = await CourseContent.exists({ _id: contentId, courseId: course._id });
+      if (!contentExists) return res.status(404).json({ error: 'Course video not found' });
+    }
+    const query = { courseId: course._id, contentId: contentId || null, userId: req.userId };
+    const existing = await CourseLike.findOne(query).select('_id').lean();
+    let liked = false;
+    if (existing) {
+      await CourseLike.deleteOne({ _id: existing._id });
+    } else {
+      try {
+        await CourseLike.create(query);
+        liked = true;
+      } catch (error) {
+        if (String(error?.code) !== '11000') throw error;
+        liked = true;
+      }
+    }
+    const count = await CourseLike.countDocuments({ courseId: course._id, contentId: contentId || null });
+    res.json({ success: true, contentId: contentId ? String(contentId) : '', count, liked });
+  } catch (e) {
+    console.error('POST /api/courses/:id/likes error:', e);
+    res.status(500).json({ error: 'Failed to update like' });
+  }
+});
+
 app.get('/api/courses/:id/comments', async (req, res) => {
   try {
     const course = await Course.findById(req.params.id).lean();
@@ -23697,6 +24529,16 @@ app.get('/api/courses/:id/comments', async (req, res) => {
     }
 
     const comments = await CourseComment.find({ courseId: course._id }).sort({ createdAt: 1 }).limit(500).lean();
+    const commentIds = comments.map((comment) => comment._id);
+    const [likeRows, myLikes] = commentIds.length ? await Promise.all([
+      CourseCommentLike.aggregate([
+        { $match: { commentId: { $in: commentIds } } },
+        { $group: { _id: '$commentId', count: { $sum: 1 } } }
+      ]),
+      CourseCommentLike.find({ commentId: { $in: commentIds }, userId: req.userId }).select('commentId').lean()
+    ]) : [[], []];
+    const likeCountMap = new Map((likeRows || []).map((row) => [String(row._id), Number(row.count || 0)]));
+    const myLikeSet = new Set((myLikes || []).map((row) => String(row.commentId || '')));
     res.json({
       success: true,
       comments: comments.map((comment) => ({
@@ -23707,6 +24549,8 @@ app.get('/api/courses/:id/comments', async (req, res) => {
         authorRole: comment.authorRole || 'student',
         parentId: comment.parentId ? String(comment.parentId) : '',
         body: String(comment.body || ''),
+        likeCount: likeCountMap.get(String(comment._id)) || 0,
+        liked: myLikeSet.has(String(comment._id)),
         createdAt: comment.createdAt,
         updatedAt: comment.updatedAt
       }))
@@ -23714,6 +24558,35 @@ app.get('/api/courses/:id/comments', async (req, res) => {
   } catch (e) {
     console.error('GET /api/courses/:id/comments error:', e);
     res.status(500).json({ error: 'Failed to load comments' });
+  }
+});
+
+app.post('/api/courses/:id/comments/:commentId/like', async (req, res) => {
+  try {
+    const courseId = toObjectIdOrNull(req.params.id);
+    const commentId = toObjectIdOrNull(req.params.commentId);
+    if (!courseId || !commentId) return res.status(400).json({ error: 'Invalid course or comment id' });
+    const comment = await CourseComment.findOne({ _id: commentId, courseId }).select('_id courseId').lean();
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    const query = { courseId, commentId, userId: req.userId };
+    const existing = await CourseCommentLike.findOne(query).select('_id').lean();
+    let liked = false;
+    if (existing) {
+      await CourseCommentLike.deleteOne({ _id: existing._id });
+    } else {
+      try {
+        await CourseCommentLike.create(query);
+        liked = true;
+      } catch (error) {
+        if (String(error?.code) !== '11000') throw error;
+        liked = true;
+      }
+    }
+    const count = await CourseCommentLike.countDocuments({ commentId });
+    res.json({ success: true, commentId: String(commentId), count, liked });
+  } catch (e) {
+    console.error('POST /api/courses/:id/comments/:commentId/like error:', e);
+    res.status(500).json({ error: 'Failed to update comment like' });
   }
 });
 
@@ -23725,7 +24598,7 @@ app.post('/api/courses/:id/comments', authenticateToken, attachUserRole, require
 
     const role = String(req.userRole || 'student').toLowerCase();
     const isOwner = String(course.teacherId || '') === String(req.userId || '');
-    if (!isOwner && role !== 'admin') {
+    if (!isOwner && role !== 'admin' && String(course.visibility || 'public') !== 'public') {
       const joined = await CourseEnrollment.findOne({ courseId: course._id, userId: req.userId }).lean();
       if (!joined) return res.status(403).json({ error: 'Only joined students can comment on this course' });
     }

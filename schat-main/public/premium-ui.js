@@ -87,23 +87,23 @@
         font-size:11px;
       }
       .hallaym-badge-verified{
-        background:rgba(15,143,131,.12);
-        color:#0f6f66;
+        background:rgba(29,95,168,.12);
+        color:#17477c;
       }
       .hallaym-badge-premium{
-        background:rgba(245,158,11,.14);
-        color:#9a6500;
-        border-color:rgba(245,158,11,.22);
+        background:rgba(40,120,199,.14);
+        color:#17477c;
+        border-color:rgba(40,120,199,.22);
       }
       html.dark .hallaym-badge-verified{
-        background:rgba(45,212,191,.14);
-        color:#88f1e6;
-        border-color:rgba(45,212,191,.22);
+        background:rgba(100,185,238,.14);
+        color:#bfdbfe;
+        border-color:rgba(100,185,238,.22);
       }
       html.dark .hallaym-badge-premium{
-        background:rgba(251,191,36,.16);
-        color:#ffd978;
-        border-color:rgba(251,191,36,.22);
+        background:rgba(100,185,238,.16);
+        color:#dbeafe;
+        border-color:rgba(100,185,238,.22);
       }
     `;
     document.head.appendChild(style);
