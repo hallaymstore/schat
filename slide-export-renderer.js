@@ -1,4 +1,10 @@
-const { Resvg } = require('@resvg/resvg-js');
+let Resvg = null;
+let resvgLoadError = null;
+try {
+  ({ Resvg } = require('@resvg/resvg-js'));
+} catch (error) {
+  resvgLoadError = error;
+}
 
 const THEME_TOKENS = {
   'teal-minimal': { bg: 'FBFFFE', surface: 'EEF7F5', text: '163633', strong: '0D2623', muted: '5C7671', accent: '0F8F83', accentText: 'FFFFFF', border: 'D8ECE8' },
@@ -440,6 +446,12 @@ function buildSlideSvgMarkup(deck, slide, index, totalSlides) {
 }
 
 async function renderDeckSlidePngBuffers(deck) {
+  if (!Resvg) {
+    const error = new Error('Slide PNG export native binding is unavailable. Run npm ci on this server platform.');
+    error.code = 'RESVG_NATIVE_BINDING_UNAVAILABLE';
+    error.cause = resvgLoadError;
+    throw error;
+  }
   const slides = Array.isArray(deck && deck.slides) ? deck.slides : [];
   return slides.map((slide, index) => {
     const svg = buildSlideSvgMarkup(deck, slide, index, slides.length);

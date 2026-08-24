@@ -423,6 +423,15 @@
     }
 
     const SCOPED_ACCOUNT_CONFIGS = {
+      tutor: {
+        label: 'Tyutor',
+        title: 'Tyutor yaratish',
+        sub: 'Tyutor tanlangan fakultet va guruhlar bo‘yicha talabalar hamda videodarslarni kuzatadi.',
+        icon: 'fa-user-check',
+        requireFaculty: true,
+        usernamePlaceholder: 'tyutor_qdtu',
+        namePlaceholder: 'Madina Tyutor'
+      },
       organizer: {
         label: 'Organizer',
         title: 'Organizer yaratish',
@@ -783,6 +792,7 @@
             <div class="flex justify-end gap-2">
               <button class="edit glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}"><i class="fa-solid fa-pen mr-2"></i>Tahrir</button>
               <button class="coin btn-primary text-white rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}"><i class="fa-solid fa-coins mr-2"></i>Coin</button>
+              <button class="faceReset glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}" data-name="${u.username}"><i class="fa-solid fa-face-viewfinder mr-2"></i>Yuz reset</button>
               <button class="del glass btn-ghost rounded-xl px-3 py-2 text-xs font-extrabold glow-ring" data-id="${u._id}" data-name="${u.username}"><i class="fa-solid fa-trash mr-2"></i>O‘chirish</button>
             </div>
           </td>
@@ -794,9 +804,9 @@
           <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
             <div>
               <div class="text-sm font-black">Rahbariyat va fakultet accountlari</div>
-              <div class="text-xs muted2 mt-1">Admin shu bo‘limdan rektor, prorektor, dekan va organizer uchun login-parol yaratadi. Yaratilgan accountlar pastdagi jadvalga darhol tushadi.</div>
+              <div class="text-xs muted2 mt-1">Admin shu bo‘limdan rektor, prorektor, dekan, tyutor va organizer uchun login-parol yaratadi. Yaratilgan accountlar pastdagi jadvalga darhol tushadi.</div>
             </div>
-            <div class="grid grid-cols-2 xl:grid-cols-4 gap-2">
+            <div class="grid grid-cols-2 xl:grid-cols-5 gap-2">
               <button id="newRectorBtn" class="btn-primary text-white rounded-xl px-4 py-2 text-xs font-extrabold glow-ring">
                 <i class="fa-solid fa-building-columns mr-2"></i>Rektor
               </button>
@@ -805,6 +815,9 @@
               </button>
               <button id="newDeanBtn" class="glass btn-ghost rounded-xl px-4 py-2 text-xs font-extrabold glow-ring">
                 <i class="fa-solid fa-user-graduate mr-2"></i>Dekan
+              </button>
+              <button id="newTutorBtn" class="glass btn-ghost rounded-xl px-4 py-2 text-xs font-extrabold glow-ring">
+                <i class="fa-solid fa-user-check mr-2"></i>Tyutor
               </button>
               <button id="newOrganizerBtn" class="glass btn-ghost rounded-xl px-4 py-2 text-xs font-extrabold glow-ring">
                 <i class="fa-solid fa-user-shield mr-2"></i>Organizer
@@ -822,8 +835,10 @@
 
       document.querySelectorAll('.coin').forEach(b=> b.onclick = ()=> openCoinModal(b.dataset.id));
       document.querySelectorAll('.edit').forEach(b=> b.onclick = ()=> openEditUser(b.dataset.id));
+      document.querySelectorAll('.faceReset').forEach(b=> b.onclick = ()=> resetUserFace(b.dataset.id, b.dataset.name));
       document.querySelectorAll('.del').forEach(b=> b.onclick = ()=> delUser(b.dataset.id, b.dataset.name));
       const scopedButtonMap = {
+        newTutorBtn: 'tutor',
         newOrganizerBtn: 'organizer',
         newDeanBtn: 'dean',
         newProrectorBtn: 'prorector',
@@ -1051,6 +1066,7 @@
               <select id="role" class="field w-full rounded-2xl px-4 py-3 text-sm mt-2">
                 <option value="student" ${String(u.role||'student')==='student'?'selected':''}>student</option>
                 <option value="teacher" ${String(u.role||'')==='teacher'?'selected':''}>teacher</option>
+                <option value="tutor" ${String(u.role||'')==='tutor'?'selected':''}>tutor</option>
                 <option value="organizer" ${String(u.role||'')==='organizer'?'selected':''}>organizer</option>
                 <option value="dean" ${String(u.role||'')==='dean'?'selected':''}>dean</option>
                 <option value="prorector" ${String(u.role||'')==='prorector'?'selected':''}>prorector</option>
@@ -1153,6 +1169,20 @@
           toast("O‘chirildi.", 'success');
           await loadOverview();
           await loadList();
+        }
+      });
+    }
+
+    async function resetUserFace(userId, username){
+      modal.show({
+        title: "Yuz tasdig‘ini reset qilish",
+        sub: `${username} keyingi loginida yuzini qayta ro‘yxatdan o‘tkazadi`,
+        okText: "Reset qilish",
+        bodyHTML: `<div class="text-sm muted2">Saqlangan shifrlangan yuz shabloni o‘chadi va foydalanuvchining barcha faol sessiyalari yopiladi.</div>`,
+        onOk: async ()=>{
+          const {res, j} = await api(`/api/admin/users/${userId}/face-reset`, { method:'POST' });
+          if(!res.ok) return toast(j?.error || 'Yuz reset bajarilmadi', 'error');
+          toast('Yuz shabloni reset qilindi.', 'success');
         }
       });
     }
@@ -3160,6 +3190,4 @@ async function adminEndGroupCall(groupId){
   <script src="/ui-premium-icons.js" defer></script>
 </body>
 </html>
-
-
 

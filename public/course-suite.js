@@ -143,6 +143,7 @@
   function dashHref(role){
     const normalized = String(role || "student").toLowerCase();
     if(normalized === "teacher") return "/teacher-dashboard.html";
+    if(normalized === "tutor") return "/tutor-dashboard.html";
     if(normalized === "admin") return "/admin-dashboard.html";
     return "/student-dashboard.html";
   }
@@ -209,11 +210,14 @@
       price: Number(raw?.price || 0),
       pricingCurrency: raw?.pricingCurrency || "UZS",
       status: raw?.status || "draft",
+      visibility: raw?.visibility || "public",
       joinMode: raw?.joinMode || "open",
       allowComments: raw?.allowComments !== false,
       allowRatings: raw?.allowRatings !== false,
       allowSequential: raw?.allowSequential !== false,
       category: raw?.category || "",
+      tags: Array.isArray(raw?.tags) ? raw.tags : [],
+      studyDirections: Array.isArray(raw?.studyDirections) ? raw.studyDirections : [],
       level: raw?.level || "beginner",
       language: raw?.language || "uz",
       durationMinutes: Number(raw?.durationMinutes || 0),
@@ -223,12 +227,23 @@
       groups: Array.isArray(raw?.groups) ? raw.groups : [],
       youtubeUrl: raw?.youtubeUrl || "",
       coverUrl: raw?.coverUrl || "",
+      previewMedia: raw?.previewMedia && typeof raw.previewMedia === "object" ? {
+        contentId: raw.previewMedia.contentId || raw.previewMedia._id || "",
+        type: raw.previewMedia.type || "",
+        title: raw.previewMedia.title || "",
+        youtubeUrl: raw.previewMedia.youtubeUrl || "",
+        videoUrl: raw.previewMedia.videoUrl || "",
+        durationMinutes: Number(raw.previewMedia.durationMinutes || 0),
+        isPreview: !!raw.previewMedia.isPreview
+      } : null,
       teacherId: raw?.teacherId || raw?.teacher?._id || "",
       teacherName: raw?.teacherName || raw?.teacher?.fullName || "",
+      enrolledCount: Number(raw?.enrolledCount || 0),
       lessonCount: Number(raw?.lessonCount || 0),
       ratingAverage: Number(raw?.ratingAverage || 0),
       ratingCount: Number(raw?.ratingCount || 0),
       commentCount: Number(raw?.commentCount || 0),
+      likeCount: Number(raw?.likeCount || 0),
       pendingRequests: Number(raw?.pendingRequests || 0),
       viewer: {
         joined: !!viewer.joined,
@@ -252,6 +267,8 @@
       youtubeUrl: raw?.youtubeUrl || "",
       videoUrl: raw?.videoUrl || "",
       pdfUrl: raw?.pdfUrl || "",
+      assetSizeBytes: Number(raw?.assetSizeBytes || 0),
+      assetMimeType: raw?.assetMimeType || "",
       durationMinutes: Number(raw?.durationMinutes || 0),
       isPreview: !!raw?.isPreview,
       quizEnabled: !!raw?.quizEnabled,

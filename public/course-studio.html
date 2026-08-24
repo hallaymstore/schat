@@ -47,7 +47,11 @@
               <div class="course-col-3"><div class="course-form-group"><label for="coursePrice">Narx</label><input id="coursePrice" class="course-input" type="number" min="0"></div></div>
               <div class="course-col-4"><div class="course-form-group"><label for="courseStatus">Status</label><select id="courseStatus" class="course-select"><option value="draft">Draft</option><option value="published">Published</option></select></div></div>
               <div class="course-col-4"><div class="course-form-group"><label for="courseJoinMode">Join mode</label><select id="courseJoinMode" class="course-select"><option value="open">Darhol kirish</option><option value="approval">Teacher approval</option></select></div></div>
+              <div class="course-col-4"><div class="course-form-group"><label for="courseVisibility">Ko‘rish huquqi</label><select id="courseVisibility" class="course-select"><option value="public">Barcha talabalar</option><option value="university">Faqat universitet</option><option value="restricted">Faqat qo‘shilganlar</option></select></div></div>
               <div class="course-col-4"><div class="course-form-group"><label for="courseFaculty">Fakultet</label><input id="courseFaculty" class="course-input"></div></div>
+              <div class="course-col-4"><div class="course-form-group"><label for="courseCategory">Fan / kategoriya</label><input id="courseCategory" class="course-input" placeholder="Dasturlash"></div></div>
+              <div class="course-col-4"><div class="course-form-group"><label for="courseTags">Teglar</label><input id="courseTags" class="course-input" placeholder="javascript, web, 1-kurs"></div></div>
+              <div class="course-col-4"><div class="course-form-group"><label for="courseDirections">Yo‘nalishlar</label><input id="courseDirections" class="course-input" placeholder="Axborot tizimlari, Dasturiy injiniring"></div></div>
               <div class="course-col-12"><div class="course-form-group"><label for="courseDescription">Tavsif</label><textarea id="courseDescription" class="course-textarea"></textarea></div></div>
               <div class="course-col-6"><div class="course-form-group"><label for="courseGroups">Guruhlar</label><input id="courseGroups" class="course-input" placeholder="MMT-520-25, EKT-110-26"></div></div>
               <div class="course-col-3"><div class="course-form-group"><label for="courseLanguage">Til</label><input id="courseLanguage" class="course-input" value="uz"></div></div>
@@ -90,16 +94,16 @@
             <h2 class="course-section-title">Mavzu editor</h2>
             <div class="course-grid" style="margin-top:18px">
               <div class="course-col-6"><div class="course-form-group"><label for="lessonTitle">Sarlavha</label><input id="lessonTitle" class="course-input"></div></div>
-              <div class="course-col-3"><div class="course-form-group"><label for="lessonType">Tur</label><select id="lessonType" class="course-select"><option value="video">Video</option><option value="youtube">YouTube</option><option value="pdf">PDF</option><option value="text">Matn</option></select></div></div>
+              <div class="course-col-3"><div class="course-form-group"><label for="lessonType">Dars manbasi</label><select id="lessonType" class="course-select"><option value="video">Qurilmadan video</option><option value="youtube">YouTube havola</option><option value="pdf">PDF hujjat</option><option value="text">Faqat matn</option></select></div></div>
               <div class="course-col-3"><div class="course-form-group"><label for="lessonOrder">Tartib</label><input id="lessonOrder" class="course-input" type="number" min="1"></div></div>
               <div class="course-col-3"><div class="course-form-group"><label for="lessonDuration">Davomiylik (min)</label><input id="lessonDuration" class="course-input" type="number" min="0"></div></div>
               <div class="course-col-9"><div class="course-form-group"><label for="lessonText">Izoh / matn</label><textarea id="lessonText" class="course-textarea"></textarea></div></div>
-              <div class="course-col-6"><div class="course-form-group"><label for="lessonYoutube">YouTube URL</label><input id="lessonYoutube" class="course-input"></div></div>
-              <div class="course-col-6"><div class="course-form-group"><label for="lessonVideo">Video URL</label><input id="lessonVideo" class="course-input"></div></div>
-              <div class="course-col-12"><div class="course-form-group"><label for="lessonPdf">PDF URL</label><input id="lessonPdf" class="course-input"></div></div>
+              <div class="course-col-12" id="lessonYoutubeField"><div class="course-form-group"><label for="lessonYoutube">YouTube video havolasi</label><input id="lessonYoutube" class="course-input" placeholder="https://www.youtube.com/watch?v=..."><small class="course-muted">Oddiy YouTube yoki youtu.be havolasini kiriting.</small></div></div>
+              <div class="course-col-12" id="lessonVideoField"><div class="course-form-group"><label for="lessonVideo">Tayyor video URL (ixtiyoriy)</label><input id="lessonVideo" class="course-input" placeholder="https://.../video.mp4"><small class="course-muted">Qurilmadan yuklash uchun avval mavzuni saqlang, keyin pastdagi fayl tugmasidan foydalaning.</small></div></div>
+              <div class="course-col-12" id="lessonPdfField"><div class="course-form-group"><label for="lessonPdf">Tayyor PDF URL (ixtiyoriy)</label><input id="lessonPdf" class="course-input" placeholder="https://.../document.pdf"></div></div>
             </div>
             <div class="course-inline-actions" style="margin-top:18px">
-              <label class="course-pill"><input type="checkbox" id="lessonPreview"> Preview lesson</label>
+              <label class="course-pill"><input type="checkbox" id="lessonPreview"> Katalogda preview qilishga ruxsat</label>
               <label class="course-pill"><input type="checkbox" id="lessonQuizEnabled"> Lesson quiz yoqilsin</label>
             </div>
 
@@ -114,13 +118,22 @@
 
             <section class="course-card tight section-gap">
               <div class="course-inline-actions" style="justify-content:space-between">
-                <h2 class="course-section-title">Upload va materiallar</h2>
+                <h2 class="course-section-title">Qurilmadan yuklash</h2>
               </div>
               <div class="course-grid" style="margin-top:18px">
-                <div class="course-col-6"><div class="course-form-group"><label for="lessonAssetInput">Asosiy video/PDF fayl</label><input id="lessonAssetInput" class="course-input" type="file"></div></div>
+                <div class="course-col-6"><div class="course-form-group"><label for="lessonAssetInput">Asosiy video yoki PDF</label><input id="lessonAssetInput" class="course-input" type="file" accept="video/mp4,video/webm,video/quicktime,application/pdf"></div></div>
                 <div class="course-col-6" style="display:flex;align-items:end"><button class="course-button" id="lessonAssetUploadBtn">Asosiy faylni yuklash</button></div>
                 <div class="course-col-6"><div class="course-form-group"><label for="lessonMaterialsInput">Qo'shimcha materiallar</label><input id="lessonMaterialsInput" class="course-input" type="file" multiple></div></div>
                 <div class="course-col-6" style="display:flex;align-items:end"><button class="course-button" id="lessonMaterialsUploadBtn">Materiallarni yuklash</button></div>
+              </div>
+              <div id="largeVideoUpload" class="course-upload-progress" hidden>
+                <div class="course-upload-head"><strong id="largeVideoUploadName">Video yuklanmoqda</strong><span id="largeVideoUploadPercent">0%</span></div>
+                <progress id="largeVideoUploadBar" max="100" value="0"></progress>
+                <div id="largeVideoUploadStatus" class="course-muted">Bo‘laklab xavfsiz yuklash tayyorlanmoqda…</div>
+                <div class="course-inline-actions">
+                  <button type="button" class="course-button" id="largeVideoPauseBtn">Pauza</button>
+                  <button type="button" class="course-button danger" id="largeVideoCancelBtn">Bekor qilish</button>
+                </div>
               </div>
               <div id="lessonMaterialsList" class="course-stack" style="margin-top:18px"></div>
             </section>

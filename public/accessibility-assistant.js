@@ -7,6 +7,8 @@
   const CAPTIONS_ENABLED_KEY = 'hallaym:captions-enabled';
   const GESTURE_ENABLED_KEY = 'hallaym:gesture-enabled';
   const NAV_GESTURE_ENABLED_KEY = 'hallaym:navigation-gesture-enabled';
+  const VOICE_QUIET_WINDOW_MS = 5000;
+  const VOICE_MAX_UTTERANCE_MS = 60000;
   const TASKS_VERSION = '0.10.22-rc.20250304';
   const TASKS_MODULE_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VERSION}/+esm`;
   const TASKS_WASM_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VERSION}/wasm`;
@@ -23,7 +25,13 @@
     lastCommandAt: 0,
     restartTimer: null,
     suspendedForSpeech: false,
-    suppressUntil: 0
+    suppressUntil: 0,
+    finalSegments: [],
+    interimTranscript: '',
+    utteranceStartedAt: 0,
+    lastSpeechAt: 0,
+    flushTimer: null,
+    unknownCount: 0
   };
 
   const gestureState = {
@@ -33,6 +41,10 @@
     face: null,
     rafId: 0,
     lastDetectAt: 0,
+    lastHandDetectAt: 0,
+    lastFaceDetectAt: 0,
+    lastHandResult: null,
+    lastFaceResult: null,
     lastEmitAt: 0,
     lastMode: '',
     modeSince: 0,
@@ -82,6 +94,96 @@
       .replace(/[^a-zа-яё0-9+'\s-]/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  function editDistance(left, right) {
+    const a = normalizeWords(left);
+    const b = normalizeWords(right);
+    if (!a) return b.length;
+    if (!b) return a.length;
+    const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+    for (let i = 1; i <= a.length; i += 1) {
+      const current = [i];
+      for (let j = 1; j <= b.length; j += 1) {
+        current[j] = Math.min(
+          current[j - 1] + 1,
+          previous[j] + 1,
+          previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+        );
+      }
+      for (let j = 0; j < current.length; j += 1) previous[j] = current[j];
+    }
+    return previous[b.length];
+  }
+
+  function phraseSimilarity(left, right) {
+    const a = normalizeWords(left);
+    const b = normalizeWords(right);
+    const size = Math.max(a.length, b.length, 1);
+    return 1 - editDistance(a, b) / size;
+  }
+
+  function tolerantVoiceCommand(raw) {
+    let command = normalizeWords(raw)
+      .replace(/\bqo(sh|s|z)il\b/g, "qo'shil")
+      .replace(/\bgrup(p)?\b/g, 'guruh')
+      .replace(/\bprofilimni\b/g, 'profilim')
+      .replace(/\bmikrafon\b/g, 'mikrofon')
+      .replace(/\bsub titr\b/g, 'subtitr')
+      .replace(/\bregistrasiya\b/g, "ro'yxatdan o't");
+    if (!command || command.split(' ').length > 8) return command;
+    const aliases = [
+      ['bosh sahifa', ['asosiy sahifa', 'uyga qayt']],
+      ['guruhlar', ['guruhlar sahifasi', 'gruhlar']],
+      ['guruhimga kir', ['guruhga kir', 'mening guruhim', 'guruhimni och']],
+      ["darsga qo'shil", ['darsga qoshil', 'video darsga kir', 'jonli darsga kir']],
+      ['xabarlar', ['chatlar', 'xabarlar sahifasi']],
+      ['kurslar', ['kurslar sahifasi', 'kursni och']],
+      ['jadval', ['dars jadvali', 'jadvalni och']],
+      ['profil', ['profilim', 'profilni och']],
+      ['keyingi tugma', ['keyingi element', "oldinga o't"]],
+      ['oldingi tugma', ['oldingi element']],
+      ['tanla', ['bos', 'och']],
+      ['yordam', ['buyruqlar', 'yordam ber']]
+    ];
+    let best = { value: command, score: 0 };
+    aliases.forEach(([canonical, variants]) => {
+      [canonical, ...variants].forEach((variant) => {
+        const score = phraseSimilarity(command, variant);
+        if (score > best.score) best = { value: canonical, score };
+      });
+    });
+    return best.score >= .66 ? best.value : command;
+  }
+
+  function clearVoiceUtterance() {
+    clearTimeout(voiceState.flushTimer);
+    voiceState.flushTimer = null;
+    voiceState.finalSegments = [];
+    voiceState.interimTranscript = '';
+    voiceState.utteranceStartedAt = 0;
+    voiceState.lastSpeechAt = 0;
+  }
+
+  async function flushVoiceUtterance() {
+    if (!voiceState.utteranceStartedAt || voiceState.processing || voiceState.speaking) return;
+    const combined = [...voiceState.finalSegments, voiceState.interimTranscript]
+      .map((part) => text(part).trim())
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    clearVoiceUtterance();
+    if (combined) await handleVoiceCommand(combined);
+  }
+
+  function scheduleVoiceFlush() {
+    clearTimeout(voiceState.flushTimer);
+    if (!voiceState.utteranceStartedAt) return;
+    const now = Date.now();
+    const quietDue = Number(voiceState.lastSpeechAt || now) + VOICE_QUIET_WINDOW_MS;
+    const maximumDue = Number(voiceState.utteranceStartedAt || now) + VOICE_MAX_UTTERANCE_MS;
+    voiceState.flushTimer = setTimeout(flushVoiceUtterance, Math.max(80, Math.min(quietDue, maximumDue) - now));
   }
   function currentGroupId() {
     const fromUrl = new URLSearchParams(location.search).get('id') || new URLSearchParams(location.search).get('groupId') || '';
@@ -359,7 +461,7 @@
   }
 
   async function handleVoiceCommand(rawCommand) {
-    const command = normalizeWords(rawCommand);
+    const command = tolerantVoiceCommand(rawCommand);
     if (!command) return;
     const now = Date.now();
     if (command === voiceState.lastCommand && now - voiceState.lastCommandAt < 1400) return;
@@ -565,13 +667,22 @@
       } else if (/imo( ishora)?(ni)? o'chir|ai imo(ni)? o'chir/.test(command)) {
         await setGestureEnabled(false, true);
       } else {
-        await speak('Buyruq tushunilmadi. Yordam desangiz, mavjud buyruqlarni aytaman.');
+        voiceState.unknownCount += 1;
+        setVoiceStatus('Aniq buyruq topilmadi — tinglash davom etmoqda', 'hearing');
+        if (voiceState.unknownCount >= 3) {
+          byId('eduVoiceHelp')?.removeAttribute('hidden');
+          voiceState.unknownCount = 0;
+        }
+        return false;
       }
+      voiceState.unknownCount = 0;
       setVoiceStatus('Buyruq bajarildi', 'ok');
+      return true;
     } catch (error) {
       const message = text(error?.message || error || 'Buyruq bajarilmadi');
       setVoiceStatus(message, 'error');
       await speak(message);
+      return false;
     } finally {
       voiceState.processing = false;
     }
@@ -584,7 +695,7 @@
     recognition.lang = VOICE_LANG;
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 5;
     recognition.onstart = () => {
       voiceState.listening = true;
       byId('eduVoiceBtn')?.setAttribute('aria-pressed', 'true');
@@ -594,13 +705,25 @@
       if (voiceState.speaking || voiceState.suspendedForSpeech || Date.now() < Number(voiceState.suppressUntil || 0)) return;
       let interim = '';
       for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const alternative = event.results[index]?.[0];
+        const result = event.results[index];
+        const alternatives = Array.from(result || []).filter(Boolean);
+        const alternative = alternatives.sort((a, b) => Number(b?.confidence || 0) - Number(a?.confidence || 0))[0] || result?.[0];
         const transcript = text(alternative?.transcript).trim();
-        const confidence = Number(alternative?.confidence || 0);
-        if (event.results[index].isFinal && (!confidence || confidence >= .36)) handleVoiceCommand(transcript);
-        else interim += `${transcript} `;
+        if (!transcript) continue;
+        if (!voiceState.utteranceStartedAt) voiceState.utteranceStartedAt = Date.now();
+        voiceState.lastSpeechAt = Date.now();
+        if (result.isFinal) {
+          const previous = voiceState.finalSegments[voiceState.finalSegments.length - 1];
+          if (normalizeWords(previous) !== normalizeWords(transcript)) voiceState.finalSegments.push(transcript);
+          voiceState.interimTranscript = '';
+        } else {
+          interim += `${transcript} `;
+        }
       }
-      if (interim.trim() && !voiceState.processing) setVoiceStatus(interim.trim(), 'hearing');
+      voiceState.interimTranscript = interim.trim();
+      const heard = [...voiceState.finalSegments, voiceState.interimTranscript].filter(Boolean).join(' ').trim();
+      if (heard && !voiceState.processing) setVoiceStatus(`Eshityapman: ${heard.slice(-180)}`, 'hearing');
+      scheduleVoiceFlush();
     };
     recognition.onerror = (event) => {
       const code = text(event?.error || 'unknown');
@@ -646,6 +769,7 @@
       try { voiceState.recognition.start(); } catch (_) {}
     } else {
       clearTimeout(voiceState.restartTimer);
+      clearVoiceUtterance();
       try { voiceState.recognition.stop(); } catch (_) {}
       byId('eduVoiceBtn')?.setAttribute('aria-pressed', 'false');
       setVoiceStatus('Ovozli yordamchi o‘chiq', 'idle');
@@ -749,8 +873,8 @@
       gesture.id = 'btnEduGesture';
       gesture.className = 'edu-call-tool';
       gesture.type = 'button';
-      gesture.title = 'AI imo-ishora boshqaruvi';
-      gesture.innerHTML = '<i class="fas fa-hand-pointer"></i>';
+      gesture.title = 'AI kamera: yuz va ko‘rsatkich fokusi';
+      gesture.innerHTML = '<i class="fas fa-crosshairs"></i>';
       gesture.addEventListener('click', () => setGestureEnabled(!gestureState.enabled, true));
       const endButton = desktop.querySelector('button[title="End/Leave"]');
       desktop.insertBefore(captions, endButton || null);
@@ -768,10 +892,21 @@
       gestureButton.id = 'mBtnEduGesture';
       gestureButton.type = 'button';
       gestureButton.className = 'edu-call-tool w-full text-left px-4 py-3 flex items-center gap-3';
-      gestureButton.innerHTML = '<i class="fas fa-hand-pointer w-5 text-center"></i><span>AI imo-ishora</span>';
+      gestureButton.innerHTML = '<i class="fas fa-crosshairs w-5 text-center"></i><span>AI kamera fokusi</span>';
       gestureButton.addEventListener('click', () => { setGestureEnabled(!gestureState.enabled, true); try { closeCallMoreMenu(); } catch (_) {} });
       mobile.insertBefore(captionButton, mobile.firstChild);
       mobile.insertBefore(gestureButton, captionButton.nextSibling);
+    }
+    const inlineHost = byId('btnTeacherOnlyInline')?.parentElement;
+    if (inlineHost && !byId('btnEduCameraInline')) {
+      const inline = document.createElement('button');
+      inline.id = 'btnEduCameraInline';
+      inline.type = 'button';
+      inline.className = 'edu-call-tool';
+      inline.title = 'AI kamera: yuzni masofaga mos fokuslash va ko‘rsatkichni kuzatish';
+      inline.innerHTML = '<i class="fas fa-crosshairs"></i><span class="edu-camera-label">AI</span>';
+      inline.addEventListener('click', () => setGestureEnabled(!gestureState.enabled, true));
+      inlineHost.insertBefore(inline, byId('teacherStageMeta') || null);
     }
     setCaptionsEnabled(captionEnabled(), false);
     syncGestureButtonVisibility();
@@ -1180,11 +1315,12 @@
       minY = Math.min(minY, Number(point.y || 0));
       maxY = Math.max(maxY, Number(point.y || 0));
     });
-    const width = Math.max(.08, maxX - minX);
+    const width = Math.max(.06, maxX - minX);
     return {
       anchorX: clamp((minX + maxX) / 2, 0, 1),
       anchorY: clamp((minY + maxY) / 2 - .03, 0, 1),
-      scale: clamp(.6 / width, 1.25, 2.05)
+      // Close face => the whole 16:9 frame. Far face => progressively tighter crop.
+      scale: clamp(.38 / width, 1, 2.85)
     };
   }
 
@@ -1208,7 +1344,7 @@
       const mode = text(payload?.mode || 'face');
       pip.dataset.mode = mode;
       if (!video || video.readyState < 2 || !video.videoWidth || !ctx) return;
-      const scale = clamp(payload?.scale || 1.65, 1.15, 4);
+      const scale = clamp(payload?.scale || 1.65, 1, 4);
       const anchorX = clamp(payload?.anchorX ?? .5, 0, 1);
       const anchorY = clamp(payload?.anchorY ?? .5, 0, 1);
       gestureState.focusRender = gestureState.focusRender || { x: anchorX, y: anchorY, scale };
@@ -1218,17 +1354,24 @@
       gestureState.focusRender.scale += (scale - gestureState.focusRender.scale) * smoothing;
       const sourceW = video.videoWidth;
       const sourceH = video.videoHeight;
-      let cropW = sourceW / gestureState.focusRender.scale;
-      let cropH = cropW * 9 / 16;
-      if (cropH > sourceH) {
-        cropH = sourceH / gestureState.focusRender.scale;
-        cropW = cropH * 16 / 9;
-      }
-      const sx = clamp(gestureState.focusRender.x * sourceW - cropW / 2, 0, Math.max(0, sourceW - cropW));
-      const sy = clamp(gestureState.focusRender.y * sourceH - cropH / 2, 0, Math.max(0, sourceH - cropH));
       ctx.fillStyle = '#020609';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+      if (gestureState.focusRender.scale <= 1.035) {
+        const fit = Math.min(canvas.width / sourceW, canvas.height / sourceH);
+        const dw = sourceW * fit;
+        const dh = sourceH * fit;
+        ctx.drawImage(video, 0, 0, sourceW, sourceH, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
+      } else {
+        let cropW = sourceW / gestureState.focusRender.scale;
+        let cropH = cropW * 9 / 16;
+        if (cropH > sourceH) {
+          cropH = sourceH / gestureState.focusRender.scale;
+          cropW = cropH * 16 / 9;
+        }
+        const sx = clamp(gestureState.focusRender.x * sourceW - cropW / 2, 0, Math.max(0, sourceW - cropW));
+        const sy = clamp(gestureState.focusRender.y * sourceH - cropH / 2, 0, Math.max(0, sourceH - cropH));
+        ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+      }
       const label = pip.querySelector('span');
       if (label) label.textContent = mode === 'point' ? 'KO‘RSATILGAN JOY' : mode === 'freeze' ? 'FOKUS QOTIRILDI' : 'YUZ FOKUSI';
       const cursor = byId('eduGestureCursor');
@@ -1412,7 +1555,11 @@
   function gestureLoop(timestamp) {
     if (!gestureState.enabled) return;
     gestureState.rafId = requestAnimationFrame(gestureLoop);
-    if (timestamp - gestureState.lastDetectAt < 105) return;
+    if (document.visibilityState === 'hidden') return;
+    const lite = document.documentElement.classList.contains('edu-lite-runtime');
+    const handInterval = lite ? 150 : 105;
+    const faceInterval = lite ? 240 : 155;
+    if (timestamp - gestureState.lastDetectAt < Math.min(handInterval, faceInterval)) return;
     const video = teacherCameraVideo(typeof myUserId === 'function' ? myUserId() : '');
     if (!video || video.readyState < 2 || !video.videoWidth) {
       setGestureHint('O‘qituvchi kamerasi kutilmoqda', 'waiting');
@@ -1420,9 +1567,15 @@
     }
     gestureState.lastDetectAt = timestamp;
     try {
-      const handResult = gestureState.hand?.detectForVideo(video, timestamp) || null;
-      const faceResult = gestureState.face?.detectForVideo(video, timestamp) || null;
-      processGesture(handResult, faceResult);
+      if (timestamp - gestureState.lastHandDetectAt >= handInterval) {
+        gestureState.lastHandDetectAt = timestamp;
+        gestureState.lastHandResult = gestureState.hand?.detectForVideo(video, timestamp) || null;
+      }
+      if (timestamp - gestureState.lastFaceDetectAt >= faceInterval) {
+        gestureState.lastFaceDetectAt = timestamp;
+        gestureState.lastFaceResult = gestureState.face?.detectForVideo(video, timestamp) || null;
+      }
+      processGesture(gestureState.lastHandResult, gestureState.lastFaceResult);
     } catch (error) {
       setGestureHint(`AI imo xatosi: ${text(error?.message || 'model')}`, 'error');
     }
@@ -1452,6 +1605,10 @@
       try { if (typeof resetTeacherStageZoom === 'function') resetTeacherStageZoom(); } catch (_) {}
       cancelAnimationFrame(gestureState.rafId);
       gestureState.lastDetectAt = 0;
+      gestureState.lastHandDetectAt = 0;
+      gestureState.lastFaceDetectAt = 0;
+      gestureState.lastHandResult = null;
+      gestureState.lastFaceResult = null;
       gestureState.rafId = requestAnimationFrame(gestureLoop);
       setGestureHint('AI imo faol', 'ready');
     } else {
@@ -1524,20 +1681,49 @@
       if (gestureState.remoteBound) clearInterval(bindTimer);
     }, 500);
     setTimeout(() => clearInterval(bindTimer), 20000);
+    const cameraRestoreTimer = setInterval(() => {
+      try {
+        if (localStorage.getItem(GESTURE_ENABLED_KEY) !== '1' || gestureState.enabled) return;
+        if (typeof groupCall === 'undefined' || !groupCall?.active || !isTeacher()) return;
+        setGestureEnabled(true, false).catch(() => {});
+      } catch (_) {}
+    }, 850);
+    setTimeout(() => clearInterval(cameraRestoreTimer), 30000);
   }
 
   function init() {
     document.documentElement.dataset.eduCaptions = captionEnabled() ? 'on' : 'off';
+    document.documentElement.dataset.eduHighContrast = localStorage.getItem('hallaym:high-contrast') === '1' ? 'on' : 'off';
+    document.documentElement.dataset.eduLargeText = localStorage.getItem('hallaym:large-text') === '1' ? 'on' : 'off';
+    document.documentElement.dataset.eduReducedMotion = localStorage.getItem('hallaym:reduced-motion') === '1' ? 'on' : 'off';
     createVoiceUi();
     createNavigationGestureUi();
     addSkipLink();
     initGroupEnhancements();
     if (localStorage.getItem(VOICE_ENABLED_KEY) === '1') {
-      setVoiceStatus('Ovozli yordamchini davom ettirish uchun Ovoz tugmasini bosing', 'idle');
+      setVoiceStatus('Ovozli yordamchi tiklanmoqda…', 'idle');
+      setTimeout(() => setVoiceEnabled(true), 450);
     }
     if (localStorage.getItem(NAV_GESTURE_ENABLED_KEY) === '1') {
-      setNavigationGestureStatus('Davom ettirish uchun Imo tugmasini bosing', 'idle');
+      setNavigationGestureStatus('Imo-navigatsiya tiklanmoqda…', 'idle');
+      setTimeout(() => {
+        if (!navigationGestureState.enabled) {
+          setNavigationGesturesEnabled(true, false).catch((error) => {
+            setNavigationGestureStatus(`${text(error?.message || error)}. Imo tugmasi orqali qayta urinishingiz mumkin.`, 'error');
+          });
+        }
+      }, 700);
     }
+    window.addEventListener('pageshow', () => {
+      if (localStorage.getItem(VOICE_ENABLED_KEY) === '1' && !voiceState.listening && !voiceState.speaking) setVoiceEnabled(true);
+      if (localStorage.getItem(NAV_GESTURE_ENABLED_KEY) === '1' && !navigationGestureState.enabled) {
+        setNavigationGesturesEnabled(true, false).catch(() => {});
+      }
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (localStorage.getItem(VOICE_ENABLED_KEY) === '1' && !voiceState.listening && !voiceState.speaking) setVoiceEnabled(true);
+    });
     window.HallaymAccessibility = {
       speak,
       handleVoiceCommand,

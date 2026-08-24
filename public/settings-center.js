@@ -57,6 +57,7 @@
   function dashboardPath(role) {
     const safe = String(role || '').trim().toLowerCase();
     if (safe === 'teacher') return '/teacher-dashboard.html';
+    if (safe === 'tutor') return '/tutor-dashboard.html';
     if (safe === 'admin') return '/admin-dashboard.html';
     if (safe === 'rector') return '/rector-dashboard.html';
     if (safe === 'prorector') return '/prorector-dashboard.html';

@@ -184,6 +184,7 @@
         const j = await r.json().catch(()=>null);
         const role = String(j?.user?.role || 'student').toLowerCase();
         if (role === 'teacher') return window.location.href = '/teacher-dashboard.html';
+        if (role === 'tutor') return window.location.href = '/tutor-dashboard.html';
         if (role === 'admin') return window.location.href = '/admin-dashboard.html';
         if (role === 'rector') return window.location.href = '/rector-dashboard.html';
         if (role === 'prorector') return window.location.href = '/prorector-dashboard.html';

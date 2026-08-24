@@ -15,6 +15,14 @@
             transform: translateY(-5px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
+        .group-card.is-live{border-color:#1d78bd!important;box-shadow:0 0 0 2px rgba(29,120,189,.12),0 10px 30px rgba(13,91,148,.14)!important}
+        .group-live-banner{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 12px;padding:8px 10px;border:1px solid #74ade0;border-radius:3px;background:#edf7ff;color:#0b4f86;font-size:11px;font-weight:800}
+        .group-live-copy{min-width:0;display:flex;align-items:center;gap:7px}
+        .group-live-copy strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .group-live-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#1676b7;box-shadow:0 0 0 0 rgba(22,118,183,.38);animation:groupLivePulse 1.7s ease-out infinite}
+        .group-live-count{flex:0 0 auto;color:#315f83;font-size:10px}
+        @keyframes groupLivePulse{0%{box-shadow:0 0 0 0 rgba(22,118,183,.38)}70%,100%{box-shadow:0 0 0 7px rgba(22,118,183,0)}}
+        @media(prefers-reduced-motion:reduce){.group-live-dot{animation:none}}
     
 /* HALLAYM premium */
 .u-anim{
@@ -954,8 +962,13 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             container.innerHTML = groups.map(group => {
                 const isMyStudyGroup = normText(group.studyGroup) && normText(group.studyGroup) === normText(meProfile?.studyGroup);
                 return `
-                <div class="group-card glass rounded-2xl shadow overflow-hidden relative">
+                <div class="group-card glass rounded-2xl shadow overflow-hidden relative ${group.liveLesson?.active ? 'is-live' : ''}">
                     <div class="p-6 sm:p-7">
+                        ${group.liveLesson?.active ? `
+                          <div class="group-live-banner" role="status" aria-label="Bu guruhda jonli dars ketmoqda">
+                            <div class="group-live-copy"><span class="group-live-dot"></span><strong>JONLI: ${group.liveLesson.title || 'Jonli dars'}</strong></div>
+                            <span class="group-live-count"><i class="fas fa-user-group"></i> ${Number(group.liveLesson.participantCount || 0)}</span>
+                          </div>` : ''}
                         <div class="flex items-start justify-between mb-4">
                             <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center">
                                 <i class="fas fa-users text-white"></i>
@@ -1007,9 +1020,9 @@ button,a{ -webkit-tap-highlight-color: transparent; }
                         </div>
                         
                         <div class="flex space-x-2">
-                            <button onclick="openGroup('${group._id}')" 
+                            <button onclick="openGroup('${group._id}', ${group.liveLesson?.active ? 'true' : 'false'})" 
                                     class="flex-1 btn-primary text-white py-2 rounded-2xl font-extrabold hover:opacity-95 transition">
-                                <i class="fas fa-door-open mr-2"></i> Open
+                                <i class="fas ${group.liveLesson?.active ? 'fa-video' : 'fa-door-open'} mr-2"></i> ${group.liveLesson?.active ? 'Darsga qo‘shilish' : 'Guruhni ochish'}
                             </button>
                             
                             ${currentGroupTab === 'my' ? `
@@ -1105,8 +1118,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
         
         // Open group
-        function openGroup(groupId) {
-            window.location.href = `/group.html?id=${groupId}`;
+        function openGroup(groupId, liveLesson = false) {
+            window.location.href = `/group.html?id=${groupId}${liveLesson ? '&autojoin=1' : ''}`;
         }
         
         // Manage group
@@ -1237,6 +1250,13 @@ try {
             await loadMeProfile();
             await loadUniversityCatalog();
             switchGroupTab('all');
+            // Small, invisible refresh: only the card data changes; no blocking
+            // loader is shown while a lesson starts or ends.
+            window.setInterval(() => {
+              if (document.visibilityState === 'visible' && !document.getElementById('createModal')?.classList?.contains('flex')) {
+                loadGroups().catch(() => {});
+              }
+            }, 7000);
         });
     </script>
 
@@ -1277,6 +1297,4 @@ try {
   <script src="/ui-premium-icons.js" defer></script>
 </body>
 </html>
-
-
 

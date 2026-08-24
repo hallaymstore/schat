@@ -2530,7 +2530,11 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             
             // Creator info
             if (group.creatorId) {
-                document.getElementById('creatorAvatar').src = group.creatorId.avatar;
+                const creatorAvatar = document.getElementById('creatorAvatar');
+                creatorAvatar.dataset.avatarUser = group.creatorId._id || '';
+                creatorAvatar.dataset.avatarRole = group.creatorId.role || 'teacher';
+                creatorAvatar.dataset.avatarGender = group.creatorId.gender || '';
+                creatorAvatar.src = group.creatorId.avatar || '';
                 document.getElementById('creatorName').textContent = group.creatorId.nickname;
             }
             
@@ -2554,7 +2558,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
             container.innerHTML = members.map(member => `
                 <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
                     <div class="flex items-center space-x-3">
-                        <img src="${member.avatar||""}" class="w-10 h-10 rounded-full member-avatar" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,&lt;svg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; width=&#x27;80&#x27; height=&#x27;80&#x27;&gt;&lt;rect width=&#x27;100%&#x27; height=&#x27;100%&#x27; fill=&#x27;#ddd&#x27;/&gt;&lt;circle cx=&#x27;40&#x27; cy=&#x27;30&#x27; r=&#x27;16&#x27; fill=&#x27;#bbb&#x27;/&gt;&lt;rect x=&#x27;18&#x27; y=&#x27;52&#x27; width=&#x27;44&#x27; height=&#x27;20&#x27; rx=&#x27;10&#x27; fill=&#x27;#bbb&#x27;/&gt;&lt;/svg&gt;';">
+                        <img src="${member.avatar||""}" data-avatar-user="${member._id||''}" data-avatar-role="${member.role||'student'}" data-avatar-gender="${member.gender||''}" class="w-10 h-10 rounded-full member-avatar" alt="${member.nickname||'Foydalanuvchi'}">
                         <div>
                             <h4 class="font-medium text-gray-800">${member.nickname}</h4>
                             <p class="text-sm text-gray-500">@${member.username}</p>
@@ -2758,7 +2762,7 @@ button,a{ -webkit-tap-highlight-color: transparent; }
 
         function canManageGroupLessonSchedule() {
             const role = String(currentUser?.role || '').toLowerCase();
-            return role === 'teacher' || role === 'admin' || role === 'organizer';
+            return role === 'teacher' || role === 'tutor' || role === 'admin' || role === 'organizer';
         }
 
         function toggleGroupLessonSchedulePanel(force) {
@@ -3282,7 +3286,7 @@ function setupSocket() {
             return `
               <div class="message" data-id="${escapeAttr(msg._id)}">
                 <div class="flex items-start space-x-2">
-                  <img src="${avatar}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${escapeAttr(sid)}')" title="Profil">
+                  <img src="${avatar}" data-avatar-user="${escapeAttr(sid)}" data-avatar-role="${escapeAttr(msg?.senderId?.role || 'student')}" data-avatar-gender="${escapeAttr(msg?.senderId?.gender || '')}" class="w-8 h-8 rounded-full cursor-pointer" onclick="openUserProfile('${escapeAttr(sid)}')" title="Profil">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center space-x-2 mb-1">
                       <span class="font-medium text-gray-800 cursor-pointer hover:underline" onclick="openUserProfile('${escapeAttr(sid)}')" title="Profil">${nick}</span>
@@ -3769,7 +3773,10 @@ function setupSocket() {
         const GROUP_REMOTE_AUDIO_BASE_VOLUME = 0.94;
         const GROUP_REMOTE_AUDIO_NON_STAGE_VOLUME = 0.38;
         const GROUP_REMOTE_AUDIO_MIC_ON_STAGE_VOLUME = 0.62;
-        const GROUP_REMOTE_AUDIO_MIC_ON_NON_STAGE_VOLUME = 0.12;
+        // A non-stage participant must still be clearly audible on phones.  The
+        // feedback guard below already ducks true echo, so 12% was unnecessarily
+        // close to silence on many Android speakers.
+        const GROUP_REMOTE_AUDIO_MIC_ON_NON_STAGE_VOLUME = 0.42;
         const GROUP_REMOTE_AUDIO_DUCK_VOLUME = 0.28;
         const GROUP_REMOTE_AUDIO_HARD_DUCK_VOLUME = 0.08;
         const GROUP_FEEDBACK_GUARD = {
@@ -4292,6 +4299,9 @@ function setupSocket() {
         let _sfuConnectSeq = 0;
         let _sfuReconnectTimer = null;
         let _sfuReconnectAttempts = 0;
+        let _sfuNoMediaCycles = 0;
+        const SFU_MAX_RECONNECT_ATTEMPTS = 2;
+        const SFU_MAX_NO_MEDIA_CYCLES = 1;
 
         function clearSfuFallbackWatch() {
             if (_sfuFallbackTimer) clearTimeout(_sfuFallbackTimer);
@@ -4350,11 +4360,17 @@ function setupSocket() {
         async function bootstrapMeshFallback(reason = 'fallback', opts = {}) {
             if (!groupCall.active) return false;
             if (_sfuFallbackBusy) return false;
-            if (normalizeCallTransport(groupCall.transport || '') === 'mesh' && !groupCall.lk?.connected) return false;
+            if (
+                normalizeCallTransport(groupCall.transport || '') === 'mesh'
+                && groupCall.peers instanceof Map
+                && groupCall.peers.size > 0
+            ) return false;
             _sfuFallbackBusy = true;
             clearSfuFallbackWatch();
             try {
                 console.warn('Falling back to ExpressTURN mesh:', reason);
+                _sfuNoMediaCycles = 0;
+                _sfuReconnectAttempts = 0;
                 setRuntimeCallTransport('mesh');
                 if (opts.remoteNotice !== false && socket && groupCall.groupId && groupCall.callId) {
                     try {
@@ -4401,8 +4417,18 @@ function setupSocket() {
                 if (Number(groupCall.lk?.connectSeq || 0) !== seq) return;
                 const participantTotal = Number(groupCall.participantCount || groupCall.participantInfos?.size || 0);
                 if (participantTotal <= 1) return;
-                const confirmed = !!groupCall.lk?.confirmed;
-                if (confirmed || hasRenderableRemoteMedia()) return;
+                // A connected recv transport is not proof that another browser's
+                // media can traverse the public network.  Only an actual live
+                // remote track confirms the end-to-end path.
+                if (hasRenderableRemoteMedia()) {
+                    _sfuNoMediaCycles = 0;
+                    return;
+                }
+                _sfuNoMediaCycles += 1;
+                if (_sfuNoMediaCycles >= SFU_MAX_NO_MEDIA_CYCLES) {
+                    bootstrapMeshFallback(`${reason}-no-remote-media`, opts).catch(() => {});
+                    return;
+                }
                 scheduleSfuReconnect(reason, opts).catch(() => {});
             }, timeoutMs);
         }
@@ -4414,6 +4440,9 @@ function setupSocket() {
 
             _sfuReconnectAttempts += 1;
             const attempt = _sfuReconnectAttempts;
+            if (attempt > SFU_MAX_RECONNECT_ATTEMPTS) {
+                return bootstrapMeshFallback(`${reason}-retry-limit`, opts);
+            }
             const delayMs = Math.max(900, Math.min(6000, Number(opts.delayMs || (1000 + (attempt - 1) * 1200))));
             setGroupCallStatus(`Mediasoup qayta ulanmoqda... (${attempt})`);
 
@@ -4430,7 +4459,11 @@ function setupSocket() {
                 } catch (error) {
                     console.warn('Mediasoup reconnect failed', error);
                     if (groupCall.active && normalizeCallTransport(groupCall.transport || '') === 'mediasoup') {
-                        scheduleSfuReconnect(reason, opts).catch(() => {});
+                        if (_sfuReconnectAttempts >= SFU_MAX_RECONNECT_ATTEMPTS) {
+                            bootstrapMeshFallback(`${reason}-connect-failed`, opts).catch(() => {});
+                        } else {
+                            scheduleSfuReconnect(reason, opts).catch(() => {});
+                        }
                     }
                 }
             }, delayMs);
@@ -4482,6 +4515,7 @@ function setupSocket() {
                     groupCall.lk.recvState = 'connected';
                 }
                 _sfuReconnectAttempts = 0;
+                _sfuNoMediaCycles = 0;
                 clearSfuFallbackWatch();
                 clearSfuReconnectWatch();
                 const waiting = String(groupCall.status || '').toLowerCase() === 'waiting';
@@ -4505,7 +4539,6 @@ function setupSocket() {
                     groupCall.lk[direction === 'send' ? 'sendState' : 'recvState'] = state;
                 }
                 if (state === 'connected') {
-                    _sfuReconnectAttempts = 0;
                     const waiting = String(groupCall.status || '').toLowerCase() === 'waiting';
                     setGroupCallStatus(waiting ? "Teacher kutilmoqda..." : 'Connected (Mediasoup SFU)');
                 } else if (state === 'failed' || state === 'disconnected') {
@@ -4546,7 +4579,6 @@ function setupSocket() {
             }
 
             groupCall.lk.connected = true;
-            _sfuReconnectAttempts = 0;
             setGroupCallStatus('Mediasoup tayyor, media ulanmoqda...');
 
             if (allowPublish && publishExistingTracks) {
@@ -4619,6 +4651,8 @@ function setupSocket() {
         let _captionTranscriberActive = false;
         let _captionTranscriberRestart = null;
         let _captionTranscriberEnabled = true;
+        let _captionTranscriberGeneration = 0;
+        let _captionTranscriberLocale = '';
         let _captionEmitAt = 0;
         let _captionLastInterim = '';
         let _captionLocalWarned = false;
@@ -4631,13 +4665,17 @@ function setupSocket() {
         let _captionLangInitTries = 0;
         let _captionLangDelegateBound = false;
         let _captionInterimTranslateAt = 0;
+        let _captionTranslateController = null;
+        let _captionLatestSourceText = '';
+        let _captionLatestSourceLang = 'uz';
+        let _captionLatestFinal = false;
 
         function getTeacherFallbackStageId() {
             try {
                 const entries = Array.from((groupCall?.participantInfos || new Map()).entries());
                 const fallback = entries.find(([id, info]) => {
                     const role = String(info?.role || '').toLowerCase();
-                    return role === 'teacher' || role === 'admin' || role === 'organizer';
+                    return role === 'teacher' || role === 'tutor' || role === 'admin' || role === 'organizer';
                 })?.[0] || '';
                 return String(fallback || '');
             } catch(_) {
@@ -6239,15 +6277,24 @@ function setupSocket() {
                     const t = ev?.target;
                     if (!t || t.id !== 'captionLangSelect') return;
                     _captionTargetLang = normalizeCaptionLangClient(t.value || 'uz');
-                    // Source tilni faqat hozir stage'da ko'rinayotgan foydalanuvchi o'zgartiradi.
+                    // For the stage speaker this is also the spoken language; the new
+                    // recognizer starts in ~40 ms. Viewers only switch translated output.
                     const me = String(myUserId() || '');
                     const stageVisible = !!(me && typeof isStageVisibleUserId === 'function' && isStageVisibleUserId(me));
-                    if (stageVisible) {
-                        _captionSourceLang = normalizeCaptionLangClient(_captionTargetLang || 'uz');
-                    }
+                    if (stageVisible) _captionSourceLang = _captionTargetLang;
                     persistCaptionLanguagePrefs();
                     _captionRenderSeq += 1;
-                    try { syncLiveCaptionTranscriber(); } catch(_) {}
+                    if (_captionLatestSourceText) {
+                        showStageCaptionLocalized(
+                            _captionLatestSourceText,
+                            { final: _captionLatestFinal },
+                            { sourceLang: _captionLatestSourceLang }
+                        ).catch(() => {});
+                    }
+                    setCaptionAudioHint('Til almashtirildi', 'listening');
+                    setTimeout(() => {
+                        try { syncLiveCaptionTranscriber(); } catch(_) {}
+                    }, 0);
                 } catch(_) {}
             }, true);
         }
@@ -6266,10 +6313,12 @@ function setupSocket() {
 
             try {
                 const token = localStorage.getItem('token') || '';
+                try { _captionTranslateController?.abort?.(); } catch(_) {}
                 const controller = new AbortController();
+                _captionTranslateController = controller;
                 const timer = setTimeout(() => {
                     try { controller.abort(); } catch(_) {}
-                }, 1800);
+                }, 1200);
                 try {
                     const res = await fetch('/api/translate/caption', {
                         method: 'POST',
@@ -6295,6 +6344,7 @@ function setupSocket() {
                     return out;
                 } finally {
                     clearTimeout(timer);
+                    if (_captionTranslateController === controller) _captionTranslateController = null;
                 }
             } catch(_) {
                 return clean;
@@ -6395,6 +6445,9 @@ function setupSocket() {
                 clean,
                 meta?.sourceLang || _captionSourceLang || _captionTargetLang || 'auto'
             );
+            _captionLatestSourceText = clean;
+            _captionLatestSourceLang = sourceLang;
+            _captionLatestFinal = !!(opts && opts.final);
             const targetLang = normalizeCaptionLangClient(_captionTargetLang || 'uz');
             showStageCaption(clean, opts);
             if (targetLang === sourceLang) return;
@@ -6452,6 +6505,7 @@ function setupSocket() {
         }
 
         function stopLiveCaptionTranscriber() {
+            _captionTranscriberGeneration += 1;
             try { if (_captionTranscriberRestart) clearTimeout(_captionTranscriberRestart); } catch(_) {}
             _captionTranscriberRestart = null;
             _captionTranscriberActive = false;
@@ -6461,23 +6515,28 @@ function setupSocket() {
                     _captionTranscriber.onresult = null;
                     _captionTranscriber.onend = null;
                     _captionTranscriber.onerror = null;
-                    _captionTranscriber.stop();
+                    _captionTranscriber.abort();
                 }
             } catch(_) {}
             _captionTranscriber = null;
+            _captionTranscriberLocale = '';
             _captionLastInterim = '';
             _captionEmitAt = 0;
         }
 
         function startLiveCaptionTranscriber() {
-            if (_captionTranscriberActive) return;
             if (!canRunLiveCaptionLocally()) return;
             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SR) return;
+            const nextLocale = captionSpeechLocale(_captionSourceLang || 'uz');
+            if (_captionTranscriberActive && _captionTranscriberLocale === nextLocale) return;
+            if (_captionTranscriberActive || _captionTranscriber) stopLiveCaptionTranscriber();
             try {
+                const generation = ++_captionTranscriberGeneration;
                 const rec = new SR();
                 _captionTranscriber = rec;
-                rec.lang = captionSpeechLocale(_captionSourceLang || _captionTargetLang || 'uz');
+                _captionTranscriberLocale = nextLocale;
+                rec.lang = nextLocale;
                 rec.interimResults = true;
                 rec.continuous = true;
                 rec.maxAlternatives = 1;
@@ -6513,6 +6572,7 @@ function setupSocket() {
 
                 rec.onerror = (evt) => {
                     const err = String(evt?.error || '');
+                    if (generation !== _captionTranscriberGeneration || err === 'aborted' || err === 'no-speech') return;
                     if (err === 'not-allowed' || err === 'service-not-allowed') {
                         _captionTranscriberEnabled = false;
                         if (!_captionLocalWarned) {
@@ -6523,12 +6583,14 @@ function setupSocket() {
                 };
 
                 rec.onend = () => {
+                    if (generation !== _captionTranscriberGeneration) return;
                     _captionTranscriberActive = false;
+                    _captionTranscriber = null;
                     if (canRunLiveCaptionLocally()) {
                         try { if (_captionTranscriberRestart) clearTimeout(_captionTranscriberRestart); } catch(_) {}
                         _captionTranscriberRestart = setTimeout(() => {
                             startLiveCaptionTranscriber();
-                        }, 350);
+                        }, 90);
                     }
                 };
 
@@ -6536,6 +6598,12 @@ function setupSocket() {
                 _captionTranscriberActive = true;
             } catch (e) {
                 _captionTranscriberActive = false;
+                _captionTranscriber = null;
+                _captionTranscriberLocale = '';
+                if (canRunLiveCaptionLocally()) {
+                    try { if (_captionTranscriberRestart) clearTimeout(_captionTranscriberRestart); } catch(_) {}
+                    _captionTranscriberRestart = setTimeout(startLiveCaptionTranscriber, 180);
+                }
                 if (!_captionLocalWarned) {
                     _captionLocalWarned = true;
                     notify("Transkripsiya ishga tushmadi: brauzer qo'llab-quvvatlamasligi mumkin.", 'info');
@@ -6545,6 +6613,12 @@ function setupSocket() {
 
         function syncLiveCaptionTranscriber() {
             if (canRunLiveCaptionLocally()) {
+                const wantedLocale = captionSpeechLocale(_captionSourceLang || 'uz');
+                if (_captionTranscriberActive && _captionTranscriberLocale !== wantedLocale) {
+                    stopLiveCaptionTranscriber();
+                    _captionTranscriberRestart = setTimeout(startLiveCaptionTranscriber, 40);
+                    return;
+                }
                 startLiveCaptionTranscriber();
             } else {
                 stopLiveCaptionTranscriber();
@@ -8161,10 +8235,10 @@ function isTeacherLikeUser(userId) {
     if (!uid) return false;
     const info = groupCall.participantInfos.get(uid);
     const role = String(info?.role || '').toLowerCase();
-    if (role === 'teacher' || role === 'admin' || role === 'organizer') return true;
+    if (role === 'teacher' || role === 'tutor' || role === 'admin' || role === 'organizer') return true;
     if (uid === String(myUserId() || '')) {
         const myRole = String(currentUser?.role || '').toLowerCase();
-        return myRole === 'teacher' || myRole === 'admin' || myRole === 'organizer';
+        return myRole === 'teacher' || myRole === 'tutor' || myRole === 'admin' || myRole === 'organizer';
     }
     return false;
 }
@@ -8764,6 +8838,9 @@ const video = tile.querySelector('video');
                 ? window.getTileContainerFor(userId)
                 : getTileContainerFor(userId);
             if (container) {
+                if (container.classList?.contains('stage-slot')) {
+                    container.querySelectorAll('.stage-placeholder').forEach((node) => node.remove());
+                }
                 if (!tile.parentElement || tile.parentElement !== container) {
                     container.appendChild(tile);
                 }
@@ -8773,6 +8850,13 @@ const video = tile.querySelector('video');
 
             try { syncTileMediaIndicators(String(userId || ''), tile, !!isLocal); } catch(_) {}
             ensureStagePlaceholder();
+            // Media tracks often arrive after the empty primary slot. Reconcile in the
+            // same task so the tile can never remain as a second row below that slot.
+            try {
+                queueMicrotask(() => {
+                    if (groupCall?.active && typeof renderGroupCallLayout === 'function') renderGroupCallLayout();
+                });
+            } catch(_) {}
         }
 
         function ensureParticipantTilesForRoster(userIds, opts = {}) {
@@ -8987,7 +9071,7 @@ const video = tile.querySelector('video');
                 const meId = String(myUserId() || '');
                 const role = String(currentUser?.role || '').toLowerCase();
                 const ownerId = String(groupCall.stage?.ownerTeacherId || '');
-                return role === 'teacher' && meId && ownerId && meId === ownerId;
+                return (role === 'teacher' || role === 'tutor') && meId && ownerId && meId === ownerId;
             } catch(e) { return false; }
         }
 function updateGroupGridLayout() {
@@ -12841,6 +12925,8 @@ async function toggleMute() {
                 groupCall.incoming = null;
                 hideIncomingGroupCallBanner({ resetDismissed: true });
                 groupCall.active = true;
+                _sfuNoMediaCycles = 0;
+                _sfuReconnectAttempts = 0;
                 try { setLiveCallOverlaySuppressed(true); } catch(_) {}
                 groupCall.callId = data.callId;
                 applyServerCallTransport(data);
@@ -12916,6 +13002,8 @@ async function toggleMute() {
                 groupCall.incoming = null;
                 hideIncomingGroupCallBanner({ resetDismissed: true });
                 groupCall.active = true;
+                _sfuNoMediaCycles = 0;
+                _sfuReconnectAttempts = 0;
                 try { setLiveCallOverlaySuppressed(true); } catch(_) {}
                 groupCall.callId = data.callId;
                 applyServerCallTransport(data);
@@ -13911,7 +13999,14 @@ async function toggleMute() {
     const stageIds = computeStageUserIds();
     if(stageIds.includes(uid)) {
       const zoomStage = (typeof ensureTeacherStageZoomStructure === 'function') ? ensureTeacherStageZoomStructure() : null;
-      return zoomStage?.surface || document.getElementById('teacherStageSurface') || tStage || sGrid;
+      const surface = zoomStage?.surface || document.getElementById('teacherStageSurface') || tStage;
+      const matchingSlot = Array.from(surface?.querySelectorAll?.('.stage-slot') || [])
+        .find((slot) => str(slot.dataset?.stageUser) === uid);
+      if (matchingSlot) {
+        matchingSlot.querySelectorAll('.stage-placeholder').forEach((node) => node.remove());
+        return matchingSlot;
+      }
+      return surface || sGrid;
     }
     return sGrid || tStage;
   };

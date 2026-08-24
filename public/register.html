@@ -482,6 +482,19 @@
             <div class="mt-2 text-xs muted2">O'qituvchilar uchun: <a href="/teacher-register.html" class="underline font-extrabold">Teacher ro'yxatdan o'tish</a></div>
           </div>
           <div>
+            <label class="text-xs font-extrabold muted">Profil ikoni (ixtiyoriy)</label>
+            <div class="mt-2 relative">
+              <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
+              <select class="field w-full rounded-2xl px-11 py-3 text-sm glow-ring" name="gender">
+                <option value="">Neytral ikon</option>
+                <option value="female">Qiz / ayol ikoni</option>
+                <option value="male">O‘g‘il / erkak ikoni</option>
+                <option value="prefer_not_to_say">Aytilmasin</option>
+              </select>
+            </div>
+            <div class="mt-2 text-xs muted2">Rasm yuklamasangiz shu tanlov asosida avtomatik ikon ko‘rinadi.</div>
+          </div>
+          <div>
             <label class="text-xs font-extrabold muted">Telefon</label>
             <div class="mt-2 relative">
               <i class="fa-solid fa-phone absolute left-4 top-1/2 -translate-y-1/2 muted2"></i>
@@ -504,6 +517,48 @@
               <textarea class="field w-full rounded-2xl px-11 py-3 text-sm min-h-[92px]" name="bio" placeholder="Qisqacha: yo‘nalish, qiziqishlar, maqsad..."></textarea>
             </div>
           </div>
+
+          <fieldset class="sm:col-span-2 glass rounded-2xl p-4" id="accessibilityRegistrationFields">
+            <legend class="px-2 text-xs font-extrabold muted">Maxsus qulayliklar (ixtiyoriy va maxfiy)</legend>
+            <p class="text-xs muted2 mb-3">Bu ma’lumot faqat sizga mos yordamchi funksiyalarni taklif qilish uchun ishlatiladi. “Aytilmasin” variantini ham tanlashingiz mumkin.</p>
+            <label class="block">
+              <span class="text-xs font-extrabold muted">Holat</span>
+              <select class="field w-full rounded-2xl px-4 py-3 text-sm mt-2" name="accessibilityDisclosure" id="accessibilityDisclosure">
+                <option value="">Belgilanmagan</option>
+                <option value="none">Maxsus ehtiyojim yo‘q</option>
+                <option value="disability">Maxsus qulaylik kerak</option>
+                <option value="prefer_not_to_say">Aytilmasin</option>
+              </select>
+            </label>
+            <div id="disabilityTypeFields" class="hidden mt-3">
+              <div class="text-xs font-extrabold muted mb-2">Kerakli yo‘nalishlar</div>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs muted2">
+                <label><input type="checkbox" name="disabilityTypes" value="visual"> Ko‘rish</label>
+                <label><input type="checkbox" name="disabilityTypes" value="hearing"> Eshitish</label>
+                <label><input type="checkbox" name="disabilityTypes" value="speech"> Nutq</label>
+                <label><input type="checkbox" name="disabilityTypes" value="mobility"> Harakat</label>
+                <label><input type="checkbox" name="disabilityTypes" value="learning"> O‘rganish</label>
+                <label><input type="checkbox" name="disabilityTypes" value="neurodivergent"> Neyroxilma-xillik</label>
+                <label><input type="checkbox" name="disabilityTypes" value="multiple"> Bir nechta</label>
+                <label><input type="checkbox" name="disabilityTypes" value="other"> Boshqa</label>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="text-xs font-extrabold muted mb-2">Yordamchi funksiyalar</div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs muted2">
+                <label><input type="checkbox" name="assistancePreferences" value="voice_navigation"> Ovozli navigatsiya</label>
+                <label><input type="checkbox" name="assistancePreferences" value="gesture_navigation"> Kamera orqali imo-navigatsiya</label>
+                <label><input type="checkbox" name="assistancePreferences" value="captions"> Jonli subtitr</label>
+                <label><input type="checkbox" name="assistancePreferences" value="high_contrast"> Yuqori kontrast</label>
+                <label><input type="checkbox" name="assistancePreferences" value="large_text"> Katta matn</label>
+                <label><input type="checkbox" name="assistancePreferences" value="reduced_motion"> Kam animatsiya</label>
+              </div>
+            </div>
+            <label class="flex gap-2 items-start mt-3 text-xs muted2">
+              <input type="checkbox" name="accessibilityConsent" value="1" class="mt-0.5">
+              Tanlovlarimni profilimda saqlash va mos yordamchi funksiyalarni yoqishga roziman.
+            </label>
+          </fieldset>
 
           <div>
             <label class="text-xs font-extrabold muted">Parol</label>
@@ -647,6 +702,14 @@ if(usernameInput){
   usernameInput.addEventListener('blur', checkUsername);
 }
 
+const accessibilityDisclosure = document.getElementById('accessibilityDisclosure');
+const disabilityTypeFields = document.getElementById('disabilityTypeFields');
+function syncAccessibilityRegistrationFields(){
+  disabilityTypeFields?.classList.toggle('hidden', accessibilityDisclosure?.value !== 'disability');
+}
+accessibilityDisclosure?.addEventListener('change', syncAccessibilityRegistrationFields);
+syncAccessibilityRegistrationFields();
+
 function showMessage(text, type){
         msg.textContent = text;
         msg.classList.remove('hidden');
@@ -696,6 +759,12 @@ function showMessage(text, type){
         e.preventDefault();
         const fd = new FormData(form);
         const data = Object.fromEntries(fd.entries());
+        const accessibilityProfile = {
+          disclosure: String(fd.get('accessibilityDisclosure') || ''),
+          disabilityTypes: fd.getAll('disabilityTypes').map(String),
+          assistancePreferences: fd.getAll('assistancePreferences').map(String),
+          consentToUseForSupport: fd.get('accessibilityConsent') === '1'
+        };
 
         // basic validation
         // username availability
@@ -724,9 +793,14 @@ if((data.password || '').length < 6){
           name: data.fullName,            // some APIs use "name"
           full_name: data.fullName,       // just in case
           phoneNumber: data.phone,        // some APIs use phoneNumber
+          accessibilityProfile,
         };
         delete payload.confirmPassword;
         delete payload.legalAccept;
+        delete payload.accessibilityDisclosure;
+        delete payload.disabilityTypes;
+        delete payload.assistancePreferences;
+        delete payload.accessibilityConsent;
 
         const original = submitBtn.innerHTML;
         submitBtn.disabled = true;
@@ -744,6 +818,15 @@ if((data.password || '').length < 6){
           if(isSuccess(res, result)){
             const token = extractToken(result);
             if(token) localStorage.setItem('token', token);
+            if(accessibilityProfile.consentToUseForSupport){
+              const prefs = new Set(accessibilityProfile.assistancePreferences);
+              if(prefs.has('voice_navigation')) localStorage.setItem('hallaym:voice-assistant-enabled', '1');
+              if(prefs.has('gesture_navigation')) localStorage.setItem('hallaym:navigation-gesture-enabled', '1');
+              if(prefs.has('captions')) localStorage.setItem('hallaym:captions-enabled', '1');
+              localStorage.setItem('hallaym:high-contrast', prefs.has('high_contrast') ? '1' : '0');
+              localStorage.setItem('hallaym:large-text', prefs.has('large_text') ? '1' : '0');
+              localStorage.setItem('hallaym:reduced-motion', prefs.has('reduced_motion') ? '1' : '0');
+            }
             showMessage("Ro‘yxatdan o‘tish muvaffaqiyatli! Yo‘naltirilmoqda...", 'success');
             setTimeout(async ()=>{
               try{
@@ -753,7 +836,9 @@ if((data.password || '').length < 6){
                 const role = (me && me.user && me.user.role) ? String(me.user.role) : 'student';
                 window.location.href = (role==='teacher')
                   ? '/teacher-dashboard.html'
-                  : (role==='admin'
+                  : (role==='tutor'
+                    ? '/tutor-dashboard.html'
+                    : (role==='admin'
                     ? '/admin-dashboard.html'
                     : (role==='rector'
                       ? '/rector-dashboard.html'
@@ -761,7 +846,7 @@ if((data.password || '').length < 6){
                         ? '/prorector-dashboard.html'
                         : (role==='dean'
                           ? '/dean-dashboard.html'
-                          : (role==='organizer' ? '/organizer.html' : '/student-dashboard.html')))));
+                          : (role==='organizer' ? '/organizer.html' : '/student-dashboard.html'))))));
               }catch(_){
                 window.location.href = '/student-dashboard.html';
               }
@@ -890,7 +975,9 @@ if((data.password || '').length < 6){
               const role = (data.user && data.user.role) ? String(data.user.role) : 'student';
               window.location.href = (role==='teacher')
                 ? '/teacher-dashboard.html'
-                : (role==='admin'
+                : (role==='tutor'
+                  ? '/tutor-dashboard.html'
+                  : (role==='admin'
                   ? '/admin-dashboard.html'
                   : (role==='rector'
                     ? '/rector-dashboard.html'
@@ -898,7 +985,7 @@ if((data.password || '').length < 6){
                       ? '/prorector-dashboard.html'
                       : (role==='dean'
                         ? '/dean-dashboard.html'
-                        : (role==='organizer' ? '/organizer.html' : '/student-dashboard.html')))));
+                        : (role==='organizer' ? '/organizer.html' : '/student-dashboard.html'))))));
             }
           else localStorage.removeItem('token');
         }catch(_){}
@@ -1013,4 +1100,3 @@ document.addEventListener('DOMContentLoaded', ()=>{
   <script src="/ui-premium-icons.js" defer></script>
 </body>
 </html>
-

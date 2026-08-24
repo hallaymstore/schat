@@ -84,6 +84,7 @@
   function dashboardPathForRole(role) {
     const normalized = String(role || '').trim().toLowerCase();
     if (normalized === 'teacher') return '/teacher-dashboard.html';
+    if (normalized === 'tutor') return '/tutor-dashboard.html';
     if (normalized === 'admin') return '/admin-dashboard.html';
     if (normalized === 'rector') return '/rector-dashboard.html';
     if (normalized === 'prorector') return '/prorector-dashboard.html';

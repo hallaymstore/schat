@@ -1,485 +1,313 @@
 const {
   $, qs, apiFetch, getMe, initStoredTheme, applyTheme, renderHeaderMeta, logout,
-  iconSpan, normalizeCourse, normalizeLesson, escapeHtml, money, shortText,
-  formatDate, mediaForCourse, mediaForLesson
+  normalizeCourse, normalizeLesson, escapeHtml, money, shortText, formatDate
 } = window.CourseSuite;
 
-const COURSE_DETAIL_STATE = {
-  me: null,
-  course: null,
-  ratings: [],
-  ratingSummary: { average: 0, count: 0, distribution: { 1:0, 2:0, 3:0, 4:0, 5:0 } },
-  comments: [],
-  lessons: [],
-  replyParentId: ""
+const WATCH_STATE = {
+  me: null, course: null, lessons: [], comments: [], ratings: [],
+  ratingSummary: { average: 0, count: 0 }, selectedLessonId: '', replyParentId: '',
+  like: { count: 0, liked: false }, recommendations: []
 };
 
 function showAlert(type, message){
-  const box = $("pageAlert");
-  box.className = "course-alert show " + (type === "error" ? "error" : "success");
+  const box = $('pageAlert');
+  box.className = `course-alert show ${type === 'error' ? 'error' : 'success'}`;
   box.textContent = message;
 }
+function clearAlert(){ $('pageAlert').className = 'course-alert'; $('pageAlert').textContent = ''; }
 
-function clearAlert(){
-  $("pageAlert").className = "course-alert";
-  $("pageAlert").textContent = "";
+function youtubeId(url){
+  const match = String(url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/i);
+  return match ? match[1] : '';
 }
 
-function mediaHtml(media){
-  if(media.type === "embed") return `<div class="course-media"><iframe src="${escapeHtml(media.src)}" allowfullscreen></iframe></div>`;
-  if(media.type === "video") return `<div class="course-media"><video src="${escapeHtml(media.src)}" controls playsinline preload="metadata"></video></div>`;
-  if(media.type === "image") return `<div class="course-media"><img src="${escapeHtml(media.src)}" alt="course preview"></div>`;
-  return `<div class="course-media placeholder"><div><div style="font-size:12px;opacity:.72;letter-spacing:.18em;text-transform:uppercase">HALLAYM Course</div><div style="font-size:2rem;font-weight:900;margin-top:10px">Jonli videodars, PDF va testlar</div></div></div>`;
+function selectedLesson(){
+  return WATCH_STATE.lessons.find((lesson)=>String(lesson.id) === String(WATCH_STATE.selectedLessonId)) || WATCH_STATE.lessons[0] || null;
 }
 
-function buildStars(activeValue, clickable){
-  const stars = [];
-  for(let value = 1; value <= 5; value += 1){
-    const cls = value <= activeValue ? "course-star-button active" : "course-star-button";
-    const attrs = clickable ? `data-rate="${value}" type="button"` : "";
-    stars.push(`<button class="${cls}" ${attrs}>${iconSpan("star")}</button>`);
+function selectedLikeContentId(){ return selectedLesson()?.id || ''; }
+
+function mediaMarkup(){
+  const lesson = selectedLesson();
+  const youtubeUrl = lesson?.youtubeUrl || (!lesson ? WATCH_STATE.course.youtubeUrl : '');
+  const videoUrl = lesson?.videoUrl || '';
+  const ytId = youtubeId(youtubeUrl);
+  if(ytId){
+    return `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(ytId)}?rel=0&modestbranding=1&playsinline=1" title="${escapeHtml(lesson?.title || WATCH_STATE.course.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
   }
-  return stars.join("");
+  if(videoUrl){
+    return `<video src="${escapeHtml(videoUrl)}" controls playsinline preload="metadata" controlslist="nodownload" aria-label="${escapeHtml(lesson?.title || WATCH_STATE.course.title)}"></video>`;
+  }
+  if(lesson?.pdfUrl){
+    return `<iframe src="${escapeHtml(lesson.pdfUrl)}" title="${escapeHtml(lesson.title)} PDF"></iframe>`;
+  }
+  if(lesson?.text){
+    return `<div class="yt-watch-empty"><h2>${escapeHtml(lesson.title)}</h2><p>${escapeHtml(lesson.text)}</p></div>`;
+  }
+  if(WATCH_STATE.course.coverUrl){
+    return `<img src="${escapeHtml(WATCH_STATE.course.coverUrl)}" alt="${escapeHtml(WATCH_STATE.course.title)}">`;
+  }
+  return '<div class="yt-watch-empty"><h2>Video dars</h2><p>Kursga qo‘shilgach video darslar shu yerda ochiladi.</p></div>';
+}
+
+function lessonThumb(lesson){
+  const id = youtubeId(lesson.youtubeUrl);
+  if(id) return `<img src="https://i.ytimg.com/vi/${encodeURIComponent(id)}/mqdefault.jpg" alt="">`;
+  if(lesson.videoUrl) return '<span class="yt-play-glyph">▶</span>';
+  if(lesson.pdfUrl) return '<span class="yt-play-glyph">PDF</span>';
+  return '<span class="yt-play-glyph">Aa</span>';
+}
+
+function joinControls(){
+  const course = WATCH_STATE.course;
+  const role = String(WATCH_STATE.me?.role || 'student').toLowerCase();
+  if(course.isOwner || role === 'admin') return `<a class="course-link-button primary" href="/course-studio.html?id=${encodeURIComponent(course.id)}">Kursni tahrirlash</a>`;
+  if(course.viewer.joined) return '<span class="yt-joined-badge">✓ Kursga qo‘shilgansiz</span>';
+  if(role !== 'student') return '';
+  if(course.viewer.pendingRequest) return '<span class="yt-joined-badge">So‘rov yuborilgan</span>';
+  if(course.joinMode === 'approval') return '<button class="course-button primary" id="requestJoinBtn">Kursga kirish so‘rovi</button>';
+  return '<button class="course-button primary" id="joinCourseBtn">Kursga qo‘shilish</button>';
+}
+
+function renderWatch(){
+  const course = WATCH_STATE.course;
+  const lesson = selectedLesson();
+  $('heroWrap').innerHTML = `
+    <section class="yt-watch-layout">
+      <div class="yt-watch-main">
+        <div class="yt-watch-player">${mediaMarkup()}</div>
+        <h1 class="yt-watch-title">${escapeHtml(lesson?.title || course.title)}</h1>
+        <div class="yt-watch-actions">
+          <div class="yt-watch-teacher"><div class="yt-teacher-avatar">${escapeHtml(String(course.teacherName || 'U').charAt(0).toUpperCase())}</div><div><b>${escapeHtml(course.teacherName || "O‘qituvchi")}</b><span>${course.enrolledCount || 0} talaba</span></div></div>
+          <div class="yt-watch-action-buttons">
+            ${joinControls()}
+            <button class="yt-action-button ${WATCH_STATE.like.liked ? 'active' : ''}" id="videoLikeBtn" aria-pressed="${WATCH_STATE.like.liked ? 'true' : 'false'}">♥ <span>${WATCH_STATE.like.count || 0}</span></button>
+            <button class="yt-action-button" id="shareCourseBtn">Ulashish</button>
+          </div>
+        </div>
+        <div class="yt-watch-description">
+          <div><b>${course.lessonCount || WATCH_STATE.lessons.length} dars</b> · ★ ${Number(course.ratingAverage || 0).toFixed(1)} · ${course.commentCount || 0} izoh</div>
+          <p>${escapeHtml(course.description || 'Kurs tavsifi kiritilmagan.')}</p>
+          ${lesson?.text ? `<p><b>Dars haqida:</b> ${escapeHtml(lesson.text)}</p>` : ''}
+          <div class="yt-course-tags"><span>${course.type === 'paid' ? escapeHtml(money(course.price)) : 'Bepul'}</span><span>${escapeHtml(course.faculty || 'Barcha yo‘nalishlar')}</span><span>${escapeHtml(course.level || 'beginner')}</span></div>
+        </div>
+      </div>
+      <aside class="yt-watch-playlist" aria-label="Kurs darslari">
+        <header><div><b>Kurs tarkibi</b><span>${WATCH_STATE.lessons.length} dars</span></div><a href="/courses.html">Barcha kurslar</a></header>
+        <div class="yt-playlist-items">
+          ${WATCH_STATE.lessons.length ? WATCH_STATE.lessons.map((item, index)=>`
+            <button class="yt-playlist-item ${String(item.id) === String(lesson?.id) ? 'active' : ''}" data-lesson-id="${escapeHtml(item.id)}">
+              <span class="yt-playlist-order">${index + 1}</span><span class="yt-playlist-thumb">${lessonThumb(item)}</span>
+              <span class="yt-playlist-copy"><b>${escapeHtml(item.title)}</b><small>${item.durationMinutes ? `${item.durationMinutes} daqiqa` : String(item.type || '').toUpperCase()}</small></span>
+            </button>`).join('') : '<div class="course-empty">Darslar kursga qo‘shilgandan keyin ochiladi.</div>'}
+        </div>
+      </aside>
+    </section>`;
+
+  $('heroWrap').querySelectorAll('[data-lesson-id]').forEach((button)=>button.addEventListener('click', async ()=>{
+    WATCH_STATE.selectedLessonId = button.dataset.lessonId || '';
+    const url = new URL(location.href);
+    url.searchParams.set('lesson', WATCH_STATE.selectedLessonId);
+    history.replaceState({}, '', url);
+    WATCH_STATE.like = { count: 0, liked: false };
+    renderWatch();
+    await loadLike();
+  }));
+  $('joinCourseBtn')?.addEventListener('click', joinCourse);
+  $('requestJoinBtn')?.addEventListener('click', requestJoin);
+  $('videoLikeBtn')?.addEventListener('click', toggleVideoLike);
+  $('shareCourseBtn')?.addEventListener('click', shareCourse);
 }
 
 function commentTree(){
-  const roots = COURSE_DETAIL_STATE.comments.filter((item)=> !item.parentId);
-  const childrenMap = new Map();
-  COURSE_DETAIL_STATE.comments.filter((item)=> item.parentId).forEach((item)=>{
-    const key = String(item.parentId);
-    const list = childrenMap.get(key) || [];
-    list.push(item);
-    childrenMap.set(key, list);
+  const roots = WATCH_STATE.comments.filter((item)=>!item.parentId);
+  const children = new Map();
+  WATCH_STATE.comments.filter((item)=>item.parentId).forEach((item)=>{
+    const list = children.get(String(item.parentId)) || [];
+    list.push(item); children.set(String(item.parentId), list);
   });
-  return { roots, childrenMap };
+  return { roots, children };
 }
 
-function renderCommentItem(comment, childrenMap){
-  const isTeacher = comment.authorRole === "teacher" || comment.authorRole === "admin";
-  const replyLabel = isTeacher ? "Ustoz" : "Talaba";
-  const replies = childrenMap.get(String(comment.id)) || [];
-  return `
-    <article class="course-comment">
-      <div class="course-comment-header">
-        <div>
-          <div class="course-chip-row">
-            <span class="course-tag ${isTeacher ? "accent" : ""}">${escapeHtml(replyLabel)}</span>
-            <span class="course-inline-code">${escapeHtml(comment.authorName || "Foydalanuvchi")}</span>
-          </div>
-          <div class="course-muted" style="margin-top:8px">${escapeHtml(formatDate(comment.createdAt) || "")}</div>
-        </div>
-        <button class="course-button ghost" type="button" data-reply="${escapeHtml(comment.id)}">${iconSpan("message")}Javob</button>
-      </div>
-      <div class="course-comment-body">${escapeHtml(comment.body || "")}</div>
-      ${replies.map((reply)=> `
-        <div class="course-comment reply">
-          <div class="course-comment-header">
-            <div>
-              <div class="course-chip-row">
-                <span class="course-tag ${reply.authorRole === "teacher" || reply.authorRole === "admin" ? "accent" : ""}">${escapeHtml(reply.authorRole === "teacher" || reply.authorRole === "admin" ? "Ustoz javobi" : "Javob")}</span>
-                <span class="course-inline-code">${escapeHtml(reply.authorName || "Foydalanuvchi")}</span>
-              </div>
-              <div class="course-muted" style="margin-top:8px">${escapeHtml(formatDate(reply.createdAt) || "")}</div>
-            </div>
-          </div>
-          <div class="course-comment-body">${escapeHtml(reply.body || "")}</div>
-        </div>
-      `).join("")}
-    </article>
-  `;
-}
-
-function renderHero(){
-  const course = COURSE_DETAIL_STATE.course;
-  const me = COURSE_DETAIL_STATE.me;
-  const role = String(me.role || "student").toLowerCase();
-  const canManage = role === "admin" || course.isOwner;
-  const joined = !!course.viewer.joined;
-  const pending = !!course.viewer.pendingRequest;
-  const joinModeLabel = course.joinMode === "approval" ? "Ustoz tasdig'i bilan qo'shilish" : "Darhol qo'shilish";
-  const media = mediaForCourse(course);
-
-  $("heroWrap").innerHTML = `
-    <section class="course-card">
-      <div class="course-hero">
-        <div class="course-hero-copy">
-          <div class="course-eyebrow">${iconSpan("course")}Premium kurs sahifasi</div>
-          <h1 class="course-big-title">${escapeHtml(course.title)}</h1>
-          <p class="course-section-copy">${escapeHtml(course.description || "Bu kursda videodarslar, PDF materiallar, qisqa testlar va progress kuzatuvi mavjud.")}</p>
-          <div class="course-chip-row">
-            <span class="course-badge ${course.type === "paid" ? "warn" : "success"}">${course.type === "paid" ? escapeHtml(money(course.price)) : "Bepul"}</span>
-            <span class="course-badge">${escapeHtml(course.faculty || "Fakultet belgilanmagan")}</span>
-            <span class="course-badge">${escapeHtml(joinModeLabel)}</span>
-            <span class="course-badge">${course.lessonCount || 0} mavzu</span>
-          </div>
-          <div class="course-stat-grid">
-            <div class="course-stat">
-              <div class="course-muted">O'qituvchi</div>
-              <div class="course-stat-value">${escapeHtml(course.teacherName || "Ustoz")}</div>
-            </div>
-            <div class="course-stat">
-              <div class="course-muted">Reyting</div>
-              <div class="course-stat-value">${course.ratingAverage ? course.ratingAverage.toFixed(1) : "0.0"}</div>
-            </div>
-            <div class="course-stat">
-              <div class="course-muted">Komment</div>
-              <div class="course-stat-value">${course.commentCount || 0}</div>
-            </div>
-            <div class="course-stat">
-              <div class="course-muted">Qo'shilish rejimi</div>
-              <div class="course-stat-value" style="font-size:1rem">${course.joinMode === "approval" ? "So'rov" : "Ochiq"}</div>
-            </div>
-          </div>
-          <div class="course-inline-actions">
-            ${joined ? `<a class="course-link-button primary" href="/joinedcourse.html?id=${encodeURIComponent(course.id)}">${iconSpan("play")}Kursni boshlash</a>` : ""}
-            ${role === "student" && !joined && course.joinMode === "open" ? `<button class="course-button primary" id="joinCourseBtn">${iconSpan("users")}Kursga qo'shilish</button>` : ""}
-            ${role === "student" && !joined && course.joinMode === "approval" ? `<button class="course-button primary" id="requestJoinBtn">${iconSpan("send")}So'rov yuborish</button>` : ""}
-            ${canManage ? `<a class="course-link-button primary" href="/joinedcourse.html?id=${encodeURIComponent(course.id)}">${iconSpan("play")}Ichiga kirish</a>` : ""}
-            ${canManage ? `<a class="course-link-button secondary" href="/course-studio.html?id=${encodeURIComponent(course.id)}">${iconSpan("settings")}Studio</a>` : ""}
-            ${canManage ? `<a class="course-link-button secondary" href="/course-progress.html?id=${encodeURIComponent(course.id)}">${iconSpan("chart")}Natijalar</a>` : ""}
-          </div>
-          <div class="course-surface-note">
-            ${joined
-              ? "Siz bu kursga qo'shilgansiz. Mavzularni ketma-ket o'tib, qisqa testlarni ishlashingiz mumkin."
-              : pending
-                ? "So'rovingiz yuborilgan. Ustoz tasdiqlashi bilan kurs ochiladi."
-                : course.joinMode === "approval"
-                  ? "Bu kursga kirish uchun ustoz tasdig'i kerak. Xohlasangiz qisqa izoh bilan so'rov yuboring."
-                  : "Bu kurs darhol qo'shilish uchun ochiq. Qo'shilganingizdan keyin videodars, PDF va testlar bir joyda ochiladi."}
-          </div>
-          ${role === "student" && !joined && course.joinMode === "approval" ? `
-            <div class="course-form-group">
-              <label for="joinRequestMessage">Ustozga izoh</label>
-              <textarea id="joinRequestMessage" class="course-textarea" placeholder="Masalan, guruhim shu fan bo'yicha o'qiydi va kursga qo'shilmoqchiman."></textarea>
-            </div>
-          ` : ""}
-        </div>
-        <div>
-          ${mediaHtml(media)}
-          <div class="course-card tight section-gap">
-            <div class="course-section-title">Kurs tafsilotlari</div>
-            <div class="course-stack" style="margin-top:14px">
-              <div class="course-row-card compact">
-                <div class="course-row-main">
-                  <div class="course-muted">Guruhlar</div>
-                  <div style="font-weight:800;margin-top:6px">${escapeHtml((course.groups && course.groups.length) ? course.groups.join(", ") : "Barcha mos talabalar uchun")}</div>
-                </div>
-              </div>
-              <div class="course-row-card compact">
-                <div class="course-row-main">
-                  <div class="course-muted">Tavsiyalar</div>
-                  <div style="font-weight:800;margin-top:6px">${escapeHtml(shortText(course.outcomes || "Videodarslarni ko'ring, PDFni oching, har mavzudan keyin test ishlang va progressni kuzating.", 160))}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  `;
-
-  if($("joinCourseBtn")){
-    $("joinCourseBtn").addEventListener("click", joinCourse);
-  }
-  if($("requestJoinBtn")){
-    $("requestJoinBtn").addEventListener("click", requestJoin);
-  }
-}
-
-function renderRatings(){
-  const course = COURSE_DETAIL_STATE.course;
-  const role = String(COURSE_DETAIL_STATE.me.role || "student").toLowerCase();
-  const canRate = course.allowRatings && !course.isOwner && (role === "admin" || course.viewer.joined);
-  const summary = COURSE_DETAIL_STATE.ratingSummary;
-
-  $("ratingsWrap").innerHTML = `
-    <section class="course-card">
-      <div class="course-split">
-        <div>
-          <h2 class="course-section-title">Baholar</h2>
-          <p class="course-section-copy">Talabalar kursni 1 dan 5 gacha baholaydi. Ustoz yangi baholar haqida bildirishnoma oladi.</p>
-          <div class="course-summary-grid" style="margin-top:18px">
-            <div class="course-summary">
-              <div class="course-muted">O'rtacha baho</div>
-              <div class="course-summary-value">${summary.average ? Number(summary.average).toFixed(1) : "0.0"}</div>
-            </div>
-            <div class="course-summary">
-              <div class="course-muted">Jami baho</div>
-              <div class="course-summary-value">${summary.count || 0}</div>
-            </div>
-          </div>
-          <div class="course-stack" style="margin-top:18px">
-            ${[5,4,3,2,1].map((star)=> `
-              <div class="course-row-card compact">
-                <div class="course-row-main">
-                  <div class="course-muted">${star} yulduz</div>
-                  <div class="course-progress-bar" style="margin-top:8px"><span style="width:${summary.count ? Math.round(((summary.distribution[star] || 0) / summary.count) * 100) : 0}%"></span></div>
-                </div>
-                <strong>${summary.distribution[star] || 0}</strong>
-              </div>
-            `).join("")}
-          </div>
-        </div>
-        <div class="course-card tight">
-          <div class="course-section-title">Sizning bahoyingiz</div>
-          <div class="course-muted" style="margin-top:8px">${canRate ? "Kurs sizga yoqsa yulduz va qisqa izoh qoldiring." : "Baholash faqat kursga qo'shilgan talabalar uchun ochiladi."}</div>
-          <div class="course-rating-stars" id="ratingStars" style="margin-top:18px">${buildStars(COURSE_DETAIL_STATE.course.viewer.myRating, canRate)}</div>
-          <div class="course-form-group" style="margin-top:16px">
-            <label for="ratingReviewInput">Qisqa fikr</label>
-            <textarea id="ratingReviewInput" class="course-textarea" ${canRate ? "" : "disabled"} placeholder="Nimasi foydali bo'ldi?">${escapeHtml((COURSE_DETAIL_STATE.ratings.find((item)=> String(item.userId || "") === String(COURSE_DETAIL_STATE.me._id || ""))?.reviewText) || "")}</textarea>
-          </div>
-          <button class="course-button primary" id="saveRatingBtn" ${canRate ? "" : "disabled"} style="margin-top:16px">${iconSpan("star")}Bahoni saqlash</button>
-        </div>
-      </div>
-      <div class="course-stack" style="margin-top:18px">
-        ${(COURSE_DETAIL_STATE.ratings || []).length ? COURSE_DETAIL_STATE.ratings.slice(0, 8).map((rating)=> `
-          <article class="course-row-card compact">
-            <div class="course-row-main">
-              <div class="course-chip-row">
-                <span class="course-inline-code">${escapeHtml(rating.authorName || "Talaba")}</span>
-                <span class="course-inline-code">${escapeHtml(formatDate(rating.createdAt) || "")}</span>
-              </div>
-              <div class="course-rating-stars" style="margin-top:10px">${buildStars(Number(rating.rating || 0), false)}</div>
-              <div class="course-row-copy" style="margin-top:10px">${escapeHtml(rating.reviewText || "Izoh qoldirilmagan.")}</div>
-            </div>
-          </article>
-        `).join("") : `<div class="course-empty">Hozircha baho qoldirilmagan.</div>`}
-      </div>
-    </section>
-  `;
-
-  if(canRate){
-    $("ratingStars").querySelectorAll("[data-rate]").forEach((button)=>{
-      button.addEventListener("click", ()=>{
-        COURSE_DETAIL_STATE.course.viewer.myRating = Number(button.dataset.rate || 0);
-        renderRatings();
-      });
-    });
-    $("saveRatingBtn").addEventListener("click", saveRating);
-  }
+function commentItem(comment, children, depth = 0){
+  const replies = depth === 0 ? (children.get(String(comment.id)) || []) : [];
+  const teacher = ['teacher', 'admin'].includes(String(comment.authorRole || '').toLowerCase());
+  return `<article class="yt-comment ${depth ? 'reply' : ''}">
+    <div class="yt-comment-avatar">${escapeHtml(String(comment.authorName || 'F').charAt(0).toUpperCase())}</div>
+    <div class="yt-comment-copy"><div><b>${escapeHtml(comment.authorName || 'Foydalanuvchi')}</b>${teacher ? '<span class="yt-author-badge">Ustoz</span>' : ''}<small>${escapeHtml(formatDate(comment.createdAt) || '')}</small></div>
+    <p>${escapeHtml(comment.body || '')}</p>
+    <div class="yt-comment-actions"><button data-comment-like="${escapeHtml(comment.id)}" class="${comment.liked ? 'active' : ''}" aria-pressed="${comment.liked ? 'true' : 'false'}">♥ ${comment.likeCount || 0}</button><button data-reply="${escapeHtml(comment.id)}">Javob</button></div>
+    ${replies.map((reply)=>commentItem(reply, children, 1)).join('')}</div>
+  </article>`;
 }
 
 function renderComments(){
-  const course = COURSE_DETAIL_STATE.course;
-  const role = String(COURSE_DETAIL_STATE.me.role || "student").toLowerCase();
-  const canComment = course.allowComments && (role === "admin" || course.isOwner || course.viewer.joined);
-  const { roots, childrenMap } = commentTree();
-  const replyTarget = COURSE_DETAIL_STATE.replyParentId;
-  const replyComment = COURSE_DETAIL_STATE.comments.find((item)=> String(item.id) === String(replyTarget));
-
-  $("commentsWrap").innerHTML = `
-    <section class="course-card">
-      <div class="course-split">
-        <div>
-          <h2 class="course-section-title">Kommentlar va savollar</h2>
-          <p class="course-section-copy">Talabalar savol qoldiradi, kurs egasi esa shu yerning o'zida javob qaytaradi. Har yangi komment ustozga bildiriladi.</p>
-          <div class="course-stack" style="margin-top:18px">
-            ${roots.length ? roots.map((comment)=> renderCommentItem(comment, childrenMap)).join("") : `<div class="course-empty">Kommentlar hali boshlanmagan.</div>`}
-          </div>
-        </div>
-        <div class="course-card tight">
-          <div class="course-section-title">Yangi komment</div>
-          <div class="course-muted" style="margin-top:8px">${canComment ? "Kurs bo'yicha savol, fikr yoki javob yozishingiz mumkin." : "Komment yozish kursga qo'shilgan talabalar va ustoz uchun ochiq."}</div>
-          <div class="course-surface-note" id="replyHint" style="margin-top:16px;display:${replyComment ? "block" : "none"}">
-            ${replyComment ? `Javob yozilyapti: ${escapeHtml(replyComment.authorName || "Foydalanuvchi")}` : ""}
-          </div>
-          <div class="course-form-group" style="margin-top:16px">
-            <label for="commentInput">Matn</label>
-            <textarea id="commentInput" class="course-textarea" ${canComment ? "" : "disabled"} placeholder="Savol yoki fikringizni yozing..."></textarea>
-          </div>
-          <div class="course-inline-actions" style="margin-top:16px">
-            <button class="course-button primary" id="sendCommentBtn" ${canComment ? "" : "disabled"}>${iconSpan("send")}Yuborish</button>
-            <button class="course-button ghost" id="clearReplyBtn" ${replyTarget ? "" : "style='display:none'"}>${iconSpan("trash")}Replyni bekor qilish</button>
-          </div>
-        </div>
-      </div>
-    </section>
-  `;
-
-  if(canComment){
-    $("sendCommentBtn").addEventListener("click", saveComment);
-  }
-  const clearReplyBtn = $("clearReplyBtn");
-  if(clearReplyBtn){
-    clearReplyBtn.addEventListener("click", ()=>{
-      COURSE_DETAIL_STATE.replyParentId = "";
-      renderComments();
-    });
-  }
-  $("commentsWrap").querySelectorAll("[data-reply]").forEach((button)=>{
-    button.addEventListener("click", ()=>{
-      COURSE_DETAIL_STATE.replyParentId = button.dataset.reply || "";
-      renderComments();
-    });
-  });
+  const course = WATCH_STATE.course;
+  const role = String(WATCH_STATE.me?.role || 'student').toLowerCase();
+  const canComment = course.allowComments && (role === 'admin' || course.isOwner || course.viewer.joined || course.visibility === 'public');
+  const { roots, children } = commentTree();
+  const target = WATCH_STATE.comments.find((item)=>String(item.id) === String(WATCH_STATE.replyParentId));
+  $('commentsWrap').innerHTML = `<section class="yt-community">
+    <h2>${WATCH_STATE.comments.length} ta izoh</h2>
+    <div class="yt-comment-composer">
+      <div class="yt-comment-avatar">${escapeHtml(String(WATCH_STATE.me?.fullName || WATCH_STATE.me?.nickname || 'S').charAt(0).toUpperCase())}</div>
+      <div><textarea id="commentInput" ${canComment ? '' : 'disabled'} placeholder="${canComment ? 'Izoh yoki savol yozing…' : 'Izoh yozish uchun kursga qo‘shiling'}"></textarea>
+      ${target ? `<div class="yt-replying">${escapeHtml(target.authorName || 'Foydalanuvchi')}ga javob <button id="clearReplyBtn">Bekor qilish</button></div>` : ''}
+      <button class="course-button primary" id="sendCommentBtn" ${canComment ? '' : 'disabled'}>Yuborish</button></div>
+    </div>
+    <div class="yt-comments-list">${roots.length ? roots.map((comment)=>commentItem(comment, children)).join('') : '<div class="course-empty">Birinchi izohni siz yozing.</div>'}</div>
+  </section>`;
+  $('sendCommentBtn')?.addEventListener('click', saveComment);
+  $('clearReplyBtn')?.addEventListener('click', ()=>{ WATCH_STATE.replyParentId = ''; renderComments(); });
+  $('commentsWrap').querySelectorAll('[data-reply]').forEach((button)=>button.addEventListener('click', ()=>{
+    WATCH_STATE.replyParentId = button.dataset.reply || ''; renderComments(); $('commentInput')?.focus();
+  }));
+  $('commentsWrap').querySelectorAll('[data-comment-like]').forEach((button)=>button.addEventListener('click', ()=>toggleCommentLike(button.dataset.commentLike)));
 }
 
-function renderLessons(){
-  const list = COURSE_DETAIL_STATE.lessons || [];
-  const canAccessLessons = !!list.length;
-  $("lessonsWrap").innerHTML = `
-    <section class="course-card">
-      <div class="course-split">
-        <div>
-          <h2 class="course-section-title">Mavzular va materiallar</h2>
-          <p class="course-section-copy">Har bir mavzuda video yoki PDF material bo'ladi. Ustoz xohlasa mavzu oxiriga qisqa test ham biriktiradi.</p>
-        </div>
-        <div class="course-card tight">
-          <div class="course-section-title">Tez ko'rinish</div>
-          <div class="course-muted" style="margin-top:8px">${canAccessLessons ? "Kurs tarkibi allaqachon tayyor. Quyida mavzular ko'rsatilgan." : "Mavzularni ko'rish kursga qo'shilgandan keyin yoki studio orqali ochiladi."}</div>
-        </div>
-      </div>
-      <div class="course-stack" style="margin-top:18px">
-        ${canAccessLessons ? list.map((lesson, index)=> {
-          const media = mediaForLesson(lesson);
-          return `
-            <article class="course-row-card">
-              <div class="course-row-main">
-                <div class="course-chip-row">
-                  <span class="course-tag">${index + 1}-mavzu</span>
-                  <span class="course-tag">${escapeHtml(String(lesson.type || "").toUpperCase())}</span>
-                  ${lesson.quizEnabled ? `<span class="course-tag accent">Qisqa test bor</span>` : ""}
-                  ${lesson.isPreview ? `<span class="course-tag warn">Preview</span>` : ""}
-                </div>
-                <h3 class="course-row-title" style="margin-top:12px">${escapeHtml(lesson.title)}</h3>
-                <p class="course-row-copy">${escapeHtml(shortText(lesson.text || "Video yoki PDF material orqali tushuntiriladi.", 180))}</p>
-                <div class="course-meta-row" style="margin-top:10px">
-                  <span class="course-inline-code">${lesson.durationMinutes ? lesson.durationMinutes + " min" : "Davomiylik kiritilmagan"}</span>
-                  <span class="course-inline-code">${lesson.materials.length} material</span>
-                </div>
-              </div>
-              <div class="course-thumb">${media.type === "image" ? `<img src="${escapeHtml(media.src)}" alt="preview">` : ""}</div>
-            </article>
-          `;
-        }).join("") : `<div class="course-empty">Mavzularni ko'rish uchun kursga qo'shiling yoki teacher studio orqali oching.</div>`}
-      </div>
-    </section>
-  `;
+function renderRatings(){
+  const canRate = WATCH_STATE.course.allowRatings && !WATCH_STATE.course.isOwner && (String(WATCH_STATE.me?.role || '') === 'admin' || WATCH_STATE.course.viewer.joined || WATCH_STATE.course.visibility === 'public');
+  const mine = Number(WATCH_STATE.course.viewer.myRating || 0);
+  $('ratingsWrap').innerHTML = `<section class="yt-rating-strip"><div><b>Kurs bahosi</b><strong>${Number(WATCH_STATE.ratingSummary.average || 0).toFixed(1)}</strong><span>${WATCH_STATE.ratingSummary.count || 0} baho</span></div>
+    <div class="yt-rate-buttons">${[1,2,3,4,5].map((value)=>`<button data-rate="${value}" class="${value <= mine ? 'active' : ''}" ${canRate ? '' : 'disabled'} aria-label="${value} yulduz">★</button>`).join('')}<input id="ratingReviewInput" ${canRate ? '' : 'disabled'} placeholder="Qisqa fikr"><button id="saveRatingBtn" ${canRate ? '' : 'disabled'}>Saqlash</button></div></section>`;
+  $('ratingsWrap').querySelectorAll('[data-rate]').forEach((button)=>button.addEventListener('click', ()=>{
+    WATCH_STATE.course.viewer.myRating = Number(button.dataset.rate || 0); renderRatings();
+  }));
+  $('saveRatingBtn')?.addEventListener('click', saveRating);
 }
 
-async function saveRating(){
+async function loadLike(){
+  const contentId = selectedLikeContentId();
+  const query = contentId ? `?contentId=${encodeURIComponent(contentId)}` : '';
   try{
-    clearAlert();
-    const rating = Number(COURSE_DETAIL_STATE.course.viewer.myRating || 0);
-    if(!rating){
-      showAlert("error", "Avval yulduz tanlang.");
-      return;
-    }
-    await apiFetch(`/api/courses/${encodeURIComponent(COURSE_DETAIL_STATE.course.id)}/ratings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        rating,
-        reviewText: $("ratingReviewInput").value
-      })
-    });
-    showAlert("success", "Bahoyingiz saqlandi.");
-    await loadEngagement();
-  }catch(error){
-    showAlert("error", error.message || "Baho saqlanmadi.");
-  }
+    const data = await apiFetch(`/api/courses/${encodeURIComponent(WATCH_STATE.course.id)}/likes${query}`);
+    WATCH_STATE.like = { count: Number(data.count || 0), liked: !!data.liked };
+  }catch(_){ WATCH_STATE.like = { count: 0, liked: false }; }
+  renderWatch();
+}
+
+async function toggleVideoLike(){
+  const data = await apiFetch(`/api/courses/${encodeURIComponent(WATCH_STATE.course.id)}/likes`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contentId: selectedLikeContentId() })
+  });
+  WATCH_STATE.like = { count: Number(data.count || 0), liked: !!data.liked };
+  renderWatch();
+}
+
+async function toggleCommentLike(commentId){
+  await apiFetch(`/api/courses/${encodeURIComponent(WATCH_STATE.course.id)}/comments/${encodeURIComponent(commentId)}/like`, { method: 'POST' });
+  await loadComments();
 }
 
 async function saveComment(){
-  try{
-    clearAlert();
-    await apiFetch(`/api/courses/${encodeURIComponent(COURSE_DETAIL_STATE.course.id)}/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        body: $("commentInput").value,
-        parentId: COURSE_DETAIL_STATE.replyParentId || ""
-      })
-    });
-    $("commentInput").value = "";
-    COURSE_DETAIL_STATE.replyParentId = "";
-    showAlert("success", "Komment yuborildi.");
-    await loadComments();
-  }catch(error){
-    showAlert("error", error.message || "Komment yuborilmadi.");
-  }
+  const body = String($('commentInput')?.value || '').trim();
+  if(!body) return showAlert('error', 'Izoh matnini yozing.');
+  await apiFetch(`/api/courses/${encodeURIComponent(WATCH_STATE.course.id)}/comments`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body, parentId: WATCH_STATE.replyParentId || '' })
+  });
+  WATCH_STATE.replyParentId = '';
+  await loadComments();
+}
+
+async function saveRating(){
+  const rating = Number(WATCH_STATE.course.viewer.myRating || 0);
+  if(!rating) return showAlert('error', 'Avval yulduz tanlang.');
+  await apiFetch(`/api/courses/${encodeURIComponent(WATCH_STATE.course.id)}/ratings`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating, reviewText: String($('ratingReviewInput')?.value || '') })
+  });
+  await loadRatings();
 }
 
 async function joinCourse(){
-  try{
-    clearAlert();
-    await apiFetch(`/api/courses/${encodeURIComponent(COURSE_DETAIL_STATE.course.id)}/join`, { method: "POST" });
-    showAlert("success", "Kursga qo'shildingiz.");
-    await loadCourse();
-  }catch(error){
-    showAlert("error", error.message || "Kursga qo'shilib bo'lmadi.");
-  }
+  await apiFetch(`/api/courses/${encodeURIComponent(WATCH_STATE.course.id)}/join`, { method: 'POST' });
+  showAlert('success', 'Kursga qo‘shildingiz. Darslar ochildi.');
+  await loadCourse();
+}
+async function requestJoin(){
+  await apiFetch(`/api/courses/${encodeURIComponent(WATCH_STATE.course.id)}/requests`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: '' })
+  });
+  showAlert('success', 'So‘rov o‘qituvchiga yuborildi.');
+  await loadCourse();
 }
 
-async function requestJoin(){
-  try{
-    clearAlert();
-    await apiFetch(`/api/courses/${encodeURIComponent(COURSE_DETAIL_STATE.course.id)}/requests`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: $("joinRequestMessage")?.value || "" })
-    });
-    showAlert("success", "So'rov yuborildi.");
-    await loadCourse();
-  }catch(error){
-    showAlert("error", error.message || "So'rov yuborilmadi.");
-  }
+async function shareCourse(){
+  const payload = { title: WATCH_STATE.course.title, text: WATCH_STATE.course.description || '', url: location.href };
+  if(navigator.share) return navigator.share(payload).catch(()=>{});
+  await navigator.clipboard.writeText(location.href);
+  showAlert('success', 'Kurs havolasi nusxalandi.');
 }
 
 async function loadLessons(){
   try{
-    const data = await apiFetch(`/api/courses/${encodeURIComponent(COURSE_DETAIL_STATE.course.id)}/content`);
-    COURSE_DETAIL_STATE.lessons = (Array.isArray(data?.items) ? data.items : []).map(normalizeLesson);
-  }catch(_){
-    COURSE_DETAIL_STATE.lessons = [];
-  }
-  renderLessons();
+    const data = await apiFetch(`/api/courses/${encodeURIComponent(WATCH_STATE.course.id)}/content`);
+    WATCH_STATE.lessons = (Array.isArray(data?.items) ? data.items : []).map(normalizeLesson);
+  }catch(_){ WATCH_STATE.lessons = []; }
+  const requested = qs('lesson');
+  WATCH_STATE.selectedLessonId = WATCH_STATE.lessons.some((item)=>String(item.id) === String(requested))
+    ? requested : (WATCH_STATE.lessons.find((item)=>item.youtubeUrl || item.videoUrl)?.id || WATCH_STATE.lessons[0]?.id || '');
 }
 
 async function loadComments(){
   try{
-    const data = await apiFetch(`/api/courses/${encodeURIComponent(COURSE_DETAIL_STATE.course.id)}/comments`);
-    COURSE_DETAIL_STATE.comments = Array.isArray(data?.comments) ? data.comments : [];
-  }catch(_){
-    COURSE_DETAIL_STATE.comments = [];
-  }
+    const data = await apiFetch(`/api/courses/${encodeURIComponent(WATCH_STATE.course.id)}/comments`);
+    WATCH_STATE.comments = Array.isArray(data?.comments) ? data.comments : [];
+  }catch(_){ WATCH_STATE.comments = []; }
   renderComments();
 }
 
-async function loadEngagement(){
+async function loadRatings(){
   try{
-    const data = await apiFetch(`/api/courses/${encodeURIComponent(COURSE_DETAIL_STATE.course.id)}/ratings`);
-    COURSE_DETAIL_STATE.ratings = Array.isArray(data?.ratings) ? data.ratings : [];
-    COURSE_DETAIL_STATE.ratingSummary = data?.summary || COURSE_DETAIL_STATE.ratingSummary;
-    COURSE_DETAIL_STATE.course.viewer.myRating = Number(data?.myRating || COURSE_DETAIL_STATE.course.viewer.myRating || 0);
-  }catch(_){
-    COURSE_DETAIL_STATE.ratings = [];
-  }
+    const data = await apiFetch(`/api/courses/${encodeURIComponent(WATCH_STATE.course.id)}/ratings`);
+    WATCH_STATE.ratings = Array.isArray(data?.ratings) ? data.ratings : [];
+    WATCH_STATE.ratingSummary = data?.summary || { average: 0, count: 0 };
+    WATCH_STATE.course.viewer.myRating = Number(data?.myRating || WATCH_STATE.course.viewer.myRating || 0);
+  }catch(_){ WATCH_STATE.ratings = []; }
   renderRatings();
 }
 
+function recommendationThumb(course){
+  if(course.coverUrl) return course.coverUrl;
+  const id = youtubeId(course.previewMedia?.youtubeUrl || course.youtubeUrl || '');
+  return id ? `https://i.ytimg.com/vi/${encodeURIComponent(id)}/mqdefault.jpg` : '';
+}
+
+async function loadRecommendations(){
+  const target = $('recommendationsWrap');
+  try{
+    const data = await apiFetch(`/api/courses/recommendations?limit=8&excludeCourseId=${encodeURIComponent(WATCH_STATE.course.id)}`);
+    WATCH_STATE.recommendations = (Array.isArray(data?.courses) ? data.courses : []).map((raw)=>({
+      ...normalizeCourse(raw),
+      recommendationReason: raw.recommendationReason || ''
+    }));
+  }catch(_){ WATCH_STATE.recommendations = []; }
+  if(!WATCH_STATE.recommendations.length){ target.innerHTML = ''; return; }
+  target.innerHTML = `<section><div class="course-inline-actions" style="justify-content:space-between;margin-bottom:12px"><div><div class="course-eyebrow">Keyingi videolar</div><h2 class="course-section-title">Siz uchun tavsiya</h2></div><a class="course-link-button ghost" href="/courses.html">Barchasi</a></div><div class="yt-course-grid">${WATCH_STATE.recommendations.map((course)=>{
+    const thumb = recommendationThumb(course);
+    return `<article class="yt-course-card"><a class="yt-course-thumb" href="/course.html?id=${encodeURIComponent(course.id)}">${thumb ? `<img src="${escapeHtml(thumb)}" alt="" loading="lazy">` : '<span class="yt-course-placeholder">H</span>'}<span class="yt-course-duration">${course.lessonCount || 0} dars</span></a><div class="yt-course-info"><div class="yt-teacher-avatar">${escapeHtml(String(course.teacherName || 'U').charAt(0).toUpperCase())}</div><div class="yt-course-copy"><a class="yt-course-title" href="/course.html?id=${encodeURIComponent(course.id)}">${escapeHtml(course.title)}</a><div class="yt-course-teacher">${escapeHtml(course.teacherName || 'O‘qituvchi')}</div><div class="yt-course-meta">${course.likeCount || 0} yoqdi · ${course.commentCount || 0} izoh · ★ ${Number(course.ratingAverage || 0).toFixed(1)}</div><div class="yt-course-tags"><span>${escapeHtml(course.recommendationReason || 'Siz uchun')}</span></div></div></div></article>`;
+  }).join('')}</div></section>`;
+}
+
 async function loadCourse(){
-  const courseId = qs("id");
-  if(!courseId){
-    showAlert("error", "Kurs ID topilmadi.");
-    return;
-  }
-  const data = await apiFetch("/api/courses/" + encodeURIComponent(courseId));
-  COURSE_DETAIL_STATE.course = normalizeCourse(data?.course || data);
-  renderHero();
-  await Promise.all([loadEngagement(), loadComments(), loadLessons()]);
+  const id = qs('id');
+  if(!id) throw new Error('Kurs ID topilmadi.');
+  const data = await apiFetch(`/api/courses/${encodeURIComponent(id)}`);
+  WATCH_STATE.course = normalizeCourse(data?.course || data);
+  await loadLessons();
+  renderWatch();
+  await Promise.all([loadLike(), loadComments(), loadRatings()]);
 }
 
 async function init(){
-  initStoredTheme();
-  applyTheme($("themeBtn"));
-  $("logoutBtn").addEventListener("click", logout);
-  COURSE_DETAIL_STATE.me = await getMe();
-  if(!COURSE_DETAIL_STATE.me) return;
-  renderHeaderMeta(COURSE_DETAIL_STATE.me, { roleBadge: "roleBadge", mePill: "mePill", dashboardLink: "dashboardLink" });
+  initStoredTheme(); applyTheme($('themeBtn')); $('logoutBtn').addEventListener('click', logout);
+  WATCH_STATE.me = await getMe();
+  if(!WATCH_STATE.me) return;
+  renderHeaderMeta(WATCH_STATE.me, { roleBadge: 'roleBadge', mePill: 'mePill', dashboardLink: 'dashboardLink' });
   await loadCourse();
+  await loadRecommendations();
 }
 
-init().catch((error)=>{
-  showAlert("error", error.message || "Sahifa yuklanmadi.");
-});
+init().catch((error)=>showAlert('error', error.message || 'Kurs yuklanmadi.'));

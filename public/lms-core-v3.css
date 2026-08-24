@@ -14,13 +14,13 @@
   --lms-blue: #176fae;
   --lms-blue-strong: #0c568d;
   --lms-blue-soft: #e5f3fc;
-  --lms-teal: #0d8b75;
-  --lms-teal-soft: #e4f7f2;
-  --lms-orange: #f26532;
-  --lms-orange-soft: #fff0e9;
+  --lms-teal: #176fae;
+  --lms-teal-soft: #e5f3fc;
+  --lms-orange: #176fae;
+  --lms-orange-soft: #e5f3fc;
   --lms-danger: #c93e4c;
-  --lms-warning: #a96605;
-  --lms-success: #18765f;
+  --lms-warning: #0c568d;
+  --lms-success: #176fae;
   --lms-shadow: 0 5px 18px rgba(28, 68, 94, .08);
   --lms-shadow-strong: 0 12px 34px rgba(20, 55, 79, .14);
   --lms-radius: 3px;
@@ -36,7 +36,7 @@
   --border: var(--lms-line) !important;
   --teal: var(--lms-teal) !important;
   --gold: var(--lms-orange) !important;
-  --gold2: #f58a42 !important;
+  --gold2: var(--lms-blue) !important;
   --sky: var(--lms-blue) !important;
   --danger: var(--lms-danger) !important;
   --ok: var(--lms-success) !important;
@@ -60,13 +60,13 @@ html.dark {
   --lms-blue: #64b9ee;
   --lms-blue-strong: #88cdf7;
   --lms-blue-soft: #102f43;
-  --lms-teal: #4dd4b7;
-  --lms-teal-soft: #10372f;
-  --lms-orange: #ff916a;
-  --lms-orange-soft: #41261e;
+  --lms-teal: #64b9ee;
+  --lms-teal-soft: #102f43;
+  --lms-orange: #64b9ee;
+  --lms-orange-soft: #102f43;
   --lms-danger: #ff7c89;
-  --lms-warning: #ffc766;
-  --lms-success: #62d7b6;
+  --lms-warning: #88cdf7;
+  --lms-success: #64b9ee;
   --lms-shadow: 0 6px 20px rgba(0,0,0,.24);
   --lms-shadow-strong: 0 14px 40px rgba(0,0,0,.38);
   --glass-bg: rgba(13,28,41,.98) !important;
@@ -481,6 +481,20 @@ html.dark #teacherStageWrap {
   background: #0a1721 !important;
   box-shadow: none !important;
 }
+
+/* v5.2 stage integrity: one strict 16:9 surface.  A late camera track may be
+   inserted before the roster render runs; force both the temporary tile and
+   the final primary slot into the same layer instead of a second grid row. */
+#teacherStageSurface{display:block!important;position:absolute!important;inset:0!important}
+#teacherStageSurface>.stage-slot-primary,
+#teacherStageSurface>.video-tile{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important}
+#teacherStageSurface>.stage-slot-primary>.video-tile{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important}
+#teacherStageSurface video{width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important}
+@media (min-width:1024px){
+  #teacherStageWrap{height:auto!important;align-self:start!important}
+  #teacherStageWrap>.w-full{height:auto!important}
+  #teacherStage{height:auto!important;aspect-ratio:16/9!important}
+}
 #stageWhiteboardCanvas { border-radius: 0 !important; }
 #stageWhiteboardCamPip {
   top: 10px !important;
@@ -780,3 +794,281 @@ html.dark #teacherStageWrap {
   :root { --lms-line: #879fad; --lms-line-strong: #5f7d8e; }
   html.dark { --lms-line: #6e8fa2; --lms-line-strong: #91adbd; }
 }
+
+/* v5.1 single brand palette: white surfaces, blue actions, pale-blue separation. */
+:root {
+  --course-bg: #f5f9ff !important;
+  --course-surface: #ffffff !important;
+  --course-surface-2: #eff6ff !important;
+  --course-text: #172033 !important;
+  --course-muted: #5d6b82 !important;
+  --course-border: #cbd8ea !important;
+  --course-border-strong: #91afd1 !important;
+  --course-accent: #1d5fa8 !important;
+  --course-accent-2: #5a9fe0 !important;
+  --course-ink: #12325b !important;
+  --course-warm: #2878c7 !important;
+  --course-success: #1d5fa8 !important;
+  --course-ring: 0 0 0 3px rgba(40,120,199,.16) !important;
+  --ws-panel: rgba(255,255,255,.98) !important;
+  --ws-panel-alt: rgba(239,246,255,.98) !important;
+  --ws-border: rgba(40,120,199,.18) !important;
+  --ws-outline: rgba(40,120,199,.20) !important;
+  --ws-gold: #2878c7 !important;
+  --ws-success: #1d5fa8 !important;
+  --studio-panel: rgba(255,255,255,.98) !important;
+  --studio-panel-alt: rgba(239,246,255,.98) !important;
+  --studio-border: rgba(40,120,199,.18) !important;
+  --studio-outline: rgba(40,120,199,.20) !important;
+  --ac-teal: #1d5fa8 !important;
+  --ac-teal-2: #5a9fe0 !important;
+  --ac-gold: #bfdbfe !important;
+}
+
+html.dark {
+  --course-bg: #07131d !important;
+  --course-surface: #0d1c29 !important;
+  --course-surface-2: #102f43 !important;
+  --course-text: #edf6fb !important;
+  --course-muted: #a9bdcb !important;
+  --course-border: #294252 !important;
+  --course-border-strong: #3d5d70 !important;
+  --course-accent: #64b9ee !important;
+  --course-accent-2: #88cdf7 !important;
+  --course-ink: #edf6fb !important;
+  --course-warm: #64b9ee !important;
+  --course-success: #64b9ee !important;
+  --ws-panel: rgba(13,28,41,.98) !important;
+  --ws-panel-alt: rgba(16,47,67,.98) !important;
+  --ws-border: rgba(100,185,238,.22) !important;
+  --ws-outline: rgba(100,185,238,.25) !important;
+  --studio-panel: rgba(13,28,41,.98) !important;
+  --studio-panel-alt: rgba(16,47,67,.98) !important;
+  --studio-border: rgba(100,185,238,.22) !important;
+  --studio-outline: rgba(100,185,238,.25) !important;
+  --ac-teal: #64b9ee !important;
+  --ac-teal-2: #88cdf7 !important;
+  --ac-gold: #bfdbfe !important;
+}
+
+body.course-body,
+body.website-studio-body,
+body.slides-studio-body {
+  background: var(--lms-bg) !important;
+}
+
+#cover:not([style*="url("]) {
+  background: linear-gradient(90deg,#1d5fa8 0%,#5a9fe0 58%,#dbeafe 100%) !important;
+}
+.g-border::before {
+  background: linear-gradient(135deg,rgba(29,95,168,.72),rgba(90,159,224,.52),rgba(219,234,254,.72)) !important;
+}
+body .stage,
+body .stage.theme-aurora,
+body .stage.theme-mint,
+body .stage.theme-sunset {
+  background:
+    radial-gradient(700px 420px at 18% 5%,rgba(40,120,199,.18),transparent 60%),
+    radial-gradient(700px 420px at 84% 12%,rgba(191,219,254,.62),transparent 62%),
+    linear-gradient(180deg,#ffffff,#eff6ff) !important;
+}
+html.dark body .stage,
+html.dark body .stage.theme-aurora,
+html.dark body .stage.theme-mint,
+html.dark body .stage.theme-sunset,
+html.dark body .stage.theme-night {
+  background: linear-gradient(180deg,#12325b,#0b1f3a) !important;
+}
+
+body :where(.chip,.scene-chip,.security-badge,.status-pill.approved,.billing-switch button.active) {
+  color: var(--lms-blue-strong) !important;
+  border-color: var(--lms-line) !important;
+  background: var(--lms-blue-soft) !important;
+}
+body :where(button,a)[class*="bg-teal-"],
+body :where(button,a)[class*="bg-emerald-"],
+body :where(button,a)[class*="bg-green-"],
+body :where(button,a)[class*="bg-indigo-"],
+body :where(button,a)[class*="bg-purple-"],
+body :where(button,a)[class*="bg-pink-"],
+body :where(button,a)[class*="bg-amber-"],
+body :where(button,a)[class*="bg-orange-"] {
+  color: #fff !important;
+  border-color: var(--lms-blue-strong) !important;
+  background: var(--lms-blue) !important;
+  background-image: none !important;
+}
+body :where(span,div,section,article,aside,label)[class*="bg-teal-"],
+body :where(span,div,section,article,aside,label)[class*="bg-emerald-"],
+body :where(span,div,section,article,aside,label)[class*="bg-green-"],
+body :where(span,div,section,article,aside,label)[class*="bg-indigo-"],
+body :where(span,div,section,article,aside,label)[class*="bg-purple-"],
+body :where(span,div,section,article,aside,label)[class*="bg-pink-"],
+body :where(span,div,section,article,aside,label)[class*="bg-amber-"],
+body :where(span,div,section,article,aside,label)[class*="bg-orange-"] {
+  color: var(--lms-blue-strong) !important;
+  border-color: var(--lms-line) !important;
+  background: var(--lms-blue-soft) !important;
+  background-image: none !important;
+}
+body :where([class*="text-teal-"],[class*="text-emerald-"],[class*="text-green-"],[class*="text-indigo-"],[class*="text-purple-"],[class*="text-pink-"],[class*="text-amber-"],[class*="text-orange-"]) {
+  color: var(--lms-blue-strong) !important;
+}
+body :where([class*="border-teal-"],[class*="border-emerald-"],[class*="border-green-"],[class*="border-indigo-"],[class*="border-purple-"],[class*="border-pink-"],[class*="border-amber-"],[class*="border-orange-"]) {
+  border-color: var(--lms-line-strong) !important;
+}
+body :where(.bg-gradient-to-r,.bg-gradient-to-br,.bg-gradient-to-b,.bg-gradient-to-tr) {
+  background-image: linear-gradient(135deg,#1d5fa8,#5a9fe0 58%,#dbeafe) !important;
+}
+.yt-teacher-avatar,
+.yt-comment-avatar {
+  color: #17477c !important;
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+}
+.lms-live-card,
+.yt-watch-empty {
+  background: linear-gradient(135deg,#12325b,#1d5fa8) !important;
+}
+#eduGestureDot { background: #3b8fe0 !important; }
+
+body :where(.brand-mark,.style-card.active,.tone-card.active,.history-card.active,.thumb-card.active,.nav-pill.active,.tool-btn.active,.action-btn.primary,.premium-chip,.verified-badge) {
+  color: var(--lms-blue-strong) !important;
+  border-color: var(--lms-line-strong) !important;
+  background: var(--lms-blue-soft) !important;
+  background-image: none !important;
+}
+body :where(button.action-btn.primary,a.action-btn.primary,button.nav-pill.active,a.nav-pill.active) {
+  color: #fff !important;
+  border-color: var(--lms-blue-strong) !important;
+  background: var(--lms-blue) !important;
+}
+
+/* v5.3 contrast contract — true light/dark themes and group-page readability. */
+:root {
+  --edu-ink: var(--lms-text) !important;
+  --edu-muted: var(--lms-muted) !important;
+  --edu-border: var(--lms-line) !important;
+  --edu-panel: var(--lms-surface) !important;
+  --edu-bg: var(--lms-bg) !important;
+}
+
+html.dark {
+  color-scheme: dark !important;
+  --edu-blue-950: #020a11 !important;
+  --edu-blue-900: #dcecf7 !important;
+  --edu-blue-800: #a8d7f3 !important;
+  --edu-blue-700: #64b9ee !important;
+  --edu-blue-600: #4aa5df !important;
+  --edu-blue-500: #88cdf7 !important;
+  --edu-blue-200: #294c62 !important;
+  --edu-blue-100: #173549 !important;
+  --edu-blue-50: #102838 !important;
+  --edu-ink: var(--lms-text) !important;
+  --edu-muted: var(--lms-muted) !important;
+  --edu-border: var(--lms-line) !important;
+  --edu-panel: var(--lms-surface) !important;
+  --edu-bg: var(--lms-bg) !important;
+}
+
+html.dark body,
+html.dark body.uni-theme-body {
+  color: var(--lms-text) !important;
+  background:
+    linear-gradient(90deg,rgba(100,185,238,.035) 1px,transparent 1px),
+    linear-gradient(rgba(100,185,238,.035) 1px,transparent 1px),
+    var(--lms-bg) !important;
+  background-size: 36px 36px,36px 36px,auto !important;
+}
+
+html.dark body :where(header,nav,.official-topbar,.glass,.hallaym-surface,.card,.panel,.modal-content,.drawer,.dialog,.dialog-card,.popup,.popover,.sheet):not(#groupCallOverlay *),
+html.dark body :where(main,section,aside):not(#groupCallOverlay):not(#groupCallOverlay *) {
+  color: var(--lms-text) !important;
+  border-color: var(--lms-line) !important;
+  background: var(--lms-surface) !important;
+}
+
+html.dark body :where(input,textarea,select) {
+  color: var(--lms-text) !important;
+  border-color: var(--lms-line-strong) !important;
+  background: var(--lms-surface-2) !important;
+}
+
+html.dark body :where(p,small,label,.muted,.muted2,.text-gray-400,.text-gray-500,.text-gray-600,.text-gray-700) {
+  color: var(--lms-muted) !important;
+}
+
+/* Group header, lesson schedule and members use surfaces, never white-on-white. */
+body #groupLessonSchedulePanel,
+body #joinPrompt,
+body #chatComposer,
+body #infoPanel {
+  color: var(--lms-text) !important;
+  border-color: var(--lms-line) !important;
+  background: var(--lms-surface) !important;
+}
+
+body #groupLessonSchedulePanel :where(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60),
+body #joinPrompt :where(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60),
+body #chatComposer :where(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60) {
+  color: var(--lms-text) !important;
+}
+
+body #groupLessonSchedulePanel :where(.text-white\/70,.text-white\/60),
+body #joinPrompt :where(.text-white\/70,.text-white\/60),
+body #chatComposer :where(.text-white\/70,.text-white\/60) {
+  color: var(--lms-muted) !important;
+}
+
+body #groupCallInviteBanner {
+  color: #fff !important;
+  border-color: #3d79aa !important;
+  background: linear-gradient(135deg,#12325b,#1d5fa8) !important;
+}
+body #groupCallInviteBanner :where(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60) { color: #fff !important; }
+
+body #infoPanel :where(h1,h2,h3,h4,.font-medium,.font-bold,.text-gray-700,.text-gray-800) { color: var(--lms-heading) !important; }
+body #infoPanel :where(label,p,small,.text-gray-400,.text-gray-500,.text-gray-600) { color: var(--lms-muted) !important; }
+body #membersList > div,
+body #inviteResults > div {
+  color: var(--lms-text) !important;
+  border: 1px solid var(--lms-line) !important;
+  background: var(--lms-surface-2) !important;
+}
+body #membersList > div:hover,
+body #inviteResults > div:hover { background: var(--lms-blue-soft) !important; }
+body #membersList h4,
+body #membersList .text-gray-800 { color: var(--lms-heading) !important; }
+body #membersList p,
+body #membersList .text-gray-500 { color: var(--lms-muted) !important; }
+
+body #messagesContainer .message .font-medium,
+body #messagesContainer .message .text-gray-800 { color: var(--lms-heading) !important; }
+body #messagesContainer .message .text-gray-500 { color: var(--lms-muted) !important; }
+body #messagesContainer .message-bubble.sent {
+  color: #fff !important;
+  border: 1px solid var(--lms-blue-strong) !important;
+  background: var(--lms-blue) !important;
+  background-image: none !important;
+}
+body #messagesContainer .message-bubble.sent :where(p,a,span,time,small) { color: #fff !important; }
+body #messagesContainer .message-bubble.received {
+  color: var(--lms-text) !important;
+  border: 1px solid var(--lms-line) !important;
+  background: var(--lms-surface-2) !important;
+}
+body #messagesContainer .message-bubble.received :where(p,span,time,small) { color: var(--lms-text) !important; }
+
+html.dark #eduVoiceDock,
+html.dark #eduVoiceHelp,
+html.dark #schatAssistantPanel,
+html.dark #attendancePanel,
+html.dark #callMoreMenu {
+  color: var(--lms-text) !important;
+  border-color: var(--lms-line) !important;
+  background: var(--lms-surface) !important;
+}
+
+html.dark #eduVoiceStatus,
+html.dark #eduVoiceHelp li,
+html.dark #eduVoiceHelp p { color: var(--lms-muted) !important; }
