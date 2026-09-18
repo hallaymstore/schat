@@ -65,7 +65,10 @@ if (JWT_SECRET_VALUE.length < 32 || JWT_SECRET_IS_PLACEHOLDER) {
   console.warn('⚠️ JWT_ACCESS_SECRET development uchun vaqtinchalik. Production oldidan tasodifiy kalit kiriting.');
 }
 const AUTH_JWT_SECRET = JWT_SECRET_VALUE || crypto.randomBytes(48).toString('base64url');
-const FACE_AUTH_REQUIRED = !/^(0|false|no|off)$/i.test(String(process.env.FACE_AUTH_REQUIRED || 'true').trim());
+// Demo mode: Face ID remains a visual UX step, but it never blocks a valid password login.
+// Set FACE_AUTH_DEMO=false later to restore real biometric enforcement.
+const FACE_AUTH_DEMO = !/^(0|false|no|off)$/i.test(String(process.env.FACE_AUTH_DEMO || 'true').trim());
+const FACE_AUTH_REQUIRED = !FACE_AUTH_DEMO && !/^(0|false|no|off)$/i.test(String(process.env.FACE_AUTH_REQUIRED || 'true').trim());
 const FACE_TEMPLATE_SECRET_EXPLICIT = String(process.env.FACE_TEMPLATE_SECRET || '').trim();
 const FACE_TEMPLATE_SECRET = FACE_TEMPLATE_SECRET_EXPLICIT || AUTH_JWT_SECRET;
 const FACE_CHALLENGE_TTL = String(process.env.FACE_CHALLENGE_TTL || '5m').trim() || '5m';
@@ -14786,6 +14789,7 @@ app.get('/api/auth/face/config', (req, res) => {
   res.json({
     success: true,
     required: FACE_AUTH_REQUIRED,
+    demo: FACE_AUTH_DEMO,
     templateAlgorithm: FACE_TEMPLATE_ALGORITHM,
     consentVersion: '2026-08-face-v1',
     secureContextRequired: true
