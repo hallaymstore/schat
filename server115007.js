@@ -65,10 +65,9 @@ if (JWT_SECRET_VALUE.length < 32 || JWT_SECRET_IS_PLACEHOLDER) {
   console.warn('⚠️ JWT_ACCESS_SECRET development uchun vaqtinchalik. Production oldidan tasodifiy kalit kiriting.');
 }
 const AUTH_JWT_SECRET = JWT_SECRET_VALUE || crypto.randomBytes(48).toString('base64url');
-// Demo mode: Face ID remains a visual UX step, but it never blocks a valid password login.
-// Set FACE_AUTH_DEMO=false later to restore real biometric enforcement.
-const FACE_AUTH_DEMO = !/^(0|false|no|off)$/i.test(String(process.env.FACE_AUTH_DEMO || 'true').trim());
-const FACE_AUTH_REQUIRED = !FACE_AUTH_DEMO && !/^(0|false|no|off)$/i.test(String(process.env.FACE_AUTH_REQUIRED || 'true').trim());
+// Face ID fully disabled: login/register use username + password only.
+const FACE_AUTH_DEMO = false;
+const FACE_AUTH_REQUIRED = false;
 const FACE_TEMPLATE_SECRET_EXPLICIT = String(process.env.FACE_TEMPLATE_SECRET || '').trim();
 const FACE_TEMPLATE_SECRET = FACE_TEMPLATE_SECRET_EXPLICIT || AUTH_JWT_SECRET;
 const FACE_CHALLENGE_TTL = String(process.env.FACE_CHALLENGE_TTL || '5m').trim() || '5m';
@@ -200,7 +199,7 @@ function injectGlobalHtmlTheme(html) {
   const avatarFallbackScript = `  <script src="${GLOBAL_AVATAR_FALLBACK_SCRIPT}" defer></script>`;
   const faceAuthScript = `  <script src="${GLOBAL_FACE_AUTH_SCRIPT}" defer></script>`;
   const faceAuthStylesheet = `  <link rel="stylesheet" href="${GLOBAL_FACE_AUTH_STYLESHEET}" />`;
-  const needsFaceAuth = /(?:id=["'](?:loginForm|registerForm)["']|\/api\/(?:login|register))/i.test(output);
+  const needsFaceAuth = false;
 
   if (!/name=["']theme-color["']/i.test(output)) {
     if (/<\/head>/i.test(output)) output = output.replace(/<\/head>/i, `${themeMeta}\n</head>`);
